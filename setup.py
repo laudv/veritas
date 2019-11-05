@@ -74,7 +74,7 @@ class CMakeBuild(build_ext):
 
 
 setup(
-    name='gbcheck',
+    name='treeck',
     version='0.1',
     author='Laurens Devos',
     author_email='',
@@ -82,7 +82,7 @@ setup(
     long_description='',
     packages=find_packages('src/python'),
     package_dir={'':'src/python'},
-    ext_modules=[CMakeExtension('gbcheck/gbcheck')],
+    ext_modules=[CMakeExtension('treeck/treeck')],
     cmdclass=dict(build_ext=CMakeBuild),
     #test_suite='tests',
     zip_safe=False,

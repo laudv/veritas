@@ -1,11 +1,18 @@
 #include <pybind11/pybind11.h>
+#include "domain.h"
 
-int add(int i, int j) {
-    return i + j;
-}
+namespace py = pybind11;
+using namespace treeck;
 
-PYBIND11_MODULE(gbcheck, m) {
-    m.doc() = "pybind11 example plugin"; // optional module docstring
+PYBIND11_MODULE(treeck, m) {
+    m.doc() = "Tree-CK: verification of ensembles of trees";
 
-    m.def("add", &add, "A function which adds two numbers");
+    py::class_<RealDomain>(m, "RealDomain")
+        .def(py::init<>())
+        .def(py::init<double, double>())
+        .def_readonly("lo", &RealDomain::lo)
+        .def_readonly("hi", &RealDomain::hi)
+        .def("contains", &RealDomain::contains)
+        .def("overlaps", &RealDomain::overlaps)
+        .def("split", &RealDomain::split);
 }

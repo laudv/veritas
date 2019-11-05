@@ -1,12 +1,15 @@
 # https://github.com/benjaminjack/python_cpp_example
 
 cmake_minimum_required(VERSION 2.8.12)
-project(gbcheck)
+project(treeck)
 
 SET(SOURCE_DIR "src/cpp")
 # Tell cmake that headers are in alse in source_dir
 include_directories(${SOURCE_DIR})
-SET(SOURCES "${SOURCE_DIR}/bindings.cpp")
+SET(SOURCES
+    "${SOURCE_DIR}/bindings.cpp"
+    "${SOURCE_DIR}/domain.cpp"
+    )
 
 #SET(TEST_DIR "tests")
 #SET(TESTS ${SOURCES}
