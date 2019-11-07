@@ -9,6 +9,7 @@ include_directories(${SOURCE_DIR})
 SET(SOURCES
     "${SOURCE_DIR}/bindings.cpp"
     "${SOURCE_DIR}/domain.cpp"
+    "${SOURCE_DIR}/tree.cpp"
     )
 
 #SET(TEST_DIR "tests")
@@ -28,3 +29,11 @@ SET(SOURCES
 
 find_package(pybind11 REQUIRED)
 pybind11_add_module(${PROJECT_NAME} ${SOURCES})
+
+set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+
+if(MSVC)
+    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+else()
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
+endif()

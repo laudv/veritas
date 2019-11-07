@@ -1,6 +1,8 @@
 #ifndef TREECK_DOMAIN_H
 #define TREECK_DOMAIN_H
 
+#include <tuple>
+
 namespace treeck {
 
     /** An interval [lo, hi) */

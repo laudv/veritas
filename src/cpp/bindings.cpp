@@ -1,5 +1,6 @@
 #include <pybind11/pybind11.h>
 #include "domain.h"
+#include "tree.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -15,4 +16,9 @@ PYBIND11_MODULE(treeck, m) {
         .def("contains", &RealDomain::contains)
         .def("overlaps", &RealDomain::overlaps)
         .def("split", &RealDomain::split);
+
+    py::class_<LtSplit>(m, "LtSplit")
+        .def(py::init<LtSplit::ValueT>())
+        .def_readonly("feat_id", &LtSplit::feat_id)
+        .def_readonly("split_value", &LtSplit::split_value);
 }
