@@ -1,3 +1,4 @@
+#include <cassert>
 #include <limits>
 #include <type_traits>
 
@@ -5,7 +6,11 @@
 
 namespace treeck {
 
-    LtSplit::LtSplit(LtSplit::ValueT split_value) : split_value(split_value) {}
+    SplitBase::SplitBase(FeatId feat_id) : feat_id(feat_id) {}
+
+    LtSplit::LtSplit(FeatId feat_id, LtSplit::ValueT split_value)
+        : SplitBase(feat_id)
+        , split_value(split_value) {}
 
     std::tuple<RealDomain, RealDomain>
     LtSplit::get_domains() const
@@ -21,7 +26,9 @@ namespace treeck {
     }
 
 
-    EqSplit::EqSplit(EqSplit::ValueT category) : category(category) {}
+    EqSplit::EqSplit(FeatId feat_id, EqSplit::ValueT category)
+        : SplitBase(feat_id)
+        , category(category) {}
 
     bool
     EqSplit::test(EqSplit::ValueT value) const
@@ -29,26 +36,166 @@ namespace treeck {
         return value == this->category;
     }
 
+    node::NodeLeaf::NodeLeaf(double value) : value(value) {}
 
-    template<class T> struct always_false : std::false_type {};
+    node::Node::Node(NodeId id, NodeId parent, int depth)
+        : id(id)
+        , parent(parent)
+        , depth(depth)
+        , tree_size(1)
+        , leaf{std::numeric_limits<double>::quiet_NaN()} {}
 
-    template <typename T>
-    bool
-    test_split(Split& split, T value)
+    NodeRef::NodeRef(Tree *tree, NodeId node_id)
+        : tree(tree)
+        , node_id(node_id) {}
+
+    //NodeRef::NodeRef(const NodeRef& other)
+    //    : tree(other.tree)
+    //    , node_id(other.node_id) {}
+
+    //NodeRef::NodeRef(NodeRef&& other)
+    //    : tree(other.tree)
+    //    , node_id(other.node_id) {}
+
+    //NodeRef&
+    //NodeRef::operator=(NodeRef& other)
+    //{
+    //    this->tree = other.tree;
+    //    this->node_id = other.node_id;
+    //    return *this;
+    //}
+
+    //NodeRef&
+    //NodeRef::operator=(NodeRef&& other)
+    //{
+    //    this->tree = std::move(other.tree);
+    //    this->node_id = other.node_id;
+    //    return *this;
+    //}
+
+    const node::Node&
+    NodeRef::node() const
     {
-        return std::visit([value](auto&& split) -> bool {
-            using S = std::decay_t<decltype(split)>;
-            static_assert(std::is_same_v<T, S::ValueT>, "invalid test type T");
-            return split.test(value);
-            //if constexpr (std::is_same_v<S, LtSplit>)
-            //    return value < split.split_value;
-            //else if constexpr (std::is_same_v<S, EqSplit>)
-            //    return value == split.category;
-            //else 
-            //    static_assert(always_false<T>::value, "non-exhaustive visitor!");
-        }, split);
+        return tree->nodes[node_id];
     }
 
-    template <> bool test_split(Split& split, LtSplit::ValueT);
-    template <> bool test_split(Split& split, EqSplit::ValueT);
+    node::Node&
+    NodeRef::node()
+    {
+        return tree->nodes[node_id];
+    }
+
+    bool
+    NodeRef::is_root() const
+    {
+        return node().parent == node().id;
+    }
+
+    bool
+    NodeRef::is_leaf() const
+    {
+        return node().tree_size == 1;
+    }
+
+    bool
+    NodeRef::is_internal() const
+    {
+        return !is_leaf();
+    }
+
+    NodeId
+    NodeRef::id() const
+    {
+        return node().id;
+    }
+
+    NodeRef
+    NodeRef::left() const
+    {
+        assert(is_internal());
+        return NodeRef(tree, node().internal.left);
+    }
+
+    NodeRef
+    NodeRef::right() const
+    {
+        assert(is_internal());
+        return NodeRef(tree, node().internal.left + 1);
+    }
+
+    NodeRef
+    NodeRef::parent() const
+    {
+        assert(!is_root());
+        return NodeRef(tree, node().parent);
+    }
+
+    int
+    NodeRef::tree_size() const
+    {
+        return node().tree_size;
+    }
+
+    int
+    NodeRef::depth() const
+    {
+        return node().depth;
+    }
+
+    const Split&
+    NodeRef::get_split() const
+    {
+        assert(is_internal());
+        return node().internal.split;
+    }
+
+    double
+    NodeRef::leaf_value() const
+    {
+        assert(is_leaf());
+        return node().leaf.value;
+    }
+
+    void
+    NodeRef::set_leaf_value(double value)
+    {
+        assert(is_leaf());
+        node().leaf.value = value;
+    }
+
+    void
+    NodeRef::split(Split split)
+    {
+        assert(is_leaf());
+
+        node::Node& n = node();
+        NodeId left_id = tree->nodes.size();
+
+        node::Node left(left_id,      n.id, n.depth + 1);
+        node::Node right(left_id + 1, n.id, n.depth + 1);
+        
+        tree->nodes.push_back(left);
+        tree->nodes.push_back(right);
+
+        n.internal.split = split;
+        n.internal.left = left_id;
+
+        NodeRef nf(*this);
+        while (!nf.is_root())
+        {
+            nf.node().tree_size += 2;
+            nf = nf.parent();
+        }
+    }
+
+    Tree::Tree()
+    {
+        nodes.push_back(node::Node(0, 0, 0)); /* add a root leaf node */
+    }
+
+    NodeRef
+    Tree::root()
+    {
+        return NodeRef(this, 0);
+    }
 }
