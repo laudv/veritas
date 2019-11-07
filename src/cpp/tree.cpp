@@ -36,42 +36,22 @@ namespace treeck {
         return value == this->category;
     }
 
-    node::NodeLeaf::NodeLeaf(double value) : value(value) {}
+    namespace node {
+        NodeLeaf::NodeLeaf(double value) : value(value) {}
 
-    node::Node::Node(NodeId id, NodeId parent, int depth)
-        : id(id)
-        , parent(parent)
-        , depth(depth)
-        , tree_size(1)
-        , leaf{std::numeric_limits<double>::quiet_NaN()} {}
+        Node::Node(NodeId id, NodeId parent, int depth)
+            : id(id)
+            , parent(parent)
+            , depth(depth)
+            , tree_size(1)
+            , leaf{std::numeric_limits<double>::quiet_NaN()} {}
 
-    NodeRef::NodeRef(Tree *tree, NodeId node_id)
+
+    } /* namespace node */
+
+    NodeRef::NodeRef(TreeP tree, NodeId node_id)
         : tree(tree)
         , node_id(node_id) {}
-
-    //NodeRef::NodeRef(const NodeRef& other)
-    //    : tree(other.tree)
-    //    , node_id(other.node_id) {}
-
-    //NodeRef::NodeRef(NodeRef&& other)
-    //    : tree(other.tree)
-    //    , node_id(other.node_id) {}
-
-    //NodeRef&
-    //NodeRef::operator=(NodeRef& other)
-    //{
-    //    this->tree = other.tree;
-    //    this->node_id = other.node_id;
-    //    return *this;
-    //}
-
-    //NodeRef&
-    //NodeRef::operator=(NodeRef&& other)
-    //{
-    //    this->tree = std::move(other.tree);
-    //    this->node_id = other.node_id;
-    //    return *this;
-    //}
 
     const node::Node&
     NodeRef::node() const
@@ -110,21 +90,21 @@ namespace treeck {
     }
 
     NodeRef
-    NodeRef::left() const
+    NodeRef::left()
     {
         assert(is_internal());
         return NodeRef(tree, node().internal.left);
     }
 
     NodeRef
-    NodeRef::right() const
+    NodeRef::right()
     {
         assert(is_internal());
         return NodeRef(tree, node().internal.left + 1);
     }
 
     NodeRef
-    NodeRef::parent() const
+    NodeRef::parent()
     {
         assert(!is_root());
         return NodeRef(tree, node().parent);
@@ -181,10 +161,11 @@ namespace treeck {
         n.internal.left = left_id;
 
         NodeRef nf(*this);
+        nf.node().tree_size += 2;
         while (!nf.is_root())
         {
-            nf.node().tree_size += 2;
             nf = nf.parent();
+            nf.node().tree_size += 2;
         }
     }
 
@@ -197,5 +178,11 @@ namespace treeck {
     Tree::root()
     {
         return NodeRef(this, 0);
+    }
+
+    int
+    Tree::num_nodes() const
+    {
+        return nodes[0].tree_size;
     }
 }

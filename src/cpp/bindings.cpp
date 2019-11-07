@@ -1,4 +1,5 @@
 #include <pybind11/pybind11.h>
+//#include <pybind11/stl.h>
 #include "domain.h"
 #include "tree.h"
 
@@ -34,6 +35,12 @@ PYBIND11_MODULE(treeck, m) {
         .def("tree_size", &NodeRef::tree_size)
         .def("depth", &NodeRef::depth)
         .def("get_split", &NodeRef::get_split)
+        .def("leaf_value", &NodeRef::leaf_value)
         .def("set_leaf_value", &NodeRef::set_leaf_value)
-        .def("split", &NodeRef::split);
+        .def("split", [](NodeRef& n, LtSplit s) { n.split(s); });
+    
+    py::class_<Tree>(m, "Tree")
+        .def(py::init<>())
+        .def("root", [](Tree * t) { return t->root(); }) // make sure we get the mutable one
+        .def("num_nodes", &Tree::num_nodes);
 }

@@ -44,14 +44,14 @@ namespace treeck {
     class Tree;
 
     namespace node {
+
         struct NodeLeaf {
             double value;
             NodeLeaf(double value);
         };
 
         struct NodeInternal {
-            NodeId left;
-            /* NodeId right; */ // right = left + 1
+            NodeId left; // right = left + 1
             Split split;
         };
 
@@ -68,30 +68,29 @@ namespace treeck {
 
             Node(NodeId id, NodeId parent, int depth);
         };
+
     } /* namespace node */
 
     class NodeRef {
-        Tree *tree;
+        using TreeP = Tree *;
+
+        TreeP tree;
         int node_id;
 
-        node::Node& node();
         const node::Node& node() const;
+        node::Node& node();
 
     public:
-        NodeRef(Tree *tree, NodeId node_id);
-        //NodeRef(const NodeRef&);
-        //NodeRef(NodeRef&&);
-        //NodeRef& operator=(NodeRef&);
-        //NodeRef& operator=(NodeRef&&);
+        NodeRef(TreeP tree, NodeId node_id);
 
         bool is_root() const;
         bool is_leaf() const;
         bool is_internal() const;
 
         NodeId id() const;
-        NodeRef left() const; /* internal only */
-        NodeRef right() const; /* internal only */
-        NodeRef parent() const;
+        NodeRef left(); /* internal only */
+        NodeRef right(); /* internal only */
+        NodeRef parent();
 
         int tree_size() const;
         int depth() const;
@@ -103,18 +102,16 @@ namespace treeck {
     };
 
     class Tree {
-        friend NodeRef;
-
+        friend class NodeRef;
         std::vector<node::Node> nodes;
 
     public:
         Tree();
         void split(NodeId node_id, Split split);
 
-        const NodeRef root() const;
         NodeRef root();
+        int num_nodes() const;
 
-        const NodeRef operator[](NodeId index) const;
         NodeRef operator[](NodeId index);
     };
 
