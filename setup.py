@@ -8,6 +8,7 @@ import sys
 import sysconfig
 import platform
 import subprocess
+import unittest
 
 from distutils.version import LooseVersion
 from setuptools import setup, Extension, find_packages
@@ -73,6 +74,12 @@ class CMakeBuild(build_ext):
         print()  # Add an empty line for cleaner output
 
 
+def my_test_suite():
+    test_loader = unittest.TestLoader()
+    test_suite = test_loader.discover('tests', pattern='test_*.py')
+    return test_suite
+
+
 setup(
     name='treeck',
     version='0.1',
@@ -84,6 +91,6 @@ setup(
     package_dir={'':'src/python'},
     ext_modules=[CMakeExtension('treeck/treeck')],
     cmdclass=dict(build_ext=CMakeBuild),
-    #test_suite='tests',
+    test_suite='setup.my_test_suite',
     zip_safe=False,
 )
