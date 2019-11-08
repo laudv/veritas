@@ -1,10 +1,11 @@
 #ifndef TREECK_TREE_H
 #define TREECK_TREE_H
 
+#include <iostream>
+#include <optional>
 #include <tuple>
 #include <variant>
 #include <vector>
-#include <optional>
 
 #include "domain.h"
 
@@ -101,6 +102,8 @@ namespace treeck {
         void split(Split split); /* leaf only */
     };
 
+    std::ostream& operator<<(std::ostream& s, NodeRef& n);
+
     class Tree {
         friend class NodeRef;
         std::vector<node::Node> nodes;
@@ -114,6 +117,8 @@ namespace treeck {
 
         NodeRef operator[](NodeId index);
     };
+
+    std::ostream& operator<<(std::ostream& s, Tree& t);
 
 
 } /* namespace treeck */

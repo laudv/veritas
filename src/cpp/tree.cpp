@@ -1,6 +1,7 @@
-#include <cassert>
+#include <exception>
 #include <limits>
 #include <type_traits>
+#include <stack>
 
 #include "tree.h"
 
@@ -92,21 +93,21 @@ namespace treeck {
     NodeRef
     NodeRef::left()
     {
-        assert(is_internal());
+        if (is_leaf()) throw std::runtime_error("left of leaf");
         return NodeRef(tree, node().internal.left);
     }
 
     NodeRef
     NodeRef::right()
     {
-        assert(is_internal());
+        if (is_leaf()) throw std::runtime_error("right of leaf");
         return NodeRef(tree, node().internal.left + 1);
     }
 
     NodeRef
     NodeRef::parent()
     {
-        assert(!is_root());
+        if (is_root()) throw std::runtime_error("parent of root");
         return NodeRef(tree, node().parent);
     }
 
@@ -125,48 +126,64 @@ namespace treeck {
     const Split&
     NodeRef::get_split() const
     {
-        assert(is_internal());
+        if (is_root()) throw std::runtime_error("split of leaf");
         return node().internal.split;
     }
 
     double
     NodeRef::leaf_value() const
     {
-        assert(is_leaf());
+        if (is_internal()) throw std::runtime_error("leaf_value of internal");
         return node().leaf.value;
     }
 
     void
     NodeRef::set_leaf_value(double value)
     {
-        assert(is_leaf());
+        if (is_internal()) throw std::runtime_error("set leaf_value of internal");
         node().leaf.value = value;
     }
 
     void
     NodeRef::split(Split split)
     {
-        assert(is_leaf());
+        if (is_internal()) throw std::runtime_error("split internal");
 
-        node::Node& n = node();
         NodeId left_id = tree->nodes.size();
 
-        node::Node left(left_id,      n.id, n.depth + 1);
-        node::Node right(left_id + 1, n.id, n.depth + 1);
+        node::Node left(left_id,      id(), depth() + 1);
+        node::Node right(left_id + 1, id(), depth() + 1);
         
         tree->nodes.push_back(left);
         tree->nodes.push_back(right);
 
-        n.internal.split = split;
-        n.internal.left = left_id;
+        node().internal.split = split;
+        node().internal.left = left_id;
 
+        node().tree_size = 3;
         NodeRef nf(*this);
-        nf.node().tree_size += 2;
         while (!nf.is_root())
         {
             nf = nf.parent();
             nf.node().tree_size += 2;
         }
+    }
+
+    std::ostream&
+    operator<<(std::ostream& s, NodeRef& n)
+    {
+        if (n.is_leaf())
+            return s << "LeafNode("
+                << "id=" << n.id()
+                << ", value=" << n.leaf_value()
+                << ")";
+        else
+            return s << "InternalNode("
+                << "id=" << n.id()
+                << ", split="
+                << ", left=" << n.left().id()
+                << ", right=" << n.right().id()
+                << ")";
     }
 
     Tree::Tree()
@@ -184,5 +201,27 @@ namespace treeck {
     Tree::num_nodes() const
     {
         return nodes[0].tree_size;
+    }
+
+    std::ostream&
+    operator<<(std::ostream& s, Tree& t)
+    {
+        s << "Tree(num_nodes=" << t.num_nodes() << ")" << std::endl;
+        std::stack<NodeRef> stack;
+        stack.push(t.root());
+        while (!stack.empty())
+        {
+            NodeRef n = stack.top(); stack.pop();
+            s << "  ";
+            for (int i = 0; i < n.depth(); ++i)
+                s << " | ";
+            s << n << std::endl;
+            if (n.is_internal())
+            {
+                stack.push(n.right());
+                stack.push(n.left());
+            }
+        }
+        return s;
     }
 }
