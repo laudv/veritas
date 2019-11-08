@@ -42,13 +42,14 @@ namespace treeck {
 
     using Split = std::variant<LtSplit, EqSplit>;
 
+    std::ostream& operator<<(std::ostream& strm, const Split& s);
+
     class Tree;
 
     namespace node {
 
         struct NodeLeaf {
             double value;
-            NodeLeaf(double value);
         };
 
         struct NodeInternal {
@@ -89,9 +90,9 @@ namespace treeck {
         bool is_internal() const;
 
         NodeId id() const;
-        NodeRef left(); /* internal only */
-        NodeRef right(); /* internal only */
-        NodeRef parent();
+        NodeRef left() const; /* internal only */
+        NodeRef right() const; /* internal only */
+        NodeRef parent() const;
 
         int tree_size() const;
         int depth() const;
@@ -102,7 +103,7 @@ namespace treeck {
         void split(Split split); /* leaf only */
     };
 
-    std::ostream& operator<<(std::ostream& s, NodeRef& n);
+    std::ostream& operator<<(std::ostream& s, const NodeRef& n);
 
     class Tree {
         friend class NodeRef;

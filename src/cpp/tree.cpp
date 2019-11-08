@@ -37,17 +37,28 @@ namespace treeck {
         return value == this->category;
     }
 
-    namespace node {
-        NodeLeaf::NodeLeaf(double value) : value(value) {}
+    namespace util {
+        template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+        template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+    }
 
+    std::ostream&
+    operator<<(std::ostream& s, const Split& split)
+    {
+        std::visit(util::overloaded {
+            [&s](const LtSplit& x) { s << "LtSplit(" << x.feat_id << ", " << x.split_value << ')'; },
+            [&s](const EqSplit& x) { s << "EqSplit(" << x.feat_id << ", " << x.category << ')'; },
+        }, split);
+        return s;
+    }
+
+    namespace node {
         Node::Node(NodeId id, NodeId parent, int depth)
             : id(id)
             , parent(parent)
             , depth(depth)
             , tree_size(1)
             , leaf{std::numeric_limits<double>::quiet_NaN()} {}
-
-
     } /* namespace node */
 
     NodeRef::NodeRef(TreeP tree, NodeId node_id)
@@ -91,21 +102,21 @@ namespace treeck {
     }
 
     NodeRef
-    NodeRef::left()
+    NodeRef::left() const
     {
         if (is_leaf()) throw std::runtime_error("left of leaf");
         return NodeRef(tree, node().internal.left);
     }
 
     NodeRef
-    NodeRef::right()
+    NodeRef::right() const
     {
         if (is_leaf()) throw std::runtime_error("right of leaf");
         return NodeRef(tree, node().internal.left + 1);
     }
 
     NodeRef
-    NodeRef::parent()
+    NodeRef::parent() const
     {
         if (is_root()) throw std::runtime_error("parent of root");
         return NodeRef(tree, node().parent);
@@ -126,7 +137,7 @@ namespace treeck {
     const Split&
     NodeRef::get_split() const
     {
-        if (is_root()) throw std::runtime_error("split of leaf");
+        if (is_leaf()) throw std::runtime_error("split of leaf");
         return node().internal.split;
     }
 
@@ -170,20 +181,20 @@ namespace treeck {
     }
 
     std::ostream&
-    operator<<(std::ostream& s, NodeRef& n)
+    operator<<(std::ostream& s, const NodeRef& n)
     {
         if (n.is_leaf())
             return s << "LeafNode("
                 << "id=" << n.id()
                 << ", value=" << n.leaf_value()
-                << ")";
+                << ')';
         else
             return s << "InternalNode("
                 << "id=" << n.id()
-                << ", split="
+                << ", split=" << n.get_split()
                 << ", left=" << n.left().id()
                 << ", right=" << n.right().id()
-                << ")";
+                << ')';
     }
 
     Tree::Tree()
@@ -206,7 +217,7 @@ namespace treeck {
     std::ostream&
     operator<<(std::ostream& s, Tree& t)
     {
-        s << "Tree(num_nodes=" << t.num_nodes() << ")" << std::endl;
+        s << "Tree(num_nodes=" << t.num_nodes() << ')' << std::endl;
         std::stack<NodeRef> stack;
         stack.push(t.root());
         while (!stack.empty())

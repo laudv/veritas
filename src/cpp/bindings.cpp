@@ -33,16 +33,17 @@ PYBIND11_MODULE(treeck, m) {
         .def(py::init<FeatId, LtSplit::ValueT>())
         .def_readonly("feat_id", &LtSplit::feat_id)
         .def_readonly("split_value", &LtSplit::split_value)
-        .def("test", &LtSplit::test);
+        .def("test", &LtSplit::test)
+        .def("__repr__", [](LtSplit& s) { return tostr(s); });
 
     py::class_<NodeRef>(m, "Node")
         .def("is_root", &NodeRef::is_root)
         .def("is_leaf", &NodeRef::is_leaf)
         .def("is_internal", &NodeRef::is_internal)
         .def("id", &NodeRef::id)
-        .def("left", &NodeRef::left)
-        .def("right", &NodeRef::right)
-        .def("parent", &NodeRef::parent)
+        .def("left", &NodeRef::left, py::keep_alive<0, 1>()) // <Nurse, Patient> = <Return, This>, 
+        .def("right", &NodeRef::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
+        .def("parent", &NodeRef::parent, py::keep_alive<0, 1>())
         .def("tree_size", &NodeRef::tree_size)
         .def("depth", &NodeRef::depth)
         .def("get_split", &NodeRef::get_split)
@@ -51,9 +52,9 @@ PYBIND11_MODULE(treeck, m) {
         .def("split", [](NodeRef& n, LtSplit s) { n.split(s); })
         .def("__repr__", [](NodeRef& n) { return tostr(n); });
     
-    py::class_<Tree, std::shared_ptr<Tree>>(m, "Tree")
+    py::class_<Tree>(m, "Tree")
         .def(py::init<>())
-        .def("root", [](Tree * t) { return t->root(); }) // make sure we get the mutable one
+        .def("root", &Tree::root, py::keep_alive<0, 1>())
         .def("num_nodes", &Tree::num_nodes)
         .def("__repr__", [](Tree& t) { return tostr(t); });
 }
