@@ -27,6 +27,13 @@ SET(SOURCES
 
 #add_library(${PROJECT_NAME} ${SOURCES})
 
+# CEREAL serialization
+#find_package(cereal REQUIRED) # system probably has old version...
+#include_directories(${cereal_INCLUDE_DIR})
+
+# ... so let's use a git submodule
+include_directories(lib/cereal/include)
+
 find_package(pybind11 REQUIRED)
 pybind11_add_module(${PROJECT_NAME} ${SOURCES})
 

@@ -2,6 +2,12 @@
 #include <limits>
 #include <type_traits>
 #include <stack>
+#include <iostream>
+#include <sstream>
+
+#include <cereal/archives/json.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/variant.hpp>
 
 #include "tree.h"
 
@@ -9,6 +15,7 @@ namespace treeck {
 
     SplitBase::SplitBase(FeatId feat_id) : feat_id(feat_id) {}
 
+    LtSplit::LtSplit() : LtSplit(-1, 0.0) {}
     LtSplit::LtSplit(FeatId feat_id, LtSplit::ValueT split_value)
         : SplitBase(feat_id)
         , split_value(split_value) {}
@@ -26,7 +33,15 @@ namespace treeck {
         return value < this->split_value;
     }
 
+    template <typename Archive>
+    void
+    LtSplit::serialize(Archive& archive)
+    {
+        archive(CEREAL_NVP(feat_id), CEREAL_NVP(split_value));
+    }
 
+
+    EqSplit::EqSplit() : EqSplit(-1, 0) {}
     EqSplit::EqSplit(FeatId feat_id, EqSplit::ValueT category)
         : SplitBase(feat_id)
         , category(category) {}
@@ -37,9 +52,17 @@ namespace treeck {
         return value == this->category;
     }
 
+    template <typename Archive>
+    void
+    EqSplit::serialize(Archive& archive)
+    {
+        archive(CEREAL_NVP(feat_id), CEREAL_NVP(category));
+    }
+
     namespace util {
         template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
         template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+        template<class T> struct always_false : std::false_type {};
     }
 
     std::ostream&
@@ -48,17 +71,49 @@ namespace treeck {
         std::visit(util::overloaded {
             [&s](const LtSplit& x) { s << "LtSplit(" << x.feat_id << ", " << x.split_value << ')'; },
             [&s](const EqSplit& x) { s << "EqSplit(" << x.feat_id << ", " << x.category << ')'; },
+            [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
         }, split);
         return s;
     }
 
     namespace node {
+
+        Node::Node() : Node(-1, -1, -1) {}
         Node::Node(NodeId id, NodeId parent, int depth)
             : id(id)
             , parent(parent)
             , depth(depth)
             , tree_size(1)
             , leaf{std::numeric_limits<double>::quiet_NaN()} {}
+
+        bool
+        Node::is_leaf() const
+        {
+            return tree_size == 1;
+        }
+
+        template <typename Archive>
+        void
+        Node::serialize(Archive& archive)
+        {
+            archive(
+                CEREAL_NVP(id),
+                CEREAL_NVP(parent),
+                CEREAL_NVP(depth),
+                CEREAL_NVP(tree_size));
+
+            if (is_leaf()) // uses tree_size read above when deserializing!
+            {
+                archive(cereal::make_nvp("leaf_value", leaf.value));
+            }
+            else
+            {
+                archive(
+                    cereal::make_nvp("left", internal.left),
+                    cereal::make_nvp("split", internal.split));
+            }
+        }
+
     } /* namespace node */
 
     NodeRef::NodeRef(TreeP tree, NodeId node_id)
@@ -86,7 +141,7 @@ namespace treeck {
     bool
     NodeRef::is_leaf() const
     {
-        return node().tree_size == 1;
+        return node().is_leaf();
     }
 
     bool
@@ -205,13 +260,49 @@ namespace treeck {
     NodeRef
     Tree::root()
     {
-        return NodeRef(this, 0);
+        return (*this)[0];
     }
 
     int
     Tree::num_nodes() const
     {
         return nodes[0].tree_size;
+    }
+
+    NodeRef
+    Tree::operator[](NodeId index)
+    {
+        return NodeRef(this, index);
+    }
+
+    template <typename Archive>
+    void
+    Tree::serialize(Archive& archive)
+    {
+        archive(cereal::make_nvp("tree_nodes", this->nodes));
+    }
+
+    std::string
+    Tree::to_json()
+    {
+        std::stringstream ss;
+        {
+            cereal::JSONOutputArchive ar(ss);
+            ar(cereal::make_nvp("tree_nodes", this->nodes)); // destructor must run!
+        }
+        return ss.str();
+    }
+
+    Tree
+    Tree::from_json(const std::string& json)
+    {
+        std::istringstream ss(json);
+        Tree tree;
+        {
+            cereal::JSONInputArchive ar(ss);
+            ar(cereal::make_nvp("tree_nodes", tree.nodes));
+        }
+        return tree;
     }
 
     std::ostream&
@@ -235,4 +326,5 @@ namespace treeck {
         }
         return s;
     }
-}
+
+} /* namespace treeck */

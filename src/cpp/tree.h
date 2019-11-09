@@ -22,22 +22,27 @@ namespace treeck {
 
     struct LtSplit : public SplitBase {
         using ValueT = double;
-
         ValueT split_value;
 
+        LtSplit();
         LtSplit(FeatId feat_id, ValueT split_value);
         std::tuple<RealDomain, RealDomain> get_domains() const;
-
         bool test(ValueT value) const;
+
+        template<typename Archive>
+        void serialize(Archive& archive);
     };
 
     struct EqSplit : public SplitBase {
         using ValueT = int;
-
         ValueT category;
 
+        EqSplit();
         EqSplit(FeatId feat_id, ValueT category);
         bool test(ValueT value) const;
+
+        template<typename Archive>
+        void serialize(Archive& archive);
     };
 
     using Split = std::variant<LtSplit, EqSplit>;
@@ -58,6 +63,9 @@ namespace treeck {
         };
 
         struct Node {
+            friend std::ostream& operator<<(std::ostream&, const Node&);
+            friend std::istream& operator>>(std::istream&, Node&);
+
             NodeId id;
             NodeId parent; /* root has itself as parent */
             int depth;
@@ -68,7 +76,12 @@ namespace treeck {
                 NodeLeaf leaf;
             };
 
+            Node();
             Node(NodeId id, NodeId parent, int depth);
+            bool is_leaf() const;
+
+            template<typename Archive>
+            void serialize(Archive& archive);
         };
 
     } /* namespace node */
@@ -117,6 +130,12 @@ namespace treeck {
         int num_nodes() const;
 
         NodeRef operator[](NodeId index);
+
+        template <typename Archive>
+        void serialize(Archive& archive);
+
+        std::string to_json();
+        static Tree from_json(const std::string& json);
     };
 
     std::ostream& operator<<(std::ostream& s, Tree& t);

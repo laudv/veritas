@@ -43,7 +43,7 @@ PYBIND11_MODULE(treeck, m) {
         .def("is_leaf", &NodeRef::is_leaf)
         .def("is_internal", &NodeRef::is_internal)
         .def("id", &NodeRef::id)
-        .def("left", &NodeRef::left, py::keep_alive<0, 1>()) // <Nurse, Patient> = <Return, This>, 
+        .def("left", &NodeRef::left, py::keep_alive<0, 1>())   // <Nurse, Patient> = <Return, This>, 
         .def("right", &NodeRef::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
         .def("parent", &NodeRef::parent, py::keep_alive<0, 1>())
         .def("tree_size", &NodeRef::tree_size)
@@ -57,6 +57,14 @@ PYBIND11_MODULE(treeck, m) {
     py::class_<Tree>(m, "Tree")
         .def(py::init<>())
         .def("root", &Tree::root, py::keep_alive<0, 1>())
+        .def("__getitem__", &Tree::operator[], py::keep_alive<0, 1>())
+        .def("__setitem__", [](Tree& tree, NodeId id, double leaf_value) {
+            NodeRef node = tree[id];
+            if (node.is_internal()) throw std::runtime_error("set leaf value of internal");
+            node.set_leaf_value(leaf_value);
+        })
         .def("num_nodes", &Tree::num_nodes)
+        .def("to_json", &Tree::to_json)
+        .def("from_json", &Tree::from_json)
         .def("__repr__", [](Tree& t) { return tostr(t); });
 }

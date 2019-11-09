@@ -13,3 +13,27 @@ class TestTree(unittest.TestCase):
 
         self.assertEqual([1.1,2.2], y)
 
+    def test_tree_json(self):
+        t = Tree()
+        t.root().split(LtSplit(1, 1.5))
+        t.root().left().split(LtSplit(2, 0.12))
+        t.root().left().left().set_leaf_value(0.25)
+        t.root().left().right().set_leaf_value(0.45)
+        t.root().right().set_leaf_value(2.2)
+
+        s = t.to_json();
+        tt = Tree.from_json(s);
+
+        self.assertTrue(tt[0].is_internal())
+        self.assertTrue(tt[1].is_internal())
+        self.assertEquals(tt[0].get_split().feat_id, 1)
+        self.assertEquals(tt[1].get_split().feat_id, 2)
+        self.assertEquals(tt[0].get_split().split_value, 1.5)
+        self.assertEquals(tt[1].get_split().split_value, 0.12)
+        self.assertTrue(tt[2].is_leaf())
+        self.assertTrue(tt[3].is_leaf())
+        self.assertTrue(tt[4].is_leaf())
+        self.assertEquals(tt[2].leaf_value(), 2.2)
+        self.assertEquals(tt[3].leaf_value(), 0.25)
+        self.assertEquals(tt[4].leaf_value(), 0.45)
+
