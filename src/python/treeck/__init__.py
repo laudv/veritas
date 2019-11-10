@@ -25,3 +25,21 @@ Tree.predict_single = __tree_predict_single
 Tree.predict = __tree_predict
 Tree.write = __tree_write
 Tree.read = __tree_read
+
+def __addtree_predict_single(zelf, example):
+    result = 0.0
+    for tree in zelf:
+        tree.predict_single(example)
+    return result
+
+def __addtree_iter(zelf):
+    for i in range(len(zelf)):
+        yield zelf[i]
+
+def __addtree_predict(zelf, examples):
+    return list(map(zelf.predict_single, examples))
+
+AddTree.__iter__ = __addtree_iter
+AddTree.predict_single = __addtree_predict_single
+AddTree.predict = __addtree_predict
+#AddTree.__getitem__ = __addtree___get_item

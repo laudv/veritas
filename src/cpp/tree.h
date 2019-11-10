@@ -140,6 +140,22 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& s, Tree& t);
 
+    class AddTree {
+        std::vector<Tree> trees;
+
+    public:
+        AddTree();
+
+        void add_tree(Tree tree);
+        size_t size() const;
+
+        Tree& operator[](size_t index);
+        const Tree& operator[](size_t index) const;
+
+        std::string to_json();
+        static AddTree from_json(const std::string& json);
+    };
+
 
 } /* namespace treeck */
 

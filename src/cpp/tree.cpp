@@ -327,4 +327,54 @@ namespace treeck {
         return s;
     }
 
+    AddTree::AddTree() {}
+
+    void
+    AddTree::add_tree(Tree tree)
+    {
+        trees.push_back(tree);
+    }
+
+    size_t
+    AddTree::size() const
+    {
+        return trees.size();
+    }
+
+    Tree&
+    AddTree::operator[](size_t index)
+    {
+        return trees[index];
+    }
+
+    const Tree&
+    AddTree::operator[](size_t index) const
+    {
+        return trees[index];
+    }
+
+    std::string
+    AddTree::to_json()
+    {
+        std::stringstream ss;
+        {
+            cereal::JSONOutputArchive ar(ss);
+            ar(cereal::make_nvp("trees", trees));
+        }
+        return ss.str();
+    }
+
+    AddTree
+    AddTree::from_json(const std::string& json)
+    {
+        std::istringstream ss(json);
+        AddTree addtree;
+        {
+            cereal::JSONInputArchive ar(ss);
+            ar(cereal::make_nvp("trees", addtree.trees));
+        }
+        return addtree;
+    }
+
+
 } /* namespace treeck */

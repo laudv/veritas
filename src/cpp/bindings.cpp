@@ -19,6 +19,9 @@ std::string tostr(T& o)
     return s.str();
 }
 
+//PYBIND11_MAKE_OPAQUE(AddTree)
+//PYBIND11_MAKE_OPAQUE(Tree)
+
 PYBIND11_MODULE(treeck, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
 
@@ -43,7 +46,7 @@ PYBIND11_MODULE(treeck, m) {
         .def("is_leaf", &NodeRef::is_leaf)
         .def("is_internal", &NodeRef::is_internal)
         .def("id", &NodeRef::id)
-        .def("left", &NodeRef::left, py::keep_alive<0, 1>())   // <Nurse, Patient> = <Return, This>, 
+        .def("left", &NodeRef::left, py::keep_alive<0, 1>())   // keep_alive<Nurse, Patient> = <Return, This>, 
         .def("right", &NodeRef::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
         .def("parent", &NodeRef::parent, py::keep_alive<0, 1>())
         .def("tree_size", &NodeRef::tree_size)
@@ -67,4 +70,12 @@ PYBIND11_MODULE(treeck, m) {
         .def("to_json", &Tree::to_json)
         .def("from_json", &Tree::from_json)
         .def("__repr__", [](Tree& t) { return tostr(t); });
+
+    py::class_<AddTree>(m, "AddTree")
+        .def(py::init<>())
+        .def("__len__", [](AddTree& at) { return at.size(); })
+        .def("add_tree", &AddTree::add_tree)
+        //.def("_get_tree_unsafe", [](AddTree& at, size_t i) { return &at[i]; })
+        .def("to_json", &AddTree::to_json)
+        .def("from_json", &AddTree::from_json);
 }
