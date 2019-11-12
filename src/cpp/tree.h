@@ -124,7 +124,6 @@ namespace treeck {
 
     public:
         Tree();
-        ~Tree();
         void split(NodeId node_id, Split split);
 
         NodeRef root();
@@ -146,6 +145,8 @@ namespace treeck {
         std::vector<Tree> trees;
 
     public:
+        double base_score;
+
         AddTree();
 
         size_t add_tree(Tree&& tree);

@@ -257,12 +257,6 @@ namespace treeck {
     Tree::Tree()
     {
         nodes.push_back(node::Node(0, 0, 0)); /* add a root leaf node */
-        std::cout << "hi from tree " << this << " nodes=" << nodes.data() << std::endl;
-    }
-
-    Tree::~Tree()
-    {
-        std::cout << "bye from tree " << this << " nodes=" << nodes.data() << std::endl;
     }
 
     NodeRef
@@ -344,7 +338,7 @@ namespace treeck {
         return s;
     }
 
-    AddTree::AddTree()
+    AddTree::AddTree() : trees{}, base_score(0.0)
     {
         trees.reserve(16);
     }
@@ -366,7 +360,6 @@ namespace treeck {
     Tree&
     AddTree::operator[](size_t index)
     {
-        std::cout << "accessing tree " << &trees[index] << std::endl;
         return trees[index];
     }
 
@@ -382,7 +375,8 @@ namespace treeck {
         std::stringstream ss;
         {
             cereal::JSONOutputArchive ar(ss);
-            ar(cereal::make_nvp("trees", trees));
+            ar(cereal::make_nvp("base_score", base_score),
+               cereal::make_nvp("trees", trees));
         }
         return ss.str();
     }
@@ -394,7 +388,8 @@ namespace treeck {
         AddTree addtree;
         {
             cereal::JSONInputArchive ar(ss);
-            ar(cereal::make_nvp("trees", addtree.trees));
+            ar(cereal::make_nvp("base_score", addtree.base_score),
+               cereal::make_nvp("trees", addtree.trees));
         }
         return addtree;
     }
