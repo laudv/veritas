@@ -124,10 +124,12 @@ namespace treeck {
 
     public:
         Tree();
+        ~Tree();
         void split(NodeId node_id, Split split);
 
         NodeRef root();
         int num_nodes() const;
+        std::tuple<unsigned long long int, unsigned long long int> id() const;
 
         NodeRef operator[](NodeId index);
 
@@ -146,7 +148,7 @@ namespace treeck {
     public:
         AddTree();
 
-        void add_tree(Tree tree);
+        size_t add_tree(Tree&& tree);
         size_t size() const;
 
         Tree& operator[](size_t index);

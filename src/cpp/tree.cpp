@@ -4,12 +4,14 @@
 #include <stack>
 #include <iostream>
 #include <sstream>
+#include <utility>
 
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <cereal/types/variant.hpp>
 
 #include "tree.h"
+//#include "opaque.h"
 
 namespace treeck {
 
@@ -255,6 +257,12 @@ namespace treeck {
     Tree::Tree()
     {
         nodes.push_back(node::Node(0, 0, 0)); /* add a root leaf node */
+        std::cout << "hi from tree " << this << " nodes=" << nodes.data() << std::endl;
+    }
+
+    Tree::~Tree()
+    {
+        std::cout << "bye from tree " << this << " nodes=" << nodes.data() << std::endl;
     }
 
     NodeRef
@@ -268,6 +276,15 @@ namespace treeck {
     {
         return nodes[0].tree_size;
     }
+
+    std::tuple<unsigned long long int, unsigned long long int>
+    Tree::id() const
+    {
+        return std::make_tuple(
+                reinterpret_cast<unsigned long long int>(this),
+                reinterpret_cast<unsigned long long int>(nodes.data()));
+    }
+
 
     NodeRef
     Tree::operator[](NodeId index)
@@ -327,12 +344,17 @@ namespace treeck {
         return s;
     }
 
-    AddTree::AddTree() {}
-
-    void
-    AddTree::add_tree(Tree tree)
+    AddTree::AddTree()
     {
-        trees.push_back(tree);
+        trees.reserve(16);
+    }
+
+    size_t
+    AddTree::add_tree(Tree&& tree)
+    {
+        size_t index = trees.size();
+        trees.push_back(std::forward<Tree>(tree));
+        return index;
     }
 
     size_t
@@ -344,6 +366,7 @@ namespace treeck {
     Tree&
     AddTree::operator[](size_t index)
     {
+        std::cout << "accessing tree " << &trees[index] << std::endl;
         return trees[index];
     }
 
