@@ -38,7 +38,7 @@ namespace treeck {
             , parent(parent)
             , depth(depth)
             , tree_size(1)
-            , leaf{std::numeric_limits<double>::quiet_NaN()} {}
+            , leaf{} {}
 
         template <typename LeafT>
         bool

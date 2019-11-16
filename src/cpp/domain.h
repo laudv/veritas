@@ -2,6 +2,7 @@
 #define TREECK_DOMAIN_H
 
 #include <tuple>
+#include <ostream>
 
 namespace treeck {
 
@@ -15,7 +16,10 @@ namespace treeck {
         bool contains(double value) const;
         bool overlaps(const RealDomain& other) const;
         std::tuple<RealDomain, RealDomain> split(double value) const;
+
     };
+
+    std::ostream& operator<<(std::ostream& s, const RealDomain& d);
 
 } /* namespace treeck */
 

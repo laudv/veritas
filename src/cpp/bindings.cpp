@@ -34,7 +34,8 @@ PYBIND11_MODULE(treeck, m) {
         .def_readonly("hi", &RealDomain::hi)
         .def("contains", &RealDomain::contains)
         .def("overlaps", &RealDomain::overlaps)
-        .def("split", &RealDomain::split);
+        .def("split", &RealDomain::split)
+        .def("__repr__", [](RealDomain& d) { return tostr(d); });
 
     py::class_<LtSplit>(m, "LtSplit")
         .def(py::init<FeatId, LtSplit::ValueT>())
@@ -104,7 +105,8 @@ PYBIND11_MODULE(treeck, m) {
         .def("from_json", &AddTree::from_json);
 
     py::class_<SearchSpace>(m, "SearchSpace")
-        .def(py::init<std::shared_ptr<AddTree>>());
+        .def(py::init<std::shared_ptr<AddTree>>())
+        .def("split", [](SearchSpace& sp) { sp.split(NumDisabledNodesMeasure(), SizeOfDomTreeStopCond{3}); });
 
 } /* PYBIND11_MODULE */
 
