@@ -142,29 +142,8 @@ namespace treeck {
         static Tree from_json(const std::string& json);
     };
 
-    //template <> class Tree<double>;
-
     template <typename LeafT>
     std::ostream& operator<<(std::ostream& s, Tree<LeafT>& t);
-
-    class AddTree {
-        std::vector<Tree<double>> trees;
-
-    public:
-        double base_score;
-
-        AddTree();
-
-        size_t add_tree(Tree<double>&& tree);
-        size_t size() const;
-
-        Tree<double>& operator[](size_t index);
-        const Tree<double>& operator[](size_t index) const;
-
-        std::string to_json();
-        static AddTree from_json(const std::string& json);
-    };
-
 
 } /* namespace treeck */
 
