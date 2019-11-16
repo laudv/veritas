@@ -6,7 +6,10 @@
 namespace treeck {
 
     class AddTree {
+    public:
         using TreeT = Tree<double>;
+
+    private:
         std::vector<TreeT> trees;
 
     public:

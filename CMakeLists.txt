@@ -10,6 +10,8 @@ SET(SOURCES
     "${SOURCE_DIR}/bindings.cpp"
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
+    "${SOURCE_DIR}/addtree.cpp"
+    "${SOURCE_DIR}/searchspace.cpp"
     )
 
 #SET(TEST_DIR "tests")

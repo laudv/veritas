@@ -9,7 +9,7 @@
 
 #include "domain.h"
 #include "tree.h"
-#include "treeinfo.h"
+#include "addtree.h"
 #include "searchspace.h"
 //#include "opaque.h"
 
@@ -94,7 +94,7 @@ PYBIND11_MODULE(treeck, m) {
         .def("__repr__", [](TreeRef& r) { return tostr(r.get()); });
 
 
-    py::class_<AddTree>(m, "AddTree")
+    py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("__len__", [](AddTree& at) { return at.size(); })
@@ -102,4 +102,10 @@ PYBIND11_MODULE(treeck, m) {
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("to_json", &AddTree::to_json)
         .def("from_json", &AddTree::from_json);
-}
+
+    py::class_<SearchSpace>(m, "SearchSpace")
+        .def(py::init<std::shared_ptr<AddTree>>());
+
+} /* PYBIND11_MODULE */
+
+
