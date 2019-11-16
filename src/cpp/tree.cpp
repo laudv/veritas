@@ -11,6 +11,7 @@
 #include <cereal/types/variant.hpp>
 
 #include "tree.h"
+#include "util.h"
 //#include "opaque.h"
 
 namespace treeck {
@@ -61,12 +62,6 @@ namespace treeck {
         archive(CEREAL_NVP(feat_id), CEREAL_NVP(category));
     }
 
-    namespace util {
-        template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
-        template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
-        template<class T> struct always_false : std::false_type {};
-    }
-
     std::ostream&
     operator<<(std::ostream& s, const Split& split)
     {
@@ -80,23 +75,28 @@ namespace treeck {
 
     namespace node {
 
-        Node::Node() : Node(-1, -1, -1) {}
-        Node::Node(NodeId id, NodeId parent, int depth)
+        template <typename LeafT>
+        Node<LeafT>::Node() : Node(-1, -1, -1) {}
+
+        template <typename LeafT>
+        Node<LeafT>::Node(NodeId id, NodeId parent, int depth)
             : id(id)
             , parent(parent)
             , depth(depth)
             , tree_size(1)
             , leaf{std::numeric_limits<double>::quiet_NaN()} {}
 
+        template <typename LeafT>
         bool
-        Node::is_leaf() const
+        Node<LeafT>::is_leaf() const
         {
             return tree_size == 1;
         }
 
+        template <typename LeafT>
         template <typename Archive>
         void
-        Node::serialize(Archive& archive)
+        Node<LeafT>::serialize(Archive& archive)
         {
             archive(
                 CEREAL_NVP(id),
@@ -116,114 +116,132 @@ namespace treeck {
             }
         }
 
+        template class Node<double>;
+
     } /* namespace node */
 
-    NodeRef::NodeRef(TreeP tree, NodeId node_id)
+    template <typename LeafT>
+    NodeRef<LeafT>::NodeRef(TreeP tree, NodeId node_id)
         : tree(tree)
         , node_id(node_id) {}
 
-    const node::Node&
-    NodeRef::node() const
+    template <typename LeafT>
+    const node::Node<LeafT>&
+    NodeRef<LeafT>::node() const
     {
-        return tree->nodes[node_id];
+        return tree->nodes_[node_id];
     }
 
-    node::Node&
-    NodeRef::node()
+    template <typename LeafT>
+    node::Node<LeafT>&
+    NodeRef<LeafT>::node()
     {
-        return tree->nodes[node_id];
+        return tree->nodes_[node_id];
     }
 
+    template <typename LeafT>
     bool
-    NodeRef::is_root() const
+    NodeRef<LeafT>::is_root() const
     {
         return node().parent == node().id;
     }
 
+    template <typename LeafT>
     bool
-    NodeRef::is_leaf() const
+    NodeRef<LeafT>::is_leaf() const
     {
         return node().is_leaf();
     }
 
+    template <typename LeafT>
     bool
-    NodeRef::is_internal() const
+    NodeRef<LeafT>::is_internal() const
     {
         return !is_leaf();
     }
 
+    template <typename LeafT>
     NodeId
-    NodeRef::id() const
+    NodeRef<LeafT>::id() const
     {
         return node().id;
     }
 
-    NodeRef
-    NodeRef::left() const
+    template <typename LeafT>
+    NodeRef<LeafT>
+    NodeRef<LeafT>::left() const
     {
         if (is_leaf()) throw std::runtime_error("left of leaf");
         return NodeRef(tree, node().internal.left);
     }
 
-    NodeRef
-    NodeRef::right() const
+    template <typename LeafT>
+    NodeRef<LeafT>
+    NodeRef<LeafT>::right() const
     {
         if (is_leaf()) throw std::runtime_error("right of leaf");
         return NodeRef(tree, node().internal.left + 1);
     }
 
-    NodeRef
-    NodeRef::parent() const
+    template <typename LeafT>
+    NodeRef<LeafT>
+    NodeRef<LeafT>::parent() const
     {
         if (is_root()) throw std::runtime_error("parent of root");
         return NodeRef(tree, node().parent);
     }
 
+    template <typename LeafT>
     int
-    NodeRef::tree_size() const
+    NodeRef<LeafT>::tree_size() const
     {
         return node().tree_size;
     }
 
+    template <typename LeafT>
     int
-    NodeRef::depth() const
+    NodeRef<LeafT>::depth() const
     {
         return node().depth;
     }
 
+    template <typename LeafT>
     const Split&
-    NodeRef::get_split() const
+    NodeRef<LeafT>::get_split() const
     {
         if (is_leaf()) throw std::runtime_error("split of leaf");
         return node().internal.split;
     }
 
-    double
-    NodeRef::leaf_value() const
+    template <typename LeafT>
+    LeafT
+    NodeRef<LeafT>::leaf_value() const
     {
         if (is_internal()) throw std::runtime_error("leaf_value of internal");
         return node().leaf.value;
     }
 
+    template <typename LeafT>
     void
-    NodeRef::set_leaf_value(double value)
+    NodeRef<LeafT>::set_leaf_value(LeafT value)
     {
         if (is_internal()) throw std::runtime_error("set leaf_value of internal");
         node().leaf.value = value;
     }
 
+    template <typename LeafT>
     void
-    NodeRef::split(Split split)
+    NodeRef<LeafT>::split(Split split)
     {
         if (is_internal()) throw std::runtime_error("split internal");
 
-        NodeId left_id = tree->nodes.size();
+        NodeId left_id = tree->nodes_.size();
 
-        node::Node left(left_id,      id(), depth() + 1);
-        node::Node right(left_id + 1, id(), depth() + 1);
+        node::Node<LeafT> left(left_id,      id(), depth() + 1);
+        node::Node<LeafT> right(left_id + 1, id(), depth() + 1);
         
-        tree->nodes.push_back(left);
-        tree->nodes.push_back(right);
+        tree->nodes_.push_back(left);
+        tree->nodes_.push_back(right);
 
         node().internal.split = split;
         node().internal.left = left_id;
@@ -237,8 +255,9 @@ namespace treeck {
         }
     }
 
+    template <typename LeafT>
     std::ostream&
-    operator<<(std::ostream& s, const NodeRef& n)
+    operator<<(std::ostream& s, const NodeRef<LeafT>& n)
     {
         if (n.is_leaf())
             return s << "LeafNode("
@@ -254,77 +273,89 @@ namespace treeck {
                 << ')';
     }
 
-    Tree::Tree()
+    template class NodeRef<double>;
+    template std::ostream& operator<<(std::ostream&, const NodeRef<double>&);
+
+
+    template <typename LeafT>
+    Tree<LeafT>::Tree()
     {
-        nodes.push_back(node::Node(0, 0, 0)); /* add a root leaf node */
+        nodes_.push_back(node::Node<LeafT>(0, 0, 0)); /* add a root leaf node */
     }
 
-    NodeRef
-    Tree::root()
+    template <typename LeafT>
+    NodeRef<LeafT>
+    Tree<LeafT>::root()
     {
         return (*this)[0];
     }
 
+    template <typename LeafT>
     int
-    Tree::num_nodes() const
+    Tree<LeafT>::num_nodes() const
     {
-        return nodes[0].tree_size;
+        return nodes_[0].tree_size;
     }
 
+    template <typename LeafT>
     std::tuple<unsigned long long int, unsigned long long int>
-    Tree::id() const
+    Tree<LeafT>::id() const
     {
         return std::make_tuple(
                 reinterpret_cast<unsigned long long int>(this),
-                reinterpret_cast<unsigned long long int>(nodes.data()));
+                reinterpret_cast<unsigned long long int>(nodes_.data()));
     }
 
-
-    NodeRef
-    Tree::operator[](NodeId index)
+    template <typename LeafT>
+    NodeRef<LeafT>
+    Tree<LeafT>::operator[](NodeId index)
     {
         return NodeRef(this, index);
     }
 
+    template <typename LeafT>
     template <typename Archive>
     void
-    Tree::serialize(Archive& archive)
+    Tree<LeafT>::serialize(Archive& archive)
     {
-        archive(cereal::make_nvp("tree_nodes", this->nodes));
+        archive(cereal::make_nvp("tree_nodes", this->nodes_));
     }
 
+    template <typename LeafT>
     std::string
-    Tree::to_json()
+    Tree<LeafT>::to_json()
     {
         std::stringstream ss;
         {
             cereal::JSONOutputArchive ar(ss);
-            ar(cereal::make_nvp("tree_nodes", this->nodes)); // destructor must run!
+            ar(cereal::make_nvp("tree_nodes", this->nodes_)); // destructor must run!
         }
         return ss.str();
     }
 
-    Tree
-    Tree::from_json(const std::string& json)
+    template <typename LeafT>
+    Tree<LeafT>
+    Tree<LeafT>::from_json(const std::string& json)
     {
         std::istringstream ss(json);
-        Tree tree;
+        Tree<LeafT> tree;
         {
             cereal::JSONInputArchive ar(ss);
-            ar(cereal::make_nvp("tree_nodes", tree.nodes));
+            ar(cereal::make_nvp("tree_nodes", tree.nodes_));
         }
         return tree;
     }
 
+    template <typename LeafT>
     std::ostream&
-    operator<<(std::ostream& s, Tree& t)
+    operator<<(std::ostream& s, Tree<LeafT>& t)
     {
         s << "Tree(num_nodes=" << t.num_nodes() << ')' << std::endl;
-        std::stack<NodeRef> stack;
+        std::stack<NodeRef<LeafT>> stack;
         stack.push(t.root());
         while (!stack.empty())
         {
-            NodeRef n = stack.top(); stack.pop();
+            NodeRef<LeafT> n = stack.top(); stack.pop();
             s << "  ";
             for (int i = 0; i < n.depth(); ++i)
                 s << " | ";
@@ -338,16 +369,20 @@ namespace treeck {
         return s;
     }
 
+    template class Tree<double>;
+    template std::ostream& operator<<(std::ostream&, Tree<double>&);
+
+
     AddTree::AddTree() : trees{}, base_score(0.0)
     {
         trees.reserve(16);
     }
 
     size_t
-    AddTree::add_tree(Tree&& tree)
+    AddTree::add_tree(Tree<double>&& tree)
     {
         size_t index = trees.size();
-        trees.push_back(std::forward<Tree>(tree));
+        trees.push_back(std::forward<Tree<double>>(tree));
         return index;
     }
 
@@ -357,13 +392,13 @@ namespace treeck {
         return trees.size();
     }
 
-    Tree&
+    Tree<double>&
     AddTree::operator[](size_t index)
     {
         return trees[index];
     }
 
-    const Tree&
+    const Tree<double>&
     AddTree::operator[](size_t index) const
     {
         return trees[index];
@@ -393,6 +428,7 @@ namespace treeck {
         }
         return addtree;
     }
+
 
 
 } /* namespace treeck */

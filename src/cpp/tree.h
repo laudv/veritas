@@ -49,12 +49,14 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& strm, const Split& s);
 
+    template <typename LeafT>
     class Tree;
 
     namespace node {
 
+        template <typename LeafT>
         struct NodeLeaf {
-            double value;
+            LeafT value;
         };
 
         struct NodeInternal {
@@ -62,10 +64,8 @@ namespace treeck {
             Split split;
         };
 
+        template <typename LeafT>
         struct Node {
-            friend std::ostream& operator<<(std::ostream&, const Node&);
-            friend std::istream& operator>>(std::istream&, Node&);
-
             NodeId id;
             NodeId parent; /* root has itself as parent */
             int depth;
@@ -73,7 +73,7 @@ namespace treeck {
 
             union {
                 NodeInternal internal;
-                NodeLeaf leaf;
+                NodeLeaf<LeafT> leaf;
             };
 
             Node();
@@ -86,14 +86,15 @@ namespace treeck {
 
     } /* namespace node */
 
+    template <typename LeafT>
     class NodeRef {
-        using TreeP = Tree *;
+        using TreeP = Tree<LeafT> *;
 
         TreeP tree;
         int node_id;
 
-        const node::Node& node() const;
-        node::Node& node();
+        const node::Node<LeafT>& node() const;
+        node::Node<LeafT>& node();
 
     public:
         NodeRef(TreeP tree, NodeId node_id);
@@ -103,34 +104,36 @@ namespace treeck {
         bool is_internal() const;
 
         NodeId id() const;
-        NodeRef left() const; /* internal only */
-        NodeRef right() const; /* internal only */
-        NodeRef parent() const;
+        NodeRef<LeafT> left() const; /* internal only */
+        NodeRef<LeafT> right() const; /* internal only */
+        NodeRef<LeafT> parent() const;
 
         int tree_size() const;
         int depth() const;
         const Split& get_split() const; /* internal only */
-        double leaf_value() const; /* leaf only */
+        LeafT leaf_value() const; /* leaf only */
 
-        void set_leaf_value(double value); /* leaf only */
+        void set_leaf_value(LeafT value); /* leaf only */
         void split(Split split); /* leaf only */
     };
 
-    std::ostream& operator<<(std::ostream& s, const NodeRef& n);
+    template <typename LeafT>
+    std::ostream& operator<<(std::ostream& s, const NodeRef<LeafT>& n);
 
+    template <typename LeafT>
     class Tree {
-        friend class NodeRef;
-        std::vector<node::Node> nodes;
+        friend class NodeRef<LeafT>;
+        std::vector<node::Node<LeafT>> nodes_;
 
     public:
         Tree();
         void split(NodeId node_id, Split split);
 
-        NodeRef root();
+        NodeRef<LeafT> root();
         int num_nodes() const;
         std::tuple<unsigned long long int, unsigned long long int> id() const;
 
-        NodeRef operator[](NodeId index);
+        NodeRef<LeafT> operator[](NodeId index);
 
         template <typename Archive>
         void serialize(Archive& archive);
@@ -139,21 +142,24 @@ namespace treeck {
         static Tree from_json(const std::string& json);
     };
 
-    std::ostream& operator<<(std::ostream& s, Tree& t);
+    //template <> class Tree<double>;
+
+    template <typename LeafT>
+    std::ostream& operator<<(std::ostream& s, Tree<LeafT>& t);
 
     class AddTree {
-        std::vector<Tree> trees;
+        std::vector<Tree<double>> trees;
 
     public:
         double base_score;
 
         AddTree();
 
-        size_t add_tree(Tree&& tree);
+        size_t add_tree(Tree<double>&& tree);
         size_t size() const;
 
-        Tree& operator[](size_t index);
-        const Tree& operator[](size_t index) const;
+        Tree<double>& operator[](size_t index);
+        const Tree<double>& operator[](size_t index) const;
 
         std::string to_json();
         static AddTree from_json(const std::string& json);
