@@ -13,10 +13,10 @@ namespace treeck {
         RealDomain();
         RealDomain(double lo, double hi);
         
+        bool is_everything() const;
         bool contains(double value) const;
         bool overlaps(const RealDomain& other) const;
         std::tuple<RealDomain, RealDomain> split(double value) const;
-
     };
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d);

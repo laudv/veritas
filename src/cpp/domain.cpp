@@ -24,6 +24,13 @@ namespace treeck {
     }
 
     bool
+    RealDomain::is_everything() const
+    {
+        return lo == -std::numeric_limits<double>::infinity()
+            && hi == std::numeric_limits<double>::infinity();
+    }
+
+    bool
     RealDomain::contains(double value) const
     {
         return this->lo <= value && value < this->hi;

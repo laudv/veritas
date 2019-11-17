@@ -176,23 +176,39 @@ namespace treeck {
         domains.resize(num_features_);
         std::fill(domains.begin(), domains.end(), RealDomain());
         Tree<LeafInfo>::MRef leaf = domtree_[node_id];
-        Tree<LeafInfo>::MRef node = leaf, prev_node = leaf;
+        Tree<LeafInfo>::MRef node = leaf;
         while (!node.is_root())
         {
+            Tree<LeafInfo>::MRef child_node = node;
             node = node.parent();
 
             LtSplit split = std::get<LtSplit>(node.get_split());
             double sval = split.split_value;
 
-            auto old_dom = domains[split.feat_id];
             auto& dom = domains[split.feat_id];
-            bool is_left = prev_node.id() == node.left().id();
-            if (is_left && dom.hi > sval) dom.hi = sval;
-            else if (dom.lo < sval)       dom.lo = sval;
-
-            std::cout << "DOMAIN[" << split.feat_id << "]: " << old_dom << " => " << domains[split.feat_id] << std::endl;
-            prev_node = node;
+            bool is_left = child_node.id() == node.left().id();
+            std::cout << "child_node.id() = " << child_node.id() << ", node.left().id() = " << node.left().id() << std::endl;
+            if (is_left)
+            {
+                std::cout << "DEBUG DOMAIN left " << split << " - " << dom << " id=" << child_node.id() << "->" << node.id() << std::endl;
+                if (dom.hi > sval) dom.hi = sval;
+                std::cout << "               -> " << dom << std::endl;
+            }
+            else
+            {
+                std::cout << "DEBUG DOMAIN right " << split << " - " << dom << " id=" << child_node.id() << "->" << node.id() << std::endl;
+                if (dom.lo < sval) dom.lo = sval;
+                std::cout << "                -> " << dom << std::endl;
+            }
         }
+
+        std::cout << "DOMAIN of node " << node_id << std::endl;
+        for (size_t i = 0; i < domains.size(); ++i)
+        {
+            if (domains[i].is_everything()) continue;
+            std::cout << " - [" << i << "] " << domains[i] << std::endl;
+        }
+        std::cout << std::endl;
     }
     
     void
@@ -215,9 +231,10 @@ namespace treeck {
             auto node = domtree_[node_id];
             Split dom_split = node.leaf_value().dom_split;
 
-            std::cout << "SPLITTING " << node_id << " " << dom_split << std::endl;
-
             node.split(dom_split);
+
+            std::cout << "SPLITTING " << node_id << " " << dom_split << " into "
+                << node.left().id() << " and " << node.right().id() << std::endl;
 
             // compute scores of left and right
             compute_best_score(node.left().id(), measure);
@@ -232,51 +249,6 @@ namespace treeck {
             std::cout << "leafs_:";
             for (auto x : leafs_) std::cout << " " << x << '(' << domtree_[x].leaf_value().score << ')';
             std::cout << std::endl;
-
-            //for (size_t leafs_index = 0; leafs_index < leafs_.size(); ++leafs_index)
-            //{
-            //    get_domains(leafs_[leafs_index], domains);
-
-            //    std::cout << "LEAF " << leafs_[leafs_index] << std::endl;
-            //    for (auto dom : domains)
-            //        std::cout << "  - " << dom << std::endl;
-            //    std::cout << std::endl;
-
-            //    for (auto&& [feat_id, splits] : splits_map_)
-            //    for (double split_value : splits)
-            //    {
-            //        // check if split in domain
-            //        RealDomain dom = domains[feat_id];
-            //        if (dom.lo == split_value || !dom.contains(split_value)) continue;
-
-            //        // compute score for left / right
-            //        double score = measure(*this, domains, LtSplit(feat_id, split_value));
-
-            //        // replace details about max if better
-            //        if (score > max_score)
-            //        {
-            //            std::cout << "MAX F" << feat_id << "<" << split_value
-            //                << " : " << score << " > " << max_score << std::endl;
-
-            //            max_leafs_index = leafs_index;
-            //            max_feat_id = feat_id;
-            //            max_split_value = split_value;
-            //            max_score = score;
-            //        }
-            //    }
-            //}
-
-            //NodeId max_leaf = leafs_[max_leafs_index];
-            //std::cout << "max_leaf_id=" << max_leaf << " max_feat_id=" << max_feat_id << " max_split_value=" << max_split_value << std::endl;
-            //domtree_[max_leaf].split(LtSplit(max_feat_id, max_split_value));
-            //leafs_[max_leafs_index] = domtree_[max_leaf].left().id();
-            //leafs_.push_back(domtree_[max_leaf].right().id());
-
-            //std::cout << domtree_ << std::endl;
-            //std::cout << "LEAFS=";
-            //for (auto leaf : leafs_)
-            //    std::cout << leaf << " ";
-            //std::cout << std::endl;
         }
 
         std::cout << "stopping condition" << std::endl;
@@ -292,17 +264,18 @@ namespace treeck {
         RealDomain dom_parent = domains[dom_split.feat_id];
         std::tie(dom_left, dom_right) = dom_parent.split(dom_split.split_value);
 
+        int unreachable_parent = count_unreachable_nodes(sp.addtree(), domains);
         domains[dom_split.feat_id] = dom_left;
         int unreachable_left = count_unreachable_nodes(sp.addtree(), domains);
         domains[dom_split.feat_id] = dom_right;
         int unreachable_right = count_unreachable_nodes(sp.addtree(), domains);
         domains[dom_split.feat_id] = dom_parent; // ensure we undo domain changes
 
-        double a = static_cast<double>(unreachable_left);
-        double b = static_cast<double>(unreachable_right);
+        double a = static_cast<double>(unreachable_left - unreachable_parent);
+        double b = static_cast<double>(unreachable_right - unreachable_parent);
         double score = (a * b) / (a + b);
 
-        //std::cout << "MEASURE: " << dom_split << ": L " << unreachable_left << ", R " << unreachable_right << " -> " << score << std::endl;
+        //std::cout << "MEASURE: " << dom_split << ": L " << a << ", R " << b << " -> " << score << std::endl;
 
         return score;
     }
