@@ -22,8 +22,10 @@ namespace treeck {
     class SearchSpace {
     public:
         using TreeT = Tree<LeafInfo>;
+        using Domains = std::vector<RealDomain>;
+
         using SplitMap = std::unordered_map<FeatId, std::vector<double>>;
-        using MeasureF = std::function<double(const SearchSpace&)>;
+        using MeasureF = std::function<double(const SearchSpace&, const Domains& domains, LtSplit split)>;
         using StopCondF = std::function<bool(const SearchSpace&)>;
 
     private:
@@ -40,17 +42,20 @@ namespace treeck {
         const AddTree& addtree() const;
         const TreeT& domtree() const;
         const std::vector<NodeId>& leafs() const;
-        void get_domains(NodeId node_id, std::vector<RealDomain>& domains);
+        void get_domains(NodeId node_id, Domains& domains);
 
         void split(MeasureF measure, StopCondF cond);
     };
 
     struct NumDisabledNodesMeasure {
-        double operator()(const SearchSpace& sp);
+        double operator()(
+                const SearchSpace& sp,
+                const SearchSpace::Domains& domains,
+                LtSplit split);
     };
 
-    struct SizeOfDomTreeStopCond {
-        int max_num_of_nodes;
+    struct NumDomTreeLeafsStopCond {
+        size_t max_num_leafs;
         bool operator()(const SearchSpace& sp);
     };
 

@@ -129,7 +129,7 @@ namespace treeck {
     }
 
     void
-    SearchSpace::get_domains(NodeId node_id, std::vector<RealDomain>& domains)
+    SearchSpace::get_domains(NodeId node_id, Domains& domains)
     {
         domains.resize(num_features_);
         std::fill(domains.begin(), domains.end(), RealDomain());
@@ -163,7 +163,7 @@ namespace treeck {
         if (domtree_.num_nodes() > 1) { throw std::runtime_error("already split"); }
 
         leafs_.push_back(domtree_.root().id());
-        std::vector<RealDomain> domains(num_features_);
+        Domains domains(num_features_);
 
         while (!cond(*this))
         {
@@ -188,19 +188,19 @@ namespace treeck {
                     RealDomain dom = domains[feat_id];
                     if (dom.lo == split_value || !dom.contains(split_value)) continue;
 
-                    std::cout << "    feat_id=" << feat_id << ", " << "split_value=" << split_value << std::endl;
-
                     // compute score for left / right
-                    double score = 0.0; // TODO compute score
+                    double score = measure(*this, domains, LtSplit(feat_id, split_value));
 
                     // replace details about max if better
                     if (score > max_score)
                     {
+                        std::cout << "MAX F" << feat_id << "<" << split_value
+                            << " : " << score << " > " << max_score << std::endl;
+
                         max_leafs_index = leafs_index;
                         max_feat_id = feat_id;
                         max_split_value = split_value;
                         max_score = score;
-                        std::cout << "MAX " << max_feat_id << ", " << max_split_value << std::endl;
                     }
                 }
             }
@@ -221,15 +221,33 @@ namespace treeck {
     }
 
     double
-    NumDisabledNodesMeasure::operator()(const SearchSpace& sp)
+    NumDisabledNodesMeasure::operator()(
+            const SearchSpace& sp,
+            const SearchSpace::Domains& domains,
+            LtSplit split)
     {
-        return 1.0;
+        int disabled_left = 0;
+        int disabled_right = 0;
+        int enabled_both = 0;
+
+        for (const AddTree::TreeT& tree : sp.addtree().trees())
+        {
+            for (NodeId node_id = 0; node_id < tree.num_nodes(); ++node_id)
+            {
+                //auto node = tree[node_id];
+                // for each node, look at split, get feat_id, get domain of
+                // feature, check if left/right are possible in domain
+                // if feat_id == split.feat_id { check if possible left/right => update stats }
+            }
+        }
+
+        return 0.0;
     }
 
     bool
-    SizeOfDomTreeStopCond::operator()(const SearchSpace& sp)
+    NumDomTreeLeafsStopCond::operator()(const SearchSpace& sp)
     {
-        return sp.domtree().num_nodes() > max_num_of_nodes;
+        return sp.leafs().size() > max_num_leafs;
     }
 
 } /* namespace treeck */

@@ -106,7 +106,7 @@ PYBIND11_MODULE(treeck, m) {
 
     py::class_<SearchSpace>(m, "SearchSpace")
         .def(py::init<std::shared_ptr<AddTree>>())
-        .def("split", [](SearchSpace& sp) { sp.split(NumDisabledNodesMeasure(), SizeOfDomTreeStopCond{3}); });
+        .def("split", [](SearchSpace& sp) { sp.split(NumDisabledNodesMeasure(), NumDomTreeLeafsStopCond{2}); });
 
 } /* PYBIND11_MODULE */
 
