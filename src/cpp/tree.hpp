@@ -27,7 +27,7 @@ namespace treeck {
         archive(CEREAL_NVP(feat_id), CEREAL_NVP(category));
     }
 
-    namespace node {
+    namespace inner {
 
         template <typename LeafT>
         Node<LeafT>::Node() : Node(-1, -1, -1) {}
@@ -70,130 +70,133 @@ namespace treeck {
             }
         }
 
-    } /* namespace node */
+    } /* namespace inner */
 
-    template <typename LeafT>
-    NodeRef<LeafT>::NodeRef(TreeP tree, NodeId node_id)
-        : tree(tree)
-        , node_id(node_id) {}
+    template <typename RefT>
+    NodeRef<RefT>::NodeRef(TreeP tree, NodeId node_id)
+        : tree_(tree)
+        , node_id_(node_id) {}
 
-    template <typename LeafT>
-    const node::Node<LeafT>&
-    NodeRef<LeafT>::node() const
+    template <typename RefT>
+    const inner::Node<typename NodeRef<RefT>::LeafT>&
+    NodeRef<RefT>::node() const
     {
-        return tree->nodes_[node_id];
+        return tree_->nodes_[node_id_];
     }
 
-    template <typename LeafT>
-    node::Node<LeafT>&
-    NodeRef<LeafT>::node()
+    template <typename RefT>
+    template <typename T>
+    std::enable_if_t<T::is_mut_type::value, inner::Node<typename RefT::LeafT>&>
+    NodeRef<RefT>::node()
     {
-        return tree->nodes_[node_id];
+        return tree_->nodes_[node_id_];
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     bool
-    NodeRef<LeafT>::is_root() const
+    NodeRef<RefT>::is_root() const
     {
         return node().parent == node().id;
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     bool
-    NodeRef<LeafT>::is_leaf() const
+    NodeRef<RefT>::is_leaf() const
     {
         return node().is_leaf();
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     bool
-    NodeRef<LeafT>::is_internal() const
+    NodeRef<RefT>::is_internal() const
     {
         return !is_leaf();
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     NodeId
-    NodeRef<LeafT>::id() const
+    NodeRef<RefT>::id() const
     {
         return node().id;
     }
 
-    template <typename LeafT>
-    NodeRef<LeafT>
-    NodeRef<LeafT>::left() const
+    template <typename RefT>
+    NodeRef<RefT>
+    NodeRef<RefT>::left() const
     {
         if (is_leaf()) throw std::runtime_error("left of leaf");
-        return NodeRef(tree, node().internal.left);
+        return NodeRef(tree_, node().internal.left);
     }
 
-    template <typename LeafT>
-    NodeRef<LeafT>
-    NodeRef<LeafT>::right() const
+    template <typename RefT>
+    NodeRef<RefT>
+    NodeRef<RefT>::right() const
     {
         if (is_leaf()) throw std::runtime_error("right of leaf");
-        return NodeRef(tree, node().internal.left + 1);
+        return NodeRef(tree_, node().internal.left + 1);
     }
 
-    template <typename LeafT>
-    NodeRef<LeafT>
-    NodeRef<LeafT>::parent() const
+    template <typename RefT>
+    NodeRef<RefT>
+    NodeRef<RefT>::parent() const
     {
         if (is_root()) throw std::runtime_error("parent of root");
-        return NodeRef(tree, node().parent);
+        return NodeRef(tree_, node().parent);
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     int
-    NodeRef<LeafT>::tree_size() const
+    NodeRef<RefT>::tree_size() const
     {
         return node().tree_size;
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     int
-    NodeRef<LeafT>::depth() const
+    NodeRef<RefT>::depth() const
     {
         return node().depth;
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     const Split&
-    NodeRef<LeafT>::get_split() const
+    NodeRef<RefT>::get_split() const
     {
         if (is_leaf()) throw std::runtime_error("split of leaf");
         return node().internal.split;
     }
 
-    template <typename LeafT>
-    LeafT
-    NodeRef<LeafT>::leaf_value() const
+    template <typename RefT>
+    typename RefT::LeafT
+    NodeRef<RefT>::leaf_value() const
     {
         if (is_internal()) throw std::runtime_error("leaf_value of internal");
         return node().leaf.value;
     }
 
-    template <typename LeafT>
-    void
-    NodeRef<LeafT>::set_leaf_value(LeafT value)
+    template <typename RefT>
+    template <typename T>
+    std::enable_if_t<T::is_mut_type::value, void>
+    NodeRef<RefT>::set_leaf_value(LeafT value)
     {
         if (is_internal()) throw std::runtime_error("set leaf_value of internal");
         node().leaf.value = value;
     }
 
-    template <typename LeafT>
-    void
-    NodeRef<LeafT>::split(Split split)
+    template <typename RefT>
+    template <typename T>
+    std::enable_if_t<T::is_mut_type::value, void>
+    NodeRef<RefT>::split(Split split)
     {
         if (is_internal()) throw std::runtime_error("split internal");
 
-        NodeId left_id = tree->nodes_.size();
+        NodeId left_id = tree_->nodes_.size();
 
-        node::Node<LeafT> left(left_id,      id(), depth() + 1);
-        node::Node<LeafT> right(left_id + 1, id(), depth() + 1);
+        inner::Node<LeafT> left(left_id,      id(), depth() + 1);
+        inner::Node<LeafT> right(left_id + 1, id(), depth() + 1);
         
-        tree->nodes_.push_back(left);
-        tree->nodes_.push_back(right);
+        tree_->nodes_.push_back(left);
+        tree_->nodes_.push_back(right);
 
         node().internal.split = split;
         node().internal.left = left_id;
@@ -207,9 +210,9 @@ namespace treeck {
         }
     }
 
-    template <typename LeafT>
+    template <typename RefT>
     std::ostream&
-    operator<<(std::ostream& s, const NodeRef<LeafT>& n)
+    operator<<(std::ostream& s, const NodeRef<RefT>& n)
     {
         if (n.is_leaf())
             return s << "LeafNode("
@@ -229,11 +232,18 @@ namespace treeck {
     template <typename LeafT>
     Tree<LeafT>::Tree()
     {
-        nodes_.push_back(node::Node<LeafT>(0, 0, 0)); /* add a root leaf node */
+        nodes_.push_back(inner::Node<LeafT>(0, 0, 0)); /* add a root leaf node */
     }
 
     template <typename LeafT>
-    NodeRef<LeafT>
+    typename Tree<LeafT>::CRef
+    Tree<LeafT>::root() const
+    {
+        return (*this)[0];
+    }
+
+    template <typename LeafT>
+    typename Tree<LeafT>::MRef
     Tree<LeafT>::root()
     {
         return (*this)[0];
@@ -256,10 +266,17 @@ namespace treeck {
     }
 
     template <typename LeafT>
-    NodeRef<LeafT>
+    typename Tree<LeafT>::CRef
+    Tree<LeafT>::operator[](NodeId index) const
+    {
+        return typename Tree<LeafT>::CRef(this, index);
+    }
+
+    template <typename LeafT>
+    typename Tree<LeafT>::MRef
     Tree<LeafT>::operator[](NodeId index)
     {
-        return NodeRef(this, index);
+        return typename Tree<LeafT>::MRef(this, index);
     }
 
     template <typename LeafT>
@@ -297,14 +314,14 @@ namespace treeck {
 
     template <typename LeafT>
     std::ostream&
-    operator<<(std::ostream& s, Tree<LeafT>& t)
+    operator<<(std::ostream& s, const Tree<LeafT>& t)
     {
         s << "Tree(num_nodes=" << t.num_nodes() << ')' << std::endl;
-        std::stack<NodeRef<LeafT>> stack;
+        std::stack<typename Tree<LeafT>::CRef> stack;
         stack.push(t.root());
         while (!stack.empty())
         {
-            NodeRef<LeafT> n = stack.top(); stack.pop();
+            auto n = stack.top(); stack.pop();
             s << "  ";
             for (int i = 0; i < n.depth(); ++i)
                 s << " | ";
@@ -322,8 +339,13 @@ namespace treeck {
 
 
 #define TREECK_INSTANTIATE_TREE_TEMPLATE(T) \
-    template class node::Node<T>; \
-    template class NodeRef<T>; \
+    template class inner::Node<T>; \
+    template class NodeRef<inner::ConstRef<T>>; \
+    template class NodeRef<inner::MutRef<T>>; \
+    template inner::Node<T>& NodeRef<inner::MutRef<T>>::node<inner::MutRef<T>>(); \
+    template void NodeRef<inner::MutRef<T>>::set_leaf_value<inner::MutRef<T>>(T); \
+    template void NodeRef<inner::MutRef<T>>::split<inner::MutRef<T>>(Split); \
     template class Tree<T>; \
-    template std::ostream& operator<<(std::ostream&, const NodeRef<T>&); \
-    template std::ostream& operator<<(std::ostream&, Tree<T>&)
+    template std::ostream& operator<<(std::ostream&, const NodeRef<inner::ConstRef<T>>&); \
+    template std::ostream& operator<<(std::ostream&, const NodeRef<inner::MutRef<T>>&); \
+    template std::ostream& operator<<(std::ostream&, const Tree<T>&)

@@ -24,6 +24,9 @@ std::string tostr(T& o)
     return s.str();
 }
 
+using TreeD = Tree<double>;
+using NodeRefD = typename TreeD::MRef;
+
 PYBIND11_MODULE(treeck, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
 
@@ -44,21 +47,21 @@ PYBIND11_MODULE(treeck, m) {
         .def("test", &LtSplit::test)
         .def("__repr__", [](LtSplit& s) { return tostr(s); });
 
-    py::class_<NodeRef<double>>(m, "Node")
-        .def("is_root", &NodeRef<double>::is_root)
-        .def("is_leaf", &NodeRef<double>::is_leaf)
-        .def("is_internal", &NodeRef<double>::is_internal)
-        .def("id", &NodeRef<double>::id)
-        .def("left", &NodeRef<double>::left, py::keep_alive<0, 1>())   // keep_alive<Nurse, Patient> = <Return, This>, 
-        .def("right", &NodeRef<double>::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
-        .def("parent", &NodeRef<double>::parent, py::keep_alive<0, 1>())
-        .def("tree_size", &NodeRef<double>::tree_size)
-        .def("depth", &NodeRef<double>::depth)
-        .def("get_split", &NodeRef<double>::get_split)
-        .def("leaf_value", &NodeRef<double>::leaf_value)
-        .def("set_leaf_value", &NodeRef<double>::set_leaf_value)
-        .def("split", [](NodeRef<double>& n, LtSplit s) { n.split(s); })
-        .def("__repr__", [](NodeRef<double>& n) { return tostr(n); });
+    py::class_<NodeRefD>(m, "Node")
+        .def("is_root", &NodeRefD::is_root)
+        .def("is_leaf", &NodeRefD::is_leaf)
+        .def("is_internal", &NodeRefD::is_internal)
+        .def("id", &NodeRefD::id)
+        .def("left", &NodeRefD::left, py::keep_alive<0, 1>())   // keep_alive<Nurse, Patient> = <Return, This>, 
+        .def("right", &NodeRefD::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
+        .def("parent", &NodeRefD::parent, py::keep_alive<0, 1>())
+        .def("tree_size", &NodeRefD::tree_size)
+        .def("depth", &NodeRefD::depth)
+        .def("get_split", &NodeRefD::get_split)
+        .def("leaf_value", &NodeRefD::leaf_value)
+        .def("set_leaf_value", [](NodeRefD& n, double v) { n.set_leaf_value(v); })
+        .def("split", [](NodeRefD& n, LtSplit s) { n.split(s); })
+        .def("__repr__", [](NodeRefD& n) { return tostr(n); });
     
     //py::class_<Tree/*, std::unique_ptr<Tree, py::nodelete>*/>(m, "Tree")
     //    .def(py::init<>())
@@ -79,7 +82,7 @@ PYBIND11_MODULE(treeck, m) {
     struct TreeRef {
         AddTree *at;
         size_t i;
-        Tree<double>& get() { return at->operator[](i); }
+        TreeD& get() { return at->operator[](i); }
     };
 
     py::class_<TreeRef>(m, "Tree")
@@ -99,7 +102,7 @@ PYBIND11_MODULE(treeck, m) {
         .def(py::init<>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("__len__", [](AddTree& at) { return at.size(); })
-        .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(Tree<double>())}; } )
+        .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("to_json", &AddTree::to_json)
         .def("from_json", &AddTree::from_json);

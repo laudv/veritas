@@ -39,14 +39,14 @@ namespace treeck {
 
         static
         void
-        visit_tree_nodes(AddTree::TreeT& tree, SearchSpace::SplitMap& splits)
+        visit_tree_nodes(const AddTree::TreeT& tree, SearchSpace::SplitMap& splits)
         {
-            std::stack<NodeRef<double>> stack;
+            std::stack<AddTree::TreeT::CRef> stack;
             stack.push(tree.root());
 
             while (!stack.empty())
             {
-                NodeRef n = stack.top();
+                auto n = stack.top();
                 stack.pop();
 
                 if (n.is_leaf())
@@ -66,7 +66,7 @@ namespace treeck {
 
         static
         SearchSpace::SplitMap
-        extract_splits(AddTree& at)
+        extract_splits(const AddTree& at)
         {
             SearchSpace::SplitMap splits;
 
@@ -89,7 +89,7 @@ namespace treeck {
 
     } /* namespace inner */
 
-    SearchSpace::SearchSpace(std::shared_ptr<AddTree> addtree)
+    SearchSpace::SearchSpace(std::shared_ptr<const AddTree> addtree)
         : num_features_(0)
         , addtree_(addtree)
         , domtree_{}
@@ -133,9 +133,9 @@ namespace treeck {
     {
         domains.resize(num_features_);
         std::fill(domains.begin(), domains.end(), RealDomain());
-        NodeRef<LeafInfo> leaf = domtree_[node_id];
+        Tree<LeafInfo>::MRef leaf = domtree_[node_id];
 
-        NodeRef<LeafInfo> node = leaf, prev_node = leaf;
+        Tree<LeafInfo>::MRef node = leaf, prev_node = leaf;
         while (!node.is_root())
         {
             node = node.parent();
@@ -234,7 +234,7 @@ namespace treeck {
         {
             for (NodeId node_id = 0; node_id < tree.num_nodes(); ++node_id)
             {
-                //auto node = tree[node_id];
+                auto node = tree[node_id];
                 // for each node, look at split, get feat_id, get domain of
                 // feature, check if left/right are possible in domain
                 // if feat_id == split.feat_id { check if possible left/right => update stats }

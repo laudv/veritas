@@ -30,13 +30,13 @@ namespace treeck {
 
     private:
         size_t num_features_;
-        std::shared_ptr<AddTree> addtree_;
+        std::shared_ptr<const AddTree> addtree_;
         TreeT domtree_; // domain tree
         SplitMap splits_map_;
         std::vector<NodeId> leafs_;
 
     public:
-        SearchSpace(std::shared_ptr<AddTree> addtree);
+        SearchSpace(std::shared_ptr<const AddTree> addtree);
 
         size_t num_features() const;
         const AddTree& addtree() const;

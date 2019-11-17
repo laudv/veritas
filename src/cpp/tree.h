@@ -52,7 +52,7 @@ namespace treeck {
     template <typename LeafT>
     class Tree;
 
-    namespace node {
+    namespace inner {
 
         template <typename LeafT>
         struct NodeLeaf {
@@ -84,17 +84,37 @@ namespace treeck {
             void serialize(Archive& archive);
         };
 
-    } /* namespace node */
+        template <typename TLeafT>
+        struct ConstRef {
+            using LeafT = TLeafT;
+            using TreeP = const Tree<LeafT> *;
+            using is_mut_type = std::false_type;
+        };
 
-    template <typename LeafT>
+        template <typename TLeafT>
+        struct MutRef {
+            using LeafT = TLeafT;
+            using TreeP = Tree<LeafT> *;
+            using is_mut_type = std::true_type;
+        };
+
+    } /* namespace inner */
+
+    template <typename RefT>
     class NodeRef {
-        using TreeP = Tree<LeafT> *;
+    public:
+        using LeafT = typename RefT::LeafT;
+        using TreeP = typename RefT::TreeP;
 
-        TreeP tree;
-        int node_id;
+    private:
+        TreeP tree_;
+        int node_id_;
 
-        const node::Node<LeafT>& node() const;
-        node::Node<LeafT>& node();
+        const inner::Node<LeafT>& node() const;
+
+        template <typename T = RefT>
+        std::enable_if_t<T::is_mut_type::value, inner::Node<LeafT>&>
+        node(); /* mut only */
 
     public:
         NodeRef(TreeP tree, NodeId node_id);
@@ -104,36 +124,53 @@ namespace treeck {
         bool is_internal() const;
 
         NodeId id() const;
-        NodeRef<LeafT> left() const; /* internal only */
-        NodeRef<LeafT> right() const; /* internal only */
-        NodeRef<LeafT> parent() const;
+
+        NodeRef<RefT> left() const; /* internal only */
+        NodeRef<RefT> right() const; /* internal only */
+        NodeRef<RefT> parent() const;
 
         int tree_size() const;
         int depth() const;
         const Split& get_split() const; /* internal only */
         LeafT leaf_value() const; /* leaf only */
 
-        void set_leaf_value(LeafT value); /* leaf only */
-        void split(Split split); /* leaf only */
+        template <typename T = RefT>
+        std::enable_if_t<T::is_mut_type::value, void>
+        set_leaf_value(LeafT value); /* leaf & mut only */
+
+        template <typename T = RefT>
+        std::enable_if_t<T::is_mut_type::value, void>
+        split(Split split); /* leaf & mut only */
     };
 
-    template <typename LeafT>
-    std::ostream& operator<<(std::ostream& s, const NodeRef<LeafT>& n);
+    template <typename RefT>
+    std::ostream& operator<<(std::ostream& s, const NodeRef<RefT>& n);
+
 
     template <typename LeafT>
     class Tree {
-        friend class NodeRef<LeafT>;
-        std::vector<node::Node<LeafT>> nodes_;
+    public:
+        using CRef = NodeRef<inner::ConstRef<LeafT>>;
+        using MRef = NodeRef<inner::MutRef<LeafT>>;
+
+    private:
+        friend MRef;
+        friend CRef;
+
+        std::vector<inner::Node<LeafT>> nodes_;
 
     public:
         Tree();
         void split(NodeId node_id, Split split);
 
-        NodeRef<LeafT> root();
+        CRef root() const;
+        MRef root();
+
+        CRef operator[](NodeId index) const;
+        MRef operator[](NodeId index);
+
         int num_nodes() const;
         std::tuple<unsigned long long int, unsigned long long int> id() const;
-
-        NodeRef<LeafT> operator[](NodeId index);
 
         template <typename Archive>
         void serialize(Archive& archive);
@@ -143,7 +180,7 @@ namespace treeck {
     };
 
     template <typename LeafT>
-    std::ostream& operator<<(std::ostream& s, Tree<LeafT>& t);
+    std::ostream& operator<<(std::ostream& s, const Tree<LeafT>& t);
 
 } /* namespace treeck */
 
