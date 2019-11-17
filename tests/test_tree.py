@@ -4,7 +4,8 @@ from treeck import *
 class TestTree(unittest.TestCase):
 
     def test_tree1(self):
-        t = Tree()
+        at = AddTree()
+        t = at.add_tree()
         t.root().split(LtSplit(1, 1.5))
         t.root().left().set_leaf_value(1.1)
         t.root().right().set_leaf_value(2.2)
@@ -14,15 +15,17 @@ class TestTree(unittest.TestCase):
         self.assertEqual([1.1,2.2], y)
 
     def test_tree_json(self):
-        t = Tree()
+        at = AddTree()
+        t = at.add_tree()
         t.root().split(LtSplit(1, 1.5))
         t.root().left().split(LtSplit(2, 0.12))
         t.root().left().left().set_leaf_value(0.25)
         t.root().left().right().set_leaf_value(0.45)
         t.root().right().set_leaf_value(2.2)
 
-        s = t.to_json();
-        tt = Tree.from_json(s);
+        s = at.to_json();
+        att = AddTree.from_json(s)
+        tt = att[0]
 
         self.assertTrue(tt[0].is_internal())
         self.assertTrue(tt[1].is_internal())
