@@ -187,18 +187,13 @@ namespace treeck {
 
             auto& dom = domains[split.feat_id];
             bool is_left = child_node.id() == node.left().id();
-            std::cout << "child_node.id() = " << child_node.id() << ", node.left().id() = " << node.left().id() << std::endl;
             if (is_left)
             {
-                std::cout << "DEBUG DOMAIN left " << split << " - " << dom << " id=" << child_node.id() << "->" << node.id() << std::endl;
                 if (dom.hi > sval) dom.hi = sval;
-                std::cout << "               -> " << dom << std::endl;
             }
             else
             {
-                std::cout << "DEBUG DOMAIN right " << split << " - " << dom << " id=" << child_node.id() << "->" << node.id() << std::endl;
                 if (dom.lo < sval) dom.lo = sval;
-                std::cout << "                -> " << dom << std::endl;
             }
         }
 
@@ -246,12 +241,10 @@ namespace treeck {
 
             std::cout << domtree_ << std::endl;
 
-            std::cout << "leafs_:";
+            std::cout << std::endl << "leafs_:";
             for (auto x : leafs_) std::cout << " " << x << '(' << domtree_[x].leaf_value().score << ')';
             std::cout << std::endl;
         }
-
-        std::cout << "stopping condition" << std::endl;
     }
 
     double
