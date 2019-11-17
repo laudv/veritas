@@ -5,7 +5,7 @@ def simple():
     at = AddTree.read("tests/models/xgb-calhouse-easy.json")
     sp = SearchSpace(at)
 
-    sp.split()
+    sp.split(5)
 
 
 class TestSearchSpace(unittest.TestCase):

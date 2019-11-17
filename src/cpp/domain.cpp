@@ -1,6 +1,7 @@
 #include <exception>
 #include <limits>
 #include <tuple>
+#include <sstream>
 
 #include "domain.h"
 
@@ -15,7 +16,11 @@ namespace treeck {
         , hi(hi)
     {
         if (lo >= hi)
-            throw std::invalid_argument("lo >= hi");
+        {
+            std::stringstream s;
+            s << "RealDomain Error: lo >= hi: [" << lo << ", " << hi << ")";
+            throw std::invalid_argument(s.str());
+        }
     }
 
     bool

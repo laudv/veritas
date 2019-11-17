@@ -5,6 +5,7 @@
 #include <memory>
 #include <unordered_map>
 #include <vector>
+#include <stack>
 
 #include "domain.h"
 #include "tree.h"
@@ -13,6 +14,12 @@
 namespace treeck {
 
     struct LeafInfo {
+        Split split;
+        double score;
+
+        LeafInfo();
+        LeafInfo(Split split, double score);
+
         template <typename Archive>
         void serialize(Archive& archive);
     };
@@ -25,7 +32,7 @@ namespace treeck {
         using Domains = std::vector<RealDomain>;
 
         using SplitMap = std::unordered_map<FeatId, std::vector<double>>;
-        using MeasureF = std::function<double(const SearchSpace&, const Domains& domains, LtSplit split)>;
+        using MeasureF = std::function<double(const SearchSpace&, Domains&, LtSplit)>;
         using StopCondF = std::function<bool(const SearchSpace&)>;
 
     private:
@@ -34,6 +41,9 @@ namespace treeck {
         TreeT domtree_; // domain tree
         SplitMap splits_map_;
         std::vector<NodeId> leafs_;
+        Domains domains_;
+
+        void compute_best_score(NodeId domtree_leaf_id, MeasureF measure);
 
     public:
         SearchSpace(std::shared_ptr<const AddTree> addtree);
@@ -47,11 +57,17 @@ namespace treeck {
         void split(MeasureF measure, StopCondF cond);
     };
 
-    struct NumDisabledNodesMeasure {
+    struct UnreachableNodesMeasure {
+        std::stack<NodeId> stack;
+
         double operator()(
                 const SearchSpace& sp,
-                const SearchSpace::Domains& domains,
+                SearchSpace::Domains& domains,
                 LtSplit split);
+
+        int count_unreachable_nodes(
+                const AddTree&,
+                const SearchSpace::Domains& domains);
     };
 
     struct NumDomTreeLeafsStopCond {
