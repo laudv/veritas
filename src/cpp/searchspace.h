@@ -14,7 +14,7 @@
 namespace treeck {
 
     struct LeafInfo {
-        Split split;
+        Split dom_split;
         double score;
 
         LeafInfo();

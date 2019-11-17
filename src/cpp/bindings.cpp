@@ -104,13 +104,14 @@ PYBIND11_MODULE(treeck, m) {
         .def("__len__", [](AddTree& at) { return at.size(); })
         .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
+        .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
         .def("to_json", &AddTree::to_json)
-        .def("from_json", &AddTree::from_json);
+        .def("from_json", AddTree::from_json);
 
     py::class_<SearchSpace>(m, "SearchSpace")
         .def(py::init<std::shared_ptr<AddTree>>())
         .def("split", [](SearchSpace& sp, size_t nleafs) {
-                sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
+            sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
         });
 
 } /* PYBIND11_MODULE */

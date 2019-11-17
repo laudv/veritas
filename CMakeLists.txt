@@ -7,17 +7,15 @@ SET(SOURCE_DIR "src/cpp")
 # Tell cmake that headers are in alse in source_dir
 include_directories(${SOURCE_DIR})
 SET(SOURCES
-    "${SOURCE_DIR}/bindings.cpp"
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/addtree.cpp"
     "${SOURCE_DIR}/searchspace.cpp"
     )
 
-#SET(TEST_DIR "tests")
-#SET(TESTS ${SOURCES}
-#    "${TEST_DIR}/test_main.cpp"
-#    "${TEST_DIR}/test_math.cpp")
+SET(TEST_DIR "tests")
+SET(TESTS ${SOURCES}
+    "${TEST_DIR}/test_main.cpp")
 
 # Generate a test executable
 #include_directories(lib/catch/include)
@@ -37,9 +35,10 @@ SET(SOURCES
 include_directories(lib/cereal/include)
 
 find_package(pybind11 REQUIRED)
-pybind11_add_module(${PROJECT_NAME} ${SOURCES})
+pybind11_add_module(${PROJECT_NAME} ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
+#set_property(TARGET "${PROJECT_NAME}_test" PROPERTY CXX_STANDARD 17)
 
 if(MSVC)
     target_compile_options(${PROJECT_NAME} PRIVATE /W4)

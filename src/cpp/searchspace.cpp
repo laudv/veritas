@@ -16,20 +16,20 @@ namespace treeck {
         : LeafInfo(LtSplit(), std::numeric_limits<double>::quiet_NaN()) {}
 
     LeafInfo::LeafInfo(Split split, double score)
-        : split(split)
+        : dom_split(split)
         , score(score) {}
 
     template <typename Archive>
     void
     LeafInfo::serialize(Archive& archive)
     {
-        archive(CEREAL_NVP(split), CEREAL_NVP(score));
+        archive(CEREAL_NVP(dom_split), CEREAL_NVP(score));
     }
 
     std::ostream&
     operator<<(std::ostream& s, LeafInfo inf)
     {
-        return s << "LeafInfo(" << inf.split << ", " << inf.score << ')';
+        return s << "LeafInfo(" << inf.dom_split << ", " << inf.score << ')';
     }
 
     namespace inner {
@@ -109,7 +109,7 @@ namespace treeck {
         FeatId max = 0;
         for (auto& n : splits_map_)
             max = std::max(max, n.first);
-        num_features_ = static_cast<size_t>(max);
+        num_features_ = static_cast<size_t>(max + 1);
     }
 
     void
@@ -134,8 +134,7 @@ namespace treeck {
             // replace details about max if better
             if (score > max_score)
             {
-                std::cout << "MAX F" << feat_id << "<" << split_value
-                    << " : " << score << " > " << max_score << std::endl;
+                //std::cout << "MAX F" << feat_id << "<" << split_value << " : " << score << " > " << max_score << std::endl;
 
                 max_feat_id = feat_id;
                 max_split_value = split_value;
@@ -200,10 +199,40 @@ namespace treeck {
     SearchSpace::split(MeasureF measure, StopCondF cond)
     {
         if (!domtree_.root().is_leaf()) { throw std::runtime_error("already split"); }
+
         leafs_.push_back(domtree_.root().id());
+        compute_best_score(domtree_.root().id(), measure);
+
+        auto cmp = [this](const NodeId& a, const NodeId& b) {
+            return this->domtree_[a].leaf_value().score < this->domtree_[b].leaf_value().score;
+        };
 
         while (!cond(*this)) // split until stop condition is met
         {
+            // pop the best leaf node of the domain tree so that we can split it
+            std::pop_heap(leafs_.begin(), leafs_.end(), cmp);
+            NodeId node_id = leafs_.back(); leafs_.pop_back();
+            auto node = domtree_[node_id];
+            Split dom_split = node.leaf_value().dom_split;
+
+            std::cout << "SPLITTING " << node_id << " " << dom_split << std::endl;
+
+            node.split(dom_split);
+
+            // compute scores of left and right
+            compute_best_score(node.left().id(), measure);
+            compute_best_score(node.right().id(), measure);
+
+            // push children onto the heap
+            leafs_.push_back(node.left().id());  std::push_heap(leafs_.begin(), leafs_.end(), cmp);
+            leafs_.push_back(node.right().id()); std::push_heap(leafs_.begin(), leafs_.end(), cmp);
+
+            std::cout << domtree_ << std::endl;
+
+            std::cout << "leafs_:";
+            for (auto x : leafs_) std::cout << " " << x << '(' << domtree_[x].leaf_value().score << ')';
+            std::cout << std::endl;
+
             //for (size_t leafs_index = 0; leafs_index < leafs_.size(); ++leafs_index)
             //{
             //    get_domains(leafs_[leafs_index], domains);
@@ -273,7 +302,7 @@ namespace treeck {
         double b = static_cast<double>(unreachable_right);
         double score = (a * b) / (a + b);
 
-        std::cout << "MEASURE: " << dom_split << ": L " << unreachable_left << ", R " << unreachable_right << " -> " << score << std::endl;
+        //std::cout << "MEASURE: " << dom_split << ": L " << unreachable_left << ", R " << unreachable_right << " -> " << score << std::endl;
 
         return score;
     }

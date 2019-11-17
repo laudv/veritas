@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "tree.hpp"
 #include "addtree.h"
 
