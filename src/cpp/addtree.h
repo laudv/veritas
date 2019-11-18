@@ -26,6 +26,7 @@ namespace treeck {
 
         std::string to_json();
         static AddTree from_json(const std::string& json);
+        static AddTree from_json_file(const char *file);
     };
 
 } /* namespace treeck */

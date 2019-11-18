@@ -102,6 +102,7 @@ namespace treeck {
         , domtree_{}
         , splits_map_{}
         , leafs_{}
+        , root_domains_{}
         , domains_{}
     {
         splits_map_ = inner::extract_splits(*addtree_);
@@ -110,6 +111,16 @@ namespace treeck {
         for (auto& n : splits_map_)
             max = std::max(max, n.first);
         num_features_ = static_cast<size_t>(max + 1);
+
+        root_domains_.resize(num_features_, RealDomain());
+    }
+
+    SearchSpace::SearchSpace(
+            std::shared_ptr<const AddTree> addtree,
+            const Domains& root_domains)
+        : SearchSpace(addtree)
+    {
+        std::copy(root_domains.begin(), root_domains.end(), root_domains_.begin());
     }
 
     void
@@ -170,11 +181,17 @@ namespace treeck {
         return leafs_;
     }
 
+    const SearchSpace::Domains&
+    SearchSpace::root_domains() const
+    {
+        return root_domains_;
+    }
+
     void
     SearchSpace::get_domains(NodeId node_id, Domains& domains)
     {
         domains.resize(num_features_);
-        std::fill(domains.begin(), domains.end(), RealDomain());
+        std::copy(root_domains_.begin(), root_domains_.end(), domains.begin());
         Tree<LeafInfo>::MRef leaf = domtree_[node_id];
         Tree<LeafInfo>::MRef node = leaf;
         while (!node.is_root())
@@ -262,7 +279,8 @@ namespace treeck {
 
         double a = static_cast<double>(unreachable_left) + 1.0;
         double b = static_cast<double>(unreachable_right) + 1.0;
-        double score = (a * b) / (a + b);
+        //double score = (a * b) / (a + b);
+        double score = a + b;
 
         std::cout << "MEASURE: " << dom_split
             << ": L " << unreachable_left

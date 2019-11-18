@@ -1,4 +1,6 @@
+#include <fstream>
 #include <iostream>
+#include <sstream>
 
 #include "tree.hpp"
 #include "addtree.h"
@@ -67,6 +69,17 @@ namespace treeck {
                cereal::make_nvp("trees", addtree.trees_));
         }
         return addtree;
+    }
+
+    AddTree
+    AddTree::from_json_file(const char *file)
+    {
+        std::ifstream t(file);
+        std::stringstream buffer;
+        buffer << t.rdbuf();
+        std::string s(buffer.str());
+
+        return AddTree::from_json(s);
     }
 
 } /* namespace treeck */

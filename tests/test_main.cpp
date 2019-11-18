@@ -1,6 +1,4 @@
 #include <iostream>
-#include <fstream>
-#include <sstream>
 #include <memory>
 
 #include "tree.h"
@@ -11,14 +9,23 @@ using namespace treeck;
 
 int main()
 {
-    std::ifstream t("tests/models/xgb-calhouse-easy.json");
-    std::stringstream buffer;
-    buffer << t.rdbuf();
-    std::string s(buffer.str());
-
-    std::shared_ptr<AddTree> at = std::make_shared<AddTree>(AddTree::from_json(s));
+    auto file = "tests/models/xgb-calhouse-easy.json";
+    std::shared_ptr<AddTree> at = std::make_shared<AddTree>(AddTree::from_json_file(file));
     SearchSpace sp(at);
 
-    size_t nleafs = 3;
+    size_t nleafs = 8;
     sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
+    SearchSpace::Domains doms(sp.num_features());
+
+    for (auto node_id : sp.leafs())
+    {
+        sp.get_domains(node_id, doms);
+
+        //std::cout << "Domains for node_id " << node_id << ": " << std::endl;
+        //for (size_t i = 0; i < doms.size(); ++i)
+        //{
+        //    if (doms[i].is_everything()) continue;
+        //    std::cout << " - [" << i << "]: " << doms[i] << std::endl;
+        //}
+    }
 }

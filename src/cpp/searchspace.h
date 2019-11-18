@@ -41,17 +41,20 @@ namespace treeck {
         TreeT domtree_; // domain tree
         SplitMap splits_map_;
         std::vector<NodeId> leafs_;
+        Domains root_domains_;
         Domains domains_;
 
         void compute_best_score(NodeId domtree_leaf_id, MeasureF measure);
 
     public:
         SearchSpace(std::shared_ptr<const AddTree> addtree);
+        SearchSpace(std::shared_ptr<const AddTree> addtree, const Domains& root_domains);
 
         size_t num_features() const;
         const AddTree& addtree() const;
         const TreeT& domtree() const;
         const std::vector<NodeId>& leafs() const;
+        const Domains& root_domains() const;
         void get_domains(NodeId node_id, Domains& domains);
 
         void split(MeasureF measure, StopCondF cond);
