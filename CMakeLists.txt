@@ -1,6 +1,6 @@
 # https://github.com/benjaminjack/python_cpp_example
 
-cmake_minimum_required(VERSION 2.8.12)
+cmake_minimum_required(VERSION 3.1)
 project(treeck)
 
 SET(SOURCE_DIR "src/cpp")
@@ -10,38 +10,33 @@ SET(SOURCES
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/addtree.cpp"
-    "${SOURCE_DIR}/searchspace.cpp"
-    )
+    "${SOURCE_DIR}/searchspace.cpp")
 
-SET(TEST_DIR "tests")
-SET(TESTS ${SOURCES}
-    "${TEST_DIR}/test_main.cpp")
+set(CMAKE_CXX_STANDARD 17)
 
-# Generate a test executable
-#include_directories(lib/catch/include)
-#add_executable("${PROJECT_NAME}_test" ${TESTS})
+add_library(${PROJECT_NAME} SHARED ${SOURCES})
 
-# Generate python module
-#add_subdirectory(lib/pybind11)
-#pybind11_add_module(python_cpp_example ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
-
-#add_library(${PROJECT_NAME} ${SOURCES})
-
-# CEREAL serialization
-#find_package(cereal REQUIRED) # system probably has old version...
-#include_directories(${cereal_INCLUDE_DIR})
-
-# ... so let's use a git submodule
+# systems usually have old version of cereal, so we use a git submodule
 include_directories(lib/cereal/include)
 
 find_package(pybind11 REQUIRED)
-pybind11_add_module(${PROJECT_NAME} ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
-
-set_property(TARGET ${PROJECT_NAME} PROPERTY CXX_STANDARD 17)
-#set_property(TARGET "${PROJECT_NAME}_test" PROPERTY CXX_STANDARD 17)
+pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
+target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
 
 if(MSVC)
-    target_compile_options(${PROJECT_NAME} PRIVATE /W4)
+    add_compile_options(/W4 /WX)
 else()
-    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -pedantic)
+    add_compile_options(-Wall -Wextra -pedantic)
 endif()
+
+option(BUILD_TESTS "Build C++ test files" OFF)
+if (BUILD_TESTS)
+    SET(TEST_DIR "tests")
+    SET(TESTS
+        "${TEST_DIR}/test_main.cpp")
+
+    # Generate a test executable
+    #include_directories(lib/catch/include)
+    add_executable("test${PROJECT_NAME}" ${TESTS})
+    target_link_libraries("test${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
+endif (BUILD_TESTS)

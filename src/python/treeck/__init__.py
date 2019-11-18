@@ -1,6 +1,6 @@
 from io import StringIO
 
-from .treeck import *
+from .pytreeck import *
 
 def __tree_predict_single(self, example):
     node = self.root()

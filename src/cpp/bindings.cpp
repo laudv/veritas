@@ -27,7 +27,7 @@ std::string tostr(T& o)
 using TreeD = Tree<double>;
 using NodeRefD = typename TreeD::MRef;
 
-PYBIND11_MODULE(treeck, m) {
+PYBIND11_MODULE(pytreeck, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
 
     py::class_<RealDomain>(m, "RealDomain")
