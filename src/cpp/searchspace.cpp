@@ -197,13 +197,12 @@ namespace treeck {
             }
         }
 
-        std::cout << "DOMAIN of node " << node_id << std::endl;
+        std::cout << std::endl << "DOMAIN of node " << node_id << std::endl;
         for (size_t i = 0; i < domains.size(); ++i)
         {
             if (domains[i].is_everything()) continue;
             std::cout << " - [" << i << "] " << domains[i] << std::endl;
         }
-        std::cout << std::endl;
     }
     
     void
@@ -250,25 +249,26 @@ namespace treeck {
     double
     UnreachableNodesMeasure::operator()(
             const SearchSpace& sp,
-            SearchSpace::Domains& domains,
+            const SearchSpace::Domains& domains,
             LtSplit dom_split)
     {
+        FeatId fid = dom_split.feat_id;
         RealDomain dom_left, dom_right;
         RealDomain dom_parent = domains[dom_split.feat_id];
         std::tie(dom_left, dom_right) = dom_parent.split(dom_split.split_value);
 
-        int unreachable_parent = count_unreachable_nodes(sp.addtree(), domains);
-        domains[dom_split.feat_id] = dom_left;
-        int unreachable_left = count_unreachable_nodes(sp.addtree(), domains);
-        domains[dom_split.feat_id] = dom_right;
-        int unreachable_right = count_unreachable_nodes(sp.addtree(), domains);
-        domains[dom_split.feat_id] = dom_parent; // ensure we undo domain changes
+        int unreachable_left = count_unreachable_nodes(sp.addtree(), domains, fid, dom_left);
+        int unreachable_right = count_unreachable_nodes(sp.addtree(), domains, fid, dom_right);
 
-        double a = static_cast<double>(unreachable_left - unreachable_parent);
-        double b = static_cast<double>(unreachable_right - unreachable_parent);
+        double a = static_cast<double>(unreachable_left) + 1.0;
+        double b = static_cast<double>(unreachable_right) + 1.0;
         double score = (a * b) / (a + b);
 
-        //std::cout << "MEASURE: " << dom_split << ": L " << a << ", R " << b << " -> " << score << std::endl;
+        std::cout << "MEASURE: " << dom_split
+            << ": L " << unreachable_left
+            << ", R " << unreachable_right
+            << ", L+R " << (unreachable_left + unreachable_right)
+            << " -> " << score << std::endl;
 
         return score;
     }
@@ -276,7 +276,9 @@ namespace treeck {
     int
     UnreachableNodesMeasure::count_unreachable_nodes(
             const AddTree& addtree,
-            const SearchSpace::Domains& domains)
+            const SearchSpace::Domains& domains,
+            FeatId feat_id,
+            RealDomain new_dom)
     {
         int unreachable = 0;
         for (const AddTree::TreeT& tree : addtree.trees())
@@ -294,26 +296,47 @@ namespace treeck {
                 double sval = split.split_value;
 
                 //       case 1       case 3          case 2
-                //       [----)       |----)          |----)
+                //       [----)   |-------------)     |----)
                 // ---------------------x-------------------------->
                 //                 split_value
+                //
+                // if split.feat_id == feat_id: check new_dom (which is subdomain of dom)
+                //                |--)              case 3.1
+                //                |--------)        case 3.3
+                //                     |--------)   case 3.3
+                //                         |----)   case 3.2
                 if (dom.lo < sval && dom.hi < sval) // case 1
                 {
                     stack.push(node.left().id()); // only left matters, skip right
-                    unreachable += node.right().tree_size();
                 }
                 else if (dom.lo >= sval && dom.hi >= sval) // case 2
                 {
                     stack.push(node.right().id()); // only right matters, skip right
-                    unreachable += node.left().tree_size();
                 }
-                else // case 1
+                else if (feat_id == split.feat_id) // case 3 and feat_id matches -> check new_dom and count!
+                {
+                    if (new_dom.lo < sval && new_dom.hi < sval) // case 3.1
+                    {
+                        stack.push(node.left().id());
+                        unreachable += node.right().tree_size();
+                    }
+                    else if (new_dom.lo >= sval && new_dom.hi >= sval) // case 3.2
+                    {
+                        stack.push(node.right().id());
+                        unreachable += node.left().tree_size();
+                    }
+                    else // case 3.3
+                    {
+                        stack.push(node.right().id());
+                        stack.push(node.left().id());
+                    }
+                }
+                else // case 3, but feat_id does not match, new_dom not applicable
                 {
                     stack.push(node.right().id());
                     stack.push(node.left().id());
                 }
             }
-
         }
         return unreachable;
     }
