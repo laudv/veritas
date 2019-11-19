@@ -19,9 +19,12 @@ add_library(${PROJECT_NAME} SHARED ${SOURCES})
 # systems usually have old version of cereal, so we use a git submodule
 include_directories(lib/cereal/include)
 
-find_package(pybind11 REQUIRED)
-pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
-target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
+option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
+if (BUILD_PYTHON_BINDINGS)
+    find_package(pybind11 REQUIRED)
+    pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
+    target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
+endif (BUILD_PYTHON_BINDINGS)
 
 if(MSVC)
     add_compile_options(/W4 /WX)
