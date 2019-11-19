@@ -115,4 +115,14 @@ namespace treeck {
         return AddTree::from_json(s);
     }
 
+    std::ostream&
+    operator<<(std::ostream& s, const AddTree& at)
+    {
+        int counter = 0;
+        s << "AddTree with " << at.size() << " trees and base_score " << at.base_score << std::endl;
+        for (const AddTree::TreeT& tree : at.trees())
+            s  << ++counter << ". " << std::endl << tree;
+        return s << "--------" << std::endl;
+    }
+
 } /* namespace treeck */

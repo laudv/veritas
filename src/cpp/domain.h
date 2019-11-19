@@ -30,7 +30,9 @@ namespace treeck {
         
         bool is_everything() const;
         WhereFlag where_is(double value) const;
+        WhereFlag where_is_strict(double value) const;
         bool contains(double value) const;
+        bool contains_strict(double value) const;
         bool overlaps(const RealDomain& other) const;
         std::tuple<RealDomain, RealDomain> split(double value) const;
     };

@@ -14,6 +14,28 @@ def generate_california_housing():
     X = calhouse["data"]
     y = calhouse["target"]
 
+    # Very Easy
+    regr = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            nthread=4,
+            tree_method="hist",
+            max_depth=3,
+            learning_rate=1.0,
+            n_estimators=2)
+    model = regr.fit(X, y)
+    at = addtree_from_xgb_model(model)
+    sqerr = sum((y - model.predict(X))**2) / len(y)
+    sqcorr = sum((model.predict(X) - at.predict(X))**2)
+    print(f"easy: rmse train {np.sqrt(sqerr)/len(X)}")
+    print(f"easy: rmse model difference {np.sqrt(sqcorr)/len(X)}")
+
+    # edge case test
+    Xt = [X[12]]
+    Xt[0][at[0][0].get_split().feat_id] = at[0][0].get_split().split_value
+    print("edge case diff: ", model.predict(Xt) - at.predict(Xt))
+
+    at.write("tests/models/xgb-calhouse-very-easy.json")
+
     # Easy
     regr = xgb.XGBRegressor(
             objective="reg:squarederror",

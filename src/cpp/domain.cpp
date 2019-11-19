@@ -40,10 +40,26 @@ namespace treeck {
         return WhereFlag::IN_DOMAIN;
     }
 
+    WhereFlag
+    RealDomain::where_is_strict(double value) const
+    {
+        if (hi <= value)
+            return WhereFlag::RIGHT;
+        else if (lo >= value) // note <= instead of <
+            return WhereFlag::LEFT;
+        return WhereFlag::IN_DOMAIN; // does not include lo, hi
+    }
+
     bool
     RealDomain::contains(double value) const
     {
         return where_is(value) == WhereFlag::IN_DOMAIN;
+    }
+
+    bool
+    RealDomain::contains_strict(double value) const
+    {
+        return where_is_strict(value) == WhereFlag::IN_DOMAIN;
     }
 
     bool

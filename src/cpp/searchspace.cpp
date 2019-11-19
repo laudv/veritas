@@ -137,7 +137,7 @@ namespace treeck {
         {
             // check if split in domain
             RealDomain dom = domains_[feat_id];
-            if (dom.lo == split_value || !dom.contains(split_value)) continue;
+            if (!dom.contains_strict(split_value)) continue;
 
             // compute score for left / right
             double score = measure(*this, domains_, LtSplit(feat_id, split_value));
@@ -240,11 +240,13 @@ namespace treeck {
             NodeId node_id = leafs_.back(); leafs_.pop_back();
             auto node = domtree_[node_id];
             Split dom_split = node.leaf_value().dom_split;
+            double score = node.leaf_value().score;
 
             node.split(dom_split);
 
             std::cout << "SPLITTING " << node_id << " " << dom_split << " into "
-                << node.left().id() << " and " << node.right().id() << std::endl;
+                << node.left().id() << " and " << node.right().id()
+                << " with score " << score << std::endl;
 
             // compute scores of left and right
             compute_best_score(node.left().id(), measure);
@@ -282,11 +284,11 @@ namespace treeck {
         //double score = (a * b) / (a + b);
         double score = a + b;
 
-        std::cout << "MEASURE: " << dom_split
-            << ": L " << unreachable_left
-            << ", R " << unreachable_right
-            << ", L+R " << (unreachable_left + unreachable_right)
-            << " -> " << score << std::endl;
+        //std::cout << "MEASURE: " << dom_split
+        //    << ": L " << unreachable_left
+        //    << ", R " << unreachable_right
+        //    << ", L+R " << (unreachable_left + unreachable_right)
+        //    << " -> " << score << std::endl;
 
         return score;
     }
@@ -317,12 +319,12 @@ namespace treeck {
                 //                |--------)        case 3.2
                 //                     |--------)   case 3.2
                 //                         |----)   case 3.3
-                switch (dom.where_is(split.split_value))
+                switch (dom.where_is_strict(split.split_value))
                 {
                 case WhereFlag::LEFT: // case 2: split value to the left of the domain
-                    return TreeVisitStatus::ADD_LEFT;
-                case WhereFlag::RIGHT: // case 1
                     return TreeVisitStatus::ADD_RIGHT;
+                case WhereFlag::RIGHT: // case 1
+                    return TreeVisitStatus::ADD_LEFT;
                 default: // case 3: IN_DOMAIN
                     if (feat_id != split.feat_id)
                         return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
@@ -332,10 +334,10 @@ namespace treeck {
                     {
                     case WhereFlag::LEFT: // case 3.3
                         unreachable += node.right().tree_size();
-                        return TreeVisitStatus::ADD_LEFT;
+                        return TreeVisitStatus::ADD_RIGHT;
                     case WhereFlag::RIGHT: // case 3.1
                         unreachable += node.left().tree_size();
-                        return TreeVisitStatus::ADD_RIGHT;
+                        return TreeVisitStatus::ADD_LEFT;
                     default: // case 3.3: IN_DOMAIN
                         return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
                     }
