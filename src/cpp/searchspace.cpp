@@ -112,7 +112,7 @@ namespace treeck {
             max = std::max(max, n.first);
         num_features_ = static_cast<size_t>(max + 1);
 
-        root_domains_.resize(num_features_, RealDomain());
+        root_domains_.resize(num_features_);
     }
 
     SearchSpace::SearchSpace(
@@ -181,7 +181,7 @@ namespace treeck {
         return leafs_;
     }
 
-    const SearchSpace::Domains&
+    const Domains&
     SearchSpace::root_domains() const
     {
         return root_domains_;
@@ -266,7 +266,7 @@ namespace treeck {
     double
     UnreachableNodesMeasure::operator()(
             const SearchSpace& sp,
-            const SearchSpace::Domains& domains,
+            const Domains& domains,
             LtSplit dom_split)
     {
         FeatId fid = dom_split.feat_id;
@@ -294,7 +294,7 @@ namespace treeck {
     int
     UnreachableNodesMeasure::count_unreachable_nodes(
             const AddTree& addtree,
-            const SearchSpace::Domains& domains,
+            const Domains& domains,
             FeatId feat_id,
             RealDomain new_dom)
     {

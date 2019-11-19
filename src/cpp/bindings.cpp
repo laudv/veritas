@@ -110,15 +110,15 @@ PYBIND11_MODULE(pytreeck, m) {
 
     py::class_<SearchSpace>(m, "SearchSpace")
         .def(py::init<std::shared_ptr<AddTree>>())
-        .def(py::init<std::shared_ptr<AddTree>, const SearchSpace::Domains&>())
+        .def(py::init<std::shared_ptr<AddTree>, const Domains::vec_t&>())
         .def("split", [](SearchSpace& sp, size_t nleafs) {
             sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
         })
         .def("leafs", &SearchSpace::leafs)
         .def("get_domains", [](SearchSpace& sp, NodeId leaf_id) {
-            SearchSpace::Domains doms;
+            Domains doms;
             sp.get_domains(leaf_id, doms);
-            return doms;
+            return doms.vec();
         })
         ;
 

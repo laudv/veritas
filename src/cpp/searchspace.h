@@ -29,7 +29,6 @@ namespace treeck {
     class SearchSpace {
     public:
         using TreeT = Tree<LeafInfo>;
-        using Domains = std::vector<RealDomain>;
 
         using SplitMap = std::unordered_map<FeatId, std::vector<double>>;
         using MeasureF = std::function<double(const SearchSpace&, const Domains&, LtSplit)>;
@@ -65,12 +64,12 @@ namespace treeck {
 
         double operator()(
                 const SearchSpace& sp,
-                const SearchSpace::Domains& domains,
+                const Domains& domains,
                 LtSplit split);
 
         int count_unreachable_nodes(
                 const AddTree&,
-                const SearchSpace::Domains& parent_domains,
+                const Domains& parent_domains,
                 FeatId feat_id,
                 RealDomain new_domain);
     };

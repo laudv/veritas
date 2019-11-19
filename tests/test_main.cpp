@@ -15,7 +15,7 @@ int main()
 
     size_t nleafs = 8;
     sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
-    SearchSpace::Domains doms(sp.num_features());
+    Domains doms;
 
     for (auto node_id : sp.leafs())
     {
