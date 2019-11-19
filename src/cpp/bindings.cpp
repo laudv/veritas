@@ -94,7 +94,6 @@ PYBIND11_MODULE(pytreeck, m) {
             node.set_leaf_value(leaf_value);
         })
         .def("num_nodes", [](TreeRef& r) { return r.get().num_nodes(); })
-        .def("id", [](TreeRef& r) { return r.get().id(); })
         .def("__repr__", [](TreeRef& r) { return tostr(r.get()); });
 
 

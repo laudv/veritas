@@ -3,11 +3,8 @@
 
 #include <iostream>
 #include <optional>
-#include <tuple>
 #include <variant>
 #include <vector>
-
-#include "domain.h"
 
 namespace treeck {
 
@@ -26,7 +23,6 @@ namespace treeck {
 
         LtSplit();
         LtSplit(FeatId feat_id, ValueT split_value);
-        std::tuple<RealDomain, RealDomain> get_domains() const;
         bool test(ValueT value) const;
 
         template<typename Archive>
@@ -170,7 +166,6 @@ namespace treeck {
         MRef operator[](NodeId index);
 
         int num_nodes() const;
-        std::tuple<unsigned long long int, unsigned long long int> id() const;
 
         template <typename Archive>
         void serialize(Archive& archive);

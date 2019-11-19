@@ -10,13 +10,6 @@ namespace treeck {
         : SplitBase(feat_id)
         , split_value(split_value) {}
 
-    std::tuple<RealDomain, RealDomain>
-    LtSplit::get_domains() const
-    {
-        auto dom = RealDomain();
-        return dom.split(this->split_value);
-    }
-
     bool
     LtSplit::test(LtSplit::ValueT value) const
     {

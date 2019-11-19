@@ -257,15 +257,6 @@ namespace treeck {
     }
 
     template <typename LeafT>
-    std::tuple<unsigned long long int, unsigned long long int>
-    Tree<LeafT>::id() const
-    {
-        return std::make_tuple(
-                reinterpret_cast<unsigned long long int>(this),
-                reinterpret_cast<unsigned long long int>(nodes_.data()));
-    }
-
-    template <typename LeafT>
     typename Tree<LeafT>::CRef
     Tree<LeafT>::operator[](NodeId index) const
     {
