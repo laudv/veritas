@@ -25,9 +25,20 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& s, LeafInfo inf);
 
+    struct PruneByDomainsTreeVisitor {
+        const Domains& domains;
+
+        PruneByDomainsTreeVisitor(const Domains& domains);
+
+        virtual TreeVisitStatus visit_reachable(AddTree::TreeT::CRef child, TreeVisitStatus s);
+        virtual TreeVisitStatus visit_unreachable(AddTree::TreeT::CRef child, TreeVisitStatus s);
+
+        TreeVisitStatus operator()(AddTree::TreeT::CRef n);
+    };
+
     class SearchSpace {
     public:
-        using TreeT = Tree<LeafInfo>;
+        using DomTreeT = Tree<LeafInfo>;
 
         using SplitMap = std::unordered_map<FeatId, std::vector<double>>;
         using MeasureF = std::function<double(const SearchSpace&, const Domains&, LtSplit)>;
@@ -36,7 +47,7 @@ namespace treeck {
     private:
         size_t num_features_;
         std::shared_ptr<const AddTree> addtree_;
-        TreeT domtree_; // domain tree
+        DomTreeT domtree_; // domain tree
         SplitMap splits_map_;
         std::vector<NodeId> leafs_;
         Domains root_domains_;
@@ -50,7 +61,7 @@ namespace treeck {
 
         size_t num_features() const;
         const AddTree& addtree() const;
-        const TreeT& domtree() const;
+        const DomTreeT& domtree() const;
         const std::vector<NodeId>& leafs() const;
         const Domains& root_domains() const;
         void get_domains(NodeId node_id, Domains& domains);

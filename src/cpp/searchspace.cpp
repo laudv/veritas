@@ -95,6 +95,53 @@ namespace treeck {
 
     } /* namespace inner */
 
+
+    PruneByDomainsTreeVisitor::PruneByDomainsTreeVisitor(const Domains& domains)
+        : domains(domains) {}
+
+    TreeVisitStatus
+    PruneByDomainsTreeVisitor::operator()(AddTree::TreeT::CRef node)
+    {
+        LtSplit split = std::get<LtSplit>(node.get_split());
+        auto dom = domains[split.feat_id];
+        auto sval = split.split_value;
+
+        TreeVisitStatus status_left, status_right;
+
+        // ---------------------x--------------------------> (x is split_value)
+        //      case1         case 2         case 3
+        //      [----)   |-------------)     |----)
+        switch (dom.contains(split.split_value))
+        {
+        case ContainsFlag::LARGER: // split value to the right of dom -> everything goes left
+            status_left = visit_reachable(node.left(), TreeVisitStatus::ADD_LEFT);
+            status_right = visit_unreachable(node.right(), TreeVisitStatus::ADD_RIGHT);
+            break;
+        case ContainsFlag::SMALLER: // split value to the left of dom -> everything goes right
+            status_left = visit_unreachable(node.left(), TreeVisitStatus::ADD_LEFT);
+            status_right = visit_reachable(node.right(), TreeVisitStatus::ADD_RIGHT);
+            break;
+        default: // IN: split value in domain -> some go left, some go right
+            status_left = visit_reachable(node.left(), TreeVisitStatus::ADD_LEFT);
+            status_right = visit_reachable(node.right(), TreeVisitStatus::ADD_RIGHT);
+            break;
+        }
+        return TreeVisitStatus(status_left | status_right);
+    }
+
+    TreeVisitStatus
+    PruneByDomainsTreeVisitor::visit_reachable(AddTree::TreeT::CRef child, TreeVisitStatus s)
+    {
+        return s;
+    }
+
+    TreeVisitStatus
+    PruneByDomainsTreeVisitor::visit_unreachable(AddTree::TreeT::CRef child, TreeVisitStatus s)
+    {
+        return TreeVisitStatus::ADD_NONE;
+    }
+
+
     SearchSpace::SearchSpace(std::shared_ptr<const AddTree> addtree)
         : num_features_(0)
         , addtree_(addtree)
@@ -168,7 +215,7 @@ namespace treeck {
         return *addtree_;
     }
 
-    const SearchSpace::TreeT&
+    const SearchSpace::DomTreeT&
     SearchSpace::domtree() const
     {
         return domtree_;
@@ -200,10 +247,9 @@ namespace treeck {
 
             LtSplit split = std::get<LtSplit>(node.get_split());
             double sval = split.split_value;
-
             auto& dom = domains[split.feat_id];
-            bool is_left = child_node.id() == node.left().id();
-            if (is_left)
+
+            if (child_node.is_left_child())
             {
                 if (dom.hi > sval) dom.hi = sval;
             }
@@ -261,6 +307,7 @@ namespace treeck {
             std::cout << std::endl;
         }
     }
+
 
     double
     UnreachableNodesMeasure::operator()(
