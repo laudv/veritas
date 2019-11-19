@@ -25,17 +25,6 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& s, LeafInfo inf);
 
-    struct PruneByDomainsTreeVisitor {
-        const Domains& domains;
-
-        PruneByDomainsTreeVisitor(const Domains& domains);
-
-        virtual TreeVisitStatus visit_reachable(AddTree::TreeT::CRef child, TreeVisitStatus s);
-        virtual TreeVisitStatus visit_unreachable(AddTree::TreeT::CRef child, TreeVisitStatus s);
-
-        TreeVisitStatus operator()(AddTree::TreeT::CRef n);
-    };
-
     class SearchSpace {
     public:
         using DomTreeT = Tree<LeafInfo>;
@@ -70,8 +59,6 @@ namespace treeck {
     };
 
     struct UnreachableNodesMeasure {
-        std::stack<NodeId> stack;
-
         double operator()(
                 const SearchSpace& sp,
                 const Domains& domains,

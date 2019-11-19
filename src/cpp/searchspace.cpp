@@ -96,52 +96,6 @@ namespace treeck {
     } /* namespace inner */
 
 
-    PruneByDomainsTreeVisitor::PruneByDomainsTreeVisitor(const Domains& domains)
-        : domains(domains) {}
-
-    TreeVisitStatus
-    PruneByDomainsTreeVisitor::operator()(AddTree::TreeT::CRef node)
-    {
-        LtSplit split = std::get<LtSplit>(node.get_split());
-        auto dom = domains[split.feat_id];
-        auto sval = split.split_value;
-
-        TreeVisitStatus status_left, status_right;
-
-        // ---------------------x--------------------------> (x is split_value)
-        //      case1         case 2         case 3
-        //      [----)   |-------------)     |----)
-        switch (dom.contains(split.split_value))
-        {
-        case ContainsFlag::LARGER: // split value to the right of dom -> everything goes left
-            status_left = visit_reachable(node.left(), TreeVisitStatus::ADD_LEFT);
-            status_right = visit_unreachable(node.right(), TreeVisitStatus::ADD_RIGHT);
-            break;
-        case ContainsFlag::SMALLER: // split value to the left of dom -> everything goes right
-            status_left = visit_unreachable(node.left(), TreeVisitStatus::ADD_LEFT);
-            status_right = visit_reachable(node.right(), TreeVisitStatus::ADD_RIGHT);
-            break;
-        default: // IN: split value in domain -> some go left, some go right
-            status_left = visit_reachable(node.left(), TreeVisitStatus::ADD_LEFT);
-            status_right = visit_reachable(node.right(), TreeVisitStatus::ADD_RIGHT);
-            break;
-        }
-        return TreeVisitStatus(status_left | status_right);
-    }
-
-    TreeVisitStatus
-    PruneByDomainsTreeVisitor::visit_reachable(AddTree::TreeT::CRef child, TreeVisitStatus s)
-    {
-        return s;
-    }
-
-    TreeVisitStatus
-    PruneByDomainsTreeVisitor::visit_unreachable(AddTree::TreeT::CRef child, TreeVisitStatus s)
-    {
-        return TreeVisitStatus::ADD_NONE;
-    }
-
-
     SearchSpace::SearchSpace(std::shared_ptr<const AddTree> addtree)
         : num_features_(0)
         , addtree_(addtree)
@@ -347,17 +301,11 @@ namespace treeck {
         int unreachable = 0;
         for (const AddTree::TreeT& tree : addtree.trees())
         {
-            stack.push(tree.root().id());
-            while (!stack.empty())
-            {
-                NodeId node_id = stack.top(); stack.pop();
-                auto node = tree[node_id];
-
-                if (node.is_leaf()) continue;
+            tree.dfs([&domains, &unreachable, feat_id, &new_dom](AddTree::TreeT::CRef node) {
+                if (node.is_leaf()) return TreeVisitStatus::ADD_NONE;
 
                 LtSplit split = std::get<LtSplit>(node.get_split());
                 RealDomain dom = domains[split.feat_id];
-                double sval = split.split_value;
 
                 //       case 1       case 3          case 2
                 //       [----)   |-------------)     |----)
@@ -366,41 +314,33 @@ namespace treeck {
                 //
                 // if split.feat_id == feat_id: check new_dom (which is subdomain of dom)
                 //                |--)              case 3.1
-                //                |--------)        case 3.3
-                //                     |--------)   case 3.3
-                //                         |----)   case 3.2
-                if (dom.lo < sval && dom.hi < sval) // case 1
+                //                |--------)        case 3.2
+                //                     |--------)   case 3.2
+                //                         |----)   case 3.3
+                switch (dom.where_is(split.split_value))
                 {
-                    stack.push(node.left().id()); // only left matters, skip right
-                }
-                else if (dom.lo >= sval && dom.hi >= sval) // case 2
-                {
-                    stack.push(node.right().id()); // only right matters, skip right
-                }
-                else if (feat_id == split.feat_id) // case 3 and feat_id matches -> check new_dom and count!
-                {
-                    if (new_dom.lo < sval && new_dom.hi < sval) // case 3.1
+                case WhereFlag::LEFT: // case 2: split value to the left of the domain
+                    return TreeVisitStatus::ADD_LEFT;
+                case WhereFlag::RIGHT: // case 1
+                    return TreeVisitStatus::ADD_RIGHT;
+                default: // case 3: IN_DOMAIN
+                    if (feat_id != split.feat_id)
+                        return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
+
+                    // compute how many nodes become inaccessible when using new_dom for feat_id
+                    switch (new_dom.where_is(split.split_value))
                     {
-                        stack.push(node.left().id());
+                    case WhereFlag::LEFT: // case 3.3
                         unreachable += node.right().tree_size();
-                    }
-                    else if (new_dom.lo >= sval && new_dom.hi >= sval) // case 3.2
-                    {
-                        stack.push(node.right().id());
+                        return TreeVisitStatus::ADD_LEFT;
+                    case WhereFlag::RIGHT: // case 3.1
                         unreachable += node.left().tree_size();
-                    }
-                    else // case 3.3
-                    {
-                        stack.push(node.right().id());
-                        stack.push(node.left().id());
+                        return TreeVisitStatus::ADD_RIGHT;
+                    default: // case 3.3: IN_DOMAIN
+                        return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
                     }
                 }
-                else // case 3, but feat_id does not match, new_dom not applicable
-                {
-                    stack.push(node.right().id());
-                    stack.push(node.left().id());
-                }
-            }
+            });
         }
         return unreachable;
     }

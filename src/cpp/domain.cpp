@@ -30,14 +30,20 @@ namespace treeck {
             && hi == std::numeric_limits<double>::infinity();
     }
 
-    ContainsFlag
+    WhereFlag
+    RealDomain::where_is(double value) const
+    {
+        if (hi <= value) // hi is excluded from the domain
+            return WhereFlag::RIGHT;
+        else if (lo > value) // lo is included in the domain
+            return WhereFlag::LEFT;
+        return WhereFlag::IN_DOMAIN;
+    }
+
+    bool
     RealDomain::contains(double value) const
     {
-        if (hi < value)
-            return ContainsFlag::LARGER;
-        else if (lo >= value)
-            return ContainsFlag::SMALLER;
-        return ContainsFlag::IN;
+        return where_is(value) == WhereFlag::IN_DOMAIN;
     }
 
     bool

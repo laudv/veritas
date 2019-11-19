@@ -8,11 +8,6 @@
 namespace treeck {
 
     /**
-     * ---------------------x--------------------------> (x is value)
-     *      case 1       case 3          case 2
-     *      [----)   |-------------)     |----)
-     */
-    /**
      *           [--- real domain ---)
      * ---X1--------------x2-----------------x3-----------> (real axis)
      *
@@ -20,10 +15,10 @@ namespace treeck {
      * x2 -> IN:      value in domain
      * x3 -> LARGER:  value not in domain and larger than any value in the domain (also value==hi)
      */
-    enum ContainsFlag {
-        SMALLER = -1,  // x1: value lies to the left of the domain
-        IN      = 0,   // case 3: value lies in the domain
-        LARGER  = 1    // case 1: value lies to the right of the domain
+    enum WhereFlag {
+        LEFT      = -1,  // x1: value lies to the left of the domain
+        IN_DOMAIN = 0,   // x2: value lies in the domain
+        RIGHT     = 1    // x3: value lies to the right of the domain
     };
 
     /** An interval [lo, hi) */
@@ -34,7 +29,8 @@ namespace treeck {
         RealDomain(double lo, double hi);
         
         bool is_everything() const;
-        ContainsFlag contains(double value) const;
+        WhereFlag where_is(double value) const;
+        bool contains(double value) const;
         bool overlaps(const RealDomain& other) const;
         std::tuple<RealDomain, RealDomain> split(double value) const;
     };
