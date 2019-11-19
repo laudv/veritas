@@ -9,7 +9,6 @@
 
 #include "domain.h"
 #include "tree.h"
-#include "addtree.h"
 
 namespace treeck {
 

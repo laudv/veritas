@@ -1,5 +1,5 @@
 #include "util.h"
-#include "tree.h"
+#include "tree.hpp"
 
 namespace treeck {
 

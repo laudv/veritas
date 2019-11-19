@@ -4,7 +4,6 @@
 #include <stack>
 #include <string>
 
-#include "addtree.h"
 #include "domain.h"
 #include "util.h"
 #include "tree.hpp"

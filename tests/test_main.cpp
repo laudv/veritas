@@ -2,7 +2,6 @@
 #include <memory>
 
 #include "tree.h"
-#include "addtree.h"
 #include "searchspace.h"
 
 using namespace treeck;

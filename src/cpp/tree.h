@@ -1,10 +1,17 @@
 #ifndef TREECK_TREE_H
 #define TREECK_TREE_H
 
+#include <fstream>
+#include <iostream>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <variant>
 #include <vector>
+
+#include <cereal/archives/json.hpp>
+#include <cereal/types/vector.hpp>
+#include <cereal/types/variant.hpp>
 
 namespace treeck {
 

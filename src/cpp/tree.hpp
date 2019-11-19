@@ -2,12 +2,7 @@
 #include <limits>
 #include <stack>
 #include <iostream>
-#include <sstream>
 #include <utility>
-
-#include <cereal/archives/json.hpp>
-#include <cereal/types/vector.hpp>
-#include <cereal/types/variant.hpp>
 
 #include "tree.h"
 
