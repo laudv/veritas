@@ -109,6 +109,20 @@ namespace treeck {
     }
 
     template <typename RefT>
+    bool
+    NodeRef<RefT>::is_left_child() const
+    {
+        return !is_root() && parent().left().id() == id();
+    }
+
+    template <typename RefT>
+    bool
+    NodeRef<RefT>::is_right_child() const
+    {
+        return !is_root() && parent().right().id() == id();
+    }
+
+    template <typename RefT>
     NodeId
     NodeRef<RefT>::id() const
     {
@@ -266,6 +280,34 @@ namespace treeck {
     }
 
     template <typename LeafT>
+    template <typename TreeVisitorT>
+    void
+    Tree<LeafT>::dfs(TreeVisitorT& visitor) const
+    {
+        std::stack<CRef> stack;
+        stack.push(root());
+        while (!stack.empty())
+        {
+            CRef node = stack.top(); stack.pop();
+            TreeVisitStatus status = visitor(node);
+
+            if (status & TreeVisitStatus::ADD_RIGHT > 0)
+                stack.push(node.right());
+            if (status & TreeVisitStatus::ADD_LEFT > 0)
+                stack.push(node.left());
+        }
+    }
+
+    template <typename LeafT>
+    template <typename TreeVisitorT>
+    void
+    Tree<LeafT>::dfs(TreeVisitorT&& visitor) const
+    {
+        TreeVisitorT v = visitor;
+        dfs(v);
+    }
+
+    template <typename LeafT>
     template <typename Archive>
     void
     Tree<LeafT>::serialize(Archive& archive)
@@ -303,21 +345,16 @@ namespace treeck {
     operator<<(std::ostream& s, const Tree<LeafT>& t)
     {
         s << "Tree(num_nodes=" << t.num_nodes() << ')' << std::endl;
-        std::stack<typename Tree<LeafT>::CRef> stack;
-        stack.push(t.root());
-        while (!stack.empty())
-        {
-            auto n = stack.top(); stack.pop();
+        t.dfs([&s](typename Tree<LeafT>::CRef n) {
             s << "  ";
-            for (int i = 0; i < n.depth(); ++i)
-                s << " | ";
+            int i = 0;
+            for (; i < n.depth() - 1; ++i) s << "│  ";
+            for (; i < n.depth(); ++i)     s << (n.is_right_child() && n.is_leaf() ? "└─ " : "├─ ");
             s << n << std::endl;
             if (n.is_internal())
-            {
-                stack.push(n.right());
-                stack.push(n.left());
-            }
-        }
+                return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
+            return TreeVisitStatus::ADD_NONE;
+        });
         return s;
     }
 

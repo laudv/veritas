@@ -125,6 +125,8 @@ namespace treeck {
         bool is_root() const;
         bool is_leaf() const;
         bool is_internal() const;
+        bool is_left_child() const;
+        bool is_right_child() const;
 
         NodeId id() const;
 
@@ -150,6 +152,13 @@ namespace treeck {
     std::ostream& operator<<(std::ostream& s, const NodeRef<RefT>& n);
 
 
+    enum TreeVisitStatus {
+        ADD_NONE = 0,
+        ADD_LEFT = 1,
+        ADD_RIGHT = 2,
+        ADD_LEFT_AND_RIGHT = 3
+    };
+
     template <typename LeafT>
     class Tree {
     public:
@@ -173,6 +182,12 @@ namespace treeck {
         MRef operator[](NodeId index);
 
         int num_nodes() const;
+
+        template <typename TreeVisitorT>
+        void dfs(TreeVisitorT& visitor) const;
+
+        template <typename TreeVisitorT>
+        void dfs(TreeVisitorT&& visitor) const;
 
         template <typename Archive>
         void serialize(Archive& archive);
