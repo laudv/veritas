@@ -117,6 +117,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("split", [](SearchSpace& sp, size_t nleafs) {
             sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
         })
+        .def("num_features", &SearchSpace::num_features)
         .def("scores", &SearchSpace::scores)
         .def("leafs", &SearchSpace::leafs)
         .def("get_domains", [](SearchSpace& sp, NodeId leaf_id) {

@@ -1,7 +1,7 @@
 from io import StringIO
 
 from .pytreeck import *
-from pytree import PyTrees
+from pytrees import PyTrees
 
 def __realdomain__str(self):
     return "[{:.3g}, {:.3g})".format(self.lo, self.hi)

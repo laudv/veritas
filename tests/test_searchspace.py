@@ -1,6 +1,9 @@
 import unittest
+import z3
+
 from treeck import *
 from treeck.plot import TreePlot
+from treeck.z3 import Z3Solver
 
 def simple():
     at = AddTree.read("tests/models/xgb-covtype-easy.json")
@@ -28,10 +31,36 @@ def simple():
                 p.add_tree(at_pruned[i])
                 p.render("plots/plot-leaf{}-{}".format(k, i))
 
+def test_z3():
+    at = AddTree.read("tests/models/xgb-covtype-easy.json")
+    sp = SearchSpace(at)
+
+    sp.split(100)
+
+    leaf = sp.leafs()[3]
+
+    addtree = sp.get_pruned_addtree(leaf)
+    pytrees = addtree.pytrees()
+    domains = sp.get_domains(leaf)
+
+    print(addtree)
+    print(f"Domains for leaf {leaf}:", list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
+
+    solver = Z3Solver(sp.num_features(), domains, pytrees)
+    #solver.verify()
+    solver.verify([(solver.xvar(35) > 0.5)])
+
+
+
 class TestSearchSpace(unittest.TestCase):
     def test_tree1(self):
         simple()
 
 
 if __name__ == "__main__":
-    simple()
+    z3.set_pp_option("rational_to_decimal", True)
+    z3.set_pp_option("precision", 3)
+    z3.set_pp_option("max_width", 130)
+
+    #simple()
+    test_z3()
