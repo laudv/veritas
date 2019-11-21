@@ -83,18 +83,19 @@ PYBIND11_MODULE(pytreeck, m) {
         AddTree *at;
         size_t i;
         TreeD& get() { return at->operator[](i); }
+        const TreeD& get() const { return at->operator[](i); }
     };
 
     py::class_<TreeRef>(m, "Tree")
         .def("root", [](TreeRef& r) { return r.get().root(); }, py::keep_alive<0, 1>())
-        .def("__getitem__", [](TreeRef& r, NodeId id) { return r.get()[id]; }, py::keep_alive<0, 1>())
+        .def("__getitem__", [](const TreeRef& r, NodeId id) { return r.get()[id]; }, py::keep_alive<0, 1>())
         .def("__setitem__", [](TreeRef& r, NodeId id, double leaf_value) {
             NodeRef node = r.get()[id];
             if (node.is_internal()) throw std::runtime_error("set leaf value of internal");
             node.set_leaf_value(leaf_value);
         })
-        .def("num_nodes", [](TreeRef& r) { return r.get().num_nodes(); })
-        .def("__repr__", [](TreeRef& r) { return tostr(r.get()); });
+        .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
+        .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
@@ -106,7 +107,9 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
         .def("to_json", &AddTree::to_json)
-        .def("from_json", AddTree::from_json);
+        .def("from_json", AddTree::from_json)
+        .def("_export_lists", &AddTree::export_lists)
+        .def("__str__", [](const AddTree& at) { return tostr(at); });
 
     py::class_<SearchSpace>(m, "SearchSpace")
         .def(py::init<std::shared_ptr<AddTree>>())
@@ -126,6 +129,12 @@ PYBIND11_MODULE(pytreeck, m) {
             sp.get_domains(node_id, doms);
             AddTree new_at = prune(sp.addtree(), doms);
             return new_at;
+        })
+        .def("_export_lists", [](const SearchSpace& sp, NodeId node_id) {
+            Domains doms;
+            sp.get_domains(node_id, doms);
+            AddTree new_at = prune(sp.addtree(), doms);
+            return new_at.export_lists();
         })
         ;
 

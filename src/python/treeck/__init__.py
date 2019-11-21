@@ -1,6 +1,7 @@
 from io import StringIO
 
 from .pytreeck import *
+from pytree import PyTrees
 
 def __realdomain__str(self):
     return "[{:.3g}, {:.3g})".format(self.lo, self.hi)
@@ -42,13 +43,6 @@ def __addtree_iter(self):
     for i in range(len(self)):
         yield self[i]
 
-def __addtree_str(self):
-    buf = StringIO()
-    print("[AddTree({})]".format(len(self)), file=buf)
-    for tree_index, tree in enumerate(self):
-        print("{}.".format(tree_index), tree, file=buf)
-    return buf.getvalue()
-
 def __addtree_predict_single(self, example):
     result = self.base_score
     for tree in self:
@@ -68,9 +62,17 @@ def __addtree_read(f):
         json = fh.read()
         return AddTree.from_json(json)
 
+def __addtree_into_pytrees(self):
+    return PyTrees(*self._export_lists())
+
 AddTree.__iter__ = __addtree_iter
-AddTree.__str__ = __addtree_str
 AddTree.predict_single = __addtree_predict_single
 AddTree.predict = __addtree_predict
 AddTree.write = __addtree_write
 AddTree.read = __addtree_read
+AddTree.pytrees = __addtree_into_pytrees
+
+def __searchspace_into_pytrees(self, leaf_id):
+    return PyTrees(*self._export_lists(leaf_id))
+
+SearchSpace.get_pruned_pytrees = __searchspace_into_pytrees;
