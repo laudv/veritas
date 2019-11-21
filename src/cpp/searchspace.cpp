@@ -104,6 +104,7 @@ namespace treeck {
         , leafs_{}
         , root_domains_{}
         , domains_{}
+        , scores_{}
     {
         splits_map_ = inner::extract_splits(*addtree_);
 
@@ -175,6 +176,12 @@ namespace treeck {
         return domtree_;
     }
 
+    const std::vector<double>&
+    SearchSpace::scores() const
+    {
+        return scores_;
+    }
+
     const std::vector<NodeId>&
     SearchSpace::leafs() const
     {
@@ -188,15 +195,15 @@ namespace treeck {
     }
 
     void
-    SearchSpace::get_domains(NodeId node_id, Domains& domains)
+    SearchSpace::get_domains(NodeId node_id, Domains& domains) const
     {
         domains.resize(num_features_);
         std::copy(root_domains_.begin(), root_domains_.end(), domains.begin());
-        Tree<LeafInfo>::MRef leaf = domtree_[node_id];
-        Tree<LeafInfo>::MRef node = leaf;
+        Tree<LeafInfo>::CRef leaf = domtree_[node_id];
+        Tree<LeafInfo>::CRef node = leaf;
         while (!node.is_root())
         {
-            Tree<LeafInfo>::MRef child_node = node;
+            Tree<LeafInfo>::CRef child_node = node;
             node = node.parent();
 
             LtSplit split = std::get<LtSplit>(node.get_split());
@@ -213,12 +220,12 @@ namespace treeck {
             }
         }
 
-        std::cout << std::endl << "DOMAIN of node " << node_id << std::endl;
-        for (size_t i = 0; i < domains.size(); ++i)
-        {
-            if (domains[i].is_everything()) continue;
-            std::cout << " - [" << i << "] " << domains[i] << std::endl;
-        }
+        //std::cout << std::endl << "DOMAIN of node " << node_id << std::endl;
+        //for (size_t i = 0; i < domains.size(); ++i)
+        //{
+        //    if (domains[i].is_everything()) continue;
+        //    std::cout << " - [" << i << "] " << domains[i] << std::endl;
+        //}
     }
     
     void
@@ -243,6 +250,7 @@ namespace treeck {
             double score = node.leaf_value().score;
 
             node.split(dom_split);
+            scores_.push_back(score);
 
             std::cout << "SPLITTING " << node_id << " " << dom_split << " into "
                 << node.left().id() << " and " << node.right().id()
@@ -256,11 +264,10 @@ namespace treeck {
             leafs_.push_back(node.left().id());  std::push_heap(leafs_.begin(), leafs_.end(), cmp);
             leafs_.push_back(node.right().id()); std::push_heap(leafs_.begin(), leafs_.end(), cmp);
 
-            std::cout << domtree_ << std::endl;
-
-            std::cout << std::endl << "leafs_:";
-            for (auto x : leafs_) std::cout << " " << x << '(' << domtree_[x].leaf_value().score << ')';
-            std::cout << std::endl;
+            //std::cout << domtree_ << std::endl;
+            //std::cout << std::endl << "leafs_:";
+            //for (auto x : leafs_) std::cout << " " << x << '(' << domtree_[x].leaf_value().score << ')';
+            //std::cout << std::endl;
         }
     }
 
@@ -279,8 +286,8 @@ namespace treeck {
         int unreachable_left = count_unreachable_nodes(sp.addtree(), domains, fid, dom_left);
         int unreachable_right = count_unreachable_nodes(sp.addtree(), domains, fid, dom_right);
 
-        double a = static_cast<double>(unreachable_left) + 1.0;
-        double b = static_cast<double>(unreachable_right) + 1.0;
+        double a = static_cast<double>(unreachable_left);
+        double b = static_cast<double>(unreachable_right);
         //double score = (a * b) / (a + b);
         double score = a + b;
 

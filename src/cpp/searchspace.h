@@ -41,6 +41,7 @@ namespace treeck {
         std::vector<NodeId> leafs_;
         Domains root_domains_;
         Domains domains_;
+        std::vector<double> scores_;
 
         void compute_best_score(NodeId domtree_leaf_id, MeasureF measure);
 
@@ -51,9 +52,10 @@ namespace treeck {
         size_t num_features() const;
         const AddTree& addtree() const;
         const DomTreeT& domtree() const;
+        const std::vector<double>& scores() const;
         const std::vector<NodeId>& leafs() const;
         const Domains& root_domains() const;
-        void get_domains(NodeId node_id, Domains& domains);
+        void get_domains(NodeId node_id, Domains& domains) const;
 
         void split(MeasureF measure, StopCondF cond);
     };

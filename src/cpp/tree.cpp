@@ -61,6 +61,15 @@ namespace treeck {
         return trees_.size();
     }
 
+    size_t
+    AddTree::num_nodes() const
+    {
+        size_t c = 0;
+        for (auto& tree : trees_)
+            c += tree.num_nodes();
+        return c;
+    }
+
     AddTree::TreeT&
     AddTree::operator[](size_t index)
     {

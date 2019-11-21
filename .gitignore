@@ -4,4 +4,4 @@ __pycache__
 *.so
 compile_commands.json
 .gdb_history
-
+plots

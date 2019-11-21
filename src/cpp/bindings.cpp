@@ -10,7 +10,7 @@
 #include "domain.h"
 #include "tree.h"
 #include "searchspace.h"
-//#include "opaque.h"
+#include "prune.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -36,6 +36,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def_readonly("hi", &RealDomain::hi)
         .def("contains", &RealDomain::contains)
         .def("overlaps", &RealDomain::overlaps)
+        .def("is_everything", &RealDomain::is_everything)
         .def("split", &RealDomain::split)
         .def("__repr__", [](RealDomain& d) { return tostr(d); });
 
@@ -99,7 +100,8 @@ PYBIND11_MODULE(pytreeck, m) {
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
         .def_readwrite("base_score", &AddTree::base_score)
-        .def("__len__", [](AddTree& at) { return at.size(); })
+        .def("__len__", &AddTree::size)
+        .def("num_nodes", &AddTree::num_nodes)
         .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
@@ -112,11 +114,18 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("split", [](SearchSpace& sp, size_t nleafs) {
             sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
         })
+        .def("scores", &SearchSpace::scores)
         .def("leafs", &SearchSpace::leafs)
         .def("get_domains", [](SearchSpace& sp, NodeId leaf_id) {
             Domains doms;
             sp.get_domains(leaf_id, doms);
             return doms.vec();
+        })
+        .def("get_pruned_addtree", [](const SearchSpace& sp, NodeId node_id) {
+            Domains doms;
+            sp.get_domains(node_id, doms);
+            AddTree new_at = prune(sp.addtree(), doms);
+            return new_at;
         })
         ;
 
