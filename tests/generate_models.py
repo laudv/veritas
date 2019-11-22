@@ -30,11 +30,6 @@ def generate_california_housing():
     print(f"easy: rmse train {np.sqrt(sqerr)/len(X)}")
     print(f"easy: rmse model difference {np.sqrt(sqcorr)/len(X)}")
 
-    # edge case test
-    Xt = [X[12]]
-    Xt[0][at[0][0].get_split().feat_id] = at[0][0].get_split().split_value
-    print("edge case diff: ", model.predict(Xt) - at.predict(Xt))
-
     at.write("tests/models/xgb-calhouse-very-easy.json")
 
     # Easy
@@ -53,8 +48,9 @@ def generate_california_housing():
     print(f"easy: rmse model difference {np.sqrt(sqcorr)/len(X)}")
 
     # edge case test
+    feat_id, split_value = at[0].get_split(0)
     Xt = [X[12]]
-    Xt[0][at[0][0].get_split().feat_id] = at[0][0].get_split().split_value
+    Xt[0][feat_id] = split_value
     print("edge case diff: ", model.predict(Xt) - at.predict(Xt))
 
     at.write("tests/models/xgb-calhouse-easy.json")
@@ -117,11 +113,12 @@ def generate_covertype():
     err = sum(y != model.predict(X)) / len(y)
     sqcorr = sum((model.predict(X[:1000], output_margin=True) - at.predict(X[:1000]))**2)
     print(f"easy: error rate {err}")
-    print(f"easy: rmse model difference {np.sqrt(sqcorr)/1000}")
+    print(f"easy: rmse model difference {np.sqrt(sqcorr)/len(X[:1000])}")
 
     # edge case test
+    feat_id, split_value = at[0].get_split(0)
     Xt = [X[12]]
-    Xt[0][at[0][0].get_split().feat_id] = at[0][0].get_split().split_value
+    Xt[0][feat_id] = split_value
     print("edge case diff: ", model.predict(Xt, output_margin=True) - at.predict(Xt))
 
     at.write("tests/models/xgb-covtype-easy.json")

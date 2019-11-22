@@ -55,6 +55,7 @@ class Z3Solver:
 
         print(self._solver)
         print("status:", status)
+        return status
 
     def test_tree_reachability(self, tree):
         trees = self._trees

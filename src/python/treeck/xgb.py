@@ -3,7 +3,7 @@ import json
 from xgboost.sklearn import XGBModel
 from xgboost.core import Booster
 
-from . import LtSplit, AddTree
+from . import AddTree
 
 def addtree_from_xgb_model(model):
     base_score = 0.5
@@ -30,11 +30,11 @@ def _parse_tree(at, tree_dump):
         if "leaf" not in node_json:
             feat_id = int(node_json["split"][1:])
             split_value = node_json["split_condition"]
-            node.split(LtSplit(feat_id, split_value))
+            tree.split(node, feat_id, split_value)
 
             # let's hope the ordering of "children" is [left,right]
-            stack.append((node.right(), node_json["children"][1]))
-            stack.append((node.left(), node_json["children"][0]))
+            stack.append((tree.right(node), node_json["children"][1]))
+            stack.append((tree.left(node), node_json["children"][0]))
         else:
             leaf_value = node_json["leaf"]
-            node.set_leaf_value(leaf_value)
+            tree.set_leaf_value(node, leaf_value)

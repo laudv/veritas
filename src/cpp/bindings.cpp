@@ -40,28 +40,28 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("split", &RealDomain::split)
         .def("__repr__", [](RealDomain& d) { return tostr(d); });
 
-    py::class_<LtSplit>(m, "LtSplit")
-        .def(py::init<FeatId, LtSplit::ValueT>())
-        .def_readonly("feat_id", &LtSplit::feat_id)
-        .def_readonly("split_value", &LtSplit::split_value)
-        .def("test", &LtSplit::test)
-        .def("__repr__", [](LtSplit& s) { return tostr(s); });
+    //py::class_<LtSplit>(m, "LtSplit")
+    //    .def(py::init<FeatId, LtSplit::ValueT>())
+    //    .def_readonly("feat_id", &LtSplit::feat_id)
+    //    .def_readonly("split_value", &LtSplit::split_value)
+    //    .def("test", &LtSplit::test)
+    //    .def("__repr__", [](LtSplit& s) { return tostr(s); });
 
-    py::class_<NodeRefD>(m, "Node")
-        .def("is_root", &NodeRefD::is_root)
-        .def("is_leaf", &NodeRefD::is_leaf)
-        .def("is_internal", &NodeRefD::is_internal)
-        .def("id", &NodeRefD::id)
-        .def("left", &NodeRefD::left, py::keep_alive<0, 1>())   // keep_alive<Nurse, Patient> = <Return, This>, 
-        .def("right", &NodeRefD::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
-        .def("parent", &NodeRefD::parent, py::keep_alive<0, 1>())
-        .def("tree_size", &NodeRefD::tree_size)
-        .def("depth", &NodeRefD::depth)
-        .def("get_split", &NodeRefD::get_split)
-        .def("leaf_value", &NodeRefD::leaf_value)
-        .def("set_leaf_value", [](NodeRefD& n, double v) { n.set_leaf_value(v); })
-        .def("split", [](NodeRefD& n, LtSplit s) { n.split(s); })
-        .def("__repr__", [](NodeRefD& n) { return tostr(n); });
+    //py::class_<NodeRefD>(m, "Node")
+    //    .def("is_root", &NodeRefD::is_root)
+    //    .def("is_leaf", &NodeRefD::is_leaf)
+    //    .def("is_internal", &NodeRefD::is_internal)
+    //    .def("id", &NodeRefD::id)
+    //    .def("left", &NodeRefD::left, py::keep_alive<0, 1>())   // keep_alive<Nurse, Patient> = <Return, This>, 
+    //    .def("right", &NodeRefD::right, py::keep_alive<0, 1>()) // Patient kept alive until Nurse dropped
+    //    .def("parent", &NodeRefD::parent, py::keep_alive<0, 1>())
+    //    .def("tree_size", &NodeRefD::tree_size)
+    //    .def("depth", &NodeRefD::depth)
+    //    .def("get_split", &NodeRefD::get_split)
+    //    .def("leaf_value", &NodeRefD::leaf_value)
+    //    .def("set_leaf_value", [](NodeRefD& n, double v) { n.set_leaf_value(v); })
+    //    .def("split", [](NodeRefD& n, LtSplit s) { n.split(s); })
+    //    .def("__repr__", [](NodeRefD& n) { return tostr(n); });
     
     //py::class_<Tree/*, std::unique_ptr<Tree, py::nodelete>*/>(m, "Tree")
     //    .def(py::init<>())
@@ -86,17 +86,35 @@ PYBIND11_MODULE(pytreeck, m) {
         const TreeD& get() const { return at->operator[](i); }
     };
 
-    py::class_<TreeRef>(m, "Tree")
-        .def("root", [](TreeRef& r) { return r.get().root(); }, py::keep_alive<0, 1>())
-        .def("__getitem__", [](const TreeRef& r, NodeId id) { return r.get()[id]; }, py::keep_alive<0, 1>())
-        .def("__setitem__", [](TreeRef& r, NodeId id, double leaf_value) {
-            NodeRef node = r.get()[id];
-            if (node.is_internal()) throw std::runtime_error("set leaf value of internal");
-            node.set_leaf_value(leaf_value);
-        })
-        .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
-        .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
+    //py::class_<TreeRef>(m, "Tree")
+    //    .def("root", [](TreeRef& r) { return r.get().root(); }, py::keep_alive<0, 1>())
+    //    .def("__getitem__", [](const TreeRef& r, NodeId id) { return r.get()[id]; }, py::keep_alive<0, 1>())
+    //    .def("__setitem__", [](TreeRef& r, NodeId id, double leaf_value) {
+    //        NodeRef node = r.get()[id];
+    //        if (node.is_internal()) throw std::runtime_error("set leaf value of internal");
+    //        node.set_leaf_value(leaf_value);
+    //    })
+    //    .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
+    //    .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
+    py::class_<TreeRef>(m, "Tree")
+        .def("root", [](const TreeRef& r) { return r.get().root().id(); })
+        .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
+        .def("is_root", [](const TreeRef& r, NodeId n) { return r.get()[n].is_root(); })
+        .def("is_leaf", [](const TreeRef& r, NodeId n) { return r.get()[n].is_leaf(); })
+        .def("is_internal", [](const TreeRef& r, NodeId n) { return r.get()[n].is_internal(); })
+        .def("left", [](const TreeRef& r, NodeId n) { return r.get()[n].left().id(); })
+        .def("right", [](const TreeRef& r, NodeId n) { return r.get()[n].right().id(); })
+        .def("parent", [](const TreeRef& r, NodeId n) { return r.get()[n].parent().id(); })
+        .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get()[n].tree_size(); })
+        .def("depth", [](const TreeRef& r, NodeId n) { return r.get()[n].depth(); })
+        .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get()[n].leaf_value(); })
+        .def("get_split", [](const TreeRef& r, NodeId n) -> std::tuple<FeatId, double> {
+                auto split = std::get<LtSplit>(r.get()[n].get_split());
+                return {split.feat_id, split.split_value}; })
+        .def("set_leaf_value", [](TreeRef& r, NodeId n, double v) { r.get()[n].set_leaf_value(v); })
+        .def("split", [](TreeRef& r, NodeId n, FeatId fid, double sv) { r.get()[n].split(LtSplit(fid, sv)); })
+        .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())

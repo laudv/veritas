@@ -12,30 +12,30 @@ def __realdomain__str(self):
 
 RealDomain.__str__ = __realdomain__str
 
-def __ltsplit__str(self):
-    return "X{} < {:.3g}".format(self.feat_id, self.split_value)
+#def __ltsplit__str(self):
+#    return "X{} < {:.3g}".format(self.feat_id, self.split_value)
+#
+#def __ltsplit__eq(self, other):
+#    return self.feat_id == other.feat_id \
+#            and self.split_value == other.split_value
+#
+#LtSplit.__str__ = __ltsplit__str
+#LtSplit.__eq__ = __ltsplit__eq
 
-def __ltsplit__eq(self, other):
-    return self.feat_id == other.feat_id \
-            and self.split_value == other.split_value
-
-LtSplit.__str__ = __ltsplit__str
-LtSplit.__eq__ = __ltsplit__eq
-
-def __node__eq(self, other):
-    return self.is_internal() == other.is_internal() \
-            and (not self.is_internal() or (self.get_split() == other.get_split())) \
-            and (not self.is_leaf() or (self.leaf_value() == other.leaf_value()))
-
-Node.__eq__ = __node__eq
+#def __node__eq(self, other):
+#    return self.is_internal() == other.is_internal() \
+#            and (not self.is_internal() or (self.get_split() == other.get_split())) \
+#            and (not self.is_leaf() or (self.leaf_value() == other.leaf_value()))
+#
+#Node.__eq__ = __node__eq
 
 def __tree_predict_single(self, example):
     node = self.root()
-    while not node.is_leaf():
-        split = node.get_split()
-        go_left = split.test(example[split.feat_id])
-        node = node.left() if go_left else node.right()
-    return node.leaf_value()
+    while not self.is_leaf(node):
+        fid, sv = self.get_split(node)
+        go_left = example[fid] < sv
+        node = self.left(node) if go_left else self.right(node)
+    return self.get_leaf_value(node)
 
 def __tree_predict(self, examples):
     return list(map(self.predict_single, examples))
@@ -54,7 +54,13 @@ def __addtree_predict_single(self, example):
     return result
 
 def __addtree_predict(self, examples):
-    return list(map(self.predict_single, examples))
+    predictions = []
+    print("predicting...", end="")
+    for i, example in enumerate(examples):
+        print("\rpredicting...", i, "/", len(examples), end="")
+        predictions.append(self.predict_single(example))
+    print("\rdone                    ")
+    return predictions
 
 def __addtree_write(self, f):
     with open(f, "w") as fh:
@@ -76,7 +82,7 @@ AddTree.write = __addtree_write
 AddTree.read = __addtree_read
 AddTree.pytrees = __addtree_into_pytrees
 
-def __searchspace_into_pytrees(self, leaf_id):
-    return PyTrees(*self._export_lists(leaf_id))
-
-SearchSpace.get_pruned_pytrees = __searchspace_into_pytrees;
+#def __searchspace_into_pytrees(self, leaf_id):
+#    return PyTrees(*self._export_lists(leaf_id))
+#
+#SearchSpace.get_pruned_pytrees = __searchspace_into_pytrees;
