@@ -1,9 +1,8 @@
-import unittest
+import unittest, time
 import z3
 
 from treeck import *
 from treeck.plot import TreePlot
-from treeck.z3 import Z3Solver, GREATER_THAN, LESS_THAN
 
 def simple():
     at = AddTree.read("tests/models/xgb-covtype-easy.json")
@@ -48,7 +47,7 @@ def test_z3():
 
     solver = Z3Solver(sp.num_features(), domains, pytrees)
     #solver.verify()
-    solver.verify([(solver.xvar(35) > 0.5)], threshold=-10, op=LESS_THAN)
+    solver.verify([(solver.xvar(35) > 0.5)], threshold=-8.0, op=LESS_THAN)
 
 
 

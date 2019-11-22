@@ -5,6 +5,7 @@ class PyTrees:
         self._lefts = lefts
         self._feat_ids = feat_ids
         self._values = values
+        self._reachable = [True] * len(lefts)
 
     def __len__(self):
         return len(self._offsets)
@@ -47,3 +48,10 @@ class PyTrees:
 
     def right(self, tree, node):
         return self._lefts[self.index(tree, node)] + 1
+
+    def is_reachable(self, tree, node):
+        return self._reachable[self.index(tree, node)]
+
+    def set_unreachable(self, tree, node):
+        self._reachable[self.index(tree, node)] = False
+
