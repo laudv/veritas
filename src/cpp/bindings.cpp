@@ -38,7 +38,13 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("overlaps", &RealDomain::overlaps)
         .def("is_everything", &RealDomain::is_everything)
         .def("split", &RealDomain::split)
-        .def("__repr__", [](RealDomain& d) { return tostr(d); });
+        .def("__repr__", [](RealDomain& d) { return tostr(d); })
+        .def(py::pickle(
+            [](const RealDomain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
+            [](py::tuple t) { // __setstate__
+                if (t.size() != 2) throw std::runtime_error("invalid pickle state");
+                return RealDomain(t[0].cast<double>(), t[1].cast<double>());
+            }));
 
     /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
     struct TreeRef {
@@ -78,7 +84,6 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
         .def("to_json", &AddTree::to_json)
         .def("from_json", AddTree::from_json)
-        .def("_export_lists", &AddTree::export_lists)
         .def("__str__", [](const AddTree& at) { return tostr(at); });
 
     py::class_<SearchSpace>(m, "SearchSpace")
@@ -100,14 +105,7 @@ PYBIND11_MODULE(pytreeck, m) {
             sp.get_domains(node_id, doms);
             AddTree new_at = prune(sp.addtree(), doms);
             return new_at;
-        })
-        .def("_export_lists", [](const SearchSpace& sp, NodeId node_id) {
-            Domains doms;
-            sp.get_domains(node_id, doms);
-            AddTree new_at = prune(sp.addtree(), doms);
-            return new_at.export_lists();
-        })
-        ;
+        });
 
 } /* PYBIND11_MODULE */
 
