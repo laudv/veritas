@@ -42,12 +42,12 @@ class Z3Solver:
                     self._solver.add(self._encode_tree_bound(tree))
 
             # Add the tree with the best bound
-            best_tree = self._pop_best_tree()
+            best_tree = self._pop_best_tree(op)
             enc = self._encode_tree(best_tree, self._trees.root(best_tree))
             self._solver.add(enc)
 
             status = self._solver.check()
-            print("status:", status)
+            print("tree added:", best_tree, "status:", status)
 
         print(self._solver)
         print("status:", status)
@@ -133,8 +133,14 @@ class Z3Solver:
         split_value = self._trees.split_value(tree, node)
         return (self._xvars[feat_id] < split_value)
 
-    def _pop_best_tree(self):
-        return self._remaining_trees.pop() # TODO actually pop best tree
+    def _pop_best_tree(self, threshold_op):
+        if threshold_op == LESS_THAN:
+            self._remaining_trees.sort(key=lambda tree: self._lobounds[tree])
+            #print(list(map(lambda tree: (tree, self._lobounds[tree]), self._remaining_trees)))
+        else:
+            self._remaining_trees.sort(key=lambda tree: self._upbounds[tree], reverse=True)
+            #print(list(map(lambda tree: (tree, self._upbounds[tree]), self._remaining_trees)))
+        return self._remaining_trees.pop()
 
     def _encode_tree(self, tree, node):
         if not self._reachable[self._trees.index(tree, node)]:
@@ -153,7 +159,7 @@ class Z3Solver:
             if lc == False and rc == False:
                 return False
             elif lc == False:
-                return z3.And(c, rc)
+                return z3.And(z3.Not(c), rc)
             elif rc == False:
                 return z3.And(c, lc)
             else:
@@ -171,7 +177,3 @@ class Z3Solver:
         else:
             status = self._solver.check(constraint) == z3.sat
             return status
-
-
-
-
