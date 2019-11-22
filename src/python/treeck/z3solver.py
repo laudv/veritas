@@ -5,24 +5,22 @@ from .consts import LESS_THAN, GREATER_THAN
 
 class Z3Solver:
 
-    def __init__(self, num_features, domains, pytrees):
+    def __init__(self, num_features, domains, addtree):
         self._num_features = num_features
         self._domains = domains
-        self._trees = pytrees
+        self._addtree = addtree
 
         self._xvars = [z3.Real("x{}".format(i)) for i in range(self._num_features)]
-        self._wvars = [z3.Real("w{}".format(i)) for i in range(len(self._trees))]
+        self._wvars = [z3.Real("w{}".format(i)) for i in range(len(self._addtree))]
 
     def xvar(self, i):
         return self._xvars[i]
 
-    def trees(self):
-        yield from self._trees
-
     def verify(self, constraints=[], threshold=0.0, op=LESS_THAN):
-        self._remaining_trees = list(range(len(self._trees)))
-        self._lobounds = [ math.inf] * len(self._trees)
-        self._upbounds = [-math.inf] * len(self._trees)
+        self._remaining_trees = list(range(len(self._addtree)))
+        self._lobounds = [ math.inf] * len(self._addtree)
+        self._upbounds = [-math.inf] * len(self._addtree)
+        self._unreachable = set()
         self._iteration_count = 0
 
         self._solver = z3.Solver()
@@ -37,29 +35,29 @@ class Z3Solver:
 
             # Compute bounds and reachable branches for all remaining trees
             for tree in self._remaining_trees:
-                bounds_changed = self.test_tree_reachability(tree)
+                bounds_changed = self._test_tree_reachability(tree)
                 if bounds_changed:
                     self._solver.add(self._encode_tree_bound(tree))
 
             # Add the tree with the best bound
-            best_tree = self._pop_best_tree(op)
-            enc = self._encode_tree(best_tree, self._trees.root(best_tree))
+            best_tree_index = self._pop_best_tree(op)
+            best_tree = self._addtree[best_tree_index]
+            enc = self._encode_tree(best_tree, best_tree.root())
             self._solver.add(enc)
 
             status = self._solver.check()
-            print()
-            print("{:4}: DEBUG added tree{} with bounds [{:.4g}, {:.4g}] -> {}".format(
-                        self._iteration_count, best_tree,
-                        self._lobounds[best_tree],
-                        self._upbounds[best_tree], status))
+            print("{:4}: DEBUG added tree{} with bounds [{:.4g}, {:.4g}] -> {}\n".format(
+                        self._iteration_count, best_tree_index,
+                        self._lobounds[best_tree_index],
+                        self._upbounds[best_tree_index], status))
 
-        print(self._solver)
+        #print(self._solver)
         print("status:", status)
         return status
 
-    def test_tree_reachability(self, tree):
-        trees = self._trees
-        stack = [(trees.root(tree), True)]
+    def _test_tree_reachability(self, tree_index):
+        tree = self._addtree[tree_index]
+        stack = [(tree.root(), True)]
 
         lo =  math.inf
         hi = -math.inf
@@ -67,10 +65,10 @@ class Z3Solver:
         while len(stack) > 0:
             node, path_constraint = stack.pop()
 
-            if not self._trees.is_reachable(tree, node): continue
+            if not self._is_reachable(tree, node): continue
 
-            if trees.is_leaf(tree, node):
-                leaf_value = trees.leaf_value(tree, node)
+            if tree.is_leaf(node):
+                leaf_value = tree.get_leaf_value(node)
                 lo = min(lo, leaf_value)
                 hi = max(hi, leaf_value)
                 continue
@@ -79,9 +77,9 @@ class Z3Solver:
             lpath_constraint = z3.And(path_constraint, split)
             rpath_constraint = z3.And(path_constraint, z3.Not(split))
 
-            l, r = trees.left(tree, node), trees.right(tree, node)
-            lreachable = self._trees.is_reachable(tree, l)
-            rreachable = self._trees.is_reachable(tree, r)
+            l, r = tree.left(node), tree.right(node)
+            lreachable = self._is_reachable(tree, l)
+            rreachable = self._is_reachable(tree, r)
 
             # RIGHT
             if rreachable:
@@ -89,9 +87,9 @@ class Z3Solver:
                     stack.append((r, rpath_constraint))
                 else:
                     print("{:4}: DEBUG unreachable right tree{}: {}->{}".format(
-                        self._iteration_count, tree, node, r))
-                    self._trees.set_unreachable(tree, r)
-                    assert not self._trees.is_reachable(tree, r)
+                        self._iteration_count, tree.index(), node, r))
+                    self._mark_unreachable(tree, r)
+                    assert not self._is_reachable(tree, r)
 
             # LEFT
             if lreachable:
@@ -99,20 +97,26 @@ class Z3Solver:
                     stack.append((l, lpath_constraint))
                 else:
                     print("{:4}: DEBUG unreachable left tree{}: {}->{}".format(
-                        self._iteration_count, tree, node, l))
-                    self._trees.set_unreachable(tree, l)
-                    assert not self._trees.is_reachable(tree, l)
+                        self._iteration_count, tree.index(), node, l))
+                    self._mark_unreachable(tree, l)
+                    assert not self._is_reachable(tree, l)
 
-        changed = self._lobounds[tree] != lo or self._upbounds[tree] != hi
+        changed = self._lobounds[tree_index] != lo \
+                or self._upbounds[tree_index] != hi
 
-        self._lobounds[tree] = lo
-        self._upbounds[tree] = hi
+        self._lobounds[tree_index] = lo
+        self._upbounds[tree_index] = hi
 
         if changed:
             print("{:4}: DEBUG new bounds tree{}: [{:.4g}, {:.4g}]".format(
-                self._iteration_count, tree,
-                self._lobounds[tree], self._upbounds[tree]))
+                self._iteration_count, tree.index(), lo, hi))
         return changed
+
+    def _is_reachable(self, tree, node):
+        return (tree.index(), node) not in self._unreachable
+
+    def _mark_unreachable(self, tree, node):
+        return self._unreachable.add((tree.index(), node))
 
     def _domain_constraints(self):
         cs = []
@@ -139,29 +143,26 @@ class Z3Solver:
         else: raise ValueError("invalid threshold operator")
 
     def _get_split_constraint(self, tree, node):
-        feat_id = self._trees.split_feat_id(tree, node)
-        split_value = self._trees.split_value(tree, node)
+        feat_id, split_value = tree.get_split(node)
         return (self._xvars[feat_id] < split_value)
 
     def _pop_best_tree(self, threshold_op):
         if threshold_op == LESS_THAN:
-            self._remaining_trees.sort(key=lambda tree: self._lobounds[tree])
-            #print(list(map(lambda tree: (tree, self._lobounds[tree]), self._remaining_trees)))
+            self._remaining_trees.sort(key=lambda i: self._lobounds[i])
         else:
-            self._remaining_trees.sort(key=lambda tree: self._upbounds[tree], reverse=True)
-            #print(list(map(lambda tree: (tree, self._upbounds[tree]), self._remaining_trees)))
+            self._remaining_trees.sort(key=lambda i: self._upbounds[i], reverse=True)
         return self._remaining_trees.pop()
 
     def _encode_tree(self, tree, node):
-        if not self._trees.is_reachable(tree, node):
+        if not self._is_reachable(tree, node):
             return False
 
-        wvar = self._wvars[tree]
+        wvar = self._wvars[tree.index()]
 
-        if self._trees.is_leaf(tree, node):
-            return (wvar == self._trees.leaf_value(tree, node))
+        if tree.is_leaf(node):
+            return (wvar == tree.get_leaf_value(node))
         else:
-            l, r = self._trees.left(tree, node), self._trees.right(tree, node)
+            l, r = tree.left(node), tree.right(node)
             lc = self._encode_tree(tree, l)
             rc = self._encode_tree(tree, r)
             c = self._get_split_constraint(tree, node)

@@ -3,7 +3,6 @@ from io import StringIO
 from .pytreeck import *
 
 from .consts import LESS_THAN, GREATER_THAN
-from .pytrees import PyTrees
 from .z3solver import Z3Solver
 from .parallel_solver import ParallelSolver
 
@@ -72,17 +71,8 @@ def __addtree_read(f):
         json = fh.read()
         return AddTree.from_json(json)
 
-def __addtree_into_pytrees(self):
-    return PyTrees(*self._export_lists())
-
 AddTree.__iter__ = __addtree_iter
 AddTree.predict_single = __addtree_predict_single
 AddTree.predict = __addtree_predict
 AddTree.write = __addtree_write
 AddTree.read = __addtree_read
-AddTree.pytrees = __addtree_into_pytrees
-
-#def __searchspace_into_pytrees(self, leaf_id):
-#    return PyTrees(*self._export_lists(leaf_id))
-#
-#SearchSpace.get_pruned_pytrees = __searchspace_into_pytrees;

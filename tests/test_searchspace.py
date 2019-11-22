@@ -34,21 +34,24 @@ def test_z3():
     at = AddTree.read("tests/models/xgb-covtype-easy.json")
     sp = SearchSpace(at)
 
-    sp.split(100)
+    sp.split(10)
+    threshold = -7.3
 
-    leaf = sp.leafs()[3]
+    results = []
 
-    addtree = sp.get_pruned_addtree(leaf)
-    pytrees = addtree.pytrees()
-    domains = sp.get_domains(leaf)
+    for i, leaf in enumerate(sp.leafs()):
+        addtree = sp.get_pruned_addtree(leaf)
+        domains = sp.get_domains(leaf)
 
-    print(addtree)
-    print(f"Domains for leaf {leaf}:", list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
+        #print(addtree)
+        print(f"Domains for leaf {i}({leaf}):",
+                list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
 
-    solver = Z3Solver(sp.num_features(), domains, pytrees)
-    #solver.verify()
-    solver.verify([(solver.xvar(35) > 0.5)], threshold=-8.0, op=LESS_THAN)
+        solver = Z3Solver(sp.num_features(), domains, addtree)
+        constraints = [(solver.xvar(35) > 0.5)]
+        results.append(solver.verify(constraints, threshold, op=LESS_THAN))
 
+    print(results)
 
 
 class TestSearchSpace(unittest.TestCase):
