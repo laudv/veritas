@@ -6,3 +6,4 @@ compile_commands.json
 .gdb_history
 plots
 dask-worker-space
+sync.sh
