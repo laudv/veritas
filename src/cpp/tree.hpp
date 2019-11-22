@@ -36,6 +36,21 @@ namespace treeck {
             , leaf{} {}
 
         template <typename LeafT>
+        Node<LeafT>::Node(const Node<LeafT>& other)
+            : id(other.id)
+            , parent(other.parent)
+            , depth(other.depth)
+            , tree_size(other.tree_size)
+            , leaf{}
+        {
+            if (other.is_leaf())
+                leaf = other.leaf;
+            else
+                internal = other.internal;
+        }
+
+
+        template <typename LeafT>
         bool
         Node<LeafT>::is_leaf() const
         {

@@ -80,6 +80,7 @@ namespace treeck {
             };
 
             Node();
+            Node(const Node<LeafT>&);
             Node(NodeId id, NodeId parent, int depth);
             bool is_leaf() const;
 
