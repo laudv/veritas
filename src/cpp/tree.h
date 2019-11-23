@@ -71,7 +71,6 @@ namespace treeck {
         struct Node {
             NodeId id;
             NodeId parent; /* root has itself as parent */
-            int depth;
             int tree_size; /* size of tree w/ this node as root */
 
             union {
@@ -81,7 +80,7 @@ namespace treeck {
 
             Node();
             Node(const Node<LeafT>&);
-            Node(NodeId id, NodeId parent, int depth);
+            Node(NodeId id, NodeId parent);
             bool is_leaf() const;
 
             template<typename Archive>
@@ -112,7 +111,7 @@ namespace treeck {
 
     private:
         TreeP tree_;
-        int node_id_;
+        NodeId node_id_;
 
         const inner::Node<LeafT>& node() const;
 
@@ -147,6 +146,10 @@ namespace treeck {
         template <typename T = RefT>
         std::enable_if_t<T::is_mut_type::value, void>
         split(Split split); /* leaf & mut only */
+
+        template <typename T = RefT>
+        std::enable_if_t<T::is_mut_type::value, void>
+        skip_branch(); /* non-root & mut only */
     };
 
     template <typename RefT>

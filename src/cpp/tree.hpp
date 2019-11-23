@@ -25,13 +25,12 @@ namespace treeck {
     namespace inner {
 
         template <typename LeafT>
-        Node<LeafT>::Node() : Node(-1, -1, -1) {}
+        Node<LeafT>::Node() : Node(-1, -1) {}
 
         template <typename LeafT>
-        Node<LeafT>::Node(NodeId id, NodeId parent, int depth)
+        Node<LeafT>::Node(NodeId id, NodeId parent)
             : id(id)
             , parent(parent)
-            , depth(depth)
             , tree_size(1)
             , leaf{} {}
 
@@ -39,7 +38,6 @@ namespace treeck {
         Node<LeafT>::Node(const Node<LeafT>& other)
             : id(other.id)
             , parent(other.parent)
-            , depth(other.depth)
             , tree_size(other.tree_size)
             , leaf{}
         {
@@ -65,7 +63,6 @@ namespace treeck {
             archive(
                 CEREAL_NVP(id),
                 CEREAL_NVP(parent),
-                CEREAL_NVP(depth),
                 CEREAL_NVP(tree_size));
 
             if (is_leaf()) // uses tree_size read above when deserializing!
@@ -179,7 +176,14 @@ namespace treeck {
     int
     NodeRef<RefT>::depth() const
     {
-        return node().depth;
+        int depth = 0;
+        NodeRef nf(*this);
+        while (!nf.is_root())
+        {
+            nf = nf.parent();
+            depth += 1;
+        }
+        return depth;
     }
 
     template <typename RefT>
@@ -216,8 +220,8 @@ namespace treeck {
 
         NodeId left_id = tree_->nodes_.size();
 
-        inner::Node<LeafT> left(left_id,      id(), depth() + 1);
-        inner::Node<LeafT> right(left_id + 1, id(), depth() + 1);
+        inner::Node<LeafT> left(left_id,      id());
+        inner::Node<LeafT> right(left_id + 1, id());
         
         tree_->nodes_.push_back(left);
         tree_->nodes_.push_back(right);
@@ -232,6 +236,38 @@ namespace treeck {
             nf = nf.parent();
             nf.node().tree_size += 2;
         }
+    }
+
+    template <typename RefT>
+    template <typename T>
+    std::enable_if_t<T::is_mut_type::value, void>
+    NodeRef<RefT>::skip_branch()
+    {
+        if (is_root()) throw std::runtime_error("skip_branch on root");
+
+        auto& skipto_node = (is_left_child() ? parent().right() : parent().left()).node();
+        auto& parent_node = parent().node();
+
+        parent_node.tree_size = skipto_node.tree_size;
+        if (skipto_node.is_leaf())
+            parent_node.leaf = skipto_node.leaf;
+        else
+            parent_node.internal = skipto_node.internal;
+
+        int skip_tree_size = tree_size();
+        auto nf = parent();
+        while (!nf.is_root())
+        {
+            nf = nf.parent();
+            nf.node().tree_size -= (skip_tree_size + 1);
+        }
+
+        if (parent().is_internal())
+        {
+            parent().left().node().parent = parent().id();
+            parent().right().node().parent = parent().id();
+        }
+        node().parent = -1;
     }
 
     template <typename RefT>
@@ -256,7 +292,7 @@ namespace treeck {
     template <typename LeafT>
     Tree<LeafT>::Tree()
     {
-        nodes_.push_back(inner::Node<LeafT>(0, 0, 0)); /* add a root leaf node */
+        nodes_.push_back(inner::Node<LeafT>(0, 0)); /* add a root leaf node */
     }
 
     template <typename LeafT>
@@ -306,9 +342,9 @@ namespace treeck {
             CRef node = stack.top(); stack.pop();
             TreeVisitStatus status = visitor(node);
 
-            if (status & TreeVisitStatus::ADD_RIGHT > 0)
+            if ((status & TreeVisitStatus::ADD_RIGHT) > 0)
                 stack.push(node.right());
-            if (status & TreeVisitStatus::ADD_LEFT > 0)
+            if ((status & TreeVisitStatus::ADD_LEFT) > 0)
                 stack.push(node.left());
         }
     }
@@ -383,6 +419,7 @@ namespace treeck {
     template inner::Node<T>& NodeRef<inner::MutRef<T>>::node<inner::MutRef<T>>(); \
     template void NodeRef<inner::MutRef<T>>::set_leaf_value<inner::MutRef<T>>(T); \
     template void NodeRef<inner::MutRef<T>>::split<inner::MutRef<T>>(Split); \
+    template void NodeRef<inner::MutRef<T>>::skip_branch<inner::MutRef<T>>(); \
     template class Tree<T>; \
     template std::ostream& operator<<(std::ostream&, const NodeRef<inner::ConstRef<T>>&); \
     template std::ostream& operator<<(std::ostream&, const NodeRef<inner::MutRef<T>>&); \

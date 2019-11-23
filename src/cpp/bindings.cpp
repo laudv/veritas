@@ -72,6 +72,7 @@ PYBIND11_MODULE(pytreeck, m) {
                 return {split.feat_id, split.split_value}; })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, double v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, double sv) { r.get()[n].split(LtSplit(fid, sv)); })
+        .def("skip_branch", [](TreeRef& r, NodeId n) { r.get()[n].skip_branch(); })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")

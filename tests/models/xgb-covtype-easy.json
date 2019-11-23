@@ -6,7 +6,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -20,7 +19,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -34,7 +32,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -48,7 +45,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -62,7 +58,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -76,7 +71,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -90,7 +84,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -104,35 +97,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.934432924
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.870967746
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.609181345
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.462450594
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -146,7 +134,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -160,35 +147,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.475489169
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.314719737
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.0746471807
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.392026097
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -202,7 +184,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -216,7 +197,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -230,7 +210,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -244,35 +223,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.194711328
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.571505368
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.326136976
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.252244204
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -286,7 +260,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -300,28 +273,24 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.924004376
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.637305677
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.897194445
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.305225939
                 }
@@ -332,7 +301,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -346,7 +314,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -360,7 +327,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -374,7 +340,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -388,7 +353,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -402,7 +366,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -416,7 +379,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -430,35 +392,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.628276408
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.389920175
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.730007708
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.995324492
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -472,7 +429,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -486,35 +442,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.171839222
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.222788587
+                    "leaf_value": -0.222788572
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.649164379
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.14284119
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -528,7 +479,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -542,7 +492,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -556,7 +505,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -570,35 +518,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.343398333
+                    "leaf_value": -0.343398303
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.578277528
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0848313197
+                    "leaf_value": 0.0848313272
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.815889597
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -612,7 +555,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -626,28 +568,24 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.514116168
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.24526903
+                    "leaf_value": -0.245269015
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.349948525
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.610573769
                 }
@@ -658,7 +596,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -672,7 +609,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -686,7 +622,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -700,7 +635,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -714,7 +648,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -728,7 +661,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -742,7 +674,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -756,35 +687,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.348445296
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.60191375
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.657391012
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.240875289
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -798,7 +724,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -812,35 +737,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.205230057
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -1.10593045
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.573882341
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.743841469
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -854,7 +774,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -868,7 +787,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -882,7 +800,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -896,35 +813,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.370435834
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.147744417
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.165942624
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.132374138
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -938,7 +850,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -952,28 +863,24 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.592581391
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.520303667
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.574173868
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.0869952068
                 }
@@ -984,7 +891,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -998,7 +904,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -1012,7 +917,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -1026,7 +930,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -1040,7 +943,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -1054,7 +956,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -1068,7 +969,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -1082,35 +982,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.203550592
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.224400893
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.337031126
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 1.00011313
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -1124,7 +1019,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -1138,35 +1032,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.438429207
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 1.54069078
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.022403568
+                    "leaf_value": -0.0224035643
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.168610111
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -1180,7 +1069,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -1194,7 +1082,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -1208,7 +1095,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -1222,35 +1108,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.316481113
+                    "leaf_value": -0.316481084
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0245623197
+                    "leaf_value": 0.0245623384
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.543729067
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.31183666
+                    "leaf_value": -0.31183663
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -1264,7 +1145,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -1278,28 +1158,24 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.319864124
+                    "leaf_value": 0.319864154
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 1.18561053
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.35133332
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.592950642
                 }
@@ -1310,7 +1186,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -1324,7 +1199,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -1338,7 +1212,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -1352,7 +1225,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -1366,7 +1238,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -1380,7 +1251,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -1394,7 +1264,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -1408,35 +1277,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.200017363
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.702623844
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.165769681
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.0714193955
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -1450,7 +1314,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -1464,35 +1327,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.559034348
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.80924207
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0914022028
+                    "leaf_value": 0.0914022103
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.352779537
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -1506,7 +1364,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -1520,7 +1377,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -1534,7 +1390,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -1548,35 +1403,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.117286161
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.424491793
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.303471178
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.288468093
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -1590,7 +1440,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -1604,30 +1453,26 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.190214157
+                    "leaf_value": 0.190214142
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.688307345
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.512917399
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.433659554
+                    "leaf_value": 0.433659524
                 }
             ]
         },
@@ -1636,7 +1481,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -1650,7 +1494,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -1664,7 +1507,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -1678,7 +1520,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -1692,7 +1533,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -1706,7 +1546,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -1720,7 +1559,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -1734,35 +1572,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0219294261
+                    "leaf_value": -0.0219294354
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.0900085643
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.579845071
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.184266165
+                    "leaf_value": 0.18426618
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -1776,7 +1609,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -1790,35 +1622,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.57762605
+                    "leaf_value": 0.57762593
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.464810401
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.656187832
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.56843847
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -1832,7 +1659,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -1846,7 +1672,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -1860,7 +1685,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -1874,35 +1698,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.397151113
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.701093137
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0441290028
+                    "leaf_value": -0.0441290252
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 1.23366678
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -1916,7 +1735,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -1930,28 +1748,24 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.317293167
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.374707967
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.655482709
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.720390856
                 }
@@ -1962,7 +1776,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 29,
                     "left": 1,
                     "split": {
@@ -1976,7 +1789,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -1990,7 +1802,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 13,
                     "left": 17,
                     "split": {
@@ -2004,7 +1815,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -2018,7 +1828,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -2032,7 +1841,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -2046,7 +1854,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -2060,35 +1867,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0527553707
+                    "leaf_value": -0.052755367
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.191773221
+                    "leaf_value": 0.191773191
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.318548292
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0347818062
+                    "leaf_value": -0.0347818136
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -2102,7 +1904,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -2116,35 +1917,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.223702937
+                    "leaf_value": -0.223702922
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.275140971
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.427699924
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.255466491
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 5,
                     "left": 19,
                     "split": {
@@ -2158,7 +1954,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 23,
                     "split": {
@@ -2172,14 +1967,12 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 1,
                     "leaf_value": -1.47152936
                 },
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -2193,21 +1986,18 @@
                 {
                     "id": 21,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.313073575
                 },
                 {
                     "id": 22,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.560482621
                 },
                 {
                     "id": 23,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 25,
                     "split": {
@@ -2221,7 +2011,6 @@
                 {
                     "id": 24,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -2235,28 +2024,24 @@
                 {
                     "id": 25,
                     "parent": 23,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.970192254
                 },
                 {
                     "id": 26,
                     "parent": 23,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.489737362
                 },
                 {
                     "id": 27,
                     "parent": 24,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.450253487
                 },
                 {
                     "id": 28,
                     "parent": 24,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.537910998
                 }
@@ -2267,7 +2052,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -2281,7 +2065,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -2295,7 +2078,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -2309,7 +2091,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -2323,7 +2104,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -2337,7 +2117,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -2351,7 +2130,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -2365,35 +2143,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.166744679
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.518172503
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0221492294
+                    "leaf_value": 0.0221492238
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.168276101
+                    "leaf_value": -0.168276086
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -2407,7 +2180,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -2421,35 +2193,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.105694726
+                    "leaf_value": -0.105694719
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.622136474
+                    "leaf_value": 0.622136414
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.2887716
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.0680099204
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -2463,7 +2230,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -2477,7 +2243,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -2491,7 +2256,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -2505,35 +2269,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.209967077
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.579827189
+                    "leaf_value": 0.57982713
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.229693234
+                    "leaf_value": 0.229693249
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.480676681
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -2547,7 +2306,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -2561,30 +2319,26 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.205735296
+                    "leaf_value": 0.205735281
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.705678463
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.883903325
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 4.96152496
+                    "leaf_value": 4.96152592
                 }
             ]
         },
@@ -2593,7 +2347,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 29,
                     "left": 1,
                     "split": {
@@ -2607,7 +2360,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 13,
                     "left": 3,
                     "split": {
@@ -2621,7 +2373,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 15,
                     "split": {
@@ -2635,7 +2386,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -2649,7 +2399,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 5,
                     "left": 11,
                     "split": {
@@ -2663,7 +2412,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -2677,7 +2425,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -2691,35 +2438,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.199739292
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.171117306
+                    "leaf_value": -0.171117321
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.452784061
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.772508204
+                    "leaf_value": -0.7725082639999999
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -2733,28 +2475,24 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 1,
                     "leaf_value": -0.558606684
                 },
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.459088773
+                    "leaf_value": 0.459088743
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -1.07767975
                 },
                 {
                     "id": 15,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 17,
                     "split": {
@@ -2768,7 +2506,6 @@
                 {
                     "id": 16,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 23,
                     "split": {
@@ -2782,7 +2519,6 @@
                 {
                     "id": 17,
                     "parent": 15,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 19,
                     "split": {
@@ -2796,7 +2532,6 @@
                 {
                     "id": 18,
                     "parent": 15,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -2810,35 +2545,30 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0246963594
+                    "leaf_value": 0.0246963445
                 },
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.511420965
+                    "leaf_value": -0.511421025
                 },
                 {
                     "id": 21,
                     "parent": 18,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.47494176
                 },
                 {
                     "id": 22,
                     "parent": 18,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.173738718
+                    "leaf_value": -0.173738733
                 },
                 {
                     "id": 23,
                     "parent": 16,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 25,
                     "split": {
@@ -2852,7 +2582,6 @@
                 {
                     "id": 24,
                     "parent": 16,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -2866,28 +2595,24 @@
                 {
                     "id": 25,
                     "parent": 23,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.539264798
                 },
                 {
                     "id": 26,
                     "parent": 23,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0196541231
+                    "leaf_value": -0.0196541101
                 },
                 {
                     "id": 27,
                     "parent": 24,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.0290722959
                 },
                 {
                     "id": 28,
                     "parent": 24,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 1.54360735
                 }
@@ -2898,7 +2623,6 @@
                 {
                     "id": 0,
                     "parent": 0,
-                    "depth": 0,
                     "tree_size": 31,
                     "left": 1,
                     "split": {
@@ -2912,7 +2636,6 @@
                 {
                     "id": 1,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 3,
                     "split": {
@@ -2926,7 +2649,6 @@
                 {
                     "id": 2,
                     "parent": 0,
-                    "depth": 1,
                     "tree_size": 15,
                     "left": 17,
                     "split": {
@@ -2940,7 +2662,6 @@
                 {
                     "id": 3,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 5,
                     "split": {
@@ -2954,7 +2675,6 @@
                 {
                     "id": 4,
                     "parent": 1,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 11,
                     "split": {
@@ -2968,7 +2688,6 @@
                 {
                     "id": 5,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 7,
                     "split": {
@@ -2982,7 +2701,6 @@
                 {
                     "id": 6,
                     "parent": 3,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 9,
                     "split": {
@@ -2996,35 +2714,30 @@
                 {
                     "id": 7,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.436319619
                 },
                 {
                     "id": 8,
                     "parent": 5,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0707576349
+                    "leaf_value": 0.0707576275
                 },
                 {
                     "id": 9,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.100054212
+                    "leaf_value": -0.100054219
                 },
                 {
                     "id": 10,
                     "parent": 6,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0253806114
+                    "leaf_value": 0.0253806096
                 },
                 {
                     "id": 11,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 13,
                     "split": {
@@ -3038,7 +2751,6 @@
                 {
                     "id": 12,
                     "parent": 4,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 15,
                     "split": {
@@ -3052,35 +2764,30 @@
                 {
                     "id": 13,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.291955829
+                    "leaf_value": -0.291955799
                 },
                 {
                     "id": 14,
                     "parent": 11,
-                    "depth": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.653551221
+                    "leaf_value": -0.653551161
                 },
                 {
                     "id": 15,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.547604859
                 },
                 {
                     "id": 16,
                     "parent": 12,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.352097005
                 },
                 {
                     "id": 17,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 19,
                     "split": {
@@ -3094,7 +2801,6 @@
                 {
                     "id": 18,
                     "parent": 2,
-                    "depth": 2,
                     "tree_size": 7,
                     "left": 25,
                     "split": {
@@ -3108,7 +2814,6 @@
                 {
                     "id": 19,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 21,
                     "split": {
@@ -3122,7 +2827,6 @@
                 {
                     "id": 20,
                     "parent": 17,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 23,
                     "split": {
@@ -3136,35 +2840,30 @@
                 {
                     "id": 21,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.447025359
                 },
                 {
                     "id": 22,
                     "parent": 19,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.405446231
                 },
                 {
                     "id": 23,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.285752088
                 },
                 {
                     "id": 24,
                     "parent": 20,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -1.10152888
                 },
                 {
                     "id": 25,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 27,
                     "split": {
@@ -3178,7 +2877,6 @@
                 {
                     "id": 26,
                     "parent": 18,
-                    "depth": 3,
                     "tree_size": 3,
                     "left": 29,
                     "split": {
@@ -3192,28 +2890,24 @@
                 {
                     "id": 27,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.597512603
                 },
                 {
                     "id": 28,
                     "parent": 25,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": 0.333664864
                 },
                 {
                     "id": 29,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.717251599
                 },
                 {
                     "id": 30,
                     "parent": 26,
-                    "depth": 4,
                     "tree_size": 1,
                     "leaf_value": -0.0721735209
                 }

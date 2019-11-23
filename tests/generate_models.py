@@ -124,5 +124,5 @@ def generate_covertype():
     at.write("tests/models/xgb-covtype-easy.json")
 
 if __name__ == "__main__":
-    #generate_california_housing()
+    generate_california_housing()
     generate_covertype()

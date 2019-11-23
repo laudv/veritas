@@ -6,9 +6,9 @@ class TestTree(unittest.TestCase):
     def test_tree1(self):
         at = AddTree()
         t = at.add_tree()
-        t.root().split(LtSplit(1, 1.5))
-        t.root().left().set_leaf_value(1.1)
-        t.root().right().set_leaf_value(2.2)
+        t.split(t.root(), 1, 1.5)
+        t.set_leaf_value(t.left(t.root()), 1.1)
+        t.set_leaf_value(t.right(t.root()), 2.2)
 
         y = t.predict([[1,1,3], [1,2,3]])
 
@@ -17,26 +17,85 @@ class TestTree(unittest.TestCase):
     def test_tree_json(self):
         at = AddTree()
         t = at.add_tree()
-        t.root().split(LtSplit(1, 1.5))
-        t.root().left().split(LtSplit(2, 0.12))
-        t.root().left().left().set_leaf_value(0.25)
-        t.root().left().right().set_leaf_value(0.45)
-        t.root().right().set_leaf_value(2.2)
+        t.split(t.root(), 1, 1.5)
+        t.split(t.left(t.root()), 2, 0.12)
+        t.set_leaf_value(t.left(t.left(t.root())), 0.25)
+        t.set_leaf_value(t.right(t.left(t.root())), 0.45)
+        t.set_leaf_value(t.right(t.root()), 2.2)
 
         s = at.to_json();
         att = AddTree.from_json(s)
         tt = att[0]
 
-        self.assertTrue(tt[0].is_internal())
-        self.assertTrue(tt[1].is_internal())
-        self.assertEquals(tt[0].get_split().feat_id, 1)
-        self.assertEquals(tt[1].get_split().feat_id, 2)
-        self.assertEquals(tt[0].get_split().split_value, 1.5)
-        self.assertEquals(tt[1].get_split().split_value, 0.12)
-        self.assertTrue(tt[2].is_leaf())
-        self.assertTrue(tt[3].is_leaf())
-        self.assertTrue(tt[4].is_leaf())
-        self.assertEquals(tt[2].leaf_value(), 2.2)
-        self.assertEquals(tt[3].leaf_value(), 0.25)
-        self.assertEquals(tt[4].leaf_value(), 0.45)
+        self.assertTrue(tt.is_internal(0))
+        self.assertTrue(tt.is_internal(1))
+        self.assertEqual(tt.get_split(0), (1, 1.5))
+        self.assertEqual(tt.get_split(1), (2, 0.12))
+        self.assertTrue(tt.is_leaf(2))
+        self.assertTrue(tt.is_leaf(3))
+        self.assertTrue(tt.is_leaf(4))
+        self.assertEqual(tt.get_leaf_value(2), 2.2)
+        self.assertEqual(tt.get_leaf_value(3), 0.25)
+        self.assertEqual(tt.get_leaf_value(4), 0.45)
 
+    def test_skip_branch_left(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 1, 1.5)
+        t.set_leaf_value(t.left(t.root()), 1.1)
+        t.set_leaf_value(t.right(t.root()), 2.2)
+
+        self.assertEqual(t.tree_size(t.root()), 3)
+        self.assertTrue(t.is_internal(t.root()))
+        self.assertEqual(t.depth(t.right(t.root())), 1)
+
+        t.skip_branch(t.left(t.root()))
+
+        self.assertEqual(t.tree_size(t.root()), 1)
+        self.assertTrue(t.is_leaf(t.root()))
+
+    def test_skip_branch_right(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 1, 1.5)
+        t.split(t.left(t.root()), 2, 0.12)
+        t.set_leaf_value(t.left(t.left(t.root())), 0.25)
+        t.set_leaf_value(t.right(t.left(t.root())), 0.45)
+        t.set_leaf_value(t.right(t.root()), 2.2)
+        self.assertEqual(t.tree_size(t.root()), 5)
+        self.assertTrue(t.is_internal(t.root()))
+
+        t.skip_branch(t.right(t.root()))
+
+        self.assertEqual(t.tree_size(t.root()), 3)
+        self.assertTrue(t.is_internal(t.root()))
+        self.assertEqual(t.depth(t.right(t.root())), 1)
+        self.assertEqual(t.depth(t.left(t.root())), 1)
+
+    def test_skip_branch_internal(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 1, 1.5)
+        t.split(t.left(t.root()), 2, 0.12)
+        t.set_leaf_value(t.left(t.left(t.root())), 0.25)
+        t.set_leaf_value(t.right(t.left(t.root())), 0.45)
+        t.set_leaf_value(t.right(t.root()), 2.2)
+        self.assertEqual(t.tree_size(t.root()), 5)
+        self.assertTrue(t.is_internal(t.root()))
+
+        print("OLD TREE\n", t);
+
+        t.skip_branch(t.left(t.left(t.root())))
+
+        print("NEW TREE\n", t);
+
+        self.assertEqual(t.tree_size(t.root()), 3)
+        self.assertTrue(t.is_internal(t.root()))
+        self.assertTrue(t.is_leaf(t.left(t.root())))
+        self.assertTrue(t.is_leaf(t.right(t.root())))
+        self.assertEqual(t.get_leaf_value(t.left(t.root())), 0.45)
+        self.assertEqual(t.get_leaf_value(t.right(t.root())), 2.2)
+
+
+if __name__ == "__main__":
+    unittest.main()

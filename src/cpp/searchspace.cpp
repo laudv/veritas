@@ -357,7 +357,7 @@ namespace treeck {
     bool
     NumDomTreeLeafsStopCond::operator()(const SearchSpace& sp)
     {
-        return sp.leafs().size() > max_num_leafs;
+        return sp.leafs().size() >= max_num_leafs;
     }
 
 } /* namespace treeck */
