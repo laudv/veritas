@@ -10,6 +10,7 @@ namespace treeck {
     prune(const AddTree& addtree, const Domains& domains)
     {
         AddTree new_addtree;
+        new_addtree.base_score = addtree.base_score;
         for (const AddTree::TreeT& tree : addtree.trees())
             new_addtree.add_tree(prune(tree, domains));
         return new_addtree;
