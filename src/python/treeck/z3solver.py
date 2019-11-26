@@ -5,16 +5,20 @@ from .consts import LESS_THAN, GREATER_THAN
 
 class Z3Solver:
 
-    def __init__(self, num_features, domains, addtree):
-        self._num_features = num_features
+    def __init__(self, domains, addtree):
+        self._num_features = len(domains)
         self._domains = domains
         self._addtree = addtree
+        self._timeout = 4294967295
 
         self._xvars = [z3.Real("x{}".format(i)) for i in range(self._num_features)]
         self._wvars = [z3.Real("w{}".format(i)) for i in range(len(self._addtree))]
 
     def xvar(self, i):
         return self._xvars[i]
+
+    def set_timeout(self, timeout):
+        self._timeout = timeout
 
     def verify(self, constraints=[], threshold=0.0, op=LESS_THAN):
         self._remaining_trees = list(range(len(self._addtree)))
@@ -24,6 +28,7 @@ class Z3Solver:
         self._iteration_count = 0
 
         self._solver = z3.Solver()
+        self._solver.set("timeout", self._timeout)
         self._solver.add(*constraints)
         self._solver.add(*self._domain_constraints())
         self._solver.add(self._output_constraint(threshold, op))
@@ -46,14 +51,26 @@ class Z3Solver:
             self._solver.add(enc)
 
             status = self._solver.check()
-            print("{:4}: DEBUG added tree{} with bounds [{:.4g}, {:.4g}] -> {}\n".format(
-                        self._iteration_count, best_tree_index,
-                        self._lobounds[best_tree_index],
-                        self._upbounds[best_tree_index], status))
+            #print("{:4}: DEBUG added tree{} with bounds [{:.4g}, {:.4g}] -> {}\n".format(
+            #            self._iteration_count, best_tree_index,
+            #            self._lobounds[best_tree_index],
+            #            self._upbounds[best_tree_index], status))
 
-        #print(self._solver)
-        print("status:", status)
+        #print(self._solver.to_smt2())
+        #print("status:", status)
         return status
+
+    def model(self):
+        z3model = self._solver.model()
+        xs = []
+        for x in self._xvars:
+            xs.append(self._extract_var(z3model, x))
+        ws = []
+        for w in self._wvars:
+            val = self._extract_var(z3model, w)
+            assert val is not None
+            ws.append(val)
+        return { "xs": xs, "ws": ws }
 
     def _test_tree_reachability(self, tree_index):
         tree = self._addtree[tree_index]
@@ -86,8 +103,8 @@ class Z3Solver:
                 if self._solver_check(rpath_constraint):
                     stack.append((r, rpath_constraint))
                 else:
-                    print("{:4}: DEBUG unreachable right tree{}: {}->{}".format(
-                        self._iteration_count, tree.index(), node, r))
+                    #print("{:4}: DEBUG unreachable right tree{}: {}->{}".format(
+                    #    self._iteration_count, tree.index(), node, r))
                     self._mark_unreachable(tree, r)
                     assert not self._is_reachable(tree, r)
 
@@ -96,8 +113,8 @@ class Z3Solver:
                 if self._solver_check(lpath_constraint):
                     stack.append((l, lpath_constraint))
                 else:
-                    print("{:4}: DEBUG unreachable left tree{}: {}->{}".format(
-                        self._iteration_count, tree.index(), node, l))
+                    #print("{:4}: DEBUG unreachable left tree{}: {}->{}".format(
+                    #    self._iteration_count, tree.index(), node, l))
                     self._mark_unreachable(tree, l)
                     assert not self._is_reachable(tree, l)
 
@@ -107,9 +124,9 @@ class Z3Solver:
         self._lobounds[tree_index] = lo
         self._upbounds[tree_index] = hi
 
-        if changed:
-            print("{:4}: DEBUG new bounds tree{}: [{:.4g}, {:.4g}]".format(
-                self._iteration_count, tree.index(), lo, hi))
+        #if changed:
+        #    print("{:4}: DEBUG new bounds tree{}: [{:.4g}, {:.4g}]".format(
+        #        self._iteration_count, tree.index(), lo, hi))
         return changed
 
     def _is_reachable(self, tree, node):
@@ -135,8 +152,8 @@ class Z3Solver:
         return cs
 
     def _output_constraint(self, threshold, op):
-        sum_of_weights = self._wvars[0]
-        for i in range(1, len(self._wvars)):
+        sum_of_weights = self._addtree.base_score
+        for i in range(len(self._wvars)):
             sum_of_weights = sum_of_weights + self._wvars[i]
         if   op == LESS_THAN:    return (sum_of_weights < threshold)
         elif op == GREATER_THAN: return (sum_of_weights > threshold)
@@ -190,3 +207,13 @@ class Z3Solver:
         else:
             status = self._solver.check(constraint) == z3.sat
             return status
+
+    def _extract_var(self, z3model, var):
+        val = z3model[var]
+        if val is None:
+            return None
+        if z3.is_rational_value(val):
+            n = float(val.numerator_as_long())
+            d = float(val.denominator_as_long())
+            return float(n / d)
+        raise RuntimeError("var not supported")
