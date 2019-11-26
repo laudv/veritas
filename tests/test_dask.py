@@ -4,7 +4,7 @@ from treeck import *
 
 def get_client():
     client = Client(threads_per_worker=1,
-                    n_workers=4,
+                    n_workers=6,
                     memory_limit='2GB')
     return client
 
@@ -27,8 +27,6 @@ def tdask(client, num_leafs):
     sp.split(num_leafs)
     leafs = sp.leafs()
 
-    num_feats = sp.num_features()
-
     tasks = []
     for leaf in leafs:
         addtree = sp.get_pruned_addtree(leaf).to_json()
@@ -36,7 +34,7 @@ def tdask(client, num_leafs):
 
         print(f"Domains for leaf {leaf}:", list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
 
-        tasks.append(solve(num_feats, domains, addtree))
+        tasks.append(solve(domains, addtree))
 
     print(tasks)
 
@@ -48,6 +46,16 @@ def tdask(client, num_leafs):
 
 
 
+def mymain():
+    with get_client() as client:
+        at = AddTree.read("tests/models/xgb-calhouse-intermediate.json")
+
+        def constraintsf(solver):
+            #return []
+            return [solver.xvar(0) > 3500] # elevation
+
+        ps = ParallelSolver(client, at)
+        ps.verify(constraintsf, 0, GREATER_THAN)
 
 
 
@@ -69,4 +77,4 @@ if __name__ == "__main__":
     z3.set_pp_option("precision", 3)
     z3.set_pp_option("max_width", 130)
 
-    #tdask(client)
+    mymain()
