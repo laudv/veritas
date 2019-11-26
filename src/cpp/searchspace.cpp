@@ -152,6 +152,7 @@ namespace treeck {
                 max_split_value = split_value;
                 max_score = score;
             }
+            //std::cout << "SPLIT X" << feat_id << " < " << split_value << " score=" << score << " leaf_id=" << domtree_leaf_id << std::endl;
         }
 
         LeafInfo inf(LtSplit(max_feat_id, max_split_value), max_score);
@@ -240,19 +241,27 @@ namespace treeck {
             return this->domtree_[a].leaf_value().score < this->domtree_[b].leaf_value().score;
         };
 
-        while (!cond(*this)) // split until stop condition is met
+        while (!cond(*this))
         {
             // pop the best leaf node of the domain tree so that we can split it
             std::pop_heap(leafs_.begin(), leafs_.end(), cmp);
-            NodeId node_id = leafs_.back(); leafs_.pop_back();
+            NodeId node_id = leafs_.back();
             auto node = domtree_[node_id];
             Split dom_split = node.leaf_value().dom_split;
             double score = node.leaf_value().score;
 
+            if (score < 0) // no good split found (score == -inf)
+            {
+                std::cout << "DEBUG: no more splits" << std::endl;
+                break;
+            }
+
+            leafs_.pop_back(); // only pop here, otherwise leafs_ is invalid when score < 0
+
             node.split(dom_split);
             scores_.push_back(score);
 
-            std::cout << "SPLITTING " << node_id << " " << dom_split << " into "
+            std::cout << "SPLITTING node_id=" << node_id << " " << dom_split << " into "
                 << node.left().id() << " and " << node.right().id()
                 << " with score " << score << std::endl;
 
@@ -263,11 +272,6 @@ namespace treeck {
             // push children onto the heap
             leafs_.push_back(node.left().id());  std::push_heap(leafs_.begin(), leafs_.end(), cmp);
             leafs_.push_back(node.right().id()); std::push_heap(leafs_.begin(), leafs_.end(), cmp);
-
-            //std::cout << domtree_ << std::endl;
-            //std::cout << std::endl << "leafs_:";
-            //for (auto x : leafs_) std::cout << " " << x << '(' << domtree_[x].leaf_value().score << ')';
-            //std::cout << std::endl;
         }
     }
 
@@ -337,13 +341,25 @@ namespace treeck {
                         return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
 
                     // compute how many nodes become inaccessible when using new_dom for feat_id
-                    switch (new_dom.where_is(split.split_value))
+                    switch (new_dom.where_is_strict(split.split_value))
                     {
                     case WhereFlag::LEFT: // case 3.3
-                        unreachable += node.right().tree_size();
+                        //std::cout << "unreachable left"
+                        //    << " id=" << node.left().id()
+                        //    << " tree_size=" << node.left().tree_size()
+                        //    << " split=X" << split.feat_id << " < " << split.split_value
+                        //    << " new_dom=" << new_dom
+                        //    << std::endl;
+                        unreachable += node.left().tree_size();
                         return TreeVisitStatus::ADD_RIGHT;
                     case WhereFlag::RIGHT: // case 3.1
-                        unreachable += node.left().tree_size();
+                        //std::cout << "unreachable right"
+                        //    << " id=" << node.right().id()
+                        //    << " tree_size=" << node.right().tree_size()
+                        //    << " split=X" << split.feat_id << " < " << split.split_value
+                        //    << " new_dom=" << new_dom
+                        //    << std::endl;
+                        unreachable += node.right().tree_size();
                         return TreeVisitStatus::ADD_LEFT;
                     default: // case 3.3: IN_DOMAIN
                         return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
@@ -357,6 +373,7 @@ namespace treeck {
     bool
     NumDomTreeLeafsStopCond::operator()(const SearchSpace& sp)
     {
+        //return (sp.domtree().num_nodes() + 1) / 2 >= max_num_leafs;
         return sp.leafs().size() >= max_num_leafs;
     }
 

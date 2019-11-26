@@ -7,13 +7,13 @@
 
 namespace treeck {
 
-    /**
+    /**          lo                  hi
      *           [--- real domain ---)
      * ---X1--------------x2-----------------x3-----------> (real axis)
      *
-     * x1 -> SMALLER: value not in domain and smaller than any value in the domain
-     * x2 -> IN:      value in domain
-     * x3 -> LARGER:  value not in domain and larger than any value in the domain (also value==hi)
+     * x1 -> LEFT:      value not in domain and smaller than any value in the domain
+     * x2 -> IN_DOMAIN: value in domain
+     * x3 -> RIGHT:     value not in domain and larger than any value in the domain (also value==hi)
      */
     enum WhereFlag {
         LEFT      = -1,  // x1: value lies to the left of the domain
