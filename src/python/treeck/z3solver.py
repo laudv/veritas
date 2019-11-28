@@ -213,7 +213,7 @@ class Z3Solver:
         if val is None:
             return None
         if z3.is_rational_value(val):
-            n = float(val.numerator_as_long())
-            d = float(val.denominator_as_long())
+            n = val.numerator_as_long()
+            d = val.denominator_as_long()
             return float(n / d)
         raise RuntimeError("var not supported")

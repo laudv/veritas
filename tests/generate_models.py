@@ -180,45 +180,39 @@ def generate_mnist():
         y = mat["y"].reshape((70000,))
 
 
-    print("Training MNIST17")
-    m17 = np.logical_or(y==1, y==7)
-    X17 = X[m17]
-    y17 = y[m17]==1
-
+    print("Training MNIST y==1")
+    y1 = y==1
     clf = xgb.XGBClassifier(
             nthread=4,
             tree_method="hist",
             max_depth=4,
             learning_rate=0.5,
             n_estimators=10)
-    model = clf.fit(X17, y17)
+    model = clf.fit(X, y1)
     at = addtree_from_xgb_model(model)
     at.base_score = 0.0
-    acc = accuracy_score(model.predict(X17), y17)
-    print(f"mnist17: accuracy 17: {acc}")
-    mae = mean_absolute_error(model.predict(X17, output_margin=True), at.predict(X17))
-    print(f"mnist17: mae model difference {mae}")
-    at.write("tests/models/xgb-mnist17-easy.json")
+    acc = accuracy_score(model.predict(X), y1)
+    print(f"mnist y==1: accuracy y==1: {acc}")
+    mae = mean_absolute_error(model.predict(X[:5000], output_margin=True), at.predict(X[:5000]))
+    print(f"mnist y==1: mae model difference {mae}")
+    at.write("tests/models/xgb-mnist-yis1-easy.json")
 
-    print("Training MNIST08")
-    m08 = np.logical_or(y==0, y==8)
-    X08 = X[m08]
-    y08 = y[m08]==0
-
+    print("Training MNIST y==0")
+    y0 = y==0
     clf = xgb.XGBClassifier(
             nthread=4,
             tree_method="hist",
             max_depth=4,
             learning_rate=0.5,
             n_estimators=10)
-    model = clf.fit(X08, y08)
+    model = clf.fit(X, y0)
     at = addtree_from_xgb_model(model)
     at.base_score = 0.0
-    acc = accuracy_score(model.predict(X08), y08)
-    print(f"mnist08: accuracy 08: {acc}")
-    mae = mean_absolute_error(model.predict(X08, output_margin=True), at.predict(X08))
-    print(f"mnist08: mae model difference {mae}")
-    at.write("tests/models/xgb-mnist08-easy.json")
+    acc = accuracy_score(model.predict(X), y0)
+    print(f"mnist y==0: accuracy y==0: {acc}")
+    mae = mean_absolute_error(model.predict(X[:5000], output_margin=True), at.predict(X[:5000]))
+    print(f"mnist y==0: mae model difference {mae}")
+    at.write("tests/models/xgb-mnist-yis0-easy.json")
 
     print("Exporting instances")
     with open("tests/models/mnist-instances.json", "w") as f:
