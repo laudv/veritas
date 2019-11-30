@@ -83,6 +83,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
+        .def("get_splits", &AddTree::get_splits)
         .def("to_json", &AddTree::to_json)
         .def("from_json", AddTree::from_json)
         .def("__str__", [](const AddTree& at) { return tostr(at); });

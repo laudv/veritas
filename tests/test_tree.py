@@ -38,6 +38,26 @@ class TestTree(unittest.TestCase):
         self.assertEqual(tt.get_leaf_value(3), 0.25)
         self.assertEqual(tt.get_leaf_value(4), 0.45)
 
+    def test_addtree_get_splits(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 1, 1.5)
+        t.split(t.left(t.root()), 2, 0.12)
+        t.set_leaf_value(t.left(t.left(t.root())), 0.25)
+        t.set_leaf_value(t.right(t.left(t.root())), 0.45)
+        t.set_leaf_value(t.right(t.root()), 2.2)
+
+        t = at.add_tree()
+        t.split(t.root(), 1, 2.0)
+        t.set_leaf_value(t.left(t.root()), 0.5)
+        t.set_leaf_value(t.right(t.root()), 2.3)
+
+        s = at.get_splits()
+
+        self.assertEqual(s[1], [1.5, 2.0])
+        self.assertEqual(s[2], [0.12])
+        self.assertEqual(sorted(list(s.keys())), [1, 2])
+
     def test_skip_branch_left(self):
         at = AddTree()
         t = at.add_tree()
