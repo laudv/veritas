@@ -1,4 +1,8 @@
+import math
+import bisect
+
 from collections import defaultdict
+
 
 class VerifierConstraint:
     def construct(self, verifier):
@@ -9,6 +13,24 @@ class VerifierConstraint:
 
     def construct_z3(self, z3verifier):
         raise RuntimeError(f"construct_z3 not implemented for {type(self)}")
+
+class ExcludeAssignmentConstraint(VerifierConstraint):
+    def __init__(self, domains):
+        self.domains = domains
+
+    #def construct_z3(self, verifier): # --> move to Z3 implementation!
+    #    #elif math.isinf(lo): d.hi = hi
+    #    #elif math.isinf(hi): c = (var < lo)
+    #    #else: c = z3.Or((var < lo), (var >= hi))
+    #    constraints = []
+    #    for d in self._domains:
+    #        if math.isinf(d.lo) and math.isinf(d.hi):
+    #            raise RuntimeError("Unconstrained feature")
+    #        elif math.isinf(d.lo): c = (var >= hi)
+    #        elif math.isinf(d.hi): c = (var < lo)
+    #        else: c = z3.Or((var < lo), (var >= hi))
+
+
 
 
 
@@ -32,7 +54,9 @@ class Verifier:
         """
         self._constraints = constraints
         self._domains = domains
+        self._addtree = addtree
         self._excluded_assignments = []
+        self._splits = None
 
         # (feat_id, split_value) => REACHABILITY FLAG
         self._unreachable = defaultdict(lambda: BOTH_REACHABLE)
@@ -100,9 +124,36 @@ class Verifier:
         # TODO implement here! -> self._excluded_assignments
         # TODO move searchspace.cpp:extract_splits into addtree and expose to python
         # - use these splits here to define "domain region inhabited by ..."
-        # - use a ExcludeDomainConstraint <: VerifierConstraint constraint and
+        # - use a ExcludeAssignmentConstraint <: VerifierConstraint constraint and
         #   insert into _excluded_assignments
-        pass
+        if self._splits is None:
+            self._splits = self._addtree.get_splits()
+
+        domains = []
+        for i, _, lo, hi in self._find_sample_intervals(assignment):
+            d = RealDomain(lo, hi)
+            if d.is_everything():
+                raise RuntimeError("Unconstrained feature!")
+            #print("{:.6g} <= {:.6g} < {:.6g}".format(lo, x, hi))
+            domains.append(d)
+        self._excluded_assignments.append(ExcludeAssignmentConstraint(domains))
+
+    def _find_sample_intervals(self, assignment): # helper `exclude_assignment`
+        for i, x in enumerate(assignment["xs"]):
+            if x == None: continue
+            split_values = self._splits[i]
+            j = bisect(split_values, x)
+            lo = -math.inf if j == 0 else split_values[j-1]
+            hi = math.inf if j == len(split_values) else split_values[j]
+            assert lo < hi
+            assert x >= lo
+            assert x < hi
+
+            yield i, x, lo, hi
+
+    def clear_excluded_assignments(self):
+        """ Remove all previously excluded assignments added using `exclude_assignment`. """
+        self._excluded_assignments.clear()
 
     def get_reachability(self, feat_id, split_value):
         """ Check the reachability of the given split. """
