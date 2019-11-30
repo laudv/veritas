@@ -1,3 +1,4 @@
+from collections import defaultdict
 
 class VerifierConstraint:
     def construct(self, verifier):
@@ -17,6 +18,11 @@ class Verifier:
     UNSAT = 0x22
     UNKNOWN = 0x33
 
+    BOTH_UNREACHABLE = 0x0
+    LEFT_REACHABLE = 0x1
+    RIGHT_REACHABLE = 0x2
+    BOTH_REACHABLE = LEFT_REACHABLE | RIGHT_REACHABLE
+
     def __init__(self, constraints, domains, addtree):
         """
         Initialize a Verifier.
@@ -27,6 +33,9 @@ class Verifier:
         self._constraints = constraints
         self._domains = domains
         self._excluded_assignments = []
+
+        # (feat_id, split_value) => REACHABILITY FLAG
+        self._unreachable = defaultdict(lambda: BOTH_REACHABLE)
 
     def add_dvar(self, name):
         """ Add an additional decision variable to the problem. """
@@ -95,4 +104,52 @@ class Verifier:
         #   insert into _excluded_assignments
         pass
 
+    def get_reachability(self, feat_id, split_value):
+        """ Check the reachability of the given split. """
+        return self._unreachable((feat_id, split_value))
 
+    def get_unreachable_dict(self):
+        """ Get the full unreachable dictionary for reuse in deeper verifiers. """
+        return self._unreachable.copy()
+
+    def test_addtree_reachability(self):
+        """
+        For each tree in the addtree, for each internal node in the tree,
+        check which side of the split is reachable given the constraints, not
+        considering the addtree.
+
+        For solvers, implement `test_split_reachability`.
+        """
+        for tree_index in range(len(self._addtree)):
+            tree = self._addtree[tree_index]
+            test_tree_reachability(tree)
+
+    def test_tree_reachability(self, tree):
+        """ Test the reachability of the nodes in a single tree.  """
+        stack = [(tree.root())]
+        while len(stack) > 0:
+            node = stack.pop()
+
+            if tree.is_leaf(node): continue
+
+            feat_id, split_value = tree.get_split(node)
+            reachability = self.test_split_reachability(feat_id, split_value)
+
+            assert reachability != BOTH_UNREACHABLE # this would be a bug
+
+            if reachability & LEFT_REACHABLE:
+                stack.append(tree.left(node))
+            if reachability & RIGHT_REACHABLE:
+                stack.append(tree.right(node))
+
+    def test_split_reachability(self, feat_id, split_value):
+        """
+        Test whether the constraints -- not including the model itself --
+        allows the left/right branch of this split.
+
+        Returns a reachability flag:
+            - LEFT_REACHABLE
+            - RIGHT_REACHABLE
+            - BOTH_REACHABLE = LEFT_REACHABLE | RIGHT_REACHABLE
+        """
+        raise RuntimeError(f"test_split_reachability not implemented for {type(self)}")
