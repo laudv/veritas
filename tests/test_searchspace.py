@@ -232,5 +232,4 @@ if __name__ == "__main__":
     z3.set_pp_option("max_width", 130)
 
     #plot_pruned_trees()
-    #test_z3()
     unittest.main()

@@ -9,7 +9,14 @@ class TreePlot:
         self.index = 0
 
     def name(self, node):
-        return "{}x{}".format(self.index, node.id())
+        return "{}x{}".format(self.index, node)
+
+    def nodes_eq(self, btree, stree, bnode, snode):
+        return btree.is_internal(bnode) == stree.is_internal(snode) \
+                and (not btree.is_internal(bnode) or \
+                        (btree.get_split(bnode) == stree.get_split(snode))) \
+                and (not btree.is_leaf(bnode) or \
+                        (btree.get_leaf_value(bnode) == stree.get_leaf_value(snode)))
 
     def add_tree(self, tree):
         g = gv.Graph()
@@ -17,15 +24,16 @@ class TreePlot:
         stack = [tree.root()]
         while len(stack) > 0:
             node = stack.pop()
-            if node.is_leaf():
-                g.node(self.name(node), "{:.3f}".format(node.leaf_value()))
+            if tree.is_leaf(node):
+                g.node(self.name(node), "{:.3f}".format(tree.get_leaf_value(node)))
             else:
-                g.node(self.name(node), str(node.get_split()))
-                stack.append(node.right())
-                stack.append(node.left())
+                feat_id, split_value = tree.get_split(node)
+                g.node(self.name(node), "X{} < {:.3f}".format(feat_id, split_value))
+                stack.append(tree.right(node))
+                stack.append(tree.left(node))
 
-            if not node.is_root():
-                g.edge(self.name(node.parent()), self.name(node))
+            if not tree.is_root(node):
+                g.edge(self.name(tree.parent(node)), self.name(node))
         self.g.subgraph(g)
 
     def add_tree_cmp(self, btree, stree):
@@ -33,31 +41,33 @@ class TreePlot:
         stack = [(btree.root(), stree.root())] # (big node, small node)
         while len(stack) > 0:
             bnode, snode = stack.pop()
-            if bnode == snode:
-                if bnode.is_leaf():
-                    self.g.node(self.name(bnode), "{:.3f}".format(bnode.leaf_value()),
+            if self.nodes_eq(btree, stree, bnode, snode):
+                if btree.is_leaf(bnode):
+                    self.g.node(self.name(bnode), "{:.3f}".format(btree.get_leaf_value(bnode)),
                             style="bold", color="darkgreen")
                 else:
-                    self.g.node(self.name(bnode), "{}".format(bnode.get_split()),
+                    feat_id, split_value = btree.get_split(bnode)
+                    self.g.node(self.name(bnode), "X{} < {:.3f}".format(feat_id, split_value),
                             style="bold", color="darkgreen")
-                    stack.append((bnode.right(), snode.right()))
-                    stack.append((bnode.left(), snode.left()))
+                    stack.append((btree.right(bnode), stree.right(snode)))
+                    stack.append((btree.left(bnode), stree.left(snode)))
 
-                if not bnode.is_root():
-                    self.g.edge(self.name(bnode.parent()), self.name(bnode),
+                if not btree.is_root(bnode):
+                    self.g.edge(self.name(btree.parent(bnode)), self.name(bnode),
                             style="bold", color="darkgreen")
             else:
-                if bnode.is_leaf():
-                    self.g.node(self.name(bnode), "{:.3f}".format(bnode.leaf_value()),
+                if btree.is_leaf(bnode):
+                    self.g.node(self.name(bnode), "{:.3f}".format(btree.get_leaf_value(bnode)),
                             color="gray", fontcolor="gray")
                 else:
-                    self.g.node(self.name(bnode), str(bnode.get_split()),
+                    feat_id, split_value = btree.get_split(bnode)
+                    self.g.node(self.name(bnode), "X{} < {:.3f}".format(feat_id, split_value),
                             color="gray", fontcolor="gray")
-                    stack.append((bnode.right(), snode))
-                    stack.append((bnode.left(), snode))
+                    stack.append((btree.right(bnode), snode))
+                    stack.append((btree.left(bnode), snode))
 
-                if not bnode.is_root():
-                    self.g.edge(self.name(bnode.parent()), self.name(bnode), color="gray")
+                if not btree.is_root(bnode):
+                    self.g.edge(self.name(btree.parent(bnode)), self.name(bnode), color="gray")
 
     def add_domains(self, domains):
         text = ""
