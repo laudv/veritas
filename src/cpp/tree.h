@@ -231,9 +231,6 @@ namespace treeck {
         static AddTree from_json_file(const char *file);
 
         SplitMapT get_splits() const;
-
-        std::tuple<std::vector<size_t>, std::vector<NodeId>, std::vector<FeatId>, std::vector<double>>
-        export_lists() const;
     };
 
     std::ostream& operator<<(std::ostream& s, const AddTree& at);

@@ -185,53 +185,6 @@ namespace treeck {
         return splits;
     }
 
-    std::tuple<std::vector<size_t>, std::vector<NodeId>, std::vector<FeatId>, std::vector<double>>
-    AddTree::export_lists() const
-    {
-        std::vector<size_t> offsets;
-        std::vector<NodeId> lefts;
-        std::vector<FeatId> feat_ids;
-        std::vector<double> values;
-
-        for (auto& tree : trees_)
-        {
-            size_t offset = lefts.size();
-            size_t num_nodes = tree.num_nodes();
-
-            offsets.push_back(offset);
-            lefts.resize(offset + num_nodes);
-            feat_ids.resize(offset + num_nodes);
-            values.resize(offset + num_nodes);
-
-            NodeId *ls = &lefts[offset];
-            FeatId *fs = &feat_ids[offset];
-            double *vs = &values[offset];
-
-            tree.dfs([ls, fs, vs](TreeT::CRef node) {
-                if (node.is_leaf())
-                {
-                    ls[node.id()] = -1;
-                    fs[node.id()] = -1;
-                    vs[node.id()] = node.leaf_value();
-
-                    return TreeVisitStatus::ADD_NONE;
-                }
-                else
-                {
-                    LtSplit split = std::get<LtSplit>(node.get_split());
-
-                    ls[node.id()] = node.left().id();
-                    fs[node.id()] = split.feat_id;
-                    vs[node.id()] = split.split_value;
-
-                    return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
-                }
-            });
-        }
-
-        return { offsets, lefts, feat_ids, values };
-    }
-
     std::ostream&
     operator<<(std::ostream& s, const AddTree& at)
     {
