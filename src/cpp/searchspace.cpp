@@ -31,6 +31,7 @@ namespace treeck {
         return s << "LeafInfo(" << inf.dom_split << ", " << inf.score << ')';
     }
 
+    // TODO remove inner extract_splits related stuff
     namespace inner {
 
         static
@@ -106,7 +107,7 @@ namespace treeck {
         , domains_{}
         , scores_{}
     {
-        splits_map_ = inner::extract_splits(*addtree_);
+        splits_map_ = addtree->get_splits();
 
         FeatId max = 0;
         for (auto& n : splits_map_)
@@ -252,7 +253,7 @@ namespace treeck {
 
             if (score < 0) // no good split found (score == -inf)
             {
-                std::cout << "DEBUG: no more splits" << std::endl;
+                std::cout << "DEBUG: SearchSpace: no more domain splits" << std::endl;
                 break;
             }
 

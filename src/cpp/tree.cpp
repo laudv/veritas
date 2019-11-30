@@ -124,6 +124,67 @@ namespace treeck {
         return AddTree::from_json(s);
     }
 
+    namespace inner {
+        static
+        void
+        insert_split_value(AddTree::SplitMapT& splits, const LtSplit& split)
+        {
+            auto search = splits.find(split.feat_id);
+            if (search != splits.end()) // found it!
+                splits[split.feat_id].push_back(split.split_value);
+            else
+                splits.emplace(split.feat_id,  std::vector<double>{split.split_value});
+        }
+
+        static
+        void
+        visit_tree_nodes(const AddTree::TreeT& tree, AddTree::SplitMapT& splits)
+        {
+            std::stack<AddTree::TreeT::CRef> stack;
+            stack.push(tree.root());
+
+            while (!stack.empty())
+            {
+                auto n = stack.top();
+                stack.pop();
+
+                if (n.is_leaf()) continue;
+
+                Split split = n.get_split();
+                std::visit(util::overloaded {
+                    [&splits](LtSplit& x) { insert_split_value(splits, x);  },
+                    [](EqSplit&) { throw std::runtime_error("EqSplit not supported"); },
+                    [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
+                }, split);
+
+                stack.push(n.right());
+                stack.push(n.left());
+            }
+        }
+    } /* namespace inner */
+
+    AddTree::SplitMapT
+    AddTree::get_splits() const
+    {
+        std::unordered_map<FeatId, std::vector<double>> splits;
+
+        // collect all the split values
+        for (const TreeT& tree : trees_)
+        {
+            inner::visit_tree_nodes(tree, splits);
+        }
+
+        // sort the split values, remove duplicates
+        for (auto& n : splits)
+        {
+            std::vector<double>& v = n.second;
+            std::sort(v.begin(), v.end());
+            v.erase(std::unique(v.begin(), v.end()), v.end());
+        }
+
+        return splits;
+    }
+
     std::tuple<std::vector<size_t>, std::vector<NodeId>, std::vector<FeatId>, std::vector<double>>
     AddTree::export_lists() const
     {

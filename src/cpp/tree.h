@@ -8,6 +8,7 @@
 #include <sstream>
 #include <variant>
 #include <vector>
+#include <unordered_map>
 
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
@@ -207,6 +208,7 @@ namespace treeck {
     class AddTree {
     public:
         using TreeT = Tree<double>;
+        using SplitMapT = std::unordered_map<FeatId, std::vector<double>>;
 
     private:
         std::vector<TreeT> trees_;
@@ -227,6 +229,8 @@ namespace treeck {
         std::string to_json();
         static AddTree from_json(const std::string& json);
         static AddTree from_json_file(const char *file);
+
+        SplitMapT get_splits() const;
 
         std::tuple<std::vector<size_t>, std::vector<NodeId>, std::vector<FeatId>, std::vector<double>>
         export_lists() const;

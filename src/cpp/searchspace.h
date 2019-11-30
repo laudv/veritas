@@ -29,7 +29,9 @@ namespace treeck {
     public:
         using DomTreeT = Tree<LeafInfo>;
 
+        // TODO remove
         using SplitMap = std::unordered_map<FeatId, std::vector<double>>;
+
         using MeasureF = std::function<double(const SearchSpace&, const Domains&, LtSplit)>;
         using StopCondF = std::function<bool(const SearchSpace&)>;
 
@@ -37,7 +39,7 @@ namespace treeck {
         size_t num_features_;
         std::shared_ptr<const AddTree> addtree_;
         DomTreeT domtree_; // domain tree
-        SplitMap splits_map_;
+        AddTree::SplitMapT splits_map_;
         std::vector<NodeId> leafs_;
         Domains root_domains_;
         Domains domains_;
