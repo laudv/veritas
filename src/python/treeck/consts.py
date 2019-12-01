@@ -1,3 +1,4 @@
+# TODO remove
 
 LESS_THAN = -1
 GREATER_THAN = 1

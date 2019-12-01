@@ -1,49 +1,160 @@
 import math
 import bisect
 
+from enum import Enum
 from collections import defaultdict
 
 
+class ConstraintVar:
+    def get(self, verifier):
+        raise RuntimeError("not implemented")
+
+    def __lt__(self, other):
+        if not isinstance(other, ConstraintVar):
+            other = Cvar(other)
+        return LtConstraint(self, other)
+
+class Xvar(ConstraintVar):
+    def __init__(self, feat_id):
+        self._feat_id = feat_id
+    def get(self, verifier):
+        return verifier.xvar(self._feat_id)
+
+class Dvar(ConstraintVar):
+    def __init__(self, name):
+        self._name = name
+    def get(self, verifier):
+        return verifier.dvar(self._name)
+
+class Fvar(ConstraintVar):
+    def get(self, verifier):
+        return verifier.fvar()
+
+class Cvar(ConstraintVar):
+    def __init__(self, constant):
+        self._constant = constant
+
+    def get(self, verifier):
+        return self._constant
+
+
 class VerifierConstraint:
-    def construct(self, verifier):
-        if isinstance(verifier, Z3Verifier):
-            self.construct_z3(verifier)
-        else:
-            raise RuntimeError(f"unknown verifier type {type(verifier)}")
+    pass
 
-    def construct_z3(self, z3verifier):
-        raise RuntimeError(f"construct_z3 not implemented for {type(self)}")
+FUNDAMENTAL_CONSTRAINTS = [
+    ("LtConstraint", "__lt__"),
+    ("GtConstraint", "__gt__"),
+    ("LeConstraint", "__le__"),
+    ("GeConstraint", "__ge__"),
+    ("EqConstraint", "__eq__"),
+    ("NeConstraint", "__ne__")]
 
-class ExcludeAssignmentConstraint(VerifierConstraint):
+for (clazz, method) in FUNDAMENTAL_CONSTRAINTS:
+    exec(f"""
+class {clazz}(VerifierConstraint):
+    def __init__(self, var1, var2):
+        self.var1 = var1
+        self.var2 = var2
+""")
+    locs = {"f": None}
+    exec(f"""
+def f(self, other):
+    if not isinstance(other, ConstraintVar):
+        other = Cvar(other)
+    return {clazz}(self, other)
+""", globals(), locs)
+    setattr(ConstraintVar, method, locs["f"])
+
+class CompoundVerifierConstraint(VerifierConstraint):
+    def compounds(self):
+        """
+        A generator of `VerifierConstraint` compounds, each of them should hold
+        (i.e. logical AND).
+        """
+        raise RuntimeError("not implemented")
+
+class ExcludeAssignmentConstraint(CompoundVerifierConstraint):
     def __init__(self, domains):
         self.domains = domains
 
-    #def construct_z3(self, verifier): # --> move to Z3 implementation!
-    #    #elif math.isinf(lo): d.hi = hi
-    #    #elif math.isinf(hi): c = (var < lo)
-    #    #else: c = z3.Or((var < lo), (var >= hi))
-    #    constraints = []
-    #    for d in self._domains:
-    #        if math.isinf(d.lo) and math.isinf(d.hi):
-    #            raise RuntimeError("Unconstrained feature")
-    #        elif math.isinf(d.lo): c = (var >= hi)
-    #        elif math.isinf(d.hi): c = (var < lo)
-    #        else: c = z3.Or((var < lo), (var >= hi))
+    def compounds(self):
+        for feat_id, d in enumerate(self.domains):
+            var = Xvar(feat_id)
+            if math.isinf(d.lo) and math.isinf(d.hi):
+                raise RuntimeError("Unconstrained feature")
+            elif math.isinf(d.lo): yield (var >= d.hi)
+            elif math.isinf(d.hi): yield (var < d.lo)
+            else:
+                yield (var < d.lo)
+                yield (var >= d.lo)
+
+
+class VerifierBackend:
+    def stats(self):
+        return {}
+
+    def reset(self):
+        """ Terminate the previous session and initialize a new one. """
+        raise RuntimeError("not implemented")
+
+    def add_var(self, name):
+        """ Add a new variable to the session. """
+        raise RuntimeError("not implemented")
+
+    def add_constraint(self, constraint, verifier=None):
+        """
+        Add a constraint to the current session. Constraint can be a
+        VerifierConstraint or a Backend specific constraint. A valid verifier
+        is needed to evaluate the ConstraintVars in the case of a
+        VerifierConstraint
+        """
+        raise RuntimeError("not implemented")
+
+    def encode_leaf(self, tree_var, leaf_value):
+        """ Encode the leaf node """
+        raise RuntimeError("not implemented")
+
+    def encode_split(self, feat_var, split_value, left, right):
+        """
+        Encode the given split using left and right as the encodings of the
+        subtrees.
+        """
+        raise RuntimeError("not implemented")
+
+    def check(self, *constraints):
+        """ Satisfiability check, optionally with additional constraints. """
+        raise RuntimeError("not implemented")
+
+    def model(self, *name_vars_pairs):
+        """
+        Get assignment to the given variables. The format of name_vars_pairs is:
+            `(name1, [var1, var2, ...]), (name2, var), ...`
+        Returns a dictionary:
+            { name1: [var1_value, var2_value, ...], name2: var_value, ... }
+        """
+        raise RuntimeError("not implemented")
 
 
 
+class VerifierStrategy:
+    def verify(self, timeout):
+        raise RuntimeError("not implemented")
 
 
 class Verifier:
-    # TODO remove consts.py
-    SAT = 0x11
-    UNSAT = 0x22
-    UNKNOWN = 0x33
+    class Result(Enum):
+        SAT = 1
+        UNSAT = 0
+        UNKNOWN = -1
 
-    BOTH_UNREACHABLE = 0x0
-    LEFT_REACHABLE = 0x1
-    RIGHT_REACHABLE = 0x2
-    BOTH_REACHABLE = LEFT_REACHABLE | RIGHT_REACHABLE
+    class Reachable(Enum):
+        NONE = 0x0
+        LEFT = 0x1
+        RIGHT = 0x2
+        BOTH = 0x1 | 0x2
+
+        def covers(self, other):
+            return self.value & other.value > 0
 
     def __init__(self, constraints, domains, addtree):
         """
@@ -59,7 +170,7 @@ class Verifier:
         self._splits = None
 
         # (feat_id, split_value) => REACHABILITY FLAG
-        self._unreachable = defaultdict(lambda: BOTH_REACHABLE)
+        self._unreachable = defaultdict(lambda: Verifier.Reachable.BOTH)
 
     def add_dvar(self, name):
         """ Add an additional decision variable to the problem. """
@@ -77,7 +188,7 @@ class Verifier:
         """ Get the decision variable associated with the output of the model. """
         raise RuntimeError(f"fvar not implemented for {type(self)}")
 
-    def verify(self, timeout=3600 * 24 * 31)
+    def verify(self, timeout=3600 * 24 * 31):
         """
         Verify the model, i.e., try to find an assignment to the decision variables that
             (1) satisfies the constraints on
@@ -173,7 +284,7 @@ class Verifier:
         """
         for tree_index in range(len(self._addtree)):
             tree = self._addtree[tree_index]
-            test_tree_reachability(tree)
+            self.test_tree_reachability(tree)
 
     def test_tree_reachability(self, tree):
         """ Test the reachability of the nodes in a single tree.  """
@@ -186,11 +297,11 @@ class Verifier:
             feat_id, split_value = tree.get_split(node)
             reachability = self.test_split_reachability(feat_id, split_value)
 
-            assert reachability != BOTH_UNREACHABLE # this would be a bug
+            assert reachability != Verifier.Reachable.NONE # this would be a bug
 
-            if reachability & LEFT_REACHABLE:
+            if reachability.covers(Verifier.Reachable.LEFT):
                 stack.append(tree.left(node))
-            if reachability & RIGHT_REACHABLE:
+            if reachability.covers(Verifier.Reachable.RIGHT):
                 stack.append(tree.right(node))
 
     def test_split_reachability(self, feat_id, split_value):
@@ -199,8 +310,8 @@ class Verifier:
         allows the left/right branch of this split.
 
         Returns a reachability flag:
-            - LEFT_REACHABLE
-            - RIGHT_REACHABLE
-            - BOTH_REACHABLE = LEFT_REACHABLE | RIGHT_REACHABLE
+            - Reachable.LEFT
+            - Reachable.RIGHT
+            - Reachable.BOTH = Reachable.LEFT | Reachable.RIGHT
         """
         raise RuntimeError(f"test_split_reachability not implemented for {type(self)}")
