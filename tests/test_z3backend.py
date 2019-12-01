@@ -37,6 +37,12 @@ class TestZ3Solver(unittest.TestCase):
         self.assertEqual(m["x"], 1.0)
         self.assertEqual(m["y"], 2.0)
 
+        status = b.check(x > y)
+        self.assertEqual(status, Verifier.Result.UNSAT)
+
+        status = b.check()
+        self.assertEqual(status, Verifier.Result.SAT)
+
         b.add_constraint(x > y)
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)

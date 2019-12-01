@@ -31,14 +31,8 @@ class Z3Backend(VerifierBackend):
         return z3.Real(name, self._ctx)
 
     def add_constraint(self, constraint):
-        if isinstance(constraint, CompoundVerifierConstraint):
-            for comp in constraint.compounds():
-                self.add_constraint(comp)
-        elif isinstance(constraint, VerifierConstraint):
-            enc = self._enc_constraint(constraint)
+        for enc in self._enc_constraint(constraint):
             self._solver.add(enc)
-        else: # assume this is a native Z3 constraint
-            self._solver.add(constraint)
 
     def encode_leaf(self, tree_var, leaf_value):
         return (tree_var == leaf_value)
@@ -54,7 +48,13 @@ class Z3Backend(VerifierBackend):
         return z3.If(cond, left, right, self._ctx)
 
     def check(self, *constraints):
-        status = self._solver.check(constraints)
+        encs = []
+        for c in constraints:
+            for enc in self._enc_constraint(c):
+                print("appending", enc)
+                encs.append(enc)
+
+        status = self._solver.check(encs)
         self._stats.num_check_calls += 1
         if status == z3.sat:     return Verifier.Result.SAT
         elif status == z3.unsat: return Verifier.Result.UNSAT
@@ -73,12 +73,18 @@ class Z3Backend(VerifierBackend):
     # -- private --
 
     def _enc_constraint(self, c):
-        fmap = Z3Backend.FUNDAMENTAL_CONSTRAINTS_MAP
-        tp = type(c)
-        if tp in fmap.keys():
-            f = getattr(c.var1.get(), fmap[tp])
-            return f(c.var2.get())
-        raise RuntimeError("constraint not supported")
+        if z3.is_bool(c):
+            yield c
+        elif isinstance(c, CompoundVerifierConstraint):
+            for comp in c.compounds:
+                self._enc_constraint(comp)
+        elif isinstance(c, VerifierConstraint):
+            fmap = Z3Backend.FUNDAMENTAL_CONSTRAINTS_MAP
+            tp = type(c)
+            if tp in fmap.keys():
+                f = getattr(c.var1.get(), fmap[tp]) # call Z3's ArithRef's __lt__, __gt__, ...
+                yield f(c.var2.get())
+        else: raise RuntimeError("constraint not supported")
 
     def _extract_var(self, z3model, var):
         val = z3model[var]

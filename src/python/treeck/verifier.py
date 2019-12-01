@@ -77,7 +77,7 @@ class CompoundVerifierConstraint(VerifierConstraint):
         A generator of `VerifierConstraint` compounds, each of them should hold
         (i.e. logical AND).
         """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
 class ExcludeAssignmentConstraint(CompoundVerifierConstraint):
     def __init__(self, domains):
@@ -101,11 +101,11 @@ class VerifierBackend:
 
     def reset(self):
         """ Terminate the previous session and initialize a new one. """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
     def add_var(self, name):
         """ Add a new variable to the session. """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
     def add_constraint(self, constraint):
         """
@@ -114,22 +114,22 @@ class VerifierBackend:
         is needed to evaluate the ConstraintVars in the case of a
         VerifierConstraint
         """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
     def encode_leaf(self, tree_var, leaf_value):
         """ Encode the leaf node """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
     def encode_split(self, feat_var, split_value, left, right):
         """
         Encode the given split using left and right as the encodings of the
         subtrees.
         """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
     def check(self, *constraints):
         """ Satisfiability check, optionally with additional constraints. """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
     def model(self, *name_vars_pairs):
         """
@@ -138,7 +138,7 @@ class VerifierBackend:
         Returns a dictionary:
             { name1: [var1_value, var2_value, ...], name2: var_value, ... }
         """
-        raise RuntimeError("not implemented")
+        raise RuntimeError("abstract method")
 
 
 
