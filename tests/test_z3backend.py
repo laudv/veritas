@@ -2,7 +2,7 @@ import unittest
 import z3
 
 from treeck import *
-from treeck.verifier import Verifier, LtConstraint, Dvar
+from treeck.verifier import Verifier, LtConstraint, Dvar, SumExpr
 from treeck.z3backend import Z3Backend
 
 class DummyVerifier:
@@ -68,6 +68,30 @@ class TestZ3Solver(unittest.TestCase):
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)
         self.assertEqual(b.stats()["num_check_calls"], 2)
+
+    def test_sum_expr(self):
+        b = Z3Backend()
+
+        w1 = b.add_var("w1")
+        w2 = b.add_var("w2")
+        w3 = b.add_var("w3")
+        x = b.add_var("x")
+
+        b.add_constraint(w1 < 1)
+        b.add_constraint(w2 < 2)
+        b.add_constraint(w3 < 3)
+        b.add_constraint(x > 15)
+
+        s1 = SumExpr(w1, w2)
+        s = SumExpr(s1, 10.0, w3)
+        b.add_constraint(s > x)
+        status = b.check()
+        self.assertEqual(status, Verifier.Result.SAT)
+
+        b.add_constraint(w3 < 1)
+        status = b.check()
+        self.assertEqual(status, Verifier.Result.UNSAT)
+
 
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)

@@ -4,7 +4,10 @@ import bisect
 from enum import Enum
 
 
-class ConstraintVar:
+class ConstraintExpr:
+    pass
+
+class ConstraintVar(ConstraintExpr):
     def __init__(self, verifier):
         self._verifier = verifier
 
@@ -34,13 +37,14 @@ class Fvar(ConstraintVar):
     def get(self):
         return self._verifier._fvar
 
-class Cvar(ConstraintVar):
-    def __init__(self, constant):
-        super().__init__(None)
-        self._constant = constant
-
-    def get(self):
-        return self._constant
+class SumExpr(ConstraintExpr):
+    def __init__(self, *parts):
+        """
+        Sum up expressions `parts`. The parts are ConstraintExpr,
+        ConstraintVar, or floats.
+        """
+        assert len(parts) > 0
+        self.parts = parts
 
 
 class VerifierConstraint:
@@ -64,11 +68,9 @@ class {clazz}(VerifierConstraint):
     locs = {"f": None}
     exec(f"""
 def f(self, other):
-    if not isinstance(other, ConstraintVar):
-        other = Cvar(other)
     return {clazz}(self, other)
 """, globals(), locs)
-    setattr(ConstraintVar, method, locs["f"])
+    setattr(ConstraintExpr, method, locs["f"])
 
 class CompoundVerifierConstraint(VerifierConstraint):
     def compounds(self):
@@ -110,7 +112,7 @@ class VerifierBackend:
         """
         Add a constraint to the current session. Constraint can be a
         VerifierConstraint or a Backend specific constraint. A valid verifier
-        is needed to evaluate the ConstraintVars in the case of a
+        is needed to evaluate the ConstraintVar in the case of a
         VerifierConstraint
         """
         raise RuntimeError("abstract method")

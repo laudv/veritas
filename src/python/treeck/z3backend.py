@@ -1,8 +1,9 @@
 import z3
 
 from .verifier import Verifier, FUNDAMENTAL_CONSTRAINTS
+from .verifier import VerifierConstraint, CompoundVerifierConstraint, ConstraintVar
 from .verifier import LtConstraint, GtConstraint, LeConstraint, GeConstraint, EqConstraint, NeConstraint
-from .verifier import VerifierConstraint, CompoundVerifierConstraint
+from .verifier import SumExpr
 from .verifier import VerifierBackend
 
 class Stats:
@@ -51,7 +52,6 @@ class Z3Backend(VerifierBackend):
         encs = []
         for c in constraints:
             for enc in self._enc_constraint(c):
-                print("appending", enc)
                 encs.append(enc)
 
         status = self._solver.check(encs)
@@ -75,6 +75,8 @@ class Z3Backend(VerifierBackend):
     def _enc_constraint(self, c):
         if z3.is_bool(c):
             yield c
+        elif isinstance(c, bool):
+            yield c
         elif isinstance(c, CompoundVerifierConstraint):
             for comp in c.compounds:
                 self._enc_constraint(comp)
@@ -82,9 +84,25 @@ class Z3Backend(VerifierBackend):
             fmap = Z3Backend.FUNDAMENTAL_CONSTRAINTS_MAP
             tp = type(c)
             if tp in fmap.keys():
-                f = getattr(c.var1.get(), fmap[tp]) # call Z3's ArithRef's __lt__, __gt__, ...
-                yield f(c.var2.get())
-        else: raise RuntimeError("constraint not supported")
+                expr1 = self._enc_expr(c.var1)
+                expr2 = self._enc_expr(c.var2)
+                f = getattr(expr1, fmap[tp]) # call float's or Z3's ArithRef's __lt__, __gt__, ...
+                yield f(expr2)
+        else: raise RuntimeError("constraint not supported: {} of type {}".format(c, type(c)))
+
+    def _enc_expr(self, e):
+        if z3.is_real(e):
+            return e
+        if isinstance(e, float):
+            return e
+        if isinstance(e, ConstraintVar):
+            return e.get()
+        if isinstance(e, SumExpr):
+            s = self._enc_expr(e.parts[0])
+            for p in e.parts[1:]:
+                s += self._enc_expr(p)
+            return s
+        raise RuntimeError("expr not supported: {} of type {}".format(e, type(e)))
 
     def _extract_var(self, z3model, var):
         val = z3model[var]
