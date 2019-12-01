@@ -347,20 +347,37 @@ class Verifier:
 
     def _initialize(self):
         self._backend.reset()
+        self._backend.add_constraint(SumExpr(self._wvars) == self._fvar)
         # TODO implement
         # - define f as sum of ws
         # - add domain constraints
         # - add user defined constraints
         # - compute reachabilities
 
-    def _add_tree(self, tree):
-        pass
-        # TODO implement
+    def _add_tree(self, tree_index, tree, node = None):
         # - start at root
         # - if left/right reachable, recur -> get_reachability
         # - if leaf reached, use backend to encode leaf
         # - use backend encode_split to join branches
         # - add constraint to backend with backend.add_constraint
+        if node is None:
+            return self._add_tree(self, tree, tree.root())
+
+        if tree.is_leaf(node):
+            wvar = self._wvars[tree_index]
+            leaf_value = tree.get_leaf_value(node)
+            return self._backend.encode_leaf(wvar, leaf_value)
+        else:
+            feat_id, split_value = tree.get_split(node)
+            xvar = self._xvars[feat_id]
+            left, right = tree.left(node), tree.right(node)
+            reachability = self.get_reachability(feat_id, split_value)
+            l, r = False, False
+            if reachabilities.covers(Verifier.Reachable.LEFT):
+                l = self._add_tree(tree_index, tree, left)
+            if reachabilities.covers(Verifier.Reachable.RIGHT):
+                r = self._add_tree(tree_index, tree, right)
+            return self._backend.encode_split(feat_id, split_value, l, r)
 
 
 class DefaultVerifier(Verifier):
