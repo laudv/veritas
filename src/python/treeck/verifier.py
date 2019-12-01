@@ -2,7 +2,6 @@ import math
 import bisect
 
 from enum import Enum
-from collections import defaultdict
 
 
 class ConstraintVar:
@@ -148,6 +147,11 @@ class Verifier:
         UNSAT = 0
         UNKNOWN = -1
 
+        def is_sat(self):
+            if self == Result.UNKNOWN:
+                raise RuntimeError("unhandled Result.UNKNOWN")
+            return self == Result.SAT
+
     class Reachable(Enum):
         NONE = 0x0
         LEFT = 0x1
@@ -156,6 +160,12 @@ class Verifier:
 
         def covers(self, other):
             return self.value & other.value > 0
+
+        def __or__(self, other):
+            return Reachable(self.value | other.value)
+
+        def __xor__(self, other):
+            return Reachable(self.value ^ other.value)
 
     def __init__(self, constraints, domains, addtree, backend):
         """
@@ -179,7 +189,7 @@ class Verifier:
         self._splits = None
 
         # (feat_id, split_value) => REACHABILITY FLAG
-        self._unreachable = defaultdict(lambda: Verifier.Reachable.BOTH)
+        self._reachability = {}
 
     def add_dvar(self, name):
         """ Add an additional decision variable to the problem. """
@@ -280,11 +290,14 @@ class Verifier:
 
     def get_reachability(self, feat_id, split_value):
         """ Check the reachability of the given split. """
-        return self._unreachable((feat_id, split_value))
+        p = (feat_id, split_value)
+        if p in self._reachability:
+            return self.reachability(p)
+        return Verifier.Reachable.BOTH
 
-    def get_unreachable_dict(self):
+    def get_reachability_dict(self):
         """ Get the full unreachable dictionary for reuse in deeper verifiers. """
-        return self._unreachable.copy()
+        return self._reachability.copy()
 
     def test_addtree_reachability(self):
         """
@@ -307,24 +320,18 @@ class Verifier:
             if tree.is_leaf(node): continue
 
             feat_id, split_value = tree.get_split(node)
-            reachability = self.test_split_reachability(feat_id, split_value)
-
-            assert reachability != Verifier.Reachable.NONE # this would be a bug
+            reachability = self.get_reachability(feat_id, split_value)
+            xvar = self.xvar(feat_id)
 
             if reachability.covers(Verifier.Reachable.LEFT):
-                stack.append(tree.left(node))
-            if reachability.covers(Verifier.Reachable.RIGHT):
-                stack.append(tree.right(node))
+                check = self._backend.check(xvar < split_value)
+                if not check.is_sat():
+                    reachability ^= Verifier.Reachable.LEFT # disable left
+                else: stack.append(tree.left(node))
+            if reachability == Verifier.Reachable.BOTH:          # if left is unreachable, then no ...
+                check = self._backend.check(xvar >= split_value) # ... need to test, right is reachable!
+                if not check.is_sat():
+                    reachability ^= Verifier.Reachable.RIGHT # disable right
+                else: stack.append(tree.right(node))
 
-    def test_split_reachability(self, feat_id, split_value):
-        """
-        Test whether the constraints -- not including the model itself --
-        allows the left/right branch of this split.
-
-        Returns a reachability flag:
-            - Reachable.LEFT
-            - Reachable.RIGHT
-            - Reachable.BOTH = Reachable.LEFT | Reachable.RIGHT
-        """
-        # TODO initalize backend solver with constraints
-        raise RuntimeError(f"test_split_reachability not implemented for {type(self)}")
+            self._reachability[(feat_id, split_value)] = reachability
