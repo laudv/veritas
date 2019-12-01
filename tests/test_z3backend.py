@@ -8,28 +8,27 @@ from treeck.z3backend import Z3Backend
 class DummyVerifier:
     def __init__(self, backend):
         self.b = backend
-        self.dvars = {}
-    def dvar(self, name):
-        return self.dvars[name]
+        self._dvars = {}
+
     def add_var(self, name):
         v = self.b.add_var(name)
-        self.dvars[name] = v
+        self._dvars[name] = v
         return v
 
 class TestZ3Solver(unittest.TestCase):
-    def test_simple(self):
+    def test_dummy_verifier_interaction(self):
         b = Z3Backend()
         v = DummyVerifier(b)
 
-        x = Dvar("x")
-        y = Dvar("y")
+        x = Dvar(v, "x")
+        y = Dvar(v, "y")
         cs = [x < y, x==1.0, y==2.0]
 
         zx = v.add_var("x")
         zy = v.add_var("y")
 
         for c in cs:
-            b.add_constraint(c, v)
+            b.add_constraint(c)
 
         status = b.check()
         self.assertEqual(status, Verifier.Result.SAT)
@@ -38,7 +37,7 @@ class TestZ3Solver(unittest.TestCase):
         self.assertEqual(m["x"], 1.0)
         self.assertEqual(m["y"], 2.0)
 
-        b.add_constraint(x > y, v)
+        b.add_constraint(x > y)
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)
 

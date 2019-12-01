@@ -30,12 +30,12 @@ class Z3Backend(VerifierBackend):
     def add_var(self, name):
         return z3.Real(name, self._ctx)
 
-    def add_constraint(self, constraint, verifier=None):
+    def add_constraint(self, constraint):
         if isinstance(constraint, CompoundVerifierConstraint):
             for comp in constraint.compounds():
                 self.add_constraint(comp)
         elif isinstance(constraint, VerifierConstraint):
-            enc = self._enc_constraint(constraint, verifier)
+            enc = self._enc_constraint(constraint)
             self._solver.add(enc)
         else: # assume this is a native Z3 constraint
             self._solver.add(constraint)
@@ -72,12 +72,12 @@ class Z3Backend(VerifierBackend):
 
     # -- private --
 
-    def _enc_constraint(self, c, v):
+    def _enc_constraint(self, c):
         fmap = Z3Backend.FUNDAMENTAL_CONSTRAINTS_MAP
         tp = type(c)
         if tp in fmap.keys():
-            f = getattr(c.var1.get(v), fmap[tp])
-            return f(c.var2.get(v))
+            f = getattr(c.var1.get(), fmap[tp])
+            return f(c.var2.get())
         raise RuntimeError("constraint not supported")
 
     def _extract_var(self, z3model, var):

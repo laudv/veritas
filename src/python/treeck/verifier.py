@@ -6,35 +6,41 @@ from collections import defaultdict
 
 
 class ConstraintVar:
-    def get(self, verifier):
-        raise RuntimeError("not implemented")
+    def __init__(self, verifier):
+        self._verifier = verifier
 
-    def __lt__(self, other):
-        if not isinstance(other, ConstraintVar):
-            other = Cvar(other)
-        return LtConstraint(self, other)
+    def get(self):
+        raise RuntimeError("abstract method")
 
 class Xvar(ConstraintVar):
-    def __init__(self, feat_id):
+    def __init__(self, verifier, feat_id):
+        super().__init__(verifier)
         self._feat_id = feat_id
-    def get(self, verifier):
-        return verifier.xvar(self._feat_id)
+
+    def get(self):
+        return self._verifier._xvars[self._feat_id]
 
 class Dvar(ConstraintVar):
-    def __init__(self, name):
+    def __init__(self, verifier, name):
+        super().__init__(verifier)
         self._name = name
-    def get(self, verifier):
-        return verifier.dvar(self._name)
+
+    def get(self):
+        return self._verifier._dvars[self._name]
 
 class Fvar(ConstraintVar):
-    def get(self, verifier):
-        return verifier.fvar()
+    def __init__(verifier):
+        super().__init__(verifier)
+
+    def get(self):
+        return self._verifier._fvar
 
 class Cvar(ConstraintVar):
     def __init__(self, constant):
+        super().__init__(None)
         self._constant = constant
 
-    def get(self, verifier):
+    def get(self):
         return self._constant
 
 
@@ -101,7 +107,7 @@ class VerifierBackend:
         """ Add a new variable to the session. """
         raise RuntimeError("not implemented")
 
-    def add_constraint(self, constraint, verifier=None):
+    def add_constraint(self, constraint):
         """
         Add a constraint to the current session. Constraint can be a
         VerifierConstraint or a Backend specific constraint. A valid verifier
@@ -136,11 +142,6 @@ class VerifierBackend:
 
 
 
-class VerifierStrategy:
-    def verify(self, timeout):
-        raise RuntimeError("not implemented")
-
-
 class Verifier:
     class Result(Enum):
         SAT = 1
@@ -156,7 +157,7 @@ class Verifier:
         def covers(self, other):
             return self.value & other.value > 0
 
-    def __init__(self, constraints, domains, addtree):
+    def __init__(self, constraints, domains, addtree, backend):
         """
         Initialize a Verifier.
          - constraints is a list of `VerifierConstraint` objects.
@@ -166,6 +167,14 @@ class Verifier:
         self._constraints = constraints
         self._domains = domains
         self._addtree = addtree
+        self._backend = backend
+
+        self._num_features = len(domains)
+        self._xvars = [backend.add_var(f"x{i}") for i in range(self._num_features)]
+        self._xvars = [backend.add_var(f"w{i}") for i in range(len(self._addtree))]
+        self._dvars = {}
+        self._fvar = backend.add_var("f")
+
         self._excluded_assignments = []
         self._splits = None
 
@@ -174,19 +183,21 @@ class Verifier:
 
     def add_dvar(self, name):
         """ Add an additional decision variable to the problem. """
-        raise RuntimeError(f"add_dvar not implemented for {type(self)}")
+        assert name not in self._dvars
+        dvar = self._backend.add_var(name)
+        self._dvars[name] = dvar
 
     def dvar(self, name):
         """ Get one of the additional decision variables. """
-        raise RuntimeError(f"dvar not implemented for {type(self)}")
+        return Dvar(self, name)
 
     def xvar(self, feat_id):
         """ Get the decision variable associated with feature `feat_id`. """
-        raise RuntimeError(f"xvar not implemented for {type(self)}")
+        return Xvar(self, feat_id)
 
     def fvar(self):
         """ Get the decision variable associated with the output of the model. """
-        raise RuntimeError(f"fvar not implemented for {type(self)}")
+        return Fvar(self)
 
     def verify(self, timeout=3600 * 24 * 31):
         """
@@ -202,12 +213,14 @@ class Verifier:
             (2) Verifier.UNSAT, no assignment that satisfies the constraints possible
             (3) Verifier.UNKNOWN, the answer is unknown, e.g. because of timeout
         """
-        raise RuntimeError(f"verify not implemented for {type(self)}")
+        raise RuntimeError("abstract method; use subclass")
 
-    def get_assignment(self):
+    def model(self):
         """
         If a call to `verify` was successful, i.e., the output was
-        `Verifier.SAT`, then this method returns a `dict` with the following structure:
+        `Verifier.SAT`, then this method returns a `dict` containing the
+        variable assignments that made the model SAT. The dict has the
+        following structure:
 
         dict{
             "xs": [ list of xvar values ],
@@ -216,11 +229,15 @@ class Verifier:
             "ds": { name => value } value map of additional variables
             }
         """
-        raise RuntimeError(f"get_assignment not implemented for {type(self)}")
+        return self._backend.model(
+                ("xs", self._xvars),
+                ("ws", self._wvars),
+                ("f", self._fvar),
+                ("ds", self._dvars))
 
-    def exclude_assignment(self, assignment):
+    def exclude_model(self, model):
         """
-        Mark the domain region inhabited by `assignment[xs]` as impossible.
+        Mark the domain region inhabited by `model[xs]` as impossible.
 
         Usage for assignment sampling:
         ```
@@ -232,11 +249,6 @@ class Verifier:
             verifier.exclude_assignment(assignment)
         ```
         """
-        # TODO implement here! -> self._excluded_assignments
-        # TODO move searchspace.cpp:extract_splits into addtree and expose to python
-        # - use these splits here to define "domain region inhabited by ..."
-        # - use a ExcludeAssignmentConstraint <: VerifierConstraint constraint and
-        #   insert into _excluded_assignments
         if self._splits is None:
             self._splits = self._addtree.get_splits()
 
@@ -314,4 +326,5 @@ class Verifier:
             - Reachable.RIGHT
             - Reachable.BOTH = Reachable.LEFT | Reachable.RIGHT
         """
+        # TODO initalize backend solver with constraints
         raise RuntimeError(f"test_split_reachability not implemented for {type(self)}")
