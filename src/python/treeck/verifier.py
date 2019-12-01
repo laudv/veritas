@@ -169,14 +169,13 @@ class Verifier:
         def __xor__(self, other):
             return Reachable(self.value ^ other.value)
 
-    def __init__(self, constraints, domains, addtree, backend):
+    def __init__(self, domains, addtree, backend):
         """
         Initialize a Verifier.
-         - constraints is a list of `VerifierConstraint` objects.
          - domains is a list of `RealDomain` objects, one for each feature.
          - addtree is the model to verify properties of.
         """
-        self._constraints = constraints
+        self._constraints = []
         self._domains = domains
         self._addtree = addtree
         self._backend = backend
@@ -210,6 +209,14 @@ class Verifier:
     def fvar(self):
         """ Get the decision variable associated with the output of the model. """
         return Fvar(self)
+
+    def add_constraint(self, constraint):
+        """
+        Add a user-defined constraint. Use add_dvar, dvar, xvar, and fvar to
+        get access to the variables.
+        """
+        assert isinstance(constraint, VerifierConstraint)
+        self._constraints.append(constraint)
 
     def verify(self, timeout=3600 * 24 * 31):
         """
@@ -337,3 +344,44 @@ class Verifier:
                 else: stack.append(tree.right(node))
 
             self._reachability[(feat_id, split_value)] = reachability
+
+    def _initialize(self):
+        self._backend.reset()
+        # TODO implement
+        # - define f as sum of ws
+        # - add domain constraints
+        # - add user defined constraints
+        # - compute reachabilities
+
+    def _add_tree(self, tree):
+        pass
+        # TODO implement
+        # - start at root
+        # - if left/right reachable, recur -> get_reachability
+        # - if leaf reached, use backend to encode leaf
+        # - use backend encode_split to join branches
+        # - add constraint to backend with backend.add_constraint
+
+
+class DefaultVerifier(Verifier):
+
+    def __init__(self, domains, addtree, backend):
+        super().__init__(domains, addtree, backend)
+
+    def verify(self, timeout=3600 * 24 * 31):
+        """
+        DefaultVerifier algorithm:
+         - define f as sum of ws          |
+         - add domain constraints         |  -> helper method in Verifier, e.g. initialize()
+         - add user defined constraints   |
+         - compute reachabilities         |
+         - add bounds for trees
+                -> get_reachability
+         - add full encodings of trees in order of best bounds -> get_reachability + backend
+                -> helper method add_tree
+         - stop early when UNSAT
+         - stop with SAT if SAT with all trees fully encoded
+         - stop with UNKNOWN if backend times out
+        """
+        # TODO implement
+        pass
