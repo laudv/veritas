@@ -9,6 +9,7 @@ from .verifier import VerifierBackend
 class Stats:
     def __init__(self):
         self.num_check_calls = 0
+        self.num_simplifies = 0
 
 class Z3Backend(VerifierBackend):
 
@@ -35,6 +36,9 @@ class Z3Backend(VerifierBackend):
         for enc in self._enc_constraint(constraint):
             self._solver.add(enc)
 
+    def simplify(self):
+        self._stats.num_simplifies += 1
+
     def encode_leaf(self, tree_var, leaf_value):
         return (tree_var == leaf_value)
 
@@ -43,9 +47,9 @@ class Z3Backend(VerifierBackend):
             return False
         cond = (feat_var < split_value)
         if left == False:
-            return z3.And(z3.Not(cond), right, self._ctx)
+            return z3.And(z3.Not(cond, self._ctx), right, self._ctx)
         if right == False:
-            return z3.And(cond, right, self._ctx)
+            return z3.And(cond, left, self._ctx)
         return z3.If(cond, left, right, self._ctx)
 
     def check(self, *constraints):
@@ -66,6 +70,8 @@ class Z3Backend(VerifierBackend):
         for (name, vs) in name_vars_pairs:
             if isinstance(vs, list):
                 model[name] = [self._extract_var(z3model, v) for v in vs]
+            elif isinstance(vs, dict):
+                model[name] = dict([(k, self._extract_var(z3model, v)) for (k, v) in vs.items()])
             else:
                 model[name] = self._extract_var(z3model, vs)
         return model
@@ -78,8 +84,8 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, bool):
             yield c
         elif isinstance(c, CompoundVerifierConstraint):
-            for comp in c.compounds:
-                self._enc_constraint(comp)
+            for comp in c.compounds():
+                yield from self._enc_constraint(comp)
         elif isinstance(c, VerifierConstraint):
             fmap = Z3Backend.FUNDAMENTAL_CONSTRAINTS_MAP
             tp = type(c)

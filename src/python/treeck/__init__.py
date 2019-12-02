@@ -4,7 +4,11 @@ from .pytreeck import *
 
 from .consts import LESS_THAN, GREATER_THAN
 from .z3solver import Z3Solver
-from .parallel_solver import ParallelSolver
+
+try:
+    from .parallel_solver import ParallelSolver
+except:
+    print("disabled parallel solver")
 
 def __realdomain__str(self):
     return "[{:.3g}, {:.3g})".format(self.lo, self.hi)

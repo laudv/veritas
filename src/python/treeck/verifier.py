@@ -1,7 +1,9 @@
 import math
-import bisect
+from bisect import bisect
 
 from enum import Enum
+
+from . import RealDomain
 
 
 class ConstraintExpr:
@@ -30,8 +32,16 @@ class Dvar(ConstraintVar):
     def get(self):
         return self._verifier._dvars[self._name]
 
+class Wvar(ConstraintVar):
+    def __init__(self, verifier, tree_index):
+        super().__init__(verifier)
+        self._tree_index = tree_index
+
+    def get(self):
+        return self._verifier._wvars[self._tree_index]
+
 class Fvar(ConstraintVar):
-    def __init__(verifier):
+    def __init__(self, verifier):
         super().__init__(verifier)
 
     def get(self):
@@ -73,6 +83,9 @@ def f(self, other):
     setattr(ConstraintExpr, method, locs["f"])
 
 class CompoundVerifierConstraint(VerifierConstraint):
+    def __init__(self, verifier):
+        self._verifier = verifier
+
     def compounds(self):
         """
         A generator of `VerifierConstraint` compounds, each of them should hold
@@ -80,20 +93,37 @@ class CompoundVerifierConstraint(VerifierConstraint):
         """
         raise RuntimeError("abstract method")
 
-class ExcludeAssignmentConstraint(CompoundVerifierConstraint):
-    def __init__(self, domains):
+class InDomainConstraint(CompoundVerifierConstraint):
+    def __init__(self, verifier, domains):
+        super().__init__(verifier)
         self.domains = domains
 
     def compounds(self):
         for feat_id, d in enumerate(self.domains):
-            var = Xvar(feat_id)
+            var = self._verifier.xvar(feat_id)
+            if math.isinf(d.lo) and math.isinf(d.hi):
+                continue # unconstrained feature
+            elif math.isinf(d.lo): yield (var < d.hi)
+            elif math.isinf(d.hi): yield (var >= d.lo)
+            else:
+                yield (var >= d.lo)
+                yield (var < d.hi)
+
+class NotInDomainConstraint(CompoundVerifierConstraint):
+    def __init__(self, verifier, domains):
+        super().__init__(verifier)
+        self.domains = domains
+
+    def compounds(self):
+        for feat_id, d in enumerate(self.domains):
+            var = self._verifier.xvar(feat_id)
             if math.isinf(d.lo) and math.isinf(d.hi):
                 raise RuntimeError("Unconstrained feature")
             elif math.isinf(d.lo): yield (var >= d.hi)
             elif math.isinf(d.hi): yield (var < d.lo)
             else:
                 yield (var < d.lo)
-                yield (var >= d.lo)
+                yield (var >= d.hi)
 
 
 class VerifierBackend:
@@ -115,6 +145,10 @@ class VerifierBackend:
         is needed to evaluate the ConstraintVar in the case of a
         VerifierConstraint
         """
+        raise RuntimeError("abstract method")
+
+    def simplify(self):
+        """ Given the backend a chance to process a bunch of added constraints. """
         raise RuntimeError("abstract method")
 
     def encode_leaf(self, tree_var, leaf_value):
@@ -150,9 +184,9 @@ class Verifier:
         UNKNOWN = -1
 
         def is_sat(self):
-            if self == Result.UNKNOWN:
+            if self == Verifier.Result.UNKNOWN:
                 raise RuntimeError("unhandled Result.UNKNOWN")
-            return self == Result.SAT
+            return self == Verifier.Result.SAT
 
     class Reachable(Enum):
         NONE = 0x0
@@ -164,10 +198,10 @@ class Verifier:
             return self.value & other.value > 0
 
         def __or__(self, other):
-            return Reachable(self.value | other.value)
+            return Verifier.Reachable(self.value | other.value)
 
         def __xor__(self, other):
-            return Reachable(self.value ^ other.value)
+            return Verifier.Reachable(self.value ^ other.value)
 
     def __init__(self, domains, addtree, backend):
         """
@@ -182,11 +216,10 @@ class Verifier:
 
         self._num_features = len(domains)
         self._xvars = [backend.add_var(f"x{i}") for i in range(self._num_features)]
-        self._xvars = [backend.add_var(f"w{i}") for i in range(len(self._addtree))]
+        self._wvars = [backend.add_var(f"w{i}") for i in range(len(self._addtree))]
         self._dvars = {}
         self._fvar = backend.add_var("f")
 
-        self._excluded_assignments = []
         self._splits = None
 
         # (feat_id, split_value) => REACHABILITY FLAG
@@ -206,6 +239,10 @@ class Verifier:
         """ Get the decision variable associated with feature `feat_id`. """
         return Xvar(self, feat_id)
 
+    def wvar(self, tree_index):
+        """ Get the decision variable associated with the output value of tree `tree_index`. """
+        return Wvar(self, tree_index)
+
     def fvar(self):
         """ Get the decision variable associated with the output of the model. """
         return Fvar(self)
@@ -218,7 +255,7 @@ class Verifier:
         assert isinstance(constraint, VerifierConstraint)
         self._constraints.append(constraint)
 
-    def verify(self, timeout=3600 * 24 * 31):
+    def verify(self, constraint=True, timeout=3600 * 24 * 31, reset=True):
         """
         Verify the model, i.e., try to find an assignment to the decision variables that
             (1) satisfies the constraints on
@@ -226,11 +263,18 @@ class Verifier:
                 - the addtree output (fvar)
                 - any additional decision variables (dvars)
             (2) satisfies the additive tree structure
+            (3) satisfies the given constraint
 
         There are three possible outcomes:
             (1) Verifier.SAT, an assignment was found
             (2) Verifier.UNSAT, no assignment that satisfies the constraints possible
             (3) Verifier.UNKNOWN, the answer is unknown, e.g. because of timeout
+        """
+        raise RuntimeError("abstract method; use subclass")
+
+    def reset(self):
+        """
+        Reset the verifier so the next call to verify is clean.
         """
         raise RuntimeError("abstract method; use subclass")
 
@@ -258,30 +302,30 @@ class Verifier:
         """
         Mark the domain region inhabited by `model[xs]` as impossible.
 
-        Usage for assignment sampling:
+        Usage for model sampling:
         ```
         while cond:
-            status = verifier.verify()
+            status = verifier.verify(reset=False)
             if status != Verifier.SAT: break
-            assignment = verifier.get_assignment()
-            # DO SOMETHING WITH assignment
-            verifier.exclude_assignment(assignment)
+            model = verifier.model()
+            # DO SOMETHING WITH model
+            verifier.exclude_model(model)
         ```
         """
         if self._splits is None:
             self._splits = self._addtree.get_splits()
 
         domains = []
-        for i, _, lo, hi in self._find_sample_intervals(assignment):
+        for i, _, lo, hi in self._find_sample_intervals(model):
             d = RealDomain(lo, hi)
             if d.is_everything():
                 raise RuntimeError("Unconstrained feature!")
             #print("{:.6g} <= {:.6g} < {:.6g}".format(lo, x, hi))
             domains.append(d)
-        self._excluded_assignments.append(ExcludeAssignmentConstraint(domains))
+        self._backend.add_constraint(NotInDomainConstraint(self, domains))
 
-    def _find_sample_intervals(self, assignment): # helper `exclude_assignment`
-        for i, x in enumerate(assignment["xs"]):
+    def _find_sample_intervals(self, model): # helper `exclude_assignment`
+        for i, x in enumerate(model["xs"]):
             if x == None: continue
             split_values = self._splits[i]
             j = bisect(split_values, x)
@@ -293,15 +337,11 @@ class Verifier:
 
             yield i, x, lo, hi
 
-    def clear_excluded_assignments(self):
-        """ Remove all previously excluded assignments added using `exclude_assignment`. """
-        self._excluded_assignments.clear()
-
     def get_reachability(self, feat_id, split_value):
         """ Check the reachability of the given split. """
         p = (feat_id, split_value)
         if p in self._reachability:
-            return self.reachability(p)
+            return self._reachability[p]
         return Verifier.Reachable.BOTH
 
     def get_reachability_dict(self):
@@ -346,22 +386,26 @@ class Verifier:
             self._reachability[(feat_id, split_value)] = reachability
 
     def _initialize(self):
-        self._backend.reset()
-        self._backend.add_constraint(SumExpr(self._wvars) == self._fvar)
-        # TODO implement
         # - define f as sum of ws
         # - add domain constraints
         # - add user defined constraints
         # - compute reachabilities
+        self._backend.reset()
+        self._backend.add_constraint(SumExpr(*self._wvars) == self._fvar)
+        self._backend.add_constraint(InDomainConstraint(self, self._domains))
+        for c in self._constraints:
+            self._backend.add_constraint(c)
+        self.test_addtree_reachability()
+        self._backend.simplify()
 
-    def _add_tree(self, tree_index, tree, node = None):
+    def _enc_tree(self, tree_index, tree, node = None):
         # - start at root
         # - if left/right reachable, recur -> get_reachability
         # - if leaf reached, use backend to encode leaf
         # - use backend encode_split to join branches
         # - add constraint to backend with backend.add_constraint
         if node is None:
-            return self._add_tree(self, tree, tree.root())
+            return self._enc_tree(tree_index, tree, tree.root())
 
         if tree.is_leaf(node):
             wvar = self._wvars[tree_index]
@@ -373,19 +417,20 @@ class Verifier:
             left, right = tree.left(node), tree.right(node)
             reachability = self.get_reachability(feat_id, split_value)
             l, r = False, False
-            if reachabilities.covers(Verifier.Reachable.LEFT):
-                l = self._add_tree(tree_index, tree, left)
-            if reachabilities.covers(Verifier.Reachable.RIGHT):
-                r = self._add_tree(tree_index, tree, right)
-            return self._backend.encode_split(feat_id, split_value, l, r)
+            if reachability.covers(Verifier.Reachable.LEFT):
+                l = self._enc_tree(tree_index, tree, left)
+            if reachability.covers(Verifier.Reachable.RIGHT):
+                r = self._enc_tree(tree_index, tree, right)
+            return self._backend.encode_split(xvar, split_value, l, r)
 
 
 class DefaultVerifier(Verifier):
 
     def __init__(self, domains, addtree, backend):
         super().__init__(domains, addtree, backend)
+        self._status = Verifier.Result.UNKNOWN
 
-    def verify(self, timeout=3600 * 24 * 31):
+    def verify(self, constraint=True, timeout=3600 * 24 * 31, reset=True):
         """
         DefaultVerifier algorithm:
          - define f as sum of ws          |
@@ -395,10 +440,69 @@ class DefaultVerifier(Verifier):
          - add bounds for trees
                 -> get_reachability
          - add full encodings of trees in order of best bounds -> get_reachability + backend
-                -> helper method add_tree
+                -> helper method enc_tree
          - stop early when UNSAT
          - stop with SAT if SAT with all trees fully encoded
          - stop with UNKNOWN if backend times out
         """
-        # TODO implement
-        pass
+
+        if reset or self._status == Verifier.Result.UNKNOWN:
+            self.reset()
+        self._status = self._backend.check(constraint)
+
+        while len(self._remaining_trees) > 0 \
+                and self._status == Verifier.Result.SAT:
+            self._iteration_count += 1
+
+            # TODO choose best tree according to heuristic
+            tree_index = self._remaining_trees.pop()
+            tree = self._addtree[tree_index]
+            enc = self._enc_tree(tree_index, tree, tree.root())
+            self._backend.add_constraint(enc)
+
+            self._status = self._backend.check(constraint)
+
+        return self._status
+
+    def reset(self):
+        m = len(self._addtree)
+        self._iteration_count = 0
+        self._remaining_trees = list(range(m))
+
+        self._initialize() # unreachable available now
+        self._bounds = [self._determine_bounds(i) for i in range(m)]
+        self._add_bounds_constraints()
+
+        self._status = Verifier.Result.SAT
+
+    # -- private --
+
+    def _determine_bounds(self, tree_index):
+        tree = self._addtree[tree_index]
+        lo =  math.inf
+        hi = -math.inf
+
+        stack = [tree.root()]
+        while len(stack) > 0:
+            node = stack.pop()
+
+            if tree.is_leaf(node):
+                leaf_value = tree.get_leaf_value(node)
+                lo = min(lo, leaf_value)
+                hi = max(hi, leaf_value)
+                continue
+
+            feat_id, split_value = tree.get_split(node)
+            reachability = self.get_reachability(feat_id, split_value)
+            if reachability.covers(Verifier.Reachable.RIGHT):
+                stack.append(tree.right(node))
+            if reachability.covers(Verifier.Reachable.LEFT):
+                stack.append(tree.left(node))
+
+        return (lo, hi)
+
+    def _add_bounds_constraints(self):
+        for tree_index, (lo, hi) in enumerate(self._bounds):
+            wvar = self.wvar(tree_index)
+            self._backend.add_constraint(wvar >= lo)
+            self._backend.add_constraint(wvar <= hi)
