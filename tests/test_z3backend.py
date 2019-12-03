@@ -2,7 +2,7 @@ import unittest
 import z3
 
 from treeck import *
-from treeck.verifier import Verifier, LtConstraint, Dvar, SumExpr
+from treeck.verifier import Verifier, Dvar, SumExpr
 from treeck.z3backend import Z3Backend
 
 class DummyVerifier:
@@ -15,7 +15,7 @@ class DummyVerifier:
         self._dvars[name] = v
         return v
 
-class TestZ3Solver(unittest.TestCase):
+class TestZ3Backend(unittest.TestCase):
     def test_dummy_verifier_interaction(self):
         b = Z3Backend()
         v = DummyVerifier(b)
