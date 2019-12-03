@@ -111,6 +111,8 @@ class Z3Backend(VerifierBackend):
             return c
         elif isinstance(c, float):
             return c
+        elif isinstance(c, int):
+            return float(c)
         elif isinstance(c, VerifierVar):
             return c.get()
         elif isinstance(c, SumExpr):

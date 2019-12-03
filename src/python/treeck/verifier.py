@@ -223,8 +223,8 @@ class Verifier:
         self._addtree = addtree
         self._backend = backend
 
-        self._num_features = len(domains)
-        self._xvars = [backend.add_var(f"x{i}") for i in range(self._num_features)]
+        self.num_features = len(domains)
+        self._xvars = [backend.add_var(f"x{i}") for i in range(self.num_features)]
         self._wvars = [backend.add_var(f"w{i}") for i in range(len(self._addtree))]
         self._dvars = {}
         self._fvar = backend.add_var("f")
@@ -261,7 +261,6 @@ class Verifier:
         Add a user-defined constraint. Use add_dvar, dvar, xvar, and fvar to
         get access to the variables.
         """
-        assert isinstance(constraint, VerifierBoolExpr)
         self._constraints.append(constraint)
 
     def verify(self, constraint=True, timeout=3600 * 24 * 31, reset=True):
@@ -357,7 +356,10 @@ class Verifier:
         """ Get the full unreachable dictionary for reuse in deeper verifiers. """
         return self._reachability.copy()
 
-    def test_addtree_reachability(self):
+    def set_reachability_dict(self, reachability):
+        self._reachability = reachability
+
+    def _test_addtree_reachability(self):
         """
         For each tree in the addtree, for each internal node in the tree,
         check which side of the split is reachable given the constraints, not
@@ -367,9 +369,9 @@ class Verifier:
         """
         for tree_index in range(len(self._addtree)):
             tree = self._addtree[tree_index]
-            self.test_tree_reachability(tree)
+            self._test_tree_reachability(tree)
 
-    def test_tree_reachability(self, tree):
+    def _test_tree_reachability(self, tree):
         """ Test the reachability of the nodes in a single tree.  """
         stack = [(tree.root())]
         while len(stack) > 0:
@@ -394,6 +396,7 @@ class Verifier:
 
             self._reachability[(feat_id, split_value)] = reachability
 
+
     def _initialize(self):
         # - define f as sum of ws
         # - add domain constraints
@@ -405,7 +408,7 @@ class Verifier:
         self._backend.add_constraint(InDomainConstraint(self, self._domains))
         for c in self._constraints:
             self._backend.add_constraint(c)
-        self.test_addtree_reachability()
+        self._test_addtree_reachability()
         self._backend.simplify()
 
     def _enc_tree(self, tree_index, tree, node = None):
@@ -482,6 +485,12 @@ class DefaultVerifier(Verifier):
         self._initialize() # unreachable available now
         self._bounds = [self._determine_bounds(i) for i in range(m)]
         self._add_bounds_constraints()
+
+        # TODO let user choose heuristic
+        # sort remaining trees by heuristic value
+        bnd = lambda i: self._bounds[i]
+        self._remaining_trees.sort(key=lambda i: max(abs(bnd(i)[0]), abs(bnd(i)[1])))
+
 
         self._status = Verifier.Result.SAT
 

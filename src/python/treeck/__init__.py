@@ -2,35 +2,10 @@ from io import StringIO
 
 from .pytreeck import *
 
-from .consts import LESS_THAN, GREATER_THAN
-from .z3solver import Z3Solver
-
-try:
-    from .parallel_solver import ParallelSolver
-except:
-    print("disabled parallel solver")
-
 def __realdomain__str(self):
     return "[{:.3g}, {:.3g})".format(self.lo, self.hi)
 
 RealDomain.__str__ = __realdomain__str
-
-#def __ltsplit__str(self):
-#    return "X{} < {:.3g}".format(self.feat_id, self.split_value)
-#
-#def __ltsplit__eq(self, other):
-#    return self.feat_id == other.feat_id \
-#            and self.split_value == other.split_value
-#
-#LtSplit.__str__ = __ltsplit__str
-#LtSplit.__eq__ = __ltsplit__eq
-
-#def __node__eq(self, other):
-#    return self.is_internal() == other.is_internal() \
-#            and (not self.is_internal() or (self.get_split() == other.get_split())) \
-#            and (not self.is_leaf() or (self.leaf_value() == other.leaf_value()))
-#
-#Node.__eq__ = __node__eq
 
 def __tree_predict_single(self, example):
     node = self.root()

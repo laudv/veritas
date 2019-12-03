@@ -5,10 +5,11 @@ import z3
 import json
 
 from treeck import *
+from treeck.verifier import Verifier, DefaultVerifier
+from treeck.z3backend import Z3Backend
 
 def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
-        max_sum_offset = None,
-        threshold_op=LESS_THAN, show_plot=False):
+        max_sum_offset = None, show_plot=False):
 
     with open("tests/models/mnist-instances.json") as f:
         instance = np.array(json.load(f)[str(instance_key)])
@@ -22,28 +23,24 @@ def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
         addtree = sp.get_pruned_addtree(leaf)
         domains = sp.get_domains(leaf)
 
-        solver = Z3Solver(domains, addtree)
+        dv = DefaultVerifier(domains, addtree, Z3Backend())
         constraints = []
         sum_constraint = 0
-        for j, pixel in enumerate(instance):
-            try:
-                x = solver.xvar(j)
-            except:
-                break
-            constraints.append(x > max(0, pixel-offset))
-            constraints.append(x < min(255, pixel+offset))
-            sum_constraint += z3.If(x-pixel <= 0, pixel-x, x-pixel)
+        for j, pixel in zip(range(dv.num_features), instance):
+            x = dv.xvar(j)
+            dv.add_constraint((x > max(0, pixel-offset)) & (x < min(255, pixel+offset)))
+            sum_constraint += z3.If(x.get()-pixel <= 0, pixel-x.get(), x.get()-pixel)
         if max_sum_offset is not None:
-            constraints.append(sum_constraint < max_sum_offset)
-        check = solver.verify(constraints, threshold=0.0, op=threshold_op)
+            dv.add_constraint(sum_constraint < max_sum_offset)
+        check = dv.verify(dv.fvar() < 0.0)
         results.append(check)
 
         #print(addtree)
         print(f"Domains for {check} leaf {i}({leaf}):",
                 list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
 
-        if check == z3.sat:
-            m = solver.model()
+        if check == Verifier.Result.SAT:
+            m = dv.model()
             xs, ws = m["xs"], m["ws"]
             adverserial = instance.copy()
             for k, x in enumerate(xs):
@@ -70,7 +67,7 @@ def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
                 plt.show()
 
     print(results)
-    testcase.assertTrue(sum(map(lambda x: x==z3.sat, results)) > 0)
+    testcase.assertTrue(sum(map(lambda x: x==Verifier.Result.SAT, results)) > 0)
 
 
 class TestSearchSpace(unittest.TestCase):
@@ -79,13 +76,13 @@ class TestSearchSpace(unittest.TestCase):
         # GREATER_THAN ==> classify as 1, LESS_THAN ==> classify as not 1
         test_adverserial_mnist(self, "xgb-mnist-yis1-easy", 1,
                 offset=5, nleafs=20, max_sum_offset=500,
-                threshold_op=LESS_THAN, show_plot=True)
+                show_plot=False)
 
     def test_mnist08(self):
         # GREATER_THAN ==> classify as 0, LESS_THAN ==> classify as not 0
         test_adverserial_mnist(self, "xgb-mnist-yis0-easy", 0,
                 offset=10, nleafs=20, max_sum_offset=500,
-                threshold_op=LESS_THAN, show_plot=True)
+                show_plot=False)
 
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)
