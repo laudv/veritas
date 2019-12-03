@@ -105,6 +105,52 @@ class TestVerifier(unittest.TestCase):
         dv.exclude_model(model)
         self.assertEqual(dv.verify(dv.fvar() < 0.01, reset=False), Verifier.Result.UNSAT)
 
+    def test_img(self):
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+
+        m, M = min(ys), max(ys)
+        img = np.array(ys).reshape((100, 100))
+        img0 = img[0:50, 0:50]
+        img1 = img[0:50, 50:100]
+        img2 = img[50:100, 0:50]
+        img3 = img[50:100, 50:100]
+
+        #fig, ax = plt.subplots(2, 2)
+        #ax[0, 0].imshow(img0, vmin=m, vmax=M)
+        #ax[0, 1].imshow(img1, vmin=m, vmax=M)
+        #ax[1, 0].imshow(img2, vmin=m, vmax=M)
+        #ax[1, 1].imshow(img3, vmin=m, vmax=M)
+        #plt.show()
+
+        print("< 0")
+        dv = DefaultVerifier([RealDomain(), RealDomain()], at, Backend())
+        self.assertEqual(dv.verify(dv.fvar() < 0.0), Verifier.Result.SAT)
+        model = dv.model()
+        self.assertLess(model["f"], 0.0)
+        self.assertGreaterEqual(model["f"], m)
+
+        print("< m, > M")
+        self.assertEqual(dv.verify((dv.fvar() < m) | (dv.fvar() > M)), Verifier.Result.UNSAT)
+
+        quandrant = 0
+        img = np.array(ys).reshape((100, 100))
+        for x0 in [0, 50]:
+            for y0 in [0, 50]:
+                print("quadrant", quandrant)
+                x1, y1 = x0 + 50, y0 + 50
+                imgq = img[x0:x1, y0:y1]
+                m, M = imgq.min(), imgq.max()
+
+                dv = DefaultVerifier([RealDomain(x0, x1), RealDomain(y0, y1)], at, Backend())
+                self.assertEqual(dv.verify(dv.fvar() < m+1e-4), Verifier.Result.SAT)
+                self.assertAlmostEqual(dv.model()["f"], m, delta=1e-4)
+                self.assertEqual(dv.verify(dv.fvar() > M-1e-4), Verifier.Result.SAT)
+                self.assertAlmostEqual(dv.model()["f"], M, delta=1e-4)
+
+                quandrant += 1
+
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)
     z3.set_pp_option("precision", 3)

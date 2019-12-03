@@ -25,9 +25,9 @@ def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
         solver = Z3Solver(domains, addtree)
         constraints = []
         sum_constraint = 0
-        for i, pixel in enumerate(instance):
+        for j, pixel in enumerate(instance):
             try:
-                x = solver.xvar(i)
+                x = solver.xvar(j)
             except:
                 break
             constraints.append(x > max(0, pixel-offset))
