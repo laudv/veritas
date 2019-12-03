@@ -1,8 +1,9 @@
 import z3
 
-from .verifier import Verifier, FUNDAMENTAL_CONSTRAINTS
-from .verifier import VerifierConstraint, CompoundVerifierConstraint, ConstraintVar
-from .verifier import LtConstraint, GtConstraint, LeConstraint, GeConstraint, EqConstraint, NeConstraint
+from .verifier import Verifier, ORDER_CONSTRAINTS
+from .verifier import VerifierBoolExpr, VerifierVar
+from .verifier import VerifierLtExpr, VerifierGtExpr, VerifierLeExpr, VerifierGeExpr, VerifierEqExpr, VerifierNeExpr
+from .verifier import VerifierAndExpr, VerifierOrExpr
 from .verifier import SumExpr
 from .verifier import VerifierBackend
 
@@ -13,8 +14,8 @@ class Stats:
 
 class Z3Backend(VerifierBackend):
 
-    FUNDAMENTAL_CONSTRAINTS_MAP = dict(
-            [(eval(name), method) for (name, method) in FUNDAMENTAL_CONSTRAINTS])
+    ORDER_CONSTRAINTS_MAP = dict(
+        [(eval(name), method) for (name, method) in ORDER_CONSTRAINTS])
 
     def __init__(self):
         self._ctx = z3.Context()
@@ -32,9 +33,9 @@ class Z3Backend(VerifierBackend):
     def add_var(self, name):
         return z3.Real(name, self._ctx)
 
-    def add_constraint(self, constraint):
-        for enc in self._enc_constraint(constraint):
-            self._solver.add(enc)
+    def add_constraint(self, *constraints):
+        encs = [enc for enc in map(self._enc_constraint, constraints) if z3.is_bool(enc)]
+        self._solver.add(*encs)
 
     def simplify(self):
         self._stats.num_simplifies += 1
@@ -53,12 +54,8 @@ class Z3Backend(VerifierBackend):
         return z3.If(cond, left, right, self._ctx)
 
     def check(self, *constraints):
-        encs = []
-        for c in constraints:
-            for enc in self._enc_constraint(c):
-                encs.append(enc)
-
-        status = self._solver.check(encs)
+        encs = [self._enc_constraint(c) for c in constraints]
+        status = self._solver.check(*encs)
         self._stats.num_check_calls += 1
         if status == z3.sat:     return Verifier.Result.SAT
         elif status == z3.unsat: return Verifier.Result.UNSAT
@@ -79,36 +76,51 @@ class Z3Backend(VerifierBackend):
     # -- private --
 
     def _enc_constraint(self, c):
-        if z3.is_bool(c):
-            yield c
-        elif isinstance(c, bool):
-            yield c
-        elif isinstance(c, CompoundVerifierConstraint):
-            for comp in c.compounds():
-                yield from self._enc_constraint(comp)
-        elif isinstance(c, VerifierConstraint):
-            fmap = Z3Backend.FUNDAMENTAL_CONSTRAINTS_MAP
-            tp = type(c)
-            if tp in fmap.keys():
-                expr1 = self._enc_expr(c.var1)
-                expr2 = self._enc_expr(c.var2)
-                f = getattr(expr1, fmap[tp]) # call float's or Z3's ArithRef's __lt__, __gt__, ...
-                yield f(expr2)
-        else: raise RuntimeError("constraint not supported: {} of type {}".format(c, type(c)))
+        return self._enc_bool_expr(c)
 
-    def _enc_expr(self, e):
-        if z3.is_real(e):
-            return e
-        if isinstance(e, float):
-            return e
-        if isinstance(e, ConstraintVar):
-            return e.get()
-        if isinstance(e, SumExpr):
-            s = self._enc_expr(e.parts[0])
-            for p in e.parts[1:]:
-                s += self._enc_expr(p)
+    def _enc_bool_expr(self, c):
+        if z3.is_bool(c):
+            return c
+        elif isinstance(c, bool):
+            return c
+        elif isinstance(c, VerifierBoolExpr):
+            return self._enc_verifier_bool_expr(c)
+        else:
+            raise RuntimeError("unsupported bool expression of type",
+                    type(c).__qualname__)
+
+    def _enc_verifier_bool_expr(self, c):
+        if isinstance(c, VerifierAndExpr):
+            cs = list(map(self._enc_bool_expr, c.conjuncts))
+            return z3.And(*cs, self._ctx) if len(cs) > 0 else True
+        elif isinstance(c, VerifierOrExpr):
+            cs = list(map(self._enc_bool_expr, c.disjuncts))
+            return z3.Or(*cs, self._ctx) if len(cs) > 0 else False
+        elif type(c) in Z3Backend.ORDER_CONSTRAINTS_MAP.keys():
+            real1 = self._enc_real_expr(c.lhs)
+            real2 = self._enc_real_expr(c.rhs)
+            method = Z3Backend.ORDER_CONSTRAINTS_MAP[type(c)]
+            method = getattr(real1, method)
+            return method(real2) # call float's or Z3's ArithRef's __lt__, __gt__, ...
+        else:
+            raise RuntimeError("unsupported VerifierBoolExpr of type",
+                    type(c).__qualname__)
+
+    def _enc_real_expr(self, c):
+        if z3.is_real(c):
+            return c
+        elif isinstance(c, float):
+            return c
+        elif isinstance(c, VerifierVar):
+            return c.get()
+        elif isinstance(c, SumExpr):
+            s = self._enc_real_expr(c.parts[0])
+            for p in c.parts[1:]:
+                s += self._enc_real_expr(p)
             return s
-        raise RuntimeError("expr not supported: {} of type {}".format(e, type(e)))
+        else:
+            raise RuntimeError("unsupported VerifierRealExpr of type",
+                    type(c).__qualname__)
 
     def _extract_var(self, z3model, var):
         val = z3model[var]

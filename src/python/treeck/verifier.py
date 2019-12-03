@@ -6,17 +6,40 @@ from enum import Enum
 from . import RealDomain
 
 
-class ConstraintExpr:
+class VerifierExpr:
     pass
 
-class ConstraintVar(ConstraintExpr):
+class VerifierRealExpr(VerifierExpr):
+    pass
+
+class VerifierBoolExpr(VerifierExpr):
+    def __and__(self, other):
+        if isinstance(self, VerifierAndExpr):
+            if isinstance(other, VerifierAndExpr):
+                self.conjuncts += other.conjuncts
+            else:
+                self.conjuncts.append(other)
+        else:
+            return VerifierAndExpr(self, other)
+
+    def __or__(self, other):
+        if isinstance(self, VerifierOrExpr):
+            if isinstance(other, VerifierOrExpr):
+                self.disjuncts += other.disjuncts
+            else:
+                self.disjuncts.append(other)
+            return self
+        else:
+            return VerifierOrExpr(self, other)
+
+class VerifierVar(VerifierRealExpr):
     def __init__(self, verifier):
         self._verifier = verifier
 
     def get(self):
         raise RuntimeError("abstract method")
 
-class Xvar(ConstraintVar):
+class Xvar(VerifierVar):
     def __init__(self, verifier, feat_id):
         super().__init__(verifier)
         self._feat_id = feat_id
@@ -24,7 +47,7 @@ class Xvar(ConstraintVar):
     def get(self):
         return self._verifier._xvars[self._feat_id]
 
-class Dvar(ConstraintVar):
+class Dvar(VerifierVar):
     def __init__(self, verifier, name):
         super().__init__(verifier)
         self._name = name
@@ -32,7 +55,7 @@ class Dvar(ConstraintVar):
     def get(self):
         return self._verifier._dvars[self._name]
 
-class Wvar(ConstraintVar):
+class Wvar(VerifierVar):
     def __init__(self, verifier, tree_index):
         super().__init__(verifier)
         self._tree_index = tree_index
@@ -40,91 +63,79 @@ class Wvar(ConstraintVar):
     def get(self):
         return self._verifier._wvars[self._tree_index]
 
-class Fvar(ConstraintVar):
+class Fvar(VerifierVar):
     def __init__(self, verifier):
         super().__init__(verifier)
 
     def get(self):
         return self._verifier._fvar
 
-class SumExpr(ConstraintExpr):
+class SumExpr(VerifierRealExpr):
     def __init__(self, *parts):
         """
-        Sum up expressions `parts`. The parts are ConstraintExpr,
-        ConstraintVar, or floats.
+        Sum up expressions `parts`. The parts are VerifierExpr,
+        VerifierVar, or floats.
         """
         assert len(parts) > 0
         self.parts = parts
 
+ORDER_CONSTRAINTS = [
+    ("VerifierLtExpr", "__lt__"),
+    ("VerifierGtExpr", "__gt__"),
+    ("VerifierLeExpr", "__le__"),
+    ("VerifierGeExpr", "__ge__"),
+    ("VerifierEqExpr", "__eq__"),
+    ("VerifierNeExpr", "__ne__")]
 
-class VerifierConstraint:
-    pass
-
-FUNDAMENTAL_CONSTRAINTS = [
-    ("LtConstraint", "__lt__"),
-    ("GtConstraint", "__gt__"),
-    ("LeConstraint", "__le__"),
-    ("GeConstraint", "__ge__"),
-    ("EqConstraint", "__eq__"),
-    ("NeConstraint", "__ne__")]
-
-for (clazz, method) in FUNDAMENTAL_CONSTRAINTS:
+for (clazz, method) in ORDER_CONSTRAINTS:
     exec(f"""
-class {clazz}(VerifierConstraint):
-    def __init__(self, var1, var2):
-        self.var1 = var1
-        self.var2 = var2
+class {clazz}(VerifierBoolExpr):
+    def __init__(self, lhs, rhs):
+        self.lhs = lhs
+        self.rhs = rhs
 """)
     locs = {"f": None}
     exec(f"""
 def f(self, other):
     return {clazz}(self, other)
 """, globals(), locs)
-    setattr(ConstraintExpr, method, locs["f"])
+    setattr(VerifierRealExpr, method, locs["f"])
 
-class CompoundVerifierConstraint(VerifierConstraint):
-    def __init__(self, verifier):
-        self._verifier = verifier
+class VerifierAndExpr(VerifierBoolExpr):
+    def __init__(self, *conjuncts):
+        self.conjuncts = conjuncts
 
-    def compounds(self):
-        """
-        A generator of `VerifierConstraint` compounds, each of them should hold
-        (i.e. logical AND).
-        """
-        raise RuntimeError("abstract method")
+class VerifierOrExpr(VerifierBoolExpr):
+    def __init__(self, *disjuncts):
+        self.disjuncts = disjuncts
 
-class InDomainConstraint(CompoundVerifierConstraint):
+class InDomainConstraint(VerifierAndExpr):
     def __init__(self, verifier, domains):
-        super().__init__(verifier)
-        self.domains = domains
-
-    def compounds(self):
-        for feat_id, d in enumerate(self.domains):
-            var = self._verifier.xvar(feat_id)
+        cs = []
+        for feat_id, d in enumerate(domains):
+            var = verifier.xvar(feat_id)
             if math.isinf(d.lo) and math.isinf(d.hi):
-                continue # unconstrained feature
-            elif math.isinf(d.lo): yield (var < d.hi)
-            elif math.isinf(d.hi): yield (var >= d.lo)
+                continue # unconstrained feature -> everything possible
+            elif math.isinf(d.lo): cs.append(var <  d.hi)
+            elif math.isinf(d.hi): cs.append(var >= d.lo)
             else:
-                yield (var >= d.lo)
-                yield (var < d.hi)
+                cs.append(var >= d.lo)
+                cs.append(var <  d.hi)
+        super().__init__(*cs)
 
-class NotInDomainConstraint(CompoundVerifierConstraint):
+class NotInDomainConstraint(VerifierAndExpr):
     def __init__(self, verifier, domains):
-        super().__init__(verifier)
-        self.domains = domains
-
-    def compounds(self):
-        for feat_id, d in enumerate(self.domains):
-            var = self._verifier.xvar(feat_id)
+        cs = []
+        for feat_id, d in enumerate(domains):
+            var = verifier.xvar(feat_id)
             if math.isinf(d.lo) and math.isinf(d.hi):
-                raise RuntimeError("Unconstrained feature")
-            elif math.isinf(d.lo): yield (var >= d.hi)
-            elif math.isinf(d.hi): yield (var < d.lo)
+                raise RuntimeError("Unconstrained feature -> nothing possible?")
+            elif math.isinf(d.lo): cs.append(var >= d.hi)
+            elif math.isinf(d.hi): cs.append(var <  d.lo)
             else:
-                yield (var < d.lo)
-                yield (var >= d.hi)
-
+                cs.append(var <  d.lo)
+                cs.append(var >= d.hi)
+        super().__init__(*cs)
 
 class VerifierBackend:
     def stats(self):
@@ -141,9 +152,7 @@ class VerifierBackend:
     def add_constraint(self, constraint):
         """
         Add a constraint to the current session. Constraint can be a
-        VerifierConstraint or a Backend specific constraint. A valid verifier
-        is needed to evaluate the ConstraintVar in the case of a
-        VerifierConstraint
+        VerifierBoolExpr or a Backend specific constraint.
         """
         raise RuntimeError("abstract method")
 
@@ -252,7 +261,7 @@ class Verifier:
         Add a user-defined constraint. Use add_dvar, dvar, xvar, and fvar to
         get access to the variables.
         """
-        assert isinstance(constraint, VerifierConstraint)
+        assert isinstance(constraint, VerifierBoolExpr)
         self._constraints.append(constraint)
 
     def verify(self, constraint=True, timeout=3600 * 24 * 31, reset=True):
@@ -391,7 +400,8 @@ class Verifier:
         # - add user defined constraints
         # - compute reachabilities
         self._backend.reset()
-        self._backend.add_constraint(SumExpr(*self._wvars) == self._fvar)
+        fexpr = SumExpr(self._addtree.base_score, *self._wvars)
+        self._backend.add_constraint(fexpr == self._fvar)
         self._backend.add_constraint(InDomainConstraint(self, self._domains))
         for c in self._constraints:
             self._backend.add_constraint(c)
