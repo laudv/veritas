@@ -7,6 +7,8 @@ import z3
 
 from treeck import *
 from treeck.plot import TreePlot
+from treeck.verifier import Verifier, DefaultVerifier
+from treeck.z3backend import Z3Backend as Backend
 
 def plot_pruned_trees():
     at = AddTree.read("tests/models/xgb-covtype-easy.json")
@@ -111,11 +113,11 @@ class TestSearchSpace(unittest.TestCase):
             print(f"Domains for leaf {i}({leaf}):",
                     list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
 
-            solver = Z3Solver(domains, addtree)
-            constraints = [(solver.xvar(35) > 0.5)]
-            results.append(solver.verify(constraints, threshold, op=LESS_THAN))
+            dv = DefaultVerifier(domains, addtree, Backend())
+            dv.add_constraint(dv.xvar(35) > 0.5)
+            results.append(dv.verify(dv.fvar() < threshold))
 
-        unsat, sat = z3.unsat, z3.sat
+        unsat, sat = Verifier.Result.UNSAT, Verifier.Result.SAT
         self.assertEqual(results, [unsat, unsat, unsat, unsat, sat, unsat, unsat, unsat, unsat, unsat])
 
     def test_img1(self):
@@ -134,13 +136,13 @@ class TestSearchSpace(unittest.TestCase):
             addtree = sp.get_pruned_addtree(leaf)
             domains = sp.get_domains(leaf)
 
-            solver = Z3Solver(domains, addtree)
-            check = solver.verify(threshold=m+1e-4, op=LESS_THAN)
+            dv = DefaultVerifier(domains, addtree, Backend())
+            check = dv.verify(dv.fvar() < m+1e-4)
             results.append(check)
 
-            if check == z3.sat:
+            if check == Verifier.Result.SAT:
                 sat_leaf = leaf
-                sat_model = solver.model()
+                sat_model = dv.model()
 
             #print(addtree)
             print(f"Domains for {check} leaf {i}({leaf}):",
@@ -170,7 +172,7 @@ class TestSearchSpace(unittest.TestCase):
         #fig.colorbar(im, ax=ax)
         #plt.show()
 
-        self.assertEqual(sum(map(lambda x: x==z3.sat, results)), 1)
+        self.assertEqual(sum(map(lambda x: x==Verifier.Result.SAT, results)), 1)
 
     def test_img2(self):
         with open("tests/models/xgb-img-easy-values.json") as f:
@@ -188,13 +190,13 @@ class TestSearchSpace(unittest.TestCase):
             addtree = sp.get_pruned_addtree(leaf)
             domains = sp.get_domains(leaf)
 
-            solver = Z3Solver(domains, addtree)
-            check = solver.verify(threshold=M-1e-4, op=GREATER_THAN)
+            dv = DefaultVerifier(domains, addtree, Backend())
+            check = dv.verify(dv.fvar() > M-1e-4)
             results.append(check)
 
-            if check == z3.sat:
+            if check == Verifier.Result.SAT:
                 sat_leaf = leaf
-                sat_model = solver.model()
+                sat_model = dv.model()
 
             #print(addtree)
             print(f"Domains for {check} leaf {i}({leaf}):",
@@ -224,7 +226,7 @@ class TestSearchSpace(unittest.TestCase):
         #fig.colorbar(im, ax=ax)
         #plt.show()
 
-        self.assertEqual(sum(map(lambda x: x==z3.sat, results)), 1)
+        self.assertEqual(sum(map(lambda x: x==Verifier.Result.SAT, results)), 1)
 
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)
