@@ -34,7 +34,7 @@ class Z3Backend(VerifierBackend):
         return z3.Real(name, self._ctx)
 
     def add_constraint(self, *constraints):
-        encs = [enc for enc in map(self._enc_constraint, constraints) if z3.is_bool(enc)]
+        encs = self._enc_constraints(constraints)
         self._solver.add(*encs)
 
     def simplify(self):
@@ -54,7 +54,9 @@ class Z3Backend(VerifierBackend):
         return z3.If(cond, left, right, self._ctx)
 
     def check(self, *constraints):
-        encs = [self._enc_constraint(c) for c in constraints]
+        encs = self._enc_constraints(constraints)
+        if isinstance(encs, bool) and not encs:
+            return Verifier.Result.UNSAT
         status = self._solver.check(*encs)
         self._stats.num_check_calls += 1
         if status == z3.sat:     return Verifier.Result.SAT
@@ -74,6 +76,16 @@ class Z3Backend(VerifierBackend):
         return model
 
     # -- private --
+
+    def _enc_constraints(self, cs):
+        encs = []
+        for c in cs:
+            enc = self._enc_constraint(c)
+            if isinstance(enc, bool):
+                if not enc: return False
+                # skip True
+            else: encs.append(enc)
+        return encs
 
     def _enc_constraint(self, c):
         return self._enc_bool_expr(c)

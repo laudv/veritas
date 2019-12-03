@@ -103,6 +103,10 @@ class TestVerifier(unittest.TestCase):
         model = dv.model()
         self.assertEqual(model["ws"], [0.3, -0.3])
         dv.exclude_model(model)
+        self.assertEqual(dv.verify(dv.fvar() < 0.01, reset=False), Verifier.Result.SAT)
+        model = dv.model()
+        self.assertEqual(model["ws"], [0.3, -0.3])
+        dv.exclude_model(model)
         self.assertEqual(dv.verify(dv.fvar() < 0.01, reset=False), Verifier.Result.UNSAT)
 
     def test_img(self):
@@ -112,10 +116,6 @@ class TestVerifier(unittest.TestCase):
 
         m, M = min(ys), max(ys)
         img = np.array(ys).reshape((100, 100))
-        img0 = img[0:50, 0:50]
-        img1 = img[0:50, 50:100]
-        img2 = img[50:100, 0:50]
-        img3 = img[50:100, 50:100]
 
         #fig, ax = plt.subplots(2, 2)
         #ax[0, 0].imshow(img0, vmin=m, vmax=M)
@@ -150,6 +150,33 @@ class TestVerifier(unittest.TestCase):
                 self.assertAlmostEqual(dv.model()["f"], M, delta=1e-4)
 
                 quandrant += 1
+
+    def test_img_sampling(self):
+        # find all points with predictions less than 0.0
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        img = np.array(ys).reshape((100, 100))
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+        dv = DefaultVerifier([RealDomain(), RealDomain()], at, Backend())
+        dv.add_constraint(dv.fvar() < 0.0)
+
+        models = []
+        while dv.verify(reset=False) == Verifier.Result.SAT:
+            m = dv.model()
+            x = int(np.floor(m["xs"][1]))
+            y = int(np.floor(m["xs"][0]))
+            self.assertLess(m["f"], 0.0)
+            self.assertAlmostEqual(img[y][x], m["f"], delta=1e-4)
+            models.append((x, y))
+            dv.exclude_model(m)
+
+        self.assertEqual(len(models), 60)
+
+        #fig, ax = plt.subplots()
+        #ax.imshow(img)
+        #for (x, y) in models:
+        #    ax.scatter([x], [y], marker="s", c="b")
+        #plt.show()
 
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)

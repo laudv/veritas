@@ -123,7 +123,7 @@ class InDomainConstraint(VerifierAndExpr):
                 cs.append(var <  d.hi)
         super().__init__(*cs)
 
-class NotInDomainConstraint(VerifierAndExpr):
+class NotInDomainConstraint(VerifierOrExpr):
     def __init__(self, verifier, domains):
         cs = []
         for feat_id, d in enumerate(domains):
