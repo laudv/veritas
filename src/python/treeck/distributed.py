@@ -5,7 +5,7 @@ from dask.distributed import wait, as_completed
 from .pytreeck import SearchSpace, AddTree
 from .z3solver import Z3Solver
 
-class ParallelSolver:
+class DistributedVerifier:
 
     def __init__(self, client, addtree):
         self.client = client # dask client
