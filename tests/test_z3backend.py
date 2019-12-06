@@ -2,17 +2,17 @@ import unittest
 import z3
 
 from treeck import *
-from treeck.verifier import Verifier, Dvar, SumExpr
+from treeck.verifier import Verifier, Rvar, SumExpr
 from treeck.z3backend import Z3Backend
 
 class DummyVerifier:
     def __init__(self, backend):
         self.b = backend
-        self._dvars = {}
+        self._rvars = {}
 
     def add_var(self, name):
-        v = self.b.add_var(name)
-        self._dvars[name] = v
+        v = self.b.add_real_var(name)
+        self._rvars[name] = v
         return v
 
 class TestZ3Backend(unittest.TestCase):
@@ -20,8 +20,8 @@ class TestZ3Backend(unittest.TestCase):
         b = Z3Backend()
         v = DummyVerifier(b)
 
-        x = Dvar(v, "x")
-        y = Dvar(v, "y")
+        x = Rvar(v, "x")
+        y = Rvar(v, "y")
         cs = [x < y, x==1.0, y==2.0]
 
         zx = v.add_var("x")
@@ -50,8 +50,8 @@ class TestZ3Backend(unittest.TestCase):
     def test_tree(self):
         b = Z3Backend()
 
-        w = b.add_var("w1")
-        x = b.add_var("x")
+        w = b.add_real_var("w1")
+        x = b.add_real_var("x")
 
         ll = b.encode_leaf(w, 1.0)
         lr = b.encode_leaf(w, 2.0)
@@ -72,10 +72,10 @@ class TestZ3Backend(unittest.TestCase):
     def test_sum_expr(self):
         b = Z3Backend()
 
-        w1 = b.add_var("w1")
-        w2 = b.add_var("w2")
-        w3 = b.add_var("w3")
-        x = b.add_var("x")
+        w1 = b.add_real_var("w1")
+        w2 = b.add_real_var("w2")
+        w3 = b.add_real_var("w3")
+        x = b.add_real_var("x")
 
         b.add_constraint(w1 < 1)
         b.add_constraint(w2 < 2)

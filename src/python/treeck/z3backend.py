@@ -30,8 +30,11 @@ class Z3Backend(VerifierBackend):
         self._solver = z3.Solver(ctx=self._ctx)
         self._stats = Stats()
 
-    def add_var(self, name):
+    def add_real_var(self, name):
         return z3.Real(name, self._ctx)
+
+    def add_bool_var(self, name):
+        return z3.Bool(name, self._ctx)
 
     def add_constraint(self, *constraints):
         encs = self._enc_constraints(constraints)
@@ -114,6 +117,8 @@ class Z3Backend(VerifierBackend):
             method = Z3Backend.ORDER_CONSTRAINTS_MAP[type(c)]
             method = getattr(real1, method)
             return method(real2) # call float's or Z3's ArithRef's __lt__, __gt__, ...
+        elif isinstance(c, VerifierVar):
+            return c.get()
         else:
             raise RuntimeError("unsupported VerifierBoolExpr of type",
                     type(c).__qualname__)

@@ -32,14 +32,14 @@ class VerifierBoolExpr(VerifierExpr):
         else:
             return VerifierOrExpr(self, other)
 
-class VerifierVar(VerifierRealExpr):
+class VerifierVar:
     def __init__(self, verifier):
         self._verifier = verifier
 
     def get(self):
         raise RuntimeError("abstract method")
 
-class Xvar(VerifierVar):
+class Xvar(VerifierVar, VerifierRealExpr):
     def __init__(self, verifier, feat_id):
         super().__init__(verifier)
         self._feat_id = feat_id
@@ -47,15 +47,23 @@ class Xvar(VerifierVar):
     def get(self):
         return self._verifier._xvars[self._feat_id]
 
-class Dvar(VerifierVar):
+class Rvar(VerifierVar, VerifierRealExpr): # An additional real variable
     def __init__(self, verifier, name):
         super().__init__(verifier)
         self._name = name
 
     def get(self):
-        return self._verifier._dvars[self._name]
+        return self._verifier._rvars[self._name]
 
-class Wvar(VerifierVar):
+class Bvar(VerifierVar, VerifierBoolExpr): # An additional bool variable
+    def __init__(self, verifier, name):
+        super().__init__(verifier)
+        self._name = name
+
+    def get(self):
+        return self._verifier._bvars[self._name]
+
+class Wvar(VerifierVar, VerifierRealExpr):
     def __init__(self, verifier, tree_index):
         super().__init__(verifier)
         self._tree_index = tree_index
@@ -63,7 +71,7 @@ class Wvar(VerifierVar):
     def get(self):
         return self._verifier._wvars[self._tree_index]
 
-class Fvar(VerifierVar):
+class Fvar(VerifierVar, VerifierRealExpr):
     def __init__(self, verifier):
         super().__init__(verifier)
 
@@ -145,8 +153,12 @@ class VerifierBackend:
         """ Terminate the previous session and initialize a new one. """
         raise RuntimeError("abstract method")
 
-    def add_var(self, name):
-        """ Add a new variable to the session. """
+    def add_real_var(self, name):
+        """ Add a new real variable to the session. """
+        raise RuntimeError("abstract method")
+
+    def add_bool_var(self, name):
+        """ Add a new boolean variable to the session. """
         raise RuntimeError("abstract method")
 
     def add_constraint(self, constraint):
@@ -212,7 +224,7 @@ class Verifier:
         def __xor__(self, other):
             return Verifier.Reachable(self.value ^ other.value)
 
-    def __init__(self, domains, addtree, backend):
+    def __init__(self, domains, addtree, backend, prefix=""):
         """
         Initialize a Verifier.
          - domains is a list of `RealDomain` objects, one for each feature.
@@ -222,27 +234,41 @@ class Verifier:
         self._domains = domains
         self._addtree = addtree
         self._backend = backend
+        self.prefix = prefix
+
+        p = self.prefix
 
         self.num_features = len(domains)
-        self._xvars = [backend.add_var(f"x{i}") for i in range(self.num_features)]
-        self._wvars = [backend.add_var(f"w{i}") for i in range(len(self._addtree))]
-        self._dvars = {}
-        self._fvar = backend.add_var("f")
+        self._xvars = [backend.add_real_var(f"{p}x{i}") for i in range(self.num_features)]
+        self._wvars = [backend.add_real_var(f"{p}w{i}") for i in range(len(self._addtree))]
+        self._rvars = {} # real additional variables
+        self._bvars = {} # boolean additional variables
+        self._fvar = backend.add_real_var(f"{p}f")
 
         self._splits = None
 
         # (feat_id, split_value) => REACHABILITY FLAG
         self._reachability = {}
 
-    def add_dvar(self, name):
+    def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
-        assert name not in self._dvars
-        dvar = self._backend.add_var(name)
-        self._dvars[name] = dvar
+        assert name not in self._rvars
+        rvar = self._backend.add_real_var(f"{self.prefix}r_{name}")
+        self._rvars[name] = rvar
 
-    def dvar(self, name):
+    def rvar(self, name):
         """ Get one of the additional decision variables. """
-        return Dvar(self, name)
+        return Rvar(self, name)
+
+    def add_bvar(self, name):
+        """ Add an additional decision variable to the problem. """
+        assert name not in self._bvars
+        bvar = self._backend.add_bool_var(f"{self.prefix}b_{name}")
+        self._bvars[name] = bvar
+
+    def bvar(self, name):
+        """ Get one of the additional decision variables. """
+        return Bvar(self, name)
 
     def xvar(self, feat_id):
         """ Get the decision variable associated with feature `feat_id`. """
@@ -258,8 +284,8 @@ class Verifier:
 
     def add_constraint(self, constraint):
         """
-        Add a user-defined constraint. Use add_dvar, dvar, xvar, and fvar to
-        get access to the variables.
+        Add a user-defined constraint. Use add_rvar, rvar, bvar, xvar, and fvar
+        to get access to the variables.
         """
         self._constraints.append(constraint)
 
@@ -269,7 +295,7 @@ class Verifier:
             (1) satisfies the constraints on
                 - the input features (xvars)
                 - the addtree output (fvar)
-                - any additional decision variables (dvars)
+                - any additional decision variables (rvars and bvars)
             (2) satisfies the additive tree structure
             (3) satisfies the given constraint
 
@@ -277,6 +303,9 @@ class Verifier:
             (1) Verifier.SAT, an assignment was found
             (2) Verifier.UNSAT, no assignment that satisfies the constraints possible
             (3) Verifier.UNKNOWN, the answer is unknown, e.g. because of timeout
+
+        when `reset` is False, don't reset the model and verify the given
+        constraint in the existing model.
         """
         raise RuntimeError("abstract method; use subclass")
 
@@ -297,14 +326,16 @@ class Verifier:
             "xs": [ list of xvar values ],
             "ws": [ list of tree leaf weights ],
             "f": sum of tree leaf weights == addtree.base_score + sum{ws}
-            "ds": { name => value } value map of additional variables
+            "rs": { name => value } value map of additional real variables
+            "bs": { name => value } value map of additional bool variables
             }
         """
         return self._backend.model(
                 ("xs", self._xvars),
                 ("ws", self._wvars),
                 ("f", self._fvar),
-                ("ds", self._dvars))
+                ("rs", self._rvars),
+                ("bs", self._bvars))
 
     def exclude_model(self, model):
         """
