@@ -5,7 +5,14 @@ from .pytreeck import *
 def __realdomain__str(self):
     return "[{:.3g}, {:.3g})".format(self.lo, self.hi)
 
+def __realdomain__eq(self, o):
+    return self.lo == o.lo and self.hi == o.hi
+
+def __realdomain__hash(self):
+    return hash((self.lo, self.hi))
+
 RealDomain.__str__ = __realdomain__str
+RealDomain.__eq__ = __realdomain__eq
 
 def __tree_predict_single(self, example):
     node = self.root()
