@@ -209,7 +209,7 @@ class VerifierStrategy:
         """
         pass
 
-    def get_reachability(self, feat_id, split_value):
+    def get_reachability(self, tree, node):
         """ Given the split, can we go left, right, or both?  """
         return Verifier.Reachable.BOTH
 
@@ -364,6 +364,7 @@ class Verifier:
             if self._status != Verifier.Result.SAT: break
             if not self._strategy.verify_step(): break # add the next part of the problem encoding
 
+            self._backend.simplify()
             self._iteration_count += 1
 
         self._strategy.verify_teardown()
@@ -430,29 +431,29 @@ class Verifier:
 
             yield i, x, lo, hi
 
-    def _enc_tree(self, tree_index, tree, node = None):
+    def _enc_tree(self, tree, node = None):
         # - start at root
         # - if left/right reachable, recur -> strategy.get_reachability
         # - if leaf reached, use backend to encode leaf
         # - use backend encode_split to join branches
         # - add constraint to backend with backend.add_constraint
         if node is None:
-            return self._enc_tree(tree_index, tree, tree.root())
+            return self._enc_tree(tree, tree.root())
 
         if tree.is_leaf(node):
-            wvar = self._wvars[tree_index]
+            wvar = self._wvars[tree.index()]
             leaf_value = tree.get_leaf_value(node)
             return self._backend.encode_leaf(wvar, leaf_value)
         else:
             feat_id, split_value = tree.get_split(node)
             xvar = self._xvars[feat_id]
             left, right = tree.left(node), tree.right(node)
-            reachability = self._strategy.get_reachability(feat_id, split_value)
+            reachability = self._strategy.get_reachability(tree, node)
             l, r = False, False
             if reachability.covers(Verifier.Reachable.LEFT):
-                l = self._enc_tree(tree_index, tree, left)
+                l = self._enc_tree(tree, left)
             if reachability.covers(Verifier.Reachable.RIGHT):
-                r = self._enc_tree(tree_index, tree, right)
+                r = self._enc_tree(tree, right)
             return self._backend.encode_split(xvar, split_value, l, r)
 
     def _determine_tree_bounds(self, tree_index):
@@ -471,7 +472,7 @@ class Verifier:
                 continue
 
             feat_id, split_value = tree.get_split(node)
-            reachability = self._strategy.get_reachability(feat_id, split_value)
+            reachability = self._strategy.get_reachability(tree, node)
             if reachability.covers(Verifier.Reachable.RIGHT):
                 stack.append(tree.right(node))
             if reachability.covers(Verifier.Reachable.LEFT):
@@ -499,8 +500,9 @@ class SplitCheckStrategy(VerifierStrategy):
         self._remaining_trees = None
         self._bounds = [(-math.inf, math.inf)] * self._m
 
-    def get_reachability(self, feat_id, split_value):
-        p = (feat_id, split_value)
+    def get_reachability(self, tree, node):
+
+        p = tree.get_split(node)
         if p in self._reachability:
             return self._reachability[p]
         return Verifier.Reachable.BOTH
@@ -537,7 +539,7 @@ class SplitCheckStrategy(VerifierStrategy):
 
         tree_index = self._remaining_trees.pop()
         tree = self._verifier._addtree[tree_index]
-        enc = self._verifier._enc_tree(tree_index, tree, tree.root())
+        enc = self._verifier._enc_tree(tree, tree.root())
         self._verifier._backend.add_constraint(enc)
         return True
 
@@ -559,15 +561,14 @@ class SplitCheckStrategy(VerifierStrategy):
             self._test_tree_reachability(tree)
 
     def _test_tree_reachability(self, tree):
-        """ Test the reachability of the nodes in a single tree.  """
         stack = [(tree.root())]
         while len(stack) > 0:
             node = stack.pop()
 
             if tree.is_leaf(node): continue
 
+            reachability = self.get_reachability(tree, node)
             feat_id, split_value = tree.get_split(node)
-            reachability = self.get_reachability(feat_id, split_value)
             xvar = self._verifier.xvar(feat_id)
 
             if reachability.covers(Verifier.Reachable.LEFT):
@@ -582,6 +583,7 @@ class SplitCheckStrategy(VerifierStrategy):
                 else: stack.append(tree.right(node))
 
             self._reachability[(feat_id, split_value)] = reachability
+
 
 
 

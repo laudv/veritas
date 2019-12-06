@@ -22,7 +22,7 @@ class TestVerifier(unittest.TestCase):
         s = SplitCheckStrategy()
         v = Verifier([RealDomain()], at, Backend(), s)
         self.assertEqual(v._backend.check(v.fvar() < 0.0), Verifier.Result.SAT)
-        v._backend.add_constraint(v._enc_tree(0, at[0]))
+        v._backend.add_constraint(v._enc_tree(at[0]))
         self.assertEqual(v._backend.check(v.fvar() < 0.0), Verifier.Result.UNSAT)
         self.assertEqual(v._backend.check(v.fvar() > 0.0), Verifier.Result.SAT)
         self.assertEqual(v._backend.check(v.fvar() < 0.41), Verifier.Result.SAT)
@@ -33,7 +33,7 @@ class TestVerifier(unittest.TestCase):
         s.verify_setup()
         self.assertEqual(s._reachability[(0, 2.0)], Verifier.Reachable.LEFT)
         self.assertEqual(s._reachability[(0, 1.0)], Verifier.Reachable.RIGHT)
-        v._backend.add_constraint(v._enc_tree(0, at[0]))
+        v._backend.add_constraint(v._enc_tree(at[0]))
         self.assertEqual(v._backend.check(v.fvar() != 0.2), Verifier.Result.UNSAT)
 
         v = Verifier([RealDomain()], at, Backend(), Strategy())
