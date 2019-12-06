@@ -19,16 +19,13 @@ class Z3Backend(VerifierBackend):
 
     def __init__(self):
         self._ctx = z3.Context()
-        self.reset()
+        self._solver = z3.Solver(ctx=self._ctx)
+        self._stats = Stats()
 
     def stats(self):
         if self._stats:
             return vars(self._stats)
         else: return {}
-
-    def reset(self):
-        self._solver = z3.Solver(ctx=self._ctx)
-        self._stats = Stats()
 
     def add_real_var(self, name):
         return z3.Real(name, self._ctx)

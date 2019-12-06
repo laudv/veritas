@@ -5,7 +5,7 @@ import z3
 import json
 
 from treeck import *
-from treeck.verifier import Verifier, DefaultVerifier
+from treeck.verifier import Verifier, SplitCheckStrategy as Strategy
 from treeck.z3backend import Z3Backend
 
 def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
@@ -23,16 +23,16 @@ def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
         addtree = sp.get_pruned_addtree(leaf)
         domains = sp.get_domains(leaf)
 
-        dv = DefaultVerifier(domains, addtree, Z3Backend())
+        v = Verifier(domains, addtree, Z3Backend(), Strategy())
         constraints = []
         sum_constraint = 0
-        for j, pixel in zip(range(dv.num_features), instance):
-            x = dv.xvar(j)
-            dv.add_constraint((x > max(0, pixel-offset)) & (x < min(255, pixel+offset)))
+        for j, pixel in zip(range(v.num_features), instance):
+            x = v.xvar(j)
+            v.add_constraint((x > max(0, pixel-offset)) & (x < min(255, pixel+offset)))
             sum_constraint += z3.If(x.get()-pixel <= 0, pixel-x.get(), x.get()-pixel)
         if max_sum_offset is not None:
-            dv.add_constraint(sum_constraint < max_sum_offset)
-        check = dv.verify(dv.fvar() < 0.0)
+            v.add_constraint(sum_constraint < max_sum_offset)
+        check = v.verify(v.fvar() < 0.0)
         results.append(check)
 
         #print(addtree)
@@ -40,7 +40,7 @@ def test_adverserial_mnist(testcase, model, instance_key, offset=10, nleafs=10,
                 list(filter(lambda d: not d[1].is_everything(), enumerate(domains))))
 
         if check == Verifier.Result.SAT:
-            m = dv.model()
+            m = v.model()
             xs, ws = m["xs"], m["ws"]
             adverserial = instance.copy()
             for k, x in enumerate(xs):
@@ -76,13 +76,13 @@ class TestSearchSpace(unittest.TestCase):
         # GREATER_THAN ==> classify as 1, LESS_THAN ==> classify as not 1
         test_adverserial_mnist(self, "xgb-mnist-yis1-easy", 1,
                 offset=5, nleafs=20, max_sum_offset=500,
-                show_plot=False)
+                show_plot=True)
 
     def test_mnist08(self):
         # GREATER_THAN ==> classify as 0, LESS_THAN ==> classify as not 0
         test_adverserial_mnist(self, "xgb-mnist-yis0-easy", 0,
                 offset=10, nleafs=20, max_sum_offset=500,
-                show_plot=False)
+                show_plot=True)
 
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)
