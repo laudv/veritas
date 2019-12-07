@@ -222,6 +222,73 @@ class TestVerifier(unittest.TestCase):
             #for m in mm: print(m)
             #print()
 
+    def test_mnist_multi_instance(self):
+        at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
+        doms = [RealDomain() for i in range(28*28)]
+
+        mv = MultiInstanceVerifier(doms, at, Backend())
+        mv.add_constraint(mv[0].fvar() >  5.0) # it is with high certainty a one
+        mv.add_constraint(mv[1].fvar() < -5.0) # it is with high certainty not a one
+
+        pbeq = []
+        for feat_id in range(mv.num_features):
+            bvar_name = f"b{feat_id}"
+            mv.add_bvar(bvar_name)
+
+            bvar = mv.bvar(bvar_name)
+            xvar1 = mv[0].xvar(feat_id)
+            xvar2 = mv[1].xvar(feat_id)
+
+            mv.add_constraint(z3.If(bvar.get(), xvar1.get() != xvar2.get(),
+                                                xvar1.get() == xvar2.get()))
+            pbeq.append((bvar.get(), 1))
+        mv.add_constraint(z3.PbLe(pbeq, 5)) # at most 10 variables differ
+
+        count = 0
+        uniques = set()
+
+        img1_prev, img2_prev = None, None
+        while mv.verify().is_sat() and count < 10:
+            model = mv.model()
+            img1 = np.zeros((28, 28))
+            img2 = np.zeros((28, 28))
+            for i, (x1, x2) in enumerate(zip(model[0]["xs"], model[1]["xs"])):
+                p = np.unravel_index(i, (28, 28))
+                if x1 is not None:
+                    img1[p[1], p[0]] = x1
+                if x2 is not None:
+                    img2[p[1], p[0]] = x2
+
+            if count > 0:
+                print("norm difference:", abs(img1-img1_prev).sum(), abs(img2-img2_prev).sum())
+            img1_prev, img2_prev = img1, img2
+
+            mv.exclude_model(model)
+
+            count += 1
+            uniques.add(hash((str(img1), str(img2))))
+
+            print("iteration", count, "uniques", len(uniques))
+            #if count % 100 != 0: continue
+
+            #fig, (ax1, ax2) = plt.subplots(1, 2)
+            #ax1.imshow(img1, vmin=0, vmax=255)
+            #ax2.imshow(img2, vmin=0, vmax=255)
+            #ax1.set_title("instance 1: f={:.3f}".format(model[0]["f"]))
+            #ax2.set_title("instance 2: f={:.3f}".format(model[1]["f"]))
+
+            #for n, b in model[0]["bs"].items():
+            #    if not b: continue
+            #    i = int(n[1:])
+            #    p = np.unravel_index(i, (28, 28))
+            #    print("different pixel (bvar):", i, p, model[0]["xs"][i], model[1]["xs"][i])
+            #    ax1.scatter([p[0]], [p[1]], marker=".", color="r")
+            #    ax2.scatter([p[0]], [p[1]], marker=".", color="r")
+            #
+            #plt.show()
+
+        self.assertEqual(count, 10)
+        self.assertEqual(len(uniques), 10)
 
 
 

@@ -119,7 +119,7 @@ class VerifierOrExpr(VerifierBoolExpr):
 class InDomainConstraint(VerifierAndExpr):
     def __init__(self, verifier, domains):
         cs = []
-        for feat_id, d in enumerate(domains):
+        for feat_id, d in domains:
             var = verifier.xvar(feat_id)
             if math.isinf(d.lo) and math.isinf(d.hi):
                 continue # unconstrained feature -> everything possible
@@ -133,7 +133,7 @@ class InDomainConstraint(VerifierAndExpr):
 class NotInDomainConstraint(VerifierOrExpr):
     def __init__(self, verifier, domains):
         cs = []
-        for feat_id, d in enumerate(domains):
+        for feat_id, d in domains:
             var = verifier.xvar(feat_id)
             if math.isinf(d.lo) and math.isinf(d.hi):
                 raise RuntimeError("Unconstrained feature -> nothing possible?")
@@ -295,7 +295,7 @@ class Verifier:
         # initialize backend
         fexpr = SumExpr(self._addtree.base_score, *self._wvars)
         self._backend.add_constraint(fexpr == self._fvar)
-        self._backend.add_constraint(InDomainConstraint(self, self._domains))
+        self._backend.add_constraint(InDomainConstraint(self, enumerate(self._domains)))
 
     def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
@@ -410,17 +410,18 @@ class Verifier:
             self._splits = self._addtree.get_splits()
 
         domains = []
-        for i, _, lo, hi in self._find_sample_intervals(model):
+        for feat_id, _, lo, hi in self._find_sample_intervals(model):
             d = RealDomain(lo, hi)
             if d.is_everything():
                 raise RuntimeError("Unconstrained feature!")
             #print("{:.6g} <= {:.6g} < {:.6g}".format(lo, x, hi))
-            domains.append(d)
+            domains.append((feat_id, d))
         self._backend.add_constraint(NotInDomainConstraint(self, domains))
 
     def _find_sample_intervals(self, model): # helper `exclude_assignment`
         for i, x in enumerate(model["xs"]):
             if x == None: continue
+            if i not in self._splits: continue # feature not used in splits of trees
             split_values = self._splits[i]
             j = bisect(split_values, x)
             lo = -math.inf if j == 0 else split_values[j-1]
@@ -694,6 +695,7 @@ class MultiInstanceVerifier:
     def __init__(self, domains, addtree, backend,
             num_instances=2,
             strategy_factory=SplitCheckStrategy):
+        self.num_features = len(domains)
         self._iteration_count = 0
         self._status = Verifier.Result.UNKNOWN
         self._backend = backend
@@ -708,6 +710,18 @@ class MultiInstanceVerifier:
         construct constraints.
         """
         return self._verifiers[verifier_index]
+
+    def add_rvar(self, name): # just use the first verifier for these
+        self._verifiers[0].add_rvar(name)
+
+    def rvar(self, name):
+        return self._verifiers[0].rvar(name)
+
+    def add_bvar(self, name):
+        self._verifiers[0].add_bvar(name)
+
+    def bvar(self, name):
+        return self._verifiers[0].bvar(name)
 
     def add_constraint(self, constraint):
         self._backend.add_constraint(constraint)

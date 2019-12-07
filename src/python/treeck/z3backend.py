@@ -146,4 +146,8 @@ class Z3Backend(VerifierBackend):
             n = val.numerator_as_long()
             d = val.denominator_as_long()
             return float(n / d)
+        if z3.is_true(val):
+            return True
+        if z3.is_false(val):
+            return False
         raise RuntimeError("var not supported")
