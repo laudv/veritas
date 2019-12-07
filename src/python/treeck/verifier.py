@@ -266,7 +266,7 @@ class Verifier:
             return Verifier.Reachable(self.value ^ other.value)
 
 
-    def __init__(self, domains, addtree, backend, strategy, prefix=""):
+    def __init__(self, domains, addtree, backend, strategy, suffix=""):
         """
         Initialize a Verifier.
          - domains is a list of `RealDomain` objects, one for each feature.
@@ -277,16 +277,16 @@ class Verifier:
         self._backend = backend
         self._strategy = strategy
         self._strategy.strategy_setup(self)
-        self._prefix = prefix
+        self._suffix = suffix
 
         self.num_features = len(domains)
-        self._xvars = [backend.add_real_var(f"{prefix}x{i}")
+        self._xvars = [backend.add_real_var(f"x{i}{suffix}")
                 for i in range(self.num_features)]
-        self._wvars = [backend.add_real_var(f"{prefix}w{i}")
+        self._wvars = [backend.add_real_var(f"w{i}{suffix}")
                 for i in range(len(self._addtree))]
         self._rvars = {} # real additional variables
         self._bvars = {} # boolean additional variables
-        self._fvar = backend.add_real_var(f"{prefix}f")
+        self._fvar = backend.add_real_var(f"f{suffix}")
 
         self._status = Verifier.Result.UNKNOWN
         self._splits = None
@@ -300,7 +300,7 @@ class Verifier:
     def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
         assert name not in self._rvars
-        rvar = self._backend.add_real_var(f"{self._prefix}r_{name}")
+        rvar = self._backend.add_real_var(f"r_{name}{self._suffix}")
         self._rvars[name] = rvar
 
     def rvar(self, name):
@@ -310,7 +310,7 @@ class Verifier:
     def add_bvar(self, name):
         """ Add an additional decision variable to the problem. """
         assert name not in self._bvars
-        bvar = self._backend.add_bool_var(f"{self._prefix}b_{name}")
+        bvar = self._backend.add_bool_var(f"b_{name}{self._suffix}")
         self._bvars[name] = bvar
 
     def bvar(self, name):
@@ -689,4 +689,60 @@ class PathCheckStrategy(VerifierStrategy):
 # -----------------------------------------------------------------------------
 
 
+class MultiInstanceVerifier:
+
+    def __init__(self, domains, addtree, backend,
+            num_instances=2,
+            strategy_factory=SplitCheckStrategy):
+        self._iteration_count = 0
+        self._status = Verifier.Result.UNKNOWN
+        self._backend = backend
+        self._verifiers = [Verifier(domains, addtree, backend,
+                                    strategy_factory(),
+                                    suffix=f"_{i}")
+            for i in range(num_instances)]
+
+    def __getitem__(self, verifier_index):
+        """
+        Use this to get the variables of the individual instance models to
+        construct constraints.
+        """
+        return self._verifiers[verifier_index]
+
+    def add_constraint(self, constraint):
+        self._backend.add_constraint(constraint)
+
+    def verify(self, constraint=True, timeout=3600*24*31):
+        """
+        Exactly the same as other verifier, but add one tree from each instance
+        at a time.
+        """
+        for v in self._verifiers:
+            v._strategy.verify_setup()
+
+        while True: # a do-while
+            self._status = self._backend.check(constraint)
+
+            if self._status != Verifier.Result.SAT: break
+
+            ndone = 0
+            for v in self._verifiers:
+                if not v._strategy.verify_step():
+                    ndone += 1
+            assert ndone == 0 or ndone == len(self._verifiers)
+            if ndone > 0: break
+
+            self._backend.simplify()
+            self._iteration_count += 1
+
+        for v in self._verifiers:
+            v._strategy.verify_teardown()
+        return self._status
+
+    def model(self):
+        return [v.model() for v in self._verifiers]
+
+    def exclude_model(self, model):
+        for (m, v) in zip(model, self._verifiers):
+            v.exclude_model(m)
 
