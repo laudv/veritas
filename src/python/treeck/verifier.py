@@ -152,6 +152,9 @@ class VerifierBackend:
     def stats(self):
         return {}
 
+    def set_timeout(self, timeout):
+        raise RuntimeError("abstract method")
+
     def add_real_var(self, name):
         """ Add a new real variable to the session. """
         raise RuntimeError("abstract method")
@@ -336,7 +339,10 @@ class Verifier:
         """
         self._backend.add_constraint(constraint)
 
-    def verify(self, constraint=True, timeout=3600 * 24 * 31):
+    def set_timeout(self, timeout):
+        self._backend.set_timeout(timeout)
+
+    def verify(self, constraint=True):
         """
         Verify the model, i.e., try to find an assignment to the decision
         variables that
@@ -711,6 +717,9 @@ class MultiInstanceVerifier:
         """
         return self._verifiers[verifier_index]
 
+    def set_timeout(self, timeout):
+        self._backend.set_timeout(timeout)
+
     def add_rvar(self, name): # just use the first verifier for these
         self._verifiers[0].add_rvar(name)
 
@@ -726,7 +735,7 @@ class MultiInstanceVerifier:
     def add_constraint(self, constraint):
         self._backend.add_constraint(constraint)
 
-    def verify(self, constraint=True, timeout=3600*24*31):
+    def verify(self, constraint=True):
         """
         Exactly the same as other verifier, but add one tree from each instance
         at a time.

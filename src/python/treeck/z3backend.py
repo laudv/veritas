@@ -27,6 +27,9 @@ class Z3Backend(VerifierBackend):
             return vars(self._stats)
         else: return {}
 
+    def set_timeout(self, timeout):
+        self._solver.set("timeout", timeout)
+
     def add_real_var(self, name):
         return z3.Real(name, self._ctx)
 
