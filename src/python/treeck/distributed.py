@@ -3,7 +3,7 @@ from enum import Enum
 from dask.distributed import wait, get_client
 
 from .pytreeck import SearchSpace, AddTree
-from .verifier import Verifier
+from .verifier import Verifier, VerifierTimeout
 
 class DistributedVerifier:
 
@@ -66,10 +66,12 @@ class DistributedVerifier:
             return [f]
         return []
 
+    @staticmethod
     def _split_fun(domains, at_enc, branch_factor):
         at = DistributedVerifier._dec_at(at_enc)
         if domains is None: sp = SearchSpace(at)
         else:               sp = SearchSpace(at, domains)
+
 
         sp.split(branch_factor)
 
@@ -82,17 +84,24 @@ class DistributedVerifier:
 
         return DistributedVerifier.TaskType.SPLIT, subprobs
 
+    @staticmethod
     def _verify_fun(vfactory, domains, at_enc, timeout):
         at = DistributedVerifier._dec_at(at_enc)
         v = vfactory(domains, at)
         v.set_timeout(timeout)
-        status = v.verify() # maybe also return logs, stats
+        try:
+            status = v.verify() # maybe also return logs, stats
+        except VerifierTimeout as e:
+            status = Verifier.Result.UNKNOWN
+            print("timeout after ", e.unk_after)
         return DistributedVerifier.TaskType.VERIFY, status, domains, at_enc
 
+    @staticmethod
     def _enc_at(at):
         b = bytes(at.to_json(), encoding="ascii")
         return codecs.encode(b, encoding="zlib")
 
+    @staticmethod
     def _dec_at(b):
         at_json = codecs.decode(b, encoding="zlib").decode("ascii")
         return AddTree.from_json(at_json)

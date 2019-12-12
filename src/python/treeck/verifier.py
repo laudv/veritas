@@ -1,4 +1,4 @@
-import math
+import math, timeit
 from bisect import bisect
 
 from enum import Enum
@@ -153,6 +153,10 @@ class VerifierBackend:
         return {}
 
     def set_timeout(self, timeout):
+        """
+        Set the maximum number of SECONDS the backend is allowed to spend.
+        Return UNKNOWN for check tasks if they take longer.
+        """
         raise RuntimeError("abstract method")
 
     def add_real_var(self, name):
@@ -238,9 +242,18 @@ class VerifierStrategy:
         pass
 
 
+
 # -----------------------------------------------------------------------------
 
 
+class VerifierTimeout(Exception):
+    def __init__(self, unk_after):
+        msg = "Backend Timeout: UNKNOWN returned after {:.3f} seconds".format(unk_after)
+        super().__init__(msg)
+        self.unk_after = unk_after
+
+
+# -----------------------------------------------------------------------------
 
 class Verifier:
     class Result(Enum):
@@ -250,7 +263,7 @@ class Verifier:
 
         def is_sat(self):
             if self == Verifier.Result.UNKNOWN:
-                raise RuntimeError("unhandled Result.UNKNOWN")
+                raise RuntimeError(f"Unexpected {Verifier.Result.UNKNOWN}")
             return self == Verifier.Result.SAT
 
     class Reachable(Enum):
@@ -357,17 +370,18 @@ class Verifier:
             (1) Verifier.SAT, an assignment was found
             (2) Verifier.UNSAT, no assignment that satisfies the constraints
                 possible
-            (3) Verifier.UNKNOWN, the answer is unknown, e.g. because of
-                timeout
+
+        This method throws an VerifierTimeout if the Backend returns
+        Verifier.UNKNOWN in any of its Backend.check() calls.
 
         Subsequent calls to verify must reuse the state of the previous.
         """
         self._strategy.verify_setup()
 
         while True: # a do-while
-            self._status = self._backend.check(constraint)
+            self._status = self._check(constraint) # throws timeout if UNKNOWN
 
-            if self._status != Verifier.Result.SAT: break
+            if self._status == Verifier.Result.UNSAT: break
             if not self._strategy.verify_step(): break # add the next part of the problem encoding
 
             self._backend.simplify()
@@ -487,6 +501,20 @@ class Verifier:
 
         return (lo, hi)
 
+    def _check(self, constraint):
+        """
+        Throws VerifierTimeout when output of backend is UNKNOWN, so output is
+        ensured to be SAT or UNSAT.
+        """
+        t0 = timeit.default_timer()
+        status = self._backend.check(constraint)
+        t1 = timeit.default_timer()
+
+        if status == Verifier.Result.UNKNOWN:
+            raise VerifierTimeout(t1 - t0)
+        return status
+
+
 
 
 
@@ -579,13 +607,13 @@ class SplitCheckStrategy(VerifierStrategy):
             xvar = self._verifier.xvar(feat_id)
 
             if reachability.covers(Verifier.Reachable.LEFT):
-                check = self._verifier._backend.check(xvar < split_value)
-                if not check.is_sat():
+                check = self._verifier._check(xvar < split_value)
+                if check == Verifier.Result.UNSAT:
                     reachability ^= Verifier.Reachable.LEFT # disable left
                 else: stack.append(tree.left(node))
-            if reachability == Verifier.Reachable.BOTH:          # if left is unreachable, then no ...
-                check = self._verifier._backend.check(xvar >= split_value) # ... need to test, right is reachable!
-                if not check.is_sat():
+            if reachability == Verifier.Reachable.BOTH:            # if left is unreachable, then no ...
+                check = self._verifier._check(xvar >= split_value) # ... need to test, right is reachable
+                if check == Verifier.Result.UNSAT:
                     reachability ^= Verifier.Reachable.RIGHT # disable right
                 else: stack.append(tree.right(node))
 
@@ -670,7 +698,8 @@ class PathCheckStrategy(VerifierStrategy):
             if reachability.covers(Verifier.Reachable.LEFT):
                 left = tree.left(node)
                 c = (xvar < split_value) & path_constraint
-                if v._backend.check(c).is_sat():
+                check = v._check(c)
+                if check == Verifier.Result.SAT:
                     stack.append((left, c))
                 else:
                     self._unreachable.add((tree.index(), left))
@@ -678,7 +707,8 @@ class PathCheckStrategy(VerifierStrategy):
             if reachability.covers(Verifier.Reachable.RIGHT):
                 right = tree.right(node)
                 c = (xvar >= split_value) & path_constraint
-                if v._backend.check(c).is_sat():
+                check = v._check(c)
+                if check == Verifier.Result.SAT:
                     stack.append((right, c))
                 else:
                     self._unreachable.add((tree.index(), right))

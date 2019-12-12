@@ -28,7 +28,7 @@ class Z3Backend(VerifierBackend):
         else: return {}
 
     def set_timeout(self, timeout):
-        self._solver.set("timeout", timeout)
+        self._solver.set("timeout", int(timeout * 1000)) # Z3 seems to interpret timeout as milli seconds
 
     def add_real_var(self, name):
         return z3.Real(name, self._ctx)
