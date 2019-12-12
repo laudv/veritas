@@ -7,11 +7,6 @@ from .verifier import VerifierAndExpr, VerifierOrExpr
 from .verifier import SumExpr
 from .verifier import VerifierBackend
 
-class Stats:
-    def __init__(self):
-        self.num_check_calls = 0
-        self.num_simplifies = 0
-
 class Z3Backend(VerifierBackend):
 
     ORDER_CONSTRAINTS_MAP = dict(
@@ -20,12 +15,6 @@ class Z3Backend(VerifierBackend):
     def __init__(self):
         self._ctx = z3.Context()
         self._solver = z3.Solver(ctx=self._ctx)
-        self._stats = Stats()
-
-    def stats(self):
-        if self._stats:
-            return vars(self._stats)
-        else: return {}
 
     def set_timeout(self, timeout):
         self._solver.set("timeout", int(timeout * 1000)) # Z3 seems to interpret timeout as milli seconds
@@ -41,7 +30,7 @@ class Z3Backend(VerifierBackend):
         self._solver.add(*encs)
 
     def simplify(self):
-        self._stats.num_simplifies += 1
+        pass
 
     def encode_leaf(self, tree_var, leaf_value):
         return (tree_var == leaf_value)
@@ -61,7 +50,6 @@ class Z3Backend(VerifierBackend):
         if isinstance(encs, bool) and not encs:
             return Verifier.Result.UNSAT
         status = self._solver.check(*encs)
-        self._stats.num_check_calls += 1
         if status == z3.sat:     return Verifier.Result.SAT
         elif status == z3.unsat: return Verifier.Result.UNSAT
         else:                    return Verifier.Result.UNKNOWN

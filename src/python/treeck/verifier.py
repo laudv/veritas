@@ -509,9 +509,10 @@ class Verifier:
         t0 = timeit.default_timer()
         status = self._backend.check(constraint)
         t1 = timeit.default_timer()
+        self.verify_time = t0 - t1
 
         if status == Verifier.Result.UNKNOWN:
-            raise VerifierTimeout(t1 - t0)
+            raise VerifierTimeout(self.checktime)
         return status
 
 

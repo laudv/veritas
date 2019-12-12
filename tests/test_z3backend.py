@@ -67,7 +67,6 @@ class TestZ3Backend(unittest.TestCase):
         b.add_constraint((x < 5.0))
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)
-        self.assertEqual(b.stats()["num_check_calls"], 2)
 
     def test_sum_expr(self):
         b = Z3Backend()
