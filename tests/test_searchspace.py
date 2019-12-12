@@ -40,7 +40,7 @@ def plot_pruned_trees():
 
 class TestSearchSpace(unittest.TestCase):
     def test_single_tree(self):
-        at = AddTree()
+        at = AddTree(1)
         at.base_score = 10
         t = at.add_tree();
         t.split(t.root(), 0, 2)

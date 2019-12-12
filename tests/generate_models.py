@@ -23,6 +23,7 @@ def generate_california_housing():
 
     X = calhouse["data"]
     y = calhouse["target"]
+    num_features = len(X[0])
 
     # Very Easy
     regr = xgb.XGBRegressor(
@@ -33,7 +34,7 @@ def generate_california_housing():
             learning_rate=1.0,
             n_estimators=2)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     sqerr = sum((y - model.predict(X))**2)
     sqcorr = sum((model.predict(X) - at.predict(X))**2)
     print(f"very easy calhouse: rmse train {np.sqrt(sqerr)/len(X)}")
@@ -50,7 +51,7 @@ def generate_california_housing():
             learning_rate=0.5,
             n_estimators=10)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     sqerr = sum((y - model.predict(X))**2)
     sqcorr = sum((model.predict(X) - at.predict(X))**2)
     print(f"easy calhouse: rmse train {np.sqrt(sqerr)/len(X)}")
@@ -74,7 +75,7 @@ def generate_california_housing():
             learning_rate=0.2,
             n_estimators=20)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     sqerr = sum((y - model.predict(X))**2)
     sqcorr = sum((model.predict(X) - at.predict(X))**2)
     print(f"inter calhouse: rmse train {np.sqrt(sqerr)/len(X)}")
@@ -92,7 +93,7 @@ def generate_california_housing():
             learning_rate=0.15,
             n_estimators=100)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     sqerr = sum((y - model.predict(X))**2)
     sqcorr = sum((model.predict(X) - at.predict(X))**2)
     print(f"hard calhouse: rmse train {np.sqrt(sqerr)/len(X)}")
@@ -107,6 +108,7 @@ def generate_covertype():
 
     X = np.array(covtype["data"])
     y = np.array(covtype["target"]) == 2
+    num_features = X.shape[1]
 
     # Very Easy
     clf = xgb.XGBClassifier(
@@ -117,7 +119,7 @@ def generate_covertype():
             learning_rate=0.5,
             n_estimators=10)
     model = clf.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     at.base_score = 0.0
     err = sum(y != model.predict(X)) / len(y)
     sqcorr = sum((model.predict(X[:1000], output_margin=True) - at.predict(X[:1000]))**2)
@@ -136,6 +138,7 @@ def generate_img():
     img = imageio.imread("tests/data/img.png")
     X = np.array([[x, y] for x in range(100) for y in range(100)])
     y = np.array([img[x, y] for x, y in X])
+    num_features = 2
 
     regr = xgb.XGBRegressor(
             objective="reg:squarederror",
@@ -145,7 +148,7 @@ def generate_img():
             learning_rate=0.5,
             n_estimators=10)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     sqcorr = sum((model.predict(X[:1000]) - at.predict(X[:1000]))**2)
@@ -179,6 +182,7 @@ def generate_mnist():
         X = mat["X"]
         y = mat["y"].reshape((70000,))
 
+    num_features = X.shape[1]
 
     print("Training MNIST y==1")
     y1 = y==1
@@ -189,7 +193,7 @@ def generate_mnist():
             learning_rate=0.5,
             n_estimators=10)
     model = clf.fit(X, y1)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     at.base_score = 0.0
     acc = accuracy_score(model.predict(X), y1)
     print(f"mnist y==1: accuracy y==1: {acc}")
@@ -206,7 +210,7 @@ def generate_mnist():
             learning_rate=0.5,
             n_estimators=10)
     model = clf.fit(X, y0)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(num_features, model)
     at.base_score = 0.0
     acc = accuracy_score(model.predict(X), y0)
     print(f"mnist y==0: accuracy y==0: {acc}")

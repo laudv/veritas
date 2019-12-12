@@ -76,10 +76,11 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
-        .def(py::init<>())
+        .def(py::init<size_t>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("__len__", &AddTree::size)
         .def("num_nodes", &AddTree::num_nodes)
+        .def("num_features", &AddTree::num_features)
         .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
@@ -94,7 +95,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("split", [](SearchSpace& sp, size_t nleafs) {
             sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
         })
-        .def("num_features", &SearchSpace::num_features)
+        //.def("num_features", &SearchSpace::num_features)
         .def("scores", &SearchSpace::scores)
         .def("leafs", &SearchSpace::leafs)
         .def("get_domains", [](SearchSpace& sp, NodeId leaf_id) {

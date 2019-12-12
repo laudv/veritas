@@ -33,7 +33,6 @@ namespace treeck {
         using StopCondF = std::function<bool(const SearchSpace&)>;
 
     private:
-        size_t num_features_;
         std::shared_ptr<const AddTree> addtree_;
         DomTreeT domtree_; // domain tree
         AddTree::SplitMapT splits_map_;
@@ -48,7 +47,6 @@ namespace treeck {
         SearchSpace(std::shared_ptr<const AddTree> addtree);
         SearchSpace(std::shared_ptr<const AddTree> addtree, const Domains& root_domains);
 
-        size_t num_features() const;
         const AddTree& addtree() const;
         const DomTreeT& domtree() const;
         const std::vector<double>& scores() const;

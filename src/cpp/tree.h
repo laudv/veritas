@@ -212,15 +212,17 @@ namespace treeck {
 
     private:
         std::vector<TreeT> trees_;
+        size_t num_features_;
 
     public:
         double base_score;
 
-        AddTree();
+        AddTree(size_t num_features);
 
         size_t add_tree(TreeT&& tree);
         size_t size() const;
         size_t num_nodes() const;
+        size_t num_features() const;
 
         TreeT& operator[](size_t index);
         const TreeT& operator[](size_t index) const;

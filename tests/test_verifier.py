@@ -10,7 +10,7 @@ from treeck.z3backend import Z3Backend as Backend
 
 class TestVerifier(unittest.TestCase):
     def test_single_tree(self):
-        at = AddTree()
+        at = AddTree(1)
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -44,7 +44,7 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v.verify(v.fvar() > 0.41), Verifier.Result.UNSAT)
 
     def test_two_trees(self):
-        at = AddTree()
+        at = AddTree(2)
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -178,7 +178,7 @@ class TestVerifier(unittest.TestCase):
         #plt.show()
 
     def test_multi_instance(self):
-        at = AddTree()
+        at = AddTree(2)
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)

@@ -2,6 +2,7 @@
 #include <limits>
 #include <tuple>
 #include <sstream>
+#include <iostream>
 
 #include "domain.h"
 
@@ -94,8 +95,8 @@ namespace treeck {
     Domains::const_iterator Domains::cbegin() const { return domains_.cbegin(); }
     Domains::const_iterator Domains::cend() const { return domains_.cend(); }
 
-    const RealDomain& Domains::operator[](size_t i) const { return domains_[i]; }
-    RealDomain& Domains::operator[](size_t i) { return domains_[i]; }
+    const RealDomain& Domains::operator[](size_t i) const { return domains_.at(i); }
+    RealDomain& Domains::operator[](size_t i) { return domains_.at(i); }
 
     const Domains::vec_t& Domains::vec() const { return domains_; }
 

@@ -5,7 +5,7 @@ from xgboost.core import Booster
 
 from . import AddTree
 
-def addtree_from_xgb_model(model):
+def addtree_from_xgb_model(num_features, model):
     base_score = 0.5
     if isinstance(model, XGBModel):
         base_score = model.base_score
@@ -13,7 +13,7 @@ def addtree_from_xgb_model(model):
     assert isinstance(model, Booster)
 
     dump = model.get_dump("", dump_format="json")
-    at = AddTree()
+    at = AddTree(num_features)
     at.base_score = base_score
 
     for tree_dump in dump:

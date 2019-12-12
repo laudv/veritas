@@ -1,4 +1,5 @@
 {
+    "num_features": 784,
     "base_score": 0.0,
     "trees": [
         {

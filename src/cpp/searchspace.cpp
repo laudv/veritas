@@ -32,8 +32,7 @@ namespace treeck {
     }
 
     SearchSpace::SearchSpace(std::shared_ptr<const AddTree> addtree)
-        : num_features_(0)
-        , addtree_(addtree)
+        : addtree_(addtree)
         , domtree_{}
         , splits_map_{}
         , leafs_{}
@@ -42,13 +41,7 @@ namespace treeck {
         , scores_{}
     {
         splits_map_ = addtree->get_splits();
-
-        FeatId max = 0;
-        for (auto& n : splits_map_)
-            max = std::max(max, n.first);
-        num_features_ = static_cast<size_t>(max + 1);
-
-        root_domains_.resize(num_features_);
+        root_domains_.resize(addtree->num_features());
     }
 
     SearchSpace::SearchSpace(
@@ -56,6 +49,8 @@ namespace treeck {
             const Domains& root_domains)
         : SearchSpace(addtree)
     {
+        if (root_domains.size() != root_domains_.size())
+            throw std::runtime_error("invalid domain sizes");
         std::copy(root_domains.begin(), root_domains.end(), root_domains_.begin());
     }
 
@@ -94,12 +89,6 @@ namespace treeck {
         domtree_[domtree_leaf_id].set_leaf_value(inf);
     }
 
-    size_t
-    SearchSpace::num_features() const
-    {
-        return num_features_;
-    }
-
     const AddTree&
     SearchSpace::addtree() const
     {
@@ -133,7 +122,7 @@ namespace treeck {
     void
     SearchSpace::get_domains(NodeId node_id, Domains& domains) const
     {
-        domains.resize(num_features_);
+        domains.resize(addtree_->num_features());
         std::copy(root_domains_.begin(), root_domains_.end(), domains.begin());
         Tree<LeafInfo>::CRef leaf = domtree_[node_id];
         Tree<LeafInfo>::CRef node = leaf;
@@ -196,9 +185,9 @@ namespace treeck {
             node.split(dom_split);
             scores_.push_back(score);
 
-            std::cout << "SPLITTING node_id=" << node_id << " " << dom_split << " into "
-                << node.left().id() << " and " << node.right().id()
-                << " with score " << score << std::endl;
+            //std::cout << "SPLITTING node_id=" << node_id << " " << dom_split << " into "
+            //    << node.left().id() << " and " << node.right().id()
+            //    << " with score " << score << std::endl;
 
             // compute scores of left and right
             compute_best_score(node.left().id(), measure);
