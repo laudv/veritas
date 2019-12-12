@@ -149,8 +149,6 @@ class NotInDomainConstraint(VerifierOrExpr):
 
 
 class VerifierBackend:
-    def stats(self):
-        return {}
 
     def set_timeout(self, timeout):
         """
@@ -509,10 +507,10 @@ class Verifier:
         t0 = timeit.default_timer()
         status = self._backend.check(constraint)
         t1 = timeit.default_timer()
-        self.verify_time = t0 - t1
+        self.verify_time = t1 - t0
 
         if status == Verifier.Result.UNKNOWN:
-            raise VerifierTimeout(self.checktime)
+            raise VerifierTimeout(self.verify_time)
         return status
 
 
