@@ -541,11 +541,20 @@ class SplitCheckStrategy(VerifierStrategy):
             return self._reachability[p]
         return Verifier.Reachable.BOTH
 
+    def set_reachability(self, reachability):
+        """
+        Reuse reachability from strategy of 'parent' model -> are unchanged, no
+        need to recalculate.
+        """
+        self._reachability = reachability
+
     def verify_setup(self):
         if self._remaining_trees is not None:
             return
 
-        self._test_addtree_reachability()
+        if len(self._reachability) == 0:      # no reachability provided...
+            self._test_addtree_reachability() # ... so compute! (see set_reachability)
+
         self._remaining_trees = list(range(self._m))
         new_bounds = [self._verifier._determine_tree_bounds(i)
                 for i in range(self._m)]

@@ -3,7 +3,7 @@ from enum import Enum
 from dask.distributed import wait, get_client
 
 from .pytreeck import SearchSpace, AddTree
-from .verifier import Verifier, VerifierTimeout
+from .verifier import Verifier, VerifierTimeout, SplitCheckStrategy, RealDomain
 
 class DistributedVerifier:
 
@@ -16,12 +16,18 @@ class DistributedVerifier:
         self._addtree = addtree # SearchSpace
         self._verifier_factory = verifier_factory # (domains, addtree) -> Verifier
         self._branch_factor = sum(client.nthreads().values()) * 4
+        self._reachability = None
 
     def run(self):
         at_enc = DistributedVerifier._enc_at(self._addtree)
-        f = self._client.submit(DistributedVerifier._split_fun,
-                None, at_enc, self._branch_factor)
-        fs = [f]
+        f0 = self._client.submit(DistributedVerifier._split_fun, None, at_enc,
+                self._branch_factor)
+        fs = [f0]
+
+        # Compute reachabilities while trees are being split
+        f1 = self._client.submit(DistributedVerifier._reachability_fun,
+                self._verifier_factory, at_enc)
+        self._reachability = f1.result()
 
         while len(fs) > 0: # while task are running...
             wait(fs, return_when="FIRST_COMPLETED")
@@ -52,7 +58,8 @@ class DistributedVerifier:
         fs = []
         for doms, at_enc in subprobs:
             f = self._client.submit(DistributedVerifier._verify_fun,
-                    self._verifier_factory, doms, at_enc, timeout)
+                    self._verifier_factory, doms, at_enc,
+                    self._reachability, timeout)
             fs.append(f)
         return fs
 
@@ -67,11 +74,20 @@ class DistributedVerifier:
         return []
 
     @staticmethod
+    def _reachability_fun(vfactory, at_enc):
+        at = DistributedVerifier._dec_at(at_enc)
+        num_features = at.num_features()
+        domains = [RealDomain() for i in range(num_features)]
+        v = vfactory(domains, at)
+        assert isinstance(v._strategy, SplitCheckStrategy) # only support this for now
+        v._strategy.verify_setup()
+        return v._strategy._reachability
+
+    @staticmethod
     def _split_fun(domains, at_enc, branch_factor):
         at = DistributedVerifier._dec_at(at_enc)
         if domains is None: sp = SearchSpace(at)
         else:               sp = SearchSpace(at, domains)
-
 
         sp.split(branch_factor)
 
@@ -85,9 +101,11 @@ class DistributedVerifier:
         return DistributedVerifier.TaskType.SPLIT, subprobs
 
     @staticmethod
-    def _verify_fun(vfactory, domains, at_enc, timeout):
+    def _verify_fun(vfactory, domains, at_enc, reachability, timeout):
         at = DistributedVerifier._dec_at(at_enc)
         v = vfactory(domains, at)
+        assert isinstance(v._strategy, SplitCheckStrategy) # only support this for now
+        v._strategy.set_reachability(reachability)
         v.set_timeout(timeout)
         try:
             status = v.verify() # maybe also return logs, stats
