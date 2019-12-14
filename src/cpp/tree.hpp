@@ -317,6 +317,22 @@ namespace treeck {
     }
 
     template <typename LeafT>
+    int
+    Tree<LeafT>::num_leafs() const
+    {
+        int num_leafs = 0;
+        dfs([&num_leafs](auto node) {
+            if (node.is_leaf())
+            {
+                num_leafs += 1;
+                return TreeVisitStatus::ADD_NONE;
+            }
+            return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
+            });
+        return num_leafs;
+    }
+
+    template <typename LeafT>
     typename Tree<LeafT>::CRef
     Tree<LeafT>::operator[](NodeId index) const
     {

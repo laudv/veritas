@@ -36,6 +36,7 @@ namespace treeck {
         template<typename Archive>
         void serialize(Archive& archive);
     };
+    bool operator==(const LtSplit& a, const LtSplit& b);
 
     struct EqSplit : public SplitBase {
         using ValueT = int;
@@ -48,10 +49,12 @@ namespace treeck {
         template<typename Archive>
         void serialize(Archive& archive);
     };
+    bool operator==(const EqSplit& a, const EqSplit& b);
 
     using Split = std::variant<LtSplit, EqSplit>;
 
     std::ostream& operator<<(std::ostream& strm, const Split& s);
+    bool operator==(const Split& a, const Split& b);
 
     template <typename LeafT>
     class Tree;
@@ -187,6 +190,7 @@ namespace treeck {
         MRef operator[](NodeId index);
 
         int num_nodes() const;
+        int num_leafs() const;
 
         template <typename TreeVisitorT>
         void dfs(TreeVisitorT& visitor) const;
@@ -222,6 +226,7 @@ namespace treeck {
         size_t add_tree(TreeT&& tree);
         size_t size() const;
         size_t num_nodes() const;
+        size_t num_leafs() const;
         size_t num_features() const;
 
         TreeT& operator[](size_t index);

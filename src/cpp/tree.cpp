@@ -16,6 +16,11 @@ namespace treeck {
         return value < this->split_value;
     }
 
+    bool operator==(const LtSplit& a, const LtSplit& b)
+    {
+        return a.feat_id == b.feat_id && a.split_value == b.split_value;
+    }
+
     EqSplit::EqSplit() : EqSplit(-1, 0) {}
     EqSplit::EqSplit(FeatId feat_id, EqSplit::ValueT category)
         : SplitBase(feat_id)
@@ -27,6 +32,11 @@ namespace treeck {
         return value == this->category;
     }
 
+    bool operator==(const EqSplit& a, const EqSplit& b)
+    {
+        return a.feat_id == b.feat_id && a.category == b.category;
+    }
+
     std::ostream&
     operator<<(std::ostream& s, const Split& split)
     {
@@ -36,6 +46,28 @@ namespace treeck {
             [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
         }, split);
         return s;
+    }
+
+    bool
+    operator==(const Split& a, const Split& b)
+    {
+        bool out = false;
+        std::visit(util::overloaded{
+            [&b, &out](const LtSplit& x) {
+                if (std::holds_alternative<LtSplit>(b)) {
+                    auto y = std::get<LtSplit>(b);
+                    out = x == y;
+                }
+            },
+            [&b, &out](const EqSplit& x) {
+                if (std::holds_alternative<EqSplit>(b)) {
+                    auto y = std::get<EqSplit>(b);
+                    out = x == y;
+                }
+            },
+            [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
+        }, a);
+        return out;
     }
 
 
@@ -71,6 +103,15 @@ namespace treeck {
         size_t c = 0;
         for (auto& tree : trees_)
             c += tree.num_nodes();
+        return c;
+    }
+
+    size_t
+    AddTree::num_leafs() const
+    {
+        size_t c = 0;
+        for (auto& tree : trees_)
+            c += tree.num_leafs();
         return c;
     }
 

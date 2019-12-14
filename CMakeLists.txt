@@ -10,6 +10,7 @@ SET(SOURCES
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/searchspace.cpp"
+    "${SOURCE_DIR}/splittree.cpp"
     "${SOURCE_DIR}/prune.cpp")
 
 set(CMAKE_CXX_STANDARD 17)

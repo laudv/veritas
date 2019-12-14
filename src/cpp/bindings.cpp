@@ -10,6 +10,7 @@
 #include "domain.h"
 #include "tree.h"
 #include "searchspace.h"
+#include "splittree.h"
 #include "prune.h"
 
 namespace py = pybind11;
@@ -80,6 +81,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def_readwrite("base_score", &AddTree::base_score)
         .def("__len__", &AddTree::size)
         .def("num_nodes", &AddTree::num_nodes)
+        .def("num_leafs", &AddTree::num_leafs)
         .def("num_features", &AddTree::num_features)
         .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
@@ -87,6 +89,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_splits", &AddTree::get_splits)
         .def("to_json", &AddTree::to_json)
         .def("from_json", AddTree::from_json)
+        .def("prune", [](const AddTree& at, const Domains::vec_t& doms) { return prune(at, doms); })
         .def("__str__", [](const AddTree& at) { return tostr(at); });
 
     py::class_<SearchSpace>(m, "SearchSpace")
@@ -109,6 +112,10 @@ PYBIND11_MODULE(pytreeck, m) {
             AddTree new_at = prune(sp.addtree(), doms);
             return new_at;
         });
+
+    py::class_<SplitTree>(m, "SplitTree")
+        .def(py::init<std::shared_ptr<AddTree>>())
+        .def("split", &SplitTree::split);
 
 } /* PYBIND11_MODULE */
 
