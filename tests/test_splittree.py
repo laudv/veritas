@@ -68,12 +68,15 @@ class TestSplitTree(unittest.TestCase):
         st.split(0)
 
     def test_covtype(self):
-        at = AddTree.read("tests/models/xgb-calhouse-very-easy.json")
+        at = AddTree.read("tests/models/xgb-calhouse-hard.json")
         st = SplitTree(at)
         st.split(0)
 
-        fid = 0
-        sval = 3.1042
+        fid = 5
+        sval = 2.7464788000
+
+        #fid = 0
+        #sval = 3.1041998900
 
         num_leafs = at.num_leafs();
         print("before: ", num_leafs)
@@ -89,14 +92,8 @@ class TestSplitTree(unittest.TestCase):
                 num_leafs - at1.num_leafs() + num_leafs - at2.num_leafs())
 
         for i in range(len(at)):
-            #p = TreePlot()
-            #p.add_domains(doms)
-            #p.add_tree(at[i])
-            #p.add_tree(at1[i])
-            #p.add_tree(at2[i])
-            #p.render(f"/tmp/test1-{i}")
             p = TreePlot()
-            p.add_domains(doms)
+            p.g.attr(label=f"X{fid} split at {sval}")
             p.add_tree_cmp(at[i], at1[i])
             p.add_tree_cmp(at[i], at2[i])
             p.render(f"/tmp/plots/test2-{i}")

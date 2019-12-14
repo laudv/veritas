@@ -1,10 +1,10 @@
 #include <functional>
 #include <exception>
 #include <iostream>
-#include <utility>
 #include <map>
 #include <limits>
 #include <cmath>
+#include <cstdio>
 
 #include "domain.h"
 #include "util.h"
@@ -68,6 +68,7 @@ namespace treeck {
         , reachable_()
     {
         reachable_.emplace(domtree_.root().id(), IsReachable());
+        splits_ = addtree_->get_splits();
     }
 
     const AddTree&
@@ -89,6 +90,8 @@ namespace treeck {
     SplitTree::set_root_domain(FeatId feat_id, RealDomain dom)
     {
         root_domains_.insert_or_assign(feat_id, dom);
+
+        // TODO mark unreachable nodes
     }
 
     RealDomain
@@ -111,6 +114,27 @@ namespace treeck {
                 if (dom.lo < sval) dom.lo = sval;
         }
         return dom;
+    }
+
+    void
+    SplitTree::get_domains(NodeId domtree_node_id,
+            std::unordered_map<FeatId, RealDomain>& domains) const
+    {
+        DomTreeT::CRef node = domtree_[domtree_node_id];
+        while (!node.is_root())
+        {
+            DomTreeT::CRef child_node = node;
+            node = node.parent();
+
+            LtSplit split = std::get<LtSplit>(node.get_split());
+            double sval = split.split_value;
+            auto& dom = domains[split.feat_id];
+
+            if (child_node.is_left_child())
+                if (dom.hi > sval) dom.hi = sval;
+            else
+                if (dom.lo < sval) dom.lo = sval;
+        }
     }
 
     bool
@@ -136,7 +160,7 @@ namespace treeck {
         // unreachable_[node_id] where node_id is internal would be invalid,
         // except for the root). This way, we only need to check the reachable
         // structures for the domtree leaf node and the domtree root node.
-        
+
         if (!domtree_[domtree_node_id].is_leaf())
             throw std::runtime_error("SplitTree::is_reachable on non-leaf domtree node");
 
@@ -163,119 +187,113 @@ namespace treeck {
     void
     SplitTree::split(NodeId domtree_node_id)
     {
-        size_t tree_index = 0;
-        const auto& reachable = reachable_.at(domtree_node_id);
-        std::unordered_map<FeatId, std::map<double, std::pair<int, int>>> counts;
-        std::unordered_set<FeatId> seen;
+        if (!domtree_[domtree_node_id].is_leaf())
+            throw std::runtime_error("already split");
 
-        // Count the number of leafs hidden behind each split
-        for (const AddTree::TreeT& tree : addtree_->trees())
-        {
-            if (tree.root().is_leaf()) continue;
-            tree.dfs([tree_index,
-                      &seen,
-                      &reachable,
-                      &counts]
-            (AddTree::TreeT::CRef node)
-            {
-                if (!reachable.is_reachable(tree_index, node.id()))
-                    return TreeVisitStatus::ADD_NONE;
-                if (node.is_internal())
-                    return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
-                seen.clear();
-                do
-                {
-                    auto parent = node.parent();
-                    LtSplit split = std::get<LtSplit>(parent.get_split());
-                    FeatId feat_id = split.feat_id;
-                    double sval = split.split_value;
-
-                    if (seen.find(feat_id) == seen.end()) // we haven't +1'ed this feat_id yet
-                    {
-                        seen.insert(feat_id);
-                        if (node.is_left_child())
-                            counts[feat_id][sval].first += 1;
-                        else
-                            counts[feat_id][sval].second += 1;
-                    }
-
-                    node = parent;
-                } while (!node.is_root());
-                return TreeVisitStatus::ADD_NONE;
-            });
-
-            tree_index += 1;
-        }
-
-        std::vector<std::pair<int, int>> accum;
-        int max_unreachable = 0;
         FeatId max_feat_id = -1;
         double max_split_value = std::numeric_limits<double>::quiet_NaN();
-        int min_left_right_diff = -1;
+        int max_score = 0;
+        int min_balance = -1;
 
-        for (const auto& n : counts)
+        std::unordered_map<FeatId, RealDomain> domains;
+        get_domains(domtree_node_id, domains);
+
+        for (auto&& [feat_id, splits] : splits_)
+        for (double sval : splits)
         {
-            FeatId feat_id = n.first;
-            const std::map<double, std::pair<int, int>>& ft_cnts = n.second;
-            accum.resize(ft_cnts.size());
+            auto domptr = domains.find(feat_id); // only splits that are still in domain
+            RealDomain dom = domptr == domains.end() ? RealDomain() : domptr->second;
+            if (!dom.contains_strict(sval))
+                continue;
 
+            RealDomain dom_l, dom_r;
+            std::tie(dom_l, dom_r) = dom.split(sval);
+
+            int unreachable_l = count_unreachable_leafs(domtree_node_id, feat_id, dom_l);
+            int unreachable_r = count_unreachable_leafs(domtree_node_id, feat_id, dom_r);
+
+            int score = unreachable_l + unreachable_r;
+            int balance = std::abs(unreachable_l - unreachable_r);
+
+            printf("feat_id=%d, split_value=%.10f, score=%d, balance=%d\n",
+                    feat_id, sval, score, balance);
+
+            if (score >= max_score)
+            if (score > max_score || min_balance > balance)
             {
-                int acc_lt = 0, acc_ge = 0;
-                auto fm = ft_cnts.cbegin(); // forward map iter
-                auto rm = ft_cnts.crbegin(); // reverse map iter
-                auto fa = accum.begin(); // forward accum iter
-                auto ra = accum.rbegin(); // reverse accum iter
-                for (; fm != ft_cnts.cend(); ++fm, ++rm, ++fa, ++ra)
-                {
-                    acc_lt += fm->second.first;
-                    fa->first = acc_lt;
-                    acc_lt += fm->second.second;
-                    acc_ge += rm->second.second;
-                    ra->second = acc_ge;
-                    acc_ge += rm->second.first;
-                }
-            }
-
-            std::cout << " + feat_id=" << n.first << std::endl;
-            auto fm = ft_cnts.cbegin(); // forward map iter
-            for (const auto& m : accum)
-                std::cout << "    - " << (fm++)->first << " => "
-                    << m.first << ", " << m.second << " : "
-                    << m.first + m.second
-                    << std::endl;
-
-            {
-                auto fm = ft_cnts.cbegin();
-                auto fa = accum.cbegin();
-                for (; fm != ft_cnts.cend(); ++fm, ++fa)
-                {
-                    int num_unreachable = fa->first + fa->second;
-                    int left_right_diff = std::abs(fa->first - fa->second);
-                    if (max_unreachable <= num_unreachable)
-                    {
-                        if (max_unreachable < num_unreachable
-                                || left_right_diff < min_left_right_diff)
-                        {
-                            max_unreachable = num_unreachable;
-                            max_feat_id = feat_id;
-                            max_split_value = fm->first;
-                            min_left_right_diff = left_right_diff;
-
-                            std::cout << "BEST! " << max_unreachable
-                                << ", " << max_feat_id
-                                << ", " << max_split_value
-                                << ", lr " << min_left_right_diff
-                                << std::endl;
-                        }
-                    }
-                }
+                max_feat_id = feat_id;
+                max_split_value = sval;
+                max_score = score;
+                min_balance = balance;
             }
         }
 
-        // TODO
-        // Split function up
-        // loop over trees and check how many leafs are actually discarded given best split
+        printf("best split: X%d <> %.10f with score %d, balance %d\n",
+                max_feat_id, max_split_value, max_score, min_balance);
+
+        // TODO perform split => update domtree, update reachabilities
     }
 
+    int
+    SplitTree::count_unreachable_leafs(
+            NodeId domtree_node_id,
+            FeatId feat_id,
+            RealDomain new_dom) const
+    {
+        int unreachable = 0;
+        size_t tree_index = 0;
+        for (const AddTree::TreeT& tree : addtree_->trees())
+        {
+            unreachable += count_unreachable_leafs(domtree_node_id, tree_index,
+                    tree.root(), feat_id, new_dom, false);
+            ++tree_index;
+        }
+        return unreachable;
+    }
+
+    int
+    SplitTree::count_unreachable_leafs(
+            NodeId domtree_node_id,
+            size_t tree_index,
+            AddTree::TreeT::CRef node,
+            FeatId feat_id,
+            RealDomain new_dom,
+            bool marked) const
+    {
+        if (node.is_leaf())
+            return marked ? 1 : 0;
+        if (!is_reachable(domtree_node_id, tree_index, node.id()))
+            return 0;
+
+        LtSplit split = std::get<LtSplit>(node.get_split());
+
+        bool marked_l = marked; // remain marked if already marked
+        bool marked_r = marked;
+        if (!marked && split.feat_id == feat_id)
+        {
+            //       case 1       case 3          case 2
+            //       [----)   |-------------)     |----)
+            // ---------------------x-------------------------->
+            //                 split_value
+            //
+            switch (new_dom.where_is_strict(split.split_value))
+            {
+            case WhereFlag::LEFT: // case 2: split value to the left of the domain
+                marked_l = true; // left becomes unreachable -> start counting
+                break;
+            case WhereFlag::RIGHT: // case 1
+                marked_r = true; // right becomes unreachable -> start counting
+                break;
+            default: // case 3: IN_DOMAIN
+                break; // both branches still reachable
+            }
+        }
+
+        return //((marked_l || marked_r) ? 1 : 0) + // this node's split became deterministic
+            count_unreachable_leafs(domtree_node_id, tree_index, node.left(),
+                    feat_id, new_dom, marked_l) +
+            count_unreachable_leafs(domtree_node_id, tree_index, node.right(),
+                    feat_id, new_dom, marked_r);
+    }
 
 } /* namespace treeck */

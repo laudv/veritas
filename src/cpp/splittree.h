@@ -1,6 +1,7 @@
 #ifndef TREECK_SPLITTREE_H
 #define TREECK_SPLITTREE_H
 
+#include <utility>
 #include <ostream>
 #include <memory>
 #include <unordered_set>
@@ -63,6 +64,8 @@ namespace treeck {
         RealDomain get_root_domain(FeatId) const;
         void set_root_domain(FeatId, RealDomain);
         RealDomain get_domain(NodeId domtree_node_id, FeatId) const;
+        void get_domains(NodeId domtree_node_id,
+                std::unordered_map<FeatId, RealDomain>& domains) const;
 
         bool is_reachable(NodeId domtree_node_id, size_t tree_index,
                 NodeId addtree_node_id) const;
@@ -70,6 +73,22 @@ namespace treeck {
                 NodeId addtree_node_id);
 
         void split(NodeId domtree_node_id);
+
+    private:
+        int
+        count_unreachable_leafs(
+                NodeId domtree_node_id,
+                FeatId feat_id,
+                RealDomain new_dom) const;
+
+        int
+        count_unreachable_leafs(
+                NodeId domtree_node_id,
+                size_t tree_index,
+                AddTree::TreeT::CRef node,
+                FeatId feat_id,
+                RealDomain new_dom,
+                bool marked) const;
     };
 
 } /* namespace treeck */

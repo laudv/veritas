@@ -39,7 +39,7 @@ namespace treeck {
             
             LtSplit split = std::get<LtSplit>(node1.get_split());
             RealDomain dom = domains[split.feat_id];
-            
+
             switch (dom.where_is_strict(split.split_value)) //!!
             {
             case WhereFlag::LEFT:                       // x     (---)  [everything def. goes right]
