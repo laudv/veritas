@@ -34,11 +34,14 @@ namespace treeck {
         bool contains(double value) const;
         bool contains_strict(double value) const;
         bool overlaps(const RealDomain& other) const;
+        bool covers(const RealDomain& other) const;
+        bool covers_strict(const RealDomain& value) const;
         std::tuple<RealDomain, RealDomain> split(double value) const;
     };
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d);
 
+    // TODO remove
     class Domains {
     public:
         using vec_t = std::vector<RealDomain>;

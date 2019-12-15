@@ -68,6 +68,21 @@ namespace treeck {
     {
         return this->lo < other.hi && this->hi > other.lo;
     }
+
+    bool
+    RealDomain::covers(const RealDomain& other) const
+    {
+        return where_is(other.lo) == WhereFlag::IN_DOMAIN
+            && where_is(other.hi) == WhereFlag::IN_DOMAIN;
+    }
+
+    bool
+    RealDomain::covers_strict(const RealDomain& other) const
+    {
+        return where_is_strict(other.lo) == WhereFlag::IN_DOMAIN
+            && where_is_strict(other.hi) == WhereFlag::IN_DOMAIN;
+    }
+
     
     std::tuple<RealDomain, RealDomain>
     RealDomain::split(double value) const

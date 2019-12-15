@@ -114,8 +114,12 @@ PYBIND11_MODULE(pytreeck, m) {
         });
 
     py::class_<SplitTree>(m, "SplitTree")
-        .def(py::init<std::shared_ptr<AddTree>>())
-        .def("split", &SplitTree::split);
+        .def(py::init<std::shared_ptr<AddTree>, SplitTree::DomainsT>())
+        .def("get_leaf", &SplitTree::get_leaf)
+        .def("split_leaf", &SplitTree::split_domtree_leaf);
+
+    py::class_<SplitTreeLeaf>(m, "SplitTreeLeaf")
+        .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split);
 
 } /* PYBIND11_MODULE */
 
