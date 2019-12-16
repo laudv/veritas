@@ -69,6 +69,31 @@ class TreePlot:
                 if not btree.is_root(bnode):
                     self.g.edge(self.name(btree.parent(bnode)), self.name(bnode), color="gray")
 
+    def add_splittree_leaf(self, tree, splittree_leaf):
+        g = gv.Graph()
+        self.index += 1
+        stack = [tree.root()]
+        while len(stack) > 0:
+            node = stack.pop()
+
+            is_reachable = splittree_leaf.is_reachable(tree.index(), node)
+            c = "darkgreen" if is_reachable else "gray"
+            s = "bold" if is_reachable else ""
+
+            if tree.is_leaf(node):
+                g.node(self.name(node), "{:.3f}".format(tree.get_leaf_value(node)),
+                        style=s, color=c, fontcolor=c)
+            else:
+                feat_id, split_value = tree.get_split(node)
+                g.node(self.name(node), "X{} < {:.3f}".format(feat_id, split_value),
+                        style=s, color=c, fontcolor=c)
+                stack.append(tree.right(node))
+                stack.append(tree.left(node))
+
+            if not tree.is_root(node):
+                g.edge(self.name(tree.parent(node)), self.name(node), color=c)
+        self.g.subgraph(g)
+
     def add_domains(self, domains):
         text = ""
         for i, dom in enumerate(domains):

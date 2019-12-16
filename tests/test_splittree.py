@@ -88,12 +88,12 @@ class TestSplitTree(unittest.TestCase):
         print(at1.num_leafs(), at2.num_leafs(),
                 num_leafs - at1.num_leafs() + num_leafs - at2.num_leafs())
 
-        #for i in range(len(at)):
-        #    p = TreePlot()
-        #    p.g.attr(label=f"X{fid} split at {sval}")
-        #    p.add_tree_cmp(at[i], at1[i])
-        #    p.add_tree_cmp(at[i], at2[i])
-        #    p.render(f"/tmp/plots/test2-{i}")
+        for i in range(len(at)):
+            p = TreePlot()
+            p.g.attr(label=f"X{fid} split at {sval}")
+            p.add_splittree_leaf(at[i], st.get_leaf(1))
+            p.add_splittree_leaf(at[i], st.get_leaf(2))
+            p.render(f"/tmp/plots/test2-{i}")
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

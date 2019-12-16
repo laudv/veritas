@@ -7,3 +7,4 @@ compile_commands.json
 plots
 dask-worker-space
 sync.sh
+.clangd
