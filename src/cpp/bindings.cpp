@@ -118,13 +118,23 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_leaf", &SplitTree::get_leaf)
         .def("split_leaf", &SplitTree::split_domtree_leaf)
         .def("to_json", &SplitTree::to_json)
-        .def("from_json", &SplitTree::from_json);
-        //.def("split", &SplitTree::split);
+        .def("from_json", &SplitTree::from_json)
+        .def("split", [](SplitTree& st, SplitTreeLeaf& leaf) {
+            st.split(std::move(leaf));
+            // C++ standard specifies `leaf` is in valid but unspecified state afterwards
+            // Python users really shouldn't reuse `leaf` afterwards
+        });
 
     py::class_<SplitTreeLeaf>(m, "SplitTreeLeaf")
+        .def_readonly("split_score", &SplitTreeLeaf::split_score)
+        .def_readonly("split_balance", &SplitTreeLeaf::split_balance)
         .def("is_reachable", &SplitTreeLeaf::is_reachable)
         .def("mark_unreachable", &SplitTreeLeaf::mark_unreachable)
         .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split)
+        .def("get_best_split", [](SplitTreeLeaf& leaf) {
+            auto split = leaf.get_best_split();
+            return std::make_tuple(split.feat_id, split.split_value);
+        })
         .def("to_json", &SplitTreeLeaf::to_json)
         .def("from_json", &SplitTreeLeaf::from_json)
         .def("update_from_json", [](SplitTreeLeaf& leaf, const std::string& json) {

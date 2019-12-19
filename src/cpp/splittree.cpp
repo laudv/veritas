@@ -12,6 +12,7 @@
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/unordered_set.hpp>
 #include <cereal/types/optional.hpp>
+#include <stdexcept>
 #include <utility>
 
 #include "cereal/cereal.hpp"
@@ -220,7 +221,7 @@ namespace treeck {
 
         node.split(*leaf.best_split_);
 
-        is_reachables_.erase(node.id()); // might be old! -> mark_unreachable)
+        is_reachables_.erase(node.id()); // might be old! -> mark_unreachable
         is_reachables_.emplace(node.left().id(), leaf.is_reachable_); // copy once
         is_reachables_.emplace(node.right().id(), std::move(leaf.is_reachable_)); // reuse for right
 
@@ -344,12 +345,16 @@ namespace treeck {
         : domtree_node_id_(other.domtree_node_id_)
         , is_reachable_(other.is_reachable_)
         , best_split_(other.best_split_)
+        , split_score(other.split_score)
+        , split_balance(other.split_balance)
     {}
 
     SplitTreeLeaf::SplitTreeLeaf(SplitTreeLeaf&& other)
         : domtree_node_id_(other.domtree_node_id_)
         , is_reachable_(std::move(other.is_reachable_))
         , best_split_(other.best_split_)
+        , split_score(other.split_score)
+        , split_balance(other.split_balance)
     {}
 
     SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
@@ -357,6 +362,7 @@ namespace treeck {
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(is_reachable)
         , best_split_()
+        , split_score(0), split_balance(0)
     {}
 
     SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
@@ -364,6 +370,7 @@ namespace treeck {
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(std::move(is_reachable))
         , best_split_()
+        , split_score(0), split_balance(0)
     {}
 
     SplitTreeLeaf&
@@ -372,6 +379,8 @@ namespace treeck {
         domtree_node_id_ = other.domtree_node_id_;
         is_reachable_ = other.is_reachable_;
         best_split_ = other.best_split_;
+        split_score = other.split_score;
+        split_balance = other.split_balance;
         return *this;
     }
 
@@ -381,6 +390,8 @@ namespace treeck {
         domtree_node_id_ = other.domtree_node_id_;
         is_reachable_ = std::move(other.is_reachable_);
         best_split_ = std::move(other.best_split_);
+        split_score = other.split_score;
+        split_balance = other.split_balance;
         return *this;
     }
 
@@ -464,6 +475,16 @@ namespace treeck {
                 max_feat_id, max_split_value, max_score, min_balance);
 
         best_split_.emplace(max_feat_id, max_split_value);
+        this->split_score = max_score;
+        this->split_balance = min_balance;
+    }
+
+    LtSplit
+    SplitTreeLeaf::get_best_split() const
+    {
+        if (!best_split_.has_value())
+            throw std::runtime_error("call find_best_domtree_split first");
+        return *best_split_;
     }
 
     int

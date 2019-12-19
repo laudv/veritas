@@ -115,6 +115,9 @@ namespace treeck {
         friend SplitTree;
 
     public:
+        int split_score;
+        int split_balance;
+
         using SplitMapT = std::unordered_map<FeatId, std::vector<double>>;
 
         SplitTreeLeaf(const SplitTreeLeaf& other);
@@ -135,6 +138,7 @@ namespace treeck {
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
         void find_best_domtree_split(const AddTree& addtree);
+        LtSplit get_best_split() const;
 
         std::string to_json() const;
         static SplitTreeLeaf from_json(const std::string& json);
