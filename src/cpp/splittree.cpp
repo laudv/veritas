@@ -102,7 +102,7 @@ namespace treeck {
     void
     IsReachable::serialize(Archive& archive)
     {
-        archive(cereal::make_nvp("set", unreachable_));
+        archive(cereal::make_nvp("unreachable", unreachable_));
     }
 
 
@@ -110,10 +110,16 @@ namespace treeck {
     SplitTree::SplitTree(std::shared_ptr<const AddTree> addtree, SplitTree::DomainsT domains)
         : addtree_(addtree)
         , domtree_()
-        , root_domains_()
+        , root_domains_(domains)
         , is_reachables_()
     {
-        is_reachables_.emplace(domtree_.root().id(), IsReachable());
+        NodeId root_id = domtree_.root().id();
+        is_reachables_.emplace(root_id, IsReachable());
+
+        // For each root domain: update which nodes are accessible
+        auto& is_reachable = is_reachables_.at(root_id);
+        for (auto&& [feat_id, dom] : domains)
+            update_is_reachable(is_reachable, feat_id, dom);
     }
 
     const AddTree&
@@ -190,9 +196,6 @@ namespace treeck {
         auto node = domtree_[domtree_node_id];
         if (!node.is_leaf())
             throw std::runtime_error("SplitTree::get_leaf on non-leaf domtree node");
-
-        DomainsT leaf_domains;
-        get_leaf_domains(domtree_node_id, leaf_domains);
 
         // SplitTreeLeaf owns all its values so that we can easily transmit it
         // over the network to worker nodes. The structures should be

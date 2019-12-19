@@ -115,6 +115,12 @@ PYBIND11_MODULE(pytreeck, m) {
 
     py::class_<SplitTree>(m, "SplitTree")
         .def(py::init<std::shared_ptr<AddTree>, SplitTree::DomainsT>())
+        .def("get_root_domain", &SplitTree::get_root_domain)
+        .def("get_leaf_domains", [](const SplitTree& st, NodeId n) {
+            SplitTree::DomainsT domains;
+            st.get_leaf_domains(n, domains);
+            return domains;
+        })
         .def("get_leaf", &SplitTree::get_leaf)
         .def("split_leaf", &SplitTree::split_domtree_leaf)
         .def("to_json", &SplitTree::to_json)
