@@ -115,6 +115,7 @@ PYBIND11_MODULE(pytreeck, m) {
 
     py::class_<SplitTree>(m, "SplitTree")
         .def(py::init<std::shared_ptr<AddTree>, SplitTree::DomainsT>())
+        .def("domtree", &SplitTree::domtree)
         .def("get_root_domain", &SplitTree::get_root_domain)
         .def("get_leaf_domains", [](const SplitTree& st, NodeId n) {
             SplitTree::DomainsT domains;
