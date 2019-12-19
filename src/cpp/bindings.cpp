@@ -25,7 +25,8 @@ std::string tostr(T& o)
 }
 
 using TreeD = Tree<double>;
-using NodeRefD = typename TreeD::MRef;
+using NodeRefD = TreeD::MRef;
+using DomTreeT = SplitTree::DomTreeT;
 
 PYBIND11_MODULE(pytreeck, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
@@ -152,5 +153,18 @@ PYBIND11_MODULE(pytreeck, m) {
             [](const std::string& json) { // __setstate__
                 return SplitTreeLeaf::from_json(json);
             }));
+
+    py::class_<DomTreeT>(m, "DomTree")
+        .def("root", [](const DomTreeT& t) { return t.root().id(); })
+        .def("num_nodes", [](const DomTreeT& t) { return t.num_nodes(); })
+        .def("is_root", [](const DomTreeT& t, NodeId n) { return t[n].is_root(); })
+        .def("is_leaf", [](const DomTreeT& t, NodeId n) { return t[n].is_leaf(); })
+        .def("is_internal", [](const DomTreeT& t, NodeId n) { return t[n].is_internal(); })
+        .def("left", [](const DomTreeT& t, NodeId n) { return t[n].left().id(); })
+        .def("right", [](const DomTreeT& t, NodeId n) { return t[n].right().id(); })
+        .def("parent", [](const DomTreeT& t, NodeId n) { return t[n].parent().id(); })
+        .def("get_split", [](const DomTreeT& t, NodeId n) -> std::tuple<FeatId, double> {
+                auto split = std::get<LtSplit>(t[n].get_split());
+                return {split.feat_id, split.split_value}; });
 
 } /* PYBIND11_MODULE */
