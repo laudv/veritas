@@ -25,6 +25,9 @@ class TestSplitTree(unittest.TestCase):
         self.assertEqual(l0.get_best_split(), (0, 2))
         self.assertEqual(l0.split_score, 4)   # 2 leafs left, 2 right
         self.assertEqual(l0.split_balance, 0) # perfectly balanced
+        m, M = l0.get_tree_bounds(at, 0)
+        self.assertEqual(m, 0.1)
+        self.assertEqual(M, 0.4)
         st.split(l0)
 
         l1 = st.get_leaf(1)
@@ -35,6 +38,9 @@ class TestSplitTree(unittest.TestCase):
         self.assertFalse(l1.is_reachable(0, 2))
         self.assertFalse(l1.is_reachable(0, 5))
         self.assertFalse(l1.is_reachable(0, 6))
+        m, M = l1.get_tree_bounds(at, 0)
+        self.assertEqual(m, 0.1)
+        self.assertEqual(M, 0.2)
 
         l2 = st.get_leaf(2)
         self.assertTrue(l2.is_reachable(0, 0))
@@ -44,6 +50,9 @@ class TestSplitTree(unittest.TestCase):
         self.assertTrue(l2.is_reachable(0, 2))
         self.assertTrue(l2.is_reachable(0, 5))
         self.assertTrue(l2.is_reachable(0, 6))
+        m, M = l2.get_tree_bounds(at, 0)
+        self.assertEqual(m, 0.3)
+        self.assertEqual(M, 0.4)
 
         # with root_domain
         st = SplitTree(at, {0: RealDomain(0, 2)})
@@ -56,6 +65,9 @@ class TestSplitTree(unittest.TestCase):
         self.assertFalse(l0.is_reachable(0, 2))
         self.assertFalse(l0.is_reachable(0, 5))
         self.assertFalse(l0.is_reachable(0, 6))
+        m, M = l0.get_tree_bounds(at, 0)
+        self.assertEqual(m, 0.1)
+        self.assertEqual(M, 0.2)
 
         l0.find_best_domtree_split(at)
         self.assertEqual(l0.get_best_split(), (0, 1))

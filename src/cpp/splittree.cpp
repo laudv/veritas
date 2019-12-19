@@ -13,6 +13,7 @@
 #include <cereal/types/unordered_set.hpp>
 #include <cereal/types/optional.hpp>
 #include <stdexcept>
+#include <tuple>
 #include <utility>
 
 #include "cereal/cereal.hpp"
@@ -489,6 +490,26 @@ namespace treeck {
         if (!best_split_.has_value())
             throw std::runtime_error("call find_best_domtree_split first");
         return *best_split_;
+    }
+
+    std::tuple<double, double>
+    SplitTreeLeaf::get_tree_bounds(const AddTree& at, size_t tree_index)
+    {
+        double min =  std::numeric_limits<double>::infinity();
+        double max = -std::numeric_limits<double>::infinity();
+        at[tree_index].dfs([this, tree_index, &min, &max](AddTree::TreeT::CRef node) {
+            if (!is_reachable(tree_index, node.id()))
+                return TreeVisitStatus::ADD_NONE;
+            if (node.is_leaf())
+            {
+                double leaf_value = node.leaf_value();
+                min = std::min(min, leaf_value);
+                max = std::max(max, leaf_value);
+                return TreeVisitStatus::ADD_NONE;
+            }
+            return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
+        });
+        return {min, max};
     }
 
     int

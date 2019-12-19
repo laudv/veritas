@@ -142,6 +142,7 @@ PYBIND11_MODULE(pytreeck, m) {
             auto split = leaf.get_best_split();
             return std::make_tuple(split.feat_id, split.split_value);
         })
+        .def("get_tree_bounds", &SplitTreeLeaf::get_tree_bounds)
         .def("to_json", &SplitTreeLeaf::to_json)
         .def("from_json", &SplitTreeLeaf::from_json)
         .def(py::pickle(

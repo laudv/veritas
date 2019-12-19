@@ -139,6 +139,7 @@ namespace treeck {
 
         void find_best_domtree_split(const AddTree& addtree);
         LtSplit get_best_split() const;
+        std::tuple<double, double> get_tree_bounds(const AddTree& at, size_t tree_index);
 
         std::string to_json() const;
         static SplitTreeLeaf from_json(const std::string& json);
