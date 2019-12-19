@@ -131,17 +131,18 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("is_reachable", &SplitTreeLeaf::is_reachable)
         .def("mark_unreachable", &SplitTreeLeaf::mark_unreachable)
         .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split)
-        .def("get_best_split", [](SplitTreeLeaf& leaf) {
+        .def("get_best_split", [](const SplitTreeLeaf& leaf) {
             auto split = leaf.get_best_split();
             return std::make_tuple(split.feat_id, split.split_value);
         })
         .def("to_json", &SplitTreeLeaf::to_json)
         .def("from_json", &SplitTreeLeaf::from_json)
-        .def("update_from_json", [](SplitTreeLeaf& leaf, const std::string& json) {
-            leaf = SplitTreeLeaf::from_json(json);
-        });
-
+        .def(py::pickle(
+            [](const SplitTreeLeaf& p) { // __getstate__
+                return p.to_json();
+            },
+            [](const std::string& json) { // __setstate__
+                return SplitTreeLeaf::from_json(json);
+            }));
 
 } /* PYBIND11_MODULE */
-
-

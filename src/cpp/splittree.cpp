@@ -67,7 +67,8 @@ namespace treeck {
 
     IsReachable::IsReachable() : unreachable_() {}
     IsReachable::IsReachable(const IsReachable& o) : unreachable_(o.unreachable_) {}
-    IsReachable::IsReachable(IsReachable&& o) : unreachable_(std::move(o.unreachable_)) {}
+    IsReachable::IsReachable(IsReachable&& o)
+        : unreachable_(std::move(o.unreachable_)) {}
 
     IsReachable&
     IsReachable::operator=(const IsReachable& other)
