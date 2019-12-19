@@ -126,7 +126,10 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("mark_unreachable", &SplitTreeLeaf::mark_unreachable)
         .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split)
         .def("to_json", &SplitTreeLeaf::to_json)
-        .def("from_json", &SplitTreeLeaf::from_json);
+        .def("from_json", &SplitTreeLeaf::from_json)
+        .def("update_from_json", [](SplitTreeLeaf& leaf, const std::string& json) {
+            leaf = SplitTreeLeaf::from_json(json);
+        });
 
 
 } /* PYBIND11_MODULE */

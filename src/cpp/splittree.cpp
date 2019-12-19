@@ -68,6 +68,20 @@ namespace treeck {
     IsReachable::IsReachable(const IsReachable& o) : unreachable_(o.unreachable_) {}
     IsReachable::IsReachable(IsReachable&& o) : unreachable_(std::move(o.unreachable_)) {}
 
+    IsReachable&
+    IsReachable::operator=(const IsReachable& other)
+    {
+        unreachable_ = other.unreachable_;
+        return *this;
+    }
+
+    IsReachable&
+    IsReachable::operator=(IsReachable&& other)
+    {
+        unreachable_ = std::move(other.unreachable_);
+        return *this;
+    }
+
     bool
     IsReachable::is_reachable(size_t tree_index, NodeId node_id) const
     {
@@ -86,7 +100,7 @@ namespace treeck {
     void
     IsReachable::serialize(Archive& archive)
     {
-        archive(cereal::make_nvp("map", unreachable_));
+        archive(cereal::make_nvp("set", unreachable_));
     }
 
 
@@ -326,6 +340,17 @@ namespace treeck {
 
     /* --------------------------------------------------------------------- */
 
+    SplitTreeLeaf::SplitTreeLeaf(const SplitTreeLeaf& other)
+        : domtree_node_id_(other.domtree_node_id_)
+        , is_reachable_(other.is_reachable_)
+        , best_split_(other.best_split_)
+    {}
+
+    SplitTreeLeaf::SplitTreeLeaf(SplitTreeLeaf&& other)
+        : domtree_node_id_(other.domtree_node_id_)
+        , is_reachable_(std::move(other.is_reachable_))
+        , best_split_(other.best_split_)
+    {}
 
     SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
             const IsReachable& is_reachable)
@@ -340,6 +365,24 @@ namespace treeck {
         , is_reachable_(std::move(is_reachable))
         , best_split_()
     {}
+
+    SplitTreeLeaf&
+    SplitTreeLeaf::operator=(const SplitTreeLeaf& other)
+    {
+        domtree_node_id_ = other.domtree_node_id_;
+        is_reachable_ = other.is_reachable_;
+        best_split_ = other.best_split_;
+        return *this;
+    }
+
+    SplitTreeLeaf&
+    SplitTreeLeaf::operator=(SplitTreeLeaf&& other)
+    {
+        domtree_node_id_ = other.domtree_node_id_;
+        is_reachable_ = std::move(other.is_reachable_);
+        best_split_ = std::move(other.best_split_);
+        return *this;
+    }
 
     bool
     SplitTreeLeaf::is_reachable(size_t tree_index, NodeId node_id) const

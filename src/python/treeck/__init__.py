@@ -1,3 +1,4 @@
+import codecs
 from io import StringIO
 
 from .pytreeck import *
@@ -62,3 +63,15 @@ AddTree.predict_single = __addtree_predict_single
 AddTree.predict = __addtree_predict
 AddTree.write = __addtree_write
 AddTree.read = __addtree_read
+
+def __splittree_leaf_getstate(self):
+    b = bytes(self.to_json(), "ascii")
+    return codecs.encode(b, encoding="zlib")
+
+def __splittree_leaf_setstate(self, b):
+    json = codecs.decode(b, encoding="zlib").decode("ascii")
+    self.update_from_json(json)
+
+SplitTreeLeaf.__getstate__ = __splittree_leaf_getstate
+SplitTreeLeaf.__setstate__ = __splittree_leaf_setstate
+

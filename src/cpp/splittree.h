@@ -49,6 +49,9 @@ namespace treeck {
         IsReachable(const IsReachable& other);
         IsReachable(IsReachable&& other);
 
+        IsReachable& operator=(const IsReachable& other);
+        IsReachable& operator=(IsReachable&& other);
+
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
@@ -114,6 +117,9 @@ namespace treeck {
     public:
         using SplitMapT = std::unordered_map<FeatId, std::vector<double>>;
 
+        SplitTreeLeaf(const SplitTreeLeaf& other);
+        SplitTreeLeaf(SplitTreeLeaf&& other);
+
         SplitTreeLeaf(
                 NodeId domtree_node_id,
                 const IsReachable& is_reachable);
@@ -121,6 +127,9 @@ namespace treeck {
         SplitTreeLeaf(
                 NodeId domtree_node_id,
                 IsReachable&& is_reachable);
+
+        SplitTreeLeaf& operator=(const SplitTreeLeaf& other);
+        SplitTreeLeaf& operator=(SplitTreeLeaf&& other);
 
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
