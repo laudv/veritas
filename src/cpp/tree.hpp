@@ -88,7 +88,7 @@ namespace treeck {
     const inner::Node<typename NodeRef<RefT>::LeafT>&
     NodeRef<RefT>::node() const
     {
-        return tree_->nodes_[node_id_];
+        return tree_->nodes_.at(node_id_);
     }
 
     template <typename RefT>
@@ -96,7 +96,7 @@ namespace treeck {
     std::enable_if_t<T::is_mut_type::value, inner::Node<typename RefT::LeafT>&>
     NodeRef<RefT>::node()
     {
-        return tree_->nodes_[node_id_];
+        return tree_->nodes_.at(node_id_);
     }
 
     template <typename RefT>
