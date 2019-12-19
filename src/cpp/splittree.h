@@ -1,6 +1,7 @@
 #ifndef TREECK_SPLITTREE_H
 #define TREECK_SPLITTREE_H
 
+#include <string>
 #include <utility>
 #include <ostream>
 #include <memory>
@@ -26,12 +27,18 @@ namespace treeck {
     struct IsReachableKey {
         int tree_index;
         NodeId node_id;
+
+        template <typename Archive>
+        void serialize(Archive& archive);
     };
 
     bool operator==(const IsReachableKey& a, const IsReachableKey& b);
 
     struct IsReachableKeyHash {
         size_t operator()(const IsReachableKey& k) const;
+
+        template <typename Archive>
+        void serialize(Archive& archive);
     };
 
     class IsReachable {
@@ -44,6 +51,9 @@ namespace treeck {
 
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
+
+        template <typename Archive>
+        void serialize(Archive& archive);
     };
 
 
@@ -53,14 +63,12 @@ namespace treeck {
     class SplitTree {
     public:
         using DomTreeT = Tree<LeafSplitInfo>;
-        using TreeIndexT = int;
         using DomainsT = std::unordered_map<FeatId, RealDomain>;
         using ReachableT = std::unordered_map<NodeId, IsReachable>;
 
     private:
         std::shared_ptr<const AddTree> addtree_;
         DomTreeT domtree_;
-        AddTree::SplitMapT splits_;
 
         DomainsT root_domains_;
         ReachableT is_reachables_;
@@ -76,17 +84,13 @@ namespace treeck {
         void get_leaf_domains(NodeId domtree_node_id, DomainsT& domains) const;
         SplitTreeLeaf get_leaf(NodeId domtree_node_id);
 
-        /*
-        bool is_reachable(NodeId domtree_node_id, size_t tree_index,
-                NodeId addtree_node_id) const;
-        void mark_unreachable(NodeId domtree_node_id, size_t tree_index,
-                NodeId addtree_node_id);
-
-        void split(NodeId domtree_node_id);
-        */
-
         void split_domtree_leaf(NodeId domtree_node_id);
         void split(SplitTreeLeaf&& leaf);
+
+        std::string to_json() const;
+        static SplitTree from_json(
+                std::shared_ptr<const AddTree> addtree,
+                const std::string& json);
 
     private:
         void update_is_reachable(IsReachable& is_reachable,
@@ -112,15 +116,19 @@ namespace treeck {
 
         SplitTreeLeaf(
                 NodeId domtree_node_id,
-                IsReachable is_reachable);
+                const IsReachable& is_reachable);
+
+        SplitTreeLeaf(
+                NodeId domtree_node_id,
+                IsReachable&& is_reachable);
 
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
         void find_best_domtree_split(const AddTree& addtree);
 
-        template <typename Archive>
-        void archive(Archive& archive);
+        std::string to_json() const;
+        static SplitTreeLeaf from_json(const std::string& json);
 
     private:
         int count_unreachable_leafs(

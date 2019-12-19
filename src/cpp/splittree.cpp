@@ -1,12 +1,22 @@
 #include <functional>
 #include <exception>
+#include <optional>
+#include <sstream>
 #include <iostream>
 #include <map>
 #include <limits>
 #include <cmath>
 #include <cstdio>
 
+#include <cereal/archives/json.hpp>
+#include <cereal/types/unordered_map.hpp>
+#include <cereal/types/unordered_set.hpp>
+#include <cereal/types/optional.hpp>
+#include <utility>
+
+#include "cereal/cereal.hpp"
 #include "domain.h"
+#include "tree.h"
 #include "util.h"
 #include "tree.hpp"
 
@@ -32,6 +42,14 @@ namespace treeck {
     }
 
 
+    template <typename Archive>
+    void
+    IsReachableKey::serialize(Archive& archive)
+    {
+        archive(CEREAL_NVP(tree_index), CEREAL_NVP(node_id));
+    }
+
+
     size_t
     IsReachableKeyHash::operator()(const IsReachableKey& k) const
     {
@@ -41,6 +59,10 @@ namespace treeck {
         seed ^= std::hash<NodeId>()(k.node_id)    + 0x9e3779b9 + (seed << 6) + (seed >> 2);
         return seed;
     }
+
+    template <typename Archive>
+    void
+    IsReachableKeyHash::serialize(Archive& archive) {}
 
     IsReachable::IsReachable() : unreachable_() {}
     IsReachable::IsReachable(const IsReachable& o) : unreachable_(o.unreachable_) {}
@@ -60,16 +82,21 @@ namespace treeck {
         unreachable_.insert(k);
     }
 
+    template <typename Archive>
+    void
+    IsReachable::serialize(Archive& archive)
+    {
+        archive(cereal::make_nvp("map", unreachable_));
+    }
+
 
 
     SplitTree::SplitTree(std::shared_ptr<const AddTree> addtree, SplitTree::DomainsT domains)
         : addtree_(addtree)
         , domtree_()
-        , splits_()
         , root_domains_()
         , is_reachables_()
     {
-        splits_ = addtree_->get_splits();
         is_reachables_.emplace(domtree_.root().id(), IsReachable());
     }
 
@@ -250,15 +277,69 @@ namespace treeck {
         update_is_reachable(is_reachable, tree_index, node.right(), feat_id, new_dom, marked_r);
     }
 
+    template<class Archive>
+    void serialize(Archive& ar, RealDomain& m)
+    {
+        ar(cereal::make_nvp("lo", m.lo), cereal::make_nvp("hi", m.hi));
+    }
+
+    std::string
+    SplitTree::to_json() const
+    {
+        std::stringstream ss;
+        {
+            cereal::JSONOutputArchive ar(ss);
+            ar(cereal::make_nvp("domtree", domtree_),
+               cereal::make_nvp("root_domains", root_domains_),
+               cereal::make_nvp("is_reachables", is_reachables_));
+
+        }
+        return ss.str();
+    }
+
+    SplitTree
+    SplitTree::from_json(
+            std::shared_ptr<const AddTree> addtree,
+            const std::string& json)
+    {
+        std::istringstream ss(json);
+
+        DomTreeT domtree;
+        DomainsT root_domains;
+        ReachableT is_reachables;
+        {
+            cereal::JSONInputArchive ar(ss);
+            ar(cereal::make_nvp("domtree", domtree),
+               cereal::make_nvp("root_domains", root_domains),
+               cereal::make_nvp("is_reachables", is_reachables));
+        }
+
+        SplitTree splittree(addtree, root_domains);
+        std::swap(splittree.domtree_, domtree);
+        std::swap(splittree.is_reachables_, is_reachables);
+
+        return splittree;
+    }
+
+
+
 
     /* --------------------------------------------------------------------- */
 
 
     SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
-            IsReachable is_reachable)
+            const IsReachable& is_reachable)
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(is_reachable)
-        , best_split_() {}
+        , best_split_()
+    {}
+
+    SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
+            IsReachable&& is_reachable)
+        : domtree_node_id_(domtree_node_id)
+        , is_reachable_(std::move(is_reachable))
+        , best_split_()
+    {}
 
     bool
     SplitTreeLeaf::is_reachable(size_t tree_index, NodeId node_id) const
@@ -402,6 +483,38 @@ namespace treeck {
                     feat_id, new_dom, marked_l) +
             count_unreachable_leafs(addtree, tree_index, node.right(),
                     feat_id, new_dom, marked_r);
+    }
+
+    std::string
+    SplitTreeLeaf::to_json() const
+    {
+        std::stringstream ss;
+        {
+            cereal::JSONOutputArchive ar(ss);
+            ar(cereal::make_nvp("domtree_node_id", domtree_node_id_),
+               cereal::make_nvp("is_reachable", is_reachable_),
+               cereal::make_nvp("best_split", best_split_));
+        }
+        return ss.str();
+    }
+
+    SplitTreeLeaf
+    SplitTreeLeaf::from_json(const std::string& json)
+    {
+        std::istringstream ss(json);
+
+        NodeId domtree_node_id;
+        IsReachable is_reachable;
+        std::optional<LtSplit> best_split;
+        {
+            cereal::JSONInputArchive ar(ss);
+            ar(cereal::make_nvp("domtree_node_id", domtree_node_id),
+               cereal::make_nvp("is_reachable", is_reachable),
+               cereal::make_nvp("best_split", best_split));
+        }
+        SplitTreeLeaf leaf(domtree_node_id, std::move(is_reachable));
+        std::swap(leaf.best_split_, best_split);
+        return leaf;
     }
 
 } /* namespace treeck */

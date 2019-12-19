@@ -116,13 +116,17 @@ PYBIND11_MODULE(pytreeck, m) {
     py::class_<SplitTree>(m, "SplitTree")
         .def(py::init<std::shared_ptr<AddTree>, SplitTree::DomainsT>())
         .def("get_leaf", &SplitTree::get_leaf)
-        .def("split_leaf", &SplitTree::split_domtree_leaf);
+        .def("split_leaf", &SplitTree::split_domtree_leaf)
+        .def("to_json", &SplitTree::to_json)
+        .def("from_json", &SplitTree::from_json);
         //.def("split", &SplitTree::split);
 
     py::class_<SplitTreeLeaf>(m, "SplitTreeLeaf")
         .def("is_reachable", &SplitTreeLeaf::is_reachable)
         .def("mark_unreachable", &SplitTreeLeaf::mark_unreachable)
-        .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split);
+        .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split)
+        .def("to_json", &SplitTreeLeaf::to_json)
+        .def("from_json", &SplitTreeLeaf::from_json);
 
 
 } /* PYBIND11_MODULE */
