@@ -384,7 +384,7 @@ namespace treeck {
 
     template <typename LeafT>
     std::string
-    Tree<LeafT>::to_json()
+    Tree<LeafT>::to_json() const
     {
         std::stringstream ss;
         {

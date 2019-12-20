@@ -1,10 +1,10 @@
-import unittest
+import unittest, pickle
 from treeck import *
 
 class TestTree(unittest.TestCase):
 
     def test_tree1(self):
-        at = AddTree()
+        at = AddTree(2)
         t = at.add_tree()
         t.split(t.root(), 1, 1.5)
         t.set_leaf_value(t.left(t.root()), 1.1)
@@ -15,7 +15,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual([1.1,2.2], y)
 
     def test_tree_json(self):
-        at = AddTree()
+        at = AddTree(3)
         t = at.add_tree()
         t.split(t.root(), 1, 1.5)
         t.split(t.left(t.root()), 2, 0.12)
@@ -39,7 +39,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(tt.get_leaf_value(4), 0.45)
 
     def test_addtree_get_splits(self):
-        at = AddTree()
+        at = AddTree(3)
         t = at.add_tree()
         t.split(t.root(), 1, 1.5)
         t.split(t.left(t.root()), 2, 0.12)
@@ -59,7 +59,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(sorted(list(s.keys())), [1, 2])
 
     def test_skip_branch_left(self):
-        at = AddTree()
+        at = AddTree(2)
         t = at.add_tree()
         t.split(t.root(), 1, 1.5)
         t.set_leaf_value(t.left(t.root()), 1.1)
@@ -75,7 +75,7 @@ class TestTree(unittest.TestCase):
         self.assertTrue(t.is_leaf(t.root()))
 
     def test_skip_branch_right(self):
-        at = AddTree()
+        at = AddTree(3)
         t = at.add_tree()
         t.split(t.root(), 1, 1.5)
         t.split(t.left(t.root()), 2, 0.12)
@@ -93,7 +93,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(t.depth(t.left(t.root())), 1)
 
     def test_skip_branch_internal(self):
-        at = AddTree()
+        at = AddTree(3)
         t = at.add_tree()
         t.split(t.root(), 1, 1.5)
         t.split(t.left(t.root()), 2, 0.12)
@@ -116,6 +116,11 @@ class TestTree(unittest.TestCase):
         self.assertEqual(t.get_leaf_value(t.left(t.root())), 0.45)
         self.assertEqual(t.get_leaf_value(t.right(t.root())), 2.2)
 
+    def test_pickle(self):
+        at = AddTree.read("tests/models/xgb-covtype-easy.json")
+        att = pickle.loads(pickle.dumps(at))
+        self.assertEqual(at.num_features(), att.num_features())
+        self.assertEqual(at.num_nodes(), att.num_nodes())
 
 if __name__ == "__main__":
     unittest.main()

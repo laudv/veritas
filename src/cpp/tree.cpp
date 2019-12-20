@@ -140,7 +140,7 @@ namespace treeck {
     }
 
     std::string
-    AddTree::to_json()
+    AddTree::to_json() const
     {
         std::stringstream ss;
         {

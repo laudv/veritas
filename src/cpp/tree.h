@@ -201,7 +201,7 @@ namespace treeck {
         template <typename Archive>
         void serialize(Archive& archive);
 
-        std::string to_json();
+        std::string to_json() const;
         static Tree from_json(const std::string& json);
     };
 
@@ -233,7 +233,7 @@ namespace treeck {
         const TreeT& operator[](size_t index) const;
         const std::vector<TreeT>& trees() const;
 
-        std::string to_json();
+        std::string to_json() const;
         static AddTree from_json(const std::string& json);
         static AddTree from_json_file(const char *file);
 

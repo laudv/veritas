@@ -91,7 +91,14 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("to_json", &AddTree::to_json)
         .def("from_json", AddTree::from_json)
         .def("prune", [](const AddTree& at, const Domains::vec_t& doms) { return prune(at, doms); })
-        .def("__str__", [](const AddTree& at) { return tostr(at); });
+        .def("__str__", [](const AddTree& at) { return tostr(at); })
+        .def(py::pickle(
+            [](const AddTree& at) { // __getstate__
+                return at.to_json();
+            },
+            [](const std::string& json) { // __setstate__
+                return AddTree::from_json(json);
+            }));
 
     py::class_<SearchSpace>(m, "SearchSpace")
         .def(py::init<std::shared_ptr<AddTree>>())
