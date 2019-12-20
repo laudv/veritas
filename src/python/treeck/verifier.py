@@ -116,19 +116,20 @@ class VerifierOrExpr(VerifierBoolExpr):
     def __init__(self, *disjuncts):
         self.disjuncts = disjuncts
 
-class InDomainConstraint(VerifierAndExpr):
-    def __init__(self, verifier, domains):
-        cs = []
-        for feat_id, d in domains:
-            var = verifier.xvar(feat_id)
-            if math.isinf(d.lo) and math.isinf(d.hi):
-                continue # unconstrained feature -> everything possible
-            elif math.isinf(d.lo): cs.append(var <  d.hi)
-            elif math.isinf(d.hi): cs.append(var >= d.lo)
-            else:
-                cs.append(var >= d.lo)
-                cs.append(var <  d.hi)
-        super().__init__(*cs)
+# TODO remove
+#class InDomainConstraint(VerifierAndExpr):
+#    def __init__(self, verifier, domains):
+#        cs = []
+#        for feat_id, d in domains:
+#            var = verifier.xvar(feat_id)
+#            if math.isinf(d.lo) and math.isinf(d.hi):
+#                continue # unconstrained feature -> everything possible
+#            elif math.isinf(d.lo): cs.append(var <  d.hi)
+#            elif math.isinf(d.hi): cs.append(var >= d.lo)
+#            else:
+#                cs.append(var >= d.lo)
+#                cs.append(var <  d.hi)
+#        super().__init__(*cs)
 
 class NotInDomainConstraint(VerifierOrExpr):
     def __init__(self, verifier, domains):
@@ -205,39 +206,40 @@ class VerifierBackend:
 # -----------------------------------------------------------------------------
 
 
-class VerifierStrategy:
-
-    def strategy_setup(self, verifier):
-        """
-        Setup circular dependency between Strategy and Verifier. Verifier is
-        responsible for calling this in its constructor.
-        """
-        pass
-
-    def get_reachability(self, tree, node):
-        """ Given the split, can we go left, right, or both?  """
-        return Verifier.Reachable.BOTH
-
-    def verify_setup(self):
-        """
-        Before starting the verification loop over the verification steps, this
-        method is called by the verifier.
-        """
-        pass
-
-    def verify_step(self):
-        """
-        This adds the next batch of constraints to the backend. Returns True if
-        there is new work to verify, or False if finished.
-        """
-        raise RuntimeError("abstract method")
-
-    def verify_teardown(self):
-        """
-        Called after the verification loop, regardless of outcome. Check
-        outcome in `verifier._status`.
-        """
-        pass
+# TODO remove
+#class VerifierStrategy:
+#
+#    def strategy_setup(self, verifier):
+#        """
+#        Setup circular dependency between Strategy and Verifier. Verifier is
+#        responsible for calling this in its constructor.
+#        """
+#        pass
+#
+#    def get_reachability(self, tree, node):
+#        """ Given the split, can we go left, right, or both?  """
+#        return Verifier.Reachable.BOTH
+#
+#    def verify_setup(self):
+#        """
+#        Before starting the verification loop over the verification steps, this
+#        method is called by the verifier.
+#        """
+#        pass
+#
+#    def verify_step(self):
+#        """
+#        This adds the next batch of constraints to the backend. Returns True if
+#        there is new work to verify, or False if finished.
+#        """
+#        raise RuntimeError("abstract method")
+#
+#    def verify_teardown(self):
+#        """
+#        Called after the verification loop, regardless of outcome. Check
+#        outcome in `verifier._status`.
+#        """
+#        pass
 
 
 
@@ -264,38 +266,14 @@ class Verifier:
                 raise RuntimeError(f"Unexpected {Verifier.Result.UNKNOWN}")
             return self == Verifier.Result.SAT
 
-    class Reachable(Enum):
-        NONE = 0x0
-        LEFT = 0x1
-        RIGHT = 0x2
-        BOTH = 0x1 | 0x2
-
-        def covers(self, other):
-            return self.value & other.value > 0
-
-        def __or__(self, other):
-            return Verifier.Reachable(self.value | other.value)
-
-        def __xor__(self, other):
-            return Verifier.Reachable(self.value ^ other.value)
-
-
-    def __init__(self, domains, addtree, backend, strategy, suffix=""):
-        """
-        Initialize a Verifier.
-         - domains is a list of `RealDomain` objects, one for each feature.
-         - addtree is the model to verify properties of.
-        """
-        self._domains = domains
+    def __init__(self, addtree, splittree_leaf, backend, suffix=""):
         self._addtree = addtree
+        self._stree = splittree_leaf
         self._backend = backend
-        self._strategy = strategy
-        self._strategy.strategy_setup(self)
         self._suffix = suffix
 
-        self.num_features = len(domains)
         self._xvars = [backend.add_real_var(f"x{i}{suffix}")
-                for i in range(self.num_features)]
+                for i in range(addtree.num_features())]
         self._wvars = [backend.add_real_var(f"w{i}{suffix}")
                 for i in range(len(self._addtree))]
         self._rvars = {} # real additional variables
@@ -304,12 +282,13 @@ class Verifier:
 
         self._status = Verifier.Result.UNKNOWN
         self._splits = None
-        self._iteration_count = 0
+
+        self.check_time = -math.inf
+        self.nchecks = 0
 
         # initialize backend
         fexpr = SumExpr(self._addtree.base_score, *self._wvars)
         self._backend.add_constraint(fexpr == self._fvar)
-        self._backend.add_constraint(InDomainConstraint(self, enumerate(self._domains)))
 
     def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
@@ -353,40 +332,20 @@ class Verifier:
     def set_timeout(self, timeout):
         self._backend.set_timeout(timeout)
 
-    def verify(self, constraint=True):
+    def check(self, *constraints):
         """
-        Verify the model, i.e., try to find an assignment to the decision
-        variables that
-            (1) satisfies the constraints on
-                - the input features (xvars)
-                - the addtree output (fvar)
-                - any additional decision variables (rvars and bvars)
-            (2) satisfies the additive tree structure
-            (3) satisfies the given constraint
-
-        There are three possible outcomes:
-            (1) Verifier.SAT, an assignment was found
-            (2) Verifier.UNSAT, no assignment that satisfies the constraints
-                possible
-
-        This method throws an VerifierTimeout if the Backend returns
-        Verifier.UNKNOWN in any of its Backend.check() calls.
-
-        Subsequent calls to verify must reuse the state of the previous.
+        Throws VerifierTimeout when output of backend is UNKNOWN, so output is
+        ensured to be SAT or UNSAT.
         """
-        self._strategy.verify_setup()
+        t0 = timeit.default_timer()
+        status = self._backend.check(*constraints)
+        self.nchecks += 1
+        t1 = timeit.default_timer()
+        self.check_time = t1 - t0
 
-        while True: # a do-while
-            self._status = self._check(constraint) # throws timeout if UNKNOWN
-
-            if self._status == Verifier.Result.UNSAT: break
-            if not self._strategy.verify_step(): break # add the next part of the problem encoding
-
-            self._backend.simplify()
-            self._iteration_count += 1
-
-        self._strategy.verify_teardown()
-        return self._status
+        if status == Verifier.Result.UNKNOWN:
+            raise VerifierTimeout(self.check_time)
+        return status
 
     def model(self):
         """
@@ -410,6 +369,24 @@ class Verifier:
                 ("rs", self._rvars),
                 ("bs", self._bvars))
 
+    def add_tree(self, tree_index):
+        """ Add the full encoding of a tree to the verifier.  """
+        tree = self._addtree[tree_index]
+        enc = self._enc_tree(tree, tree.root())
+        self.add_constraint(enc)
+    
+    def add_all_trees(self):
+        """ Add all trees in the addtree. """
+        for tree_index in range(len(self._addtree)):
+            self.add_tree(tree_index)
+
+    def model_family(self):
+        # TODO implement, then remove exclude model and replace by add_constraint(..)
+        # e.g. v.add_constraint(StrictModelExcludeConstraint(mf))
+        #      v.add_constraint(RelaxedModelExcludeConstraint(mf))
+        pass
+
+    # TODO see above
     def exclude_model(self, model):
         """
         Mark the domain region inhabited by `model[xs]` as impossible.
@@ -450,68 +427,47 @@ class Verifier:
 
             yield i, x, lo, hi
 
-    def _enc_tree(self, tree, node = None):
-        # - start at root
-        # - if left/right reachable, recur -> strategy.get_reachability
-        # - if leaf reached, use backend to encode leaf
-        # - use backend encode_split to join branches
-        # - add constraint to backend with backend.add_constraint
-        if node is None:
-            return self._enc_tree(tree, tree.root())
-
+    def _enc_tree(self, tree, node):
         if tree.is_leaf(node):
             wvar = self._wvars[tree.index()]
             leaf_value = tree.get_leaf_value(node)
             return self._backend.encode_leaf(wvar, leaf_value)
         else:
+            tree_index = tree.index()
             feat_id, split_value = tree.get_split(node)
             xvar = self._xvars[feat_id]
             left, right = tree.left(node), tree.right(node)
-            reachability = self._strategy.get_reachability(tree, node)
             l, r = False, False
-            if reachability.covers(Verifier.Reachable.LEFT):
+            if self._stree.is_reachable(tree_index, left):
                 l = self._enc_tree(tree, left)
-            if reachability.covers(Verifier.Reachable.RIGHT):
+            if self._stree.is_reachable(tree_index, right):
                 r = self._enc_tree(tree, right)
             return self._backend.encode_split(xvar, split_value, l, r)
 
-    def _determine_tree_bounds(self, tree_index):
-        tree = self._addtree[tree_index]
-        lo =  math.inf
-        hi = -math.inf
-
-        stack = [tree.root()]
-        while len(stack) > 0:
-            node = stack.pop()
-
-            if tree.is_leaf(node):
-                leaf_value = tree.get_leaf_value(node)
-                lo = min(lo, leaf_value)
-                hi = max(hi, leaf_value)
-                continue
-
-            feat_id, split_value = tree.get_split(node)
-            reachability = self._strategy.get_reachability(tree, node)
-            if reachability.covers(Verifier.Reachable.RIGHT):
-                stack.append(tree.right(node))
-            if reachability.covers(Verifier.Reachable.LEFT):
-                stack.append(tree.left(node))
-
-        return (lo, hi)
-
-    def _check(self, constraint):
-        """
-        Throws VerifierTimeout when output of backend is UNKNOWN, so output is
-        ensured to be SAT or UNSAT.
-        """
-        t0 = timeit.default_timer()
-        status = self._backend.check(constraint)
-        t1 = timeit.default_timer()
-        self.verify_time = t1 - t0
-
-        if status == Verifier.Result.UNKNOWN:
-            raise VerifierTimeout(self.verify_time)
-        return status
+# TODO remove -> SplitTreeLeaf::get_tree_bounds
+#    def _determine_tree_bounds(self, tree_index):
+#        tree = self._addtree[tree_index]
+#        lo =  math.inf
+#        hi = -math.inf
+#
+#        stack = [tree.root()]
+#        while len(stack) > 0:
+#            node = stack.pop()
+#
+#            if tree.is_leaf(node):
+#                leaf_value = tree.get_leaf_value(node)
+#                lo = min(lo, leaf_value)
+#                hi = max(hi, leaf_value)
+#                continue
+#
+#            feat_id, split_value = tree.get_split(node)
+#            reachability = self._strategy.get_reachability(tree, node)
+#            if reachability.covers(Verifier.Reachable.RIGHT):
+#                stack.append(tree.right(node))
+#            if reachability.covers(Verifier.Reachable.LEFT):
+#                stack.append(tree.left(node))
+#
+#        return (lo, hi)
 
 
 
@@ -520,290 +476,290 @@ class Verifier:
 # -----------------------------------------------------------------------------
 
 
-class SplitCheckStrategy(VerifierStrategy):
-    """
-    A strategy that ignores unreachable branches by check individual split
-    conditions.
-    """
+# TODO remove
+#class SplitCheckStrategy(VerifierStrategy):
+#    """
+#    A strategy that ignores unreachable branches by check individual split
+#    conditions.
+#    """
+#
+#    def strategy_setup(self, verifier):
+#        self._verifier = verifier
+#
+#        self._m = len(self._verifier._addtree)
+#        self._reachability = {}
+#        self._remaining_trees = None
+#        self._bounds = [(-math.inf, math.inf)] * self._m
+#
+#    def get_reachability(self, tree, node):
+#        p = tree.get_split(node)
+#        if p in self._reachability:
+#            return self._reachability[p]
+#        return Verifier.Reachable.BOTH
+#
+#    def set_reachability(self, reachability):
+#        """
+#        Reuse reachability from strategy of 'parent' model -> are unchanged, no
+#        need to recalculate.
+#        """
+#        self._reachability = reachability
+#
+#    def verify_setup(self):
+#        if self._remaining_trees is not None:
+#            return
+#
+#        if len(self._reachability) == 0:      # no reachability provided...
+#            self._test_addtree_reachability() # ... so compute! (see set_reachability)
+#
+#        self._remaining_trees = list(range(self._m))
+#        new_bounds = [self._verifier._determine_tree_bounds(i)
+#                for i in range(self._m)]
+#
+#        for tree_index in range(self._m):
+#            old = self._bounds[tree_index]
+#            lo, hi = new_bounds[tree_index]
+#
+#            if old == (lo, hi): continue
+#
+#            # Add tree bound constraint to backend
+#            wvar = self._verifier.wvar(tree_index)
+#            self._verifier.add_constraint((wvar >= lo) & (wvar <= hi))
+#
+#        self._bounds = new_bounds
+#
+#        # TODO use better sort heuristic
+#        bnd = lambda i: self._bounds[i]
+#        self._remaining_trees.sort(
+#                key=lambda i: max(abs(bnd(i)[0]), abs(bnd(i)[1])),
+#                reverse=True)
+#
+#    def verify_step(self):
+#        if len(self._remaining_trees) == 0:
+#            return False
+#
+#        tree_index = self._remaining_trees.pop()
+#        tree = self._verifier._addtree[tree_index]
+#        enc = self._verifier._enc_tree(tree, tree.root())
+#        self._verifier.add_constraint(enc)
+#        return True
+#
+#    def verify_teardown(self):
+#        pass
+#
+#    # -- private --
+#
+#    def _test_addtree_reachability(self):
+#        """
+#        For each tree in the addtree, for each internal node in the tree,
+#        check which side of the split is reachable given the constraints, not
+#        considering the addtree.
+#
+#        For solvers, implement `test_split_reachability`.
+#        """
+#        for tree_index in range(self._m):
+#            tree = self._verifier._addtree[tree_index]
+#            self._test_tree_reachability(tree)
+#
+#    def _test_tree_reachability(self, tree):
+#        stack = [(tree.root())]
+#        while len(stack) > 0:
+#            node = stack.pop()
+#
+#            if tree.is_leaf(node): continue
+#
+#            reachability = self.get_reachability(tree, node)
+#            feat_id, split_value = tree.get_split(node)
+#            xvar = self._verifier.xvar(feat_id)
+#
+#            if reachability.covers(Verifier.Reachable.LEFT):
+#                check = self._verifier._check(xvar < split_value)
+#                if check == Verifier.Result.UNSAT:
+#                    reachability ^= Verifier.Reachable.LEFT # disable left
+#                else: stack.append(tree.left(node))
+#            if reachability == Verifier.Reachable.BOTH:            # if left is unreachable, then no ...
+#                check = self._verifier._check(xvar >= split_value) # ... need to test, right is reachable
+#                if check == Verifier.Result.UNSAT:
+#                    reachability ^= Verifier.Reachable.RIGHT # disable right
+#                else: stack.append(tree.right(node))
+#
+#            self._reachability[(feat_id, split_value)] = reachability
 
-    def strategy_setup(self, verifier):
-        self._verifier = verifier
-
-        self._m = len(self._verifier._addtree)
-        self._reachability = {}
-        self._remaining_trees = None
-        self._bounds = [(-math.inf, math.inf)] * self._m
-
-    def get_reachability(self, tree, node):
-        p = tree.get_split(node)
-        if p in self._reachability:
-            return self._reachability[p]
-        return Verifier.Reachable.BOTH
-
-    def set_reachability(self, reachability):
-        """
-        Reuse reachability from strategy of 'parent' model -> are unchanged, no
-        need to recalculate.
-        """
-        self._reachability = reachability
-
-    def verify_setup(self):
-        if self._remaining_trees is not None:
-            return
-
-        if len(self._reachability) == 0:      # no reachability provided...
-            self._test_addtree_reachability() # ... so compute! (see set_reachability)
-
-        self._remaining_trees = list(range(self._m))
-        new_bounds = [self._verifier._determine_tree_bounds(i)
-                for i in range(self._m)]
-
-        for tree_index in range(self._m):
-            old = self._bounds[tree_index]
-            lo, hi = new_bounds[tree_index]
-
-            if old == (lo, hi): continue
-
-            # Add tree bound constraint to backend
-            wvar = self._verifier.wvar(tree_index)
-            self._verifier.add_constraint((wvar >= lo) & (wvar <= hi))
-
-        self._bounds = new_bounds
-
-        # TODO use better sort heuristic
-        bnd = lambda i: self._bounds[i]
-        self._remaining_trees.sort(
-                key=lambda i: max(abs(bnd(i)[0]), abs(bnd(i)[1])),
-                reverse=True)
-
-    def verify_step(self):
-        if len(self._remaining_trees) == 0:
-            return False
-
-        tree_index = self._remaining_trees.pop()
-        tree = self._verifier._addtree[tree_index]
-        enc = self._verifier._enc_tree(tree, tree.root())
-        self._verifier.add_constraint(enc)
-        return True
-
-    def verify_teardown(self):
-        pass
-
-    # -- private --
-
-    def _test_addtree_reachability(self):
-        """
-        For each tree in the addtree, for each internal node in the tree,
-        check which side of the split is reachable given the constraints, not
-        considering the addtree.
-
-        For solvers, implement `test_split_reachability`.
-        """
-        for tree_index in range(self._m):
-            tree = self._verifier._addtree[tree_index]
-            self._test_tree_reachability(tree)
-
-    def _test_tree_reachability(self, tree):
-        stack = [(tree.root())]
-        while len(stack) > 0:
-            node = stack.pop()
-
-            if tree.is_leaf(node): continue
-
-            reachability = self.get_reachability(tree, node)
-            feat_id, split_value = tree.get_split(node)
-            xvar = self._verifier.xvar(feat_id)
-
-            if reachability.covers(Verifier.Reachable.LEFT):
-                check = self._verifier._check(xvar < split_value)
-                if check == Verifier.Result.UNSAT:
-                    reachability ^= Verifier.Reachable.LEFT # disable left
-                else: stack.append(tree.left(node))
-            if reachability == Verifier.Reachable.BOTH:            # if left is unreachable, then no ...
-                check = self._verifier._check(xvar >= split_value) # ... need to test, right is reachable
-                if check == Verifier.Result.UNSAT:
-                    reachability ^= Verifier.Reachable.RIGHT # disable right
-                else: stack.append(tree.right(node))
-
-            self._reachability[(feat_id, split_value)] = reachability
 
 
-
-
-class PathCheckStrategy(VerifierStrategy):
-
-    def strategy_setup(self, verifier):
-        self._verifier = verifier
-        self._unreachable = set()
-        self._m = len(self._verifier._addtree)
-        self._remaining_trees = list(range(self._m))
-        self._bounds = [(-math.inf, math.inf)] * self._m
-
-    def get_reachability(self, tree, node):
-        l = (tree.index(), tree.left(node))
-        r = (tree.index(), tree.right(node))
-        reachability = Verifier.Reachable.NONE
-        if l not in self._unreachable:
-            reachability |= Verifier.Reachable.LEFT
-        if r not in self._unreachable:
-            reachability |= Verifier.Reachable.RIGHT
-        return reachability
-
-    def verify_setup(self):
-        pass
-
-    def verify_step(self):
-        if len(self._remaining_trees) == 0:
-            return False
-
-        v = self._verifier
-        for tree_index in self._remaining_trees:
-            bounds_changed = self._test_tree_reachability(tree_index)
-            if bounds_changed:
-                wvar = v.wvar(tree_index)
-                lo, hi = self._bounds[tree_index]
-                v.add_constraint((wvar >= lo) & (wvar <= hi))
-
-        # TODO use better sort heuristic
-        bnd = lambda i: self._bounds[i]
-        self._remaining_trees.sort(
-                key=lambda i: max(abs(bnd(i)[0]), abs(bnd(i)[1])),
-                reverse=True)
-
-        # encode the best tree
-        tree_index = self._remaining_trees.pop()
-        tree = self._verifier._addtree[tree_index]
-        enc = self._verifier._enc_tree(tree, tree.root())
-        self._verifier.add_constraint(enc)
-        return True
-
-    def verify_teardown(self):
-        pass
-
-    # -- private --
-
-    def _test_tree_reachability(self, tree_index):
-        v = self._verifier
-        tree = v._addtree[tree_index]
-        stack = [(tree.root(), True)]
-
-        lo =  math.inf
-        hi = -math.inf
-
-        while len(stack) > 0:
-            node, path_constraint = stack.pop()
-
-            if tree.is_leaf(node):
-                leaf_value = tree.get_leaf_value(node)
-                lo = min(lo, leaf_value)
-                hi = max(hi, leaf_value)
-                continue
-
-            reachability = self.get_reachability(tree, node)
-            feat_id, split_value = tree.get_split(node)
-            xvar = v.xvar(feat_id)
-
-            if reachability.covers(Verifier.Reachable.LEFT):
-                left = tree.left(node)
-                c = (xvar < split_value) & path_constraint
-                check = v._check(c)
-                if check == Verifier.Result.SAT:
-                    stack.append((left, c))
-                else:
-                    self._unreachable.add((tree.index(), left))
-
-            if reachability.covers(Verifier.Reachable.RIGHT):
-                right = tree.right(node)
-                c = (xvar >= split_value) & path_constraint
-                check = v._check(c)
-                if check == Verifier.Result.SAT:
-                    stack.append((right, c))
-                else:
-                    self._unreachable.add((tree.index(), right))
-
-        changed = self._bounds[tree_index] != (lo, hi)
-        self._bounds[tree_index] = (lo, hi)
-
-        if changed:
-            print("{:4}: DEBUG new bounds tree{}: [{:.4g}, {:.4g}]".format(
-                v._iteration_count, tree.index(), lo, hi))
-        return changed
+# TODO remove
+#class PathCheckStrategy(VerifierStrategy):
+#
+#    def strategy_setup(self, verifier):
+#        self._verifier = verifier
+#        self._unreachable = set()
+#        self._m = len(self._verifier._addtree)
+#        self._remaining_trees = list(range(self._m))
+#        self._bounds = [(-math.inf, math.inf)] * self._m
+#
+#    def get_reachability(self, tree, node):
+#        l = (tree.index(), tree.left(node))
+#        r = (tree.index(), tree.right(node))
+#        reachability = Verifier.Reachable.NONE
+#        if l not in self._unreachable:
+#            reachability |= Verifier.Reachable.LEFT
+#        if r not in self._unreachable:
+#            reachability |= Verifier.Reachable.RIGHT
+#        return reachability
+#
+#    def verify_setup(self):
+#        pass
+#
+#    def verify_step(self):
+#        if len(self._remaining_trees) == 0:
+#            return False
+#
+#        v = self._verifier
+#        for tree_index in self._remaining_trees:
+#            bounds_changed = self._test_tree_reachability(tree_index)
+#            if bounds_changed:
+#                wvar = v.wvar(tree_index)
+#                lo, hi = self._bounds[tree_index]
+#                v.add_constraint((wvar >= lo) & (wvar <= hi))
+#
+#        # TODO use better sort heuristic
+#        bnd = lambda i: self._bounds[i]
+#        self._remaining_trees.sort(
+#                key=lambda i: max(abs(bnd(i)[0]), abs(bnd(i)[1])),
+#                reverse=True)
+#
+#        # encode the best tree
+#        tree_index = self._remaining_trees.pop()
+#        tree = self._verifier._addtree[tree_index]
+#        enc = self._verifier._enc_tree(tree, tree.root())
+#        self._verifier.add_constraint(enc)
+#        return True
+#
+#    def verify_teardown(self):
+#        pass
+#
+#    # -- private --
+#
+#    def _test_tree_reachability(self, tree_index):
+#        v = self._verifier
+#        tree = v._addtree[tree_index]
+#        stack = [(tree.root(), True)]
+#
+#        lo =  math.inf
+#        hi = -math.inf
+#
+#        while len(stack) > 0:
+#            node, path_constraint = stack.pop()
+#
+#            if tree.is_leaf(node):
+#                leaf_value = tree.get_leaf_value(node)
+#                lo = min(lo, leaf_value)
+#                hi = max(hi, leaf_value)
+#                continue
+#
+#            reachability = self.get_reachability(tree, node)
+#            feat_id, split_value = tree.get_split(node)
+#            xvar = v.xvar(feat_id)
+#
+#            if reachability.covers(Verifier.Reachable.LEFT):
+#                left = tree.left(node)
+#                c = (xvar < split_value) & path_constraint
+#                check = v._check(c)
+#                if check == Verifier.Result.SAT:
+#                    stack.append((left, c))
+#                else:
+#                    self._unreachable.add((tree.index(), left))
+#
+#            if reachability.covers(Verifier.Reachable.RIGHT):
+#                right = tree.right(node)
+#                c = (xvar >= split_value) & path_constraint
+#                check = v._check(c)
+#                if check == Verifier.Result.SAT:
+#                    stack.append((right, c))
+#                else:
+#                    self._unreachable.add((tree.index(), right))
+#
+#        changed = self._bounds[tree_index] != (lo, hi)
+#        self._bounds[tree_index] = (lo, hi)
+#
+#        if changed:
+#            print("{:4}: DEBUG new bounds tree{}: [{:.4g}, {:.4g}]".format(
+#                v._iteration_count, tree.index(), lo, hi))
+#        return changed
 
 
 
 # -----------------------------------------------------------------------------
 
 
-class MultiInstanceVerifier:
-
-    def __init__(self, domains, addtree, backend,
-            num_instances=2,
-            strategy_factory=SplitCheckStrategy):
-        self.num_features = len(domains)
-        self._iteration_count = 0
-        self._status = Verifier.Result.UNKNOWN
-        self._backend = backend
-        self._verifiers = [Verifier(domains, addtree, backend,
-                                    strategy_factory(),
-                                    suffix=f"_{i}")
-            for i in range(num_instances)]
-
-    def __getitem__(self, verifier_index):
-        """
-        Use this to get the variables of the individual instance models to
-        construct constraints.
-        """
-        return self._verifiers[verifier_index]
-
-    def set_timeout(self, timeout):
-        self._backend.set_timeout(timeout)
-
-    def add_rvar(self, name): # just use the first verifier for these
-        self._verifiers[0].add_rvar(name)
-
-    def rvar(self, name):
-        return self._verifiers[0].rvar(name)
-
-    def add_bvar(self, name):
-        self._verifiers[0].add_bvar(name)
-
-    def bvar(self, name):
-        return self._verifiers[0].bvar(name)
-
-    def add_constraint(self, constraint):
-        self._backend.add_constraint(constraint)
-
-    def verify(self, constraint=True):
-        """
-        Exactly the same as other verifier, but add one tree from each instance
-        at a time.
-        """
-        for v in self._verifiers:
-            v._strategy.verify_setup()
-
-        while True: # a do-while
-            self._status = self._backend.check(constraint)
-
-            if self._status != Verifier.Result.SAT: break
-
-            ndone = 0
-            for v in self._verifiers:
-                if not v._strategy.verify_step():
-                    ndone += 1
-            assert ndone == 0 or ndone == len(self._verifiers)
-            if ndone > 0: break
-
-            self._backend.simplify()
-            self._iteration_count += 1
-
-        for v in self._verifiers:
-            v._strategy.verify_teardown()
-        return self._status
-
-    def model(self):
-        return [v.model() for v in self._verifiers]
-
-    def exclude_model(self, model):
-        for (m, v) in zip(model, self._verifiers):
-            v.exclude_model(m)
+#class MultiInstanceVerifier:
+#
+#    def __init__(self, domains, addtree, backend,
+#            num_instances=2,
+#            strategy_factory=SplitCheckStrategy):
+#        self._iteration_count = 0
+#        self._status = Verifier.Result.UNKNOWN
+#        self._backend = backend
+#        self._verifiers = [Verifier(domains, addtree, backend,
+#                                    strategy_factory(),
+#                                    suffix=f"_{i}")
+#            for i in range(num_instances)]
+#
+#    def __getitem__(self, verifier_index):
+#        """
+#        Use this to get the variables of the individual instance models to
+#        construct constraints.
+#        """
+#        return self._verifiers[verifier_index]
+#
+#    def set_timeout(self, timeout):
+#        self._backend.set_timeout(timeout)
+#
+#    def add_rvar(self, name): # just use the first verifier for these
+#        self._verifiers[0].add_rvar(name)
+#
+#    def rvar(self, name):
+#        return self._verifiers[0].rvar(name)
+#
+#    def add_bvar(self, name):
+#        self._verifiers[0].add_bvar(name)
+#
+#    def bvar(self, name):
+#        return self._verifiers[0].bvar(name)
+#
+#    def add_constraint(self, constraint):
+#        self._backend.add_constraint(constraint)
+#
+#    def verify(self, constraint=True):
+#        """
+#        Exactly the same as other verifier, but add one tree from each instance
+#        at a time.
+#        """
+#        for v in self._verifiers:
+#            v._strategy.verify_setup()
+#
+#        while True: # a do-while
+#            self._status = self._backend.check(constraint)
+#
+#            if self._status != Verifier.Result.SAT: break
+#
+#            ndone = 0
+#            for v in self._verifiers:
+#                if not v._strategy.verify_step():
+#                    ndone += 1
+#            assert ndone == 0 or ndone == len(self._verifiers)
+#            if ndone > 0: break
+#
+#            self._backend.simplify()
+#            self._iteration_count += 1
+#
+#        for v in self._verifiers:
+#            v._strategy.verify_teardown()
+#        return self._status
+#
+#    def model(self):
+#        return [v.model() for v in self._verifiers]
+#
+#    def exclude_model(self, model):
+#        for (m, v) in zip(model, self._verifiers):
+#            v.exclude_model(m)
 
