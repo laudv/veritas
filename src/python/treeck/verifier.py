@@ -115,34 +115,32 @@ class VerifierOrExpr(VerifierBoolExpr):
     def __init__(self, *disjuncts):
         self.disjuncts = disjuncts
 
-# TODO remove
-#class InDomainConstraint(VerifierAndExpr):
-#    def __init__(self, verifier, domains):
-#        cs = []
-#        for feat_id, d in domains:
-#            var = verifier.xvar(feat_id)
-#            if math.isinf(d.lo) and math.isinf(d.hi):
-#                continue # unconstrained feature -> everything possible
-#            elif math.isinf(d.lo): cs.append(var <  d.hi)
-#            elif math.isinf(d.hi): cs.append(var >= d.lo)
-#            else:
-#                cs.append(var >= d.lo)
-#                cs.append(var <  d.hi)
-#        super().__init__(*cs)
+def in_domain_constraint(verifier, domains):
+    cs = []
+    for feat_id, d in domains:
+        var = verifier.xvar(feat_id)
+        if math.isinf(d.lo) and math.isinf(d.hi):
+            continue # unconstrained feature -> everything possible
+        elif math.isinf(d.lo): cs.append(var <  d.hi)
+        elif math.isinf(d.hi): cs.append(var >= d.lo)
+        else:
+            cs.append(var >= d.lo)
+            cs.append(var <  d.hi)
+    return VerifierAndExpr(*cs)
 
-class NotInDomainConstraint(VerifierOrExpr):
-    def __init__(self, verifier, domains):
-        cs = []
-        for feat_id, d in domains.items():
-            var = verifier.xvar(feat_id)
-            if math.isinf(d.lo) and math.isinf(d.hi):
-                raise RuntimeError("Unconstrained feature -> nothing possible?")
-            elif math.isinf(d.lo): cs.append(var >= d.hi)
-            elif math.isinf(d.hi): cs.append(var <  d.lo)
-            else:
-                cs.append(var <  d.lo)
-                cs.append(var >= d.hi)
-        super().__init__(*cs)
+def not_in_domain_constraint(verifier, domains, strict=True):
+    cs = []
+    for feat_id, d in domains.items():
+        var = verifier.xvar(feat_id)
+        if math.isinf(d.lo) and math.isinf(d.hi):
+            raise RuntimeError("Unconstrained feature -> nothing possible?")
+        elif math.isinf(d.lo): cs.append(var >= d.hi)
+        elif math.isinf(d.hi): cs.append(var <  d.lo)
+        else:
+            cs.append((var < d.lo) | (var >= d.hi))
+    if strict:
+        return VerifierOrExpr(*cs)
+    return VerifierAndExpr(*cs)
 
 
 # -----------------------------------------------------------------------------
@@ -205,45 +203,6 @@ class VerifierBackend:
 # -----------------------------------------------------------------------------
 
 
-# TODO remove
-#class VerifierStrategy:
-#
-#    def strategy_setup(self, verifier):
-#        """
-#        Setup circular dependency between Strategy and Verifier. Verifier is
-#        responsible for calling this in its constructor.
-#        """
-#        pass
-#
-#    def get_reachability(self, tree, node):
-#        """ Given the split, can we go left, right, or both?  """
-#        return Verifier.Reachable.BOTH
-#
-#    def verify_setup(self):
-#        """
-#        Before starting the verification loop over the verification steps, this
-#        method is called by the verifier.
-#        """
-#        pass
-#
-#    def verify_step(self):
-#        """
-#        This adds the next batch of constraints to the backend. Returns True if
-#        there is new work to verify, or False if finished.
-#        """
-#        raise RuntimeError("abstract method")
-#
-#    def verify_teardown(self):
-#        """
-#        Called after the verification loop, regardless of outcome. Check
-#        outcome in `verifier._status`.
-#        """
-#        pass
-
-
-
-# -----------------------------------------------------------------------------
-
 
 class VerifierTimeout(Exception):
     def __init__(self, unk_after):
@@ -252,7 +211,10 @@ class VerifierTimeout(Exception):
         self.unk_after = unk_after
 
 
+
 # -----------------------------------------------------------------------------
+
+
 
 class Verifier:
     class Result(Enum):
@@ -304,7 +266,7 @@ class Verifier:
     def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
         assert name not in self._rvars
-        rvar = self._backend.add_real_var(f"r_{name}{self._suffix}")
+        rvar = self._backend.add_real_var(f"r_{name}")
         self._rvars[name] = rvar
 
     def rvar(self, name):
@@ -314,7 +276,7 @@ class Verifier:
     def add_bvar(self, name):
         """ Add an additional decision variable to the problem. """
         assert name not in self._bvars
-        bvar = self._backend.add_bool_var(f"b_{name}{self._suffix}")
+        bvar = self._backend.add_bool_var(f"b_{name}")
         self._bvars[name] = bvar
 
     def bvar(self, name):
@@ -376,16 +338,16 @@ class Verifier:
         return self._backend.model(*args)
 
     def model_family(self, model):
+        """
+        Get ranges on the xvar values within which the model does not
+        change its predicted value.
+        """
         if len(self._instances) == 1:
             return self._xs_family(model["xs"])
         return [self._xs_family(model[i]["xs"])
                 for i in range(len(self._instances))]
 
     def _xs_family(self, xs):
-        """
-        Get ranges on the xvar values within which the model does not
-        change its predicted value.
-        """
         if self._splits is None:
             self._splits = self._addtree.get_splits()
 
@@ -413,36 +375,11 @@ class Verifier:
             yield i, x, lo, hi
 
 
-# TODO remove -> SplitTreeLeaf::get_tree_bounds
-#    def _determine_tree_bounds(self, tree_index):
-#        tree = self._addtree[tree_index]
-#        lo =  math.inf
-#        hi = -math.inf
-#
-#        stack = [tree.root()]
-#        while len(stack) > 0:
-#            node = stack.pop()
-#
-#            if tree.is_leaf(node):
-#                leaf_value = tree.get_leaf_value(node)
-#                lo = min(lo, leaf_value)
-#                hi = max(hi, leaf_value)
-#                continue
-#
-#            feat_id, split_value = tree.get_split(node)
-#            reachability = self._strategy.get_reachability(tree, node)
-#            if reachability.covers(Verifier.Reachable.RIGHT):
-#                stack.append(tree.right(node))
-#            if reachability.covers(Verifier.Reachable.LEFT):
-#                stack.append(tree.left(node))
-#
-#        return (lo, hi)
-
-
-
 
 
 # -----------------------------------------------------------------------------
+
+
 
 class AddTreeInstance:
 

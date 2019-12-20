@@ -71,7 +71,7 @@ class Z3Backend(VerifierBackend):
                     model[name] = [self._extract_var(z3model, v) for v in vs]
             elif isinstance(vs, dict):
                 #print("recur dict:", name, "=>", vs)
-                model[name] = self._model_aux(z3model, vs)
+                model[name] = self._model_aux(z3model, list(vs.items()))
             else:
                 #print("plain var:", name, "=>", vs)
                 model[name] = self._extract_var(z3model, vs)
