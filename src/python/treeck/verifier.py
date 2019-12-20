@@ -2,7 +2,6 @@ import math, timeit
 from bisect import bisect
 
 from enum import Enum
-
 from . import RealDomain
 
 class VerifierExpr:
@@ -134,7 +133,7 @@ class VerifierOrExpr(VerifierBoolExpr):
 class NotInDomainConstraint(VerifierOrExpr):
     def __init__(self, verifier, domains):
         cs = []
-        for feat_id, d in domains:
+        for feat_id, d in domains.items():
             var = verifier.xvar(feat_id)
             if math.isinf(d.lo) and math.isinf(d.hi):
                 raise RuntimeError("Unconstrained feature -> nothing possible?")
@@ -266,29 +265,41 @@ class Verifier:
                 raise RuntimeError(f"Unexpected {Verifier.Result.UNKNOWN}")
             return self == Verifier.Result.SAT
 
-    def __init__(self, addtree, splittree_leaf, backend, suffix=""):
+    def __init__(self, addtree, splittree_leaf, backend,
+            num_instances=1):
+
         self._addtree = addtree
         self._stree = splittree_leaf
         self._backend = backend
-        self._suffix = suffix
+        self._instances = [AddTreeInstance(self, f"_{i}")
+                for i in range(num_instances)]
 
-        self._xvars = [backend.add_real_var(f"x{i}{suffix}")
-                for i in range(addtree.num_features())]
-        self._wvars = [backend.add_real_var(f"w{i}{suffix}")
-                for i in range(len(self._addtree))]
         self._rvars = {} # real additional variables
         self._bvars = {} # boolean additional variables
-        self._fvar = backend.add_real_var(f"f{suffix}")
 
-        self._status = Verifier.Result.UNKNOWN
         self._splits = None
+        self._status = Verifier.Result.UNKNOWN
 
         self.check_time = -math.inf
         self.nchecks = 0
 
-        # initialize backend
-        fexpr = SumExpr(self._addtree.base_score, *self._wvars)
-        self._backend.add_constraint(fexpr == self._fvar)
+    def instance(self, instance=0):
+        return self._instances[instance]
+
+    def xvar(self, feat_id, instance=0):
+        return self.instance(instance).xvar(feat_id)
+
+    def wvar(self, tree_index, instance=0):
+        return self.instance(instance).wvar(tree_index)
+
+    def fvar(self, instance=0):
+        return self.instance(instance).fvar()
+
+    def add_tree(self, tree_index, instance=0):
+        self.instance(instance).add_tree(tree_index)
+
+    def add_all_trees(self, instance=0):
+        self.instance(instance).add_all_trees()
 
     def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
@@ -310,18 +321,6 @@ class Verifier:
         """ Get one of the additional decision variables. """
         return Bvar(self, name)
 
-    def xvar(self, feat_id):
-        """ Get the decision variable associated with feature `feat_id`. """
-        return Xvar(self, feat_id)
-
-    def wvar(self, tree_index):
-        """ Get the decision variable associated with the output value of tree `tree_index`. """
-        return Wvar(self, tree_index)
-
-    def fvar(self):
-        """ Get the decision variable associated with the output of the model. """
-        return Fvar(self)
-
     def add_constraint(self, constraint):
         """
         Add a user-defined constraint. Use add_rvar, rvar, bvar, xvar, and fvar
@@ -330,6 +329,7 @@ class Verifier:
         self._backend.add_constraint(constraint)
 
     def set_timeout(self, timeout):
+        """ Set the timeout of the backend solver. """
         self._backend.set_timeout(timeout)
 
     def check(self, *constraints):
@@ -349,8 +349,8 @@ class Verifier:
 
     def model(self):
         """
-        If a call to `verify` was successful, i.e., the output was
-        `Verifier.SAT`, then this method returns a `dict` containing the
+        If a `check` was successful, i.e., the output was
+        `Verifier.Result.SAT`, then this method returns a `dict` containing the
         variable assignments that made the model SAT. The dict has the
         following structure:
 
@@ -362,59 +362,44 @@ class Verifier:
             "bs": { name => value } value map of additional bool variables
             }
         """
-        return self._backend.model(
-                ("xs", self._xvars),
-                ("ws", self._wvars),
-                ("f", self._fvar),
-                ("rs", self._rvars),
-                ("bs", self._bvars))
+        if len(self._instances) == 1:
+            args = [("xs", self._instances[0]._xvars),
+                    ("ws", self._instances[0]._wvars),
+                    ("f",  self._instances[0]._fvar )]
+        else:
+            args = [(i, [("xs", inst._xvars),
+                         ("ws", inst._wvars),
+                         ("f",  inst._fvar )])
+                    for i, inst in enumerate(self._instances)]
+        args.append(("rs", self._rvars))
+        args.append(("bs", self._bvars))
+        return self._backend.model(*args)
 
-    def add_tree(self, tree_index):
-        """ Add the full encoding of a tree to the verifier.  """
-        tree = self._addtree[tree_index]
-        enc = self._enc_tree(tree, tree.root())
-        self.add_constraint(enc)
-    
-    def add_all_trees(self):
-        """ Add all trees in the addtree. """
-        for tree_index in range(len(self._addtree)):
-            self.add_tree(tree_index)
+    def model_family(self, model):
+        if len(self._instances) == 1:
+            return self._xs_family(model["xs"])
+        return [self._xs_family(model[i]["xs"])
+                for i in range(len(self._instances))]
 
-    def model_family(self):
-        # TODO implement, then remove exclude model and replace by add_constraint(..)
-        # e.g. v.add_constraint(StrictModelExcludeConstraint(mf))
-        #      v.add_constraint(RelaxedModelExcludeConstraint(mf))
-        pass
-
-    # TODO see above
-    def exclude_model(self, model):
+    def _xs_family(self, xs):
         """
-        Mark the domain region inhabited by `model[xs]` as impossible.
-
-        Usage for model sampling:
-        ```
-        while cond:
-            status = verifier.verify()
-            if status != Verifier.SAT: break
-            model = verifier.model()
-            # DO SOMETHING WITH model
-            verifier.exclude_model(model)
-        ```
+        Get ranges on the xvar values within which the model does not
+        change its predicted value.
         """
         if self._splits is None:
             self._splits = self._addtree.get_splits()
 
-        domains = []
-        for feat_id, _, lo, hi in self._find_sample_intervals(model):
+        domains = {}
+        for feat_id, _, lo, hi in self._find_sample_intervals(xs):
             d = RealDomain(lo, hi)
             if d.is_everything():
                 raise RuntimeError("Unconstrained feature!")
             #print("{:.6g} <= {:.6g} < {:.6g}".format(lo, x, hi))
-            domains.append((feat_id, d))
-        self._backend.add_constraint(NotInDomainConstraint(self, domains))
+            domains[feat_id] = d
+        return domains
 
-    def _find_sample_intervals(self, model): # helper `exclude_assignment`
-        for i, x in enumerate(model["xs"]):
+    def _find_sample_intervals(self, xs):
+        for i, x in enumerate(xs):
             if x == None: continue
             if i not in self._splits: continue # feature not used in splits of trees
             split_values = self._splits[i]
@@ -427,22 +412,6 @@ class Verifier:
 
             yield i, x, lo, hi
 
-    def _enc_tree(self, tree, node):
-        if tree.is_leaf(node):
-            wvar = self._wvars[tree.index()]
-            leaf_value = tree.get_leaf_value(node)
-            return self._backend.encode_leaf(wvar, leaf_value)
-        else:
-            tree_index = tree.index()
-            feat_id, split_value = tree.get_split(node)
-            xvar = self._xvars[feat_id]
-            left, right = tree.left(node), tree.right(node)
-            l, r = False, False
-            if self._stree.is_reachable(tree_index, left):
-                l = self._enc_tree(tree, left)
-            if self._stree.is_reachable(tree_index, right):
-                r = self._enc_tree(tree, right)
-            return self._backend.encode_split(xvar, split_value, l, r)
 
 # TODO remove -> SplitTreeLeaf::get_tree_bounds
 #    def _determine_tree_bounds(self, tree_index):
@@ -468,6 +437,68 @@ class Verifier:
 #                stack.append(tree.left(node))
 #
 #        return (lo, hi)
+
+
+
+
+
+# -----------------------------------------------------------------------------
+
+class AddTreeInstance:
+
+    def __init__(self, verifier, suffix):
+        self._v = verifier
+
+        self._xvars = [self._v._backend.add_real_var(f"x{i}{suffix}")
+                for i in range(self._v._addtree.num_features())]
+        self._wvars = [self._v._backend.add_real_var(f"w{i}{suffix}")
+                for i in range(len(self._v._addtree))]
+        self._fvar = self._v._backend.add_real_var(f"f{suffix}")
+
+        # FVAR = sum{WVARS}
+        fexpr = SumExpr(self._v._addtree.base_score, *self._wvars)
+        self._v.add_constraint(fexpr == self.fvar())
+
+    def xvar(self, feat_id):
+        """ Get the decision variable associated with feature `feat_id`. """
+        return Xvar(self, feat_id)
+
+    def wvar(self, tree_index):
+        """ Get the decision variable associated with the output value of tree `tree_index`. """
+        return Wvar(self, tree_index)
+
+    def fvar(self):
+        """ Get the decision variable associated with the output of the model. """
+        return Fvar(self)
+
+    def add_tree(self, tree_index):
+        """ Add the full encoding of a tree to the backend.  """
+        tree = self._v._addtree[tree_index]
+        enc = self._enc_tree(tree, tree.root())
+        self._v._backend.add_constraint(enc)
+
+    def add_all_trees(self):
+        """ Add all trees in the addtree. """
+        for tree_index in range(len(self._v._addtree)):
+            self.add_tree(tree_index)
+
+    def _enc_tree(self, tree, node):
+        if tree.is_leaf(node):
+            wvar = self._wvars[tree.index()]
+            leaf_value = tree.get_leaf_value(node)
+            return self._v._backend.encode_leaf(wvar, leaf_value)
+        else:
+            tree_index = tree.index()
+            feat_id, split_value = tree.get_split(node)
+            xvar = self._xvars[feat_id]
+            left, right = tree.left(node), tree.right(node)
+            l, r = False, False
+            if self._v._stree.is_reachable(tree_index, left):
+                l = self._enc_tree(tree, left)
+            if self._v._stree.is_reachable(tree_index, right):
+                r = self._enc_tree(tree, right)
+            return self._v._backend.encode_split(xvar, split_value, l, r)
+
 
 
 
@@ -685,81 +716,3 @@ class Verifier:
 #            print("{:4}: DEBUG new bounds tree{}: [{:.4g}, {:.4g}]".format(
 #                v._iteration_count, tree.index(), lo, hi))
 #        return changed
-
-
-
-# -----------------------------------------------------------------------------
-
-
-#class MultiInstanceVerifier:
-#
-#    def __init__(self, domains, addtree, backend,
-#            num_instances=2,
-#            strategy_factory=SplitCheckStrategy):
-#        self._iteration_count = 0
-#        self._status = Verifier.Result.UNKNOWN
-#        self._backend = backend
-#        self._verifiers = [Verifier(domains, addtree, backend,
-#                                    strategy_factory(),
-#                                    suffix=f"_{i}")
-#            for i in range(num_instances)]
-#
-#    def __getitem__(self, verifier_index):
-#        """
-#        Use this to get the variables of the individual instance models to
-#        construct constraints.
-#        """
-#        return self._verifiers[verifier_index]
-#
-#    def set_timeout(self, timeout):
-#        self._backend.set_timeout(timeout)
-#
-#    def add_rvar(self, name): # just use the first verifier for these
-#        self._verifiers[0].add_rvar(name)
-#
-#    def rvar(self, name):
-#        return self._verifiers[0].rvar(name)
-#
-#    def add_bvar(self, name):
-#        self._verifiers[0].add_bvar(name)
-#
-#    def bvar(self, name):
-#        return self._verifiers[0].bvar(name)
-#
-#    def add_constraint(self, constraint):
-#        self._backend.add_constraint(constraint)
-#
-#    def verify(self, constraint=True):
-#        """
-#        Exactly the same as other verifier, but add one tree from each instance
-#        at a time.
-#        """
-#        for v in self._verifiers:
-#            v._strategy.verify_setup()
-#
-#        while True: # a do-while
-#            self._status = self._backend.check(constraint)
-#
-#            if self._status != Verifier.Result.SAT: break
-#
-#            ndone = 0
-#            for v in self._verifiers:
-#                if not v._strategy.verify_step():
-#                    ndone += 1
-#            assert ndone == 0 or ndone == len(self._verifiers)
-#            if ndone > 0: break
-#
-#            self._backend.simplify()
-#            self._iteration_count += 1
-#
-#        for v in self._verifiers:
-#            v._strategy.verify_teardown()
-#        return self._status
-#
-#    def model(self):
-#        return [v.model() for v in self._verifiers]
-#
-#    def exclude_model(self, model):
-#        for (m, v) in zip(model, self._verifiers):
-#            v.exclude_model(m)
-

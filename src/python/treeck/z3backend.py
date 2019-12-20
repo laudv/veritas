@@ -55,14 +55,25 @@ class Z3Backend(VerifierBackend):
         else:                    return Verifier.Result.UNKNOWN
 
     def model(self, *name_vars_pairs):
-        model = {}
         z3model = self._solver.model()
+        return self._model_aux(z3model, name_vars_pairs)
+
+    def _model_aux(self, z3model, name_vars_pairs):
+        model = {}
         for (name, vs) in name_vars_pairs:
+            # either (pair (name=>(dict|list|var), list=[var...] or [name=>(dict|list|var)... recur])
             if isinstance(vs, list):
-                model[name] = [self._extract_var(z3model, v) for v in vs]
+                if len(vs) > 0 and isinstance(vs[0], tuple):
+                    #print("recur list:", name, "=>", vs)
+                    model[name] = self._model_aux(z3model, vs)
+                else:
+                    #print("plain list:", name, "=>", vs)
+                    model[name] = [self._extract_var(z3model, v) for v in vs]
             elif isinstance(vs, dict):
-                model[name] = dict([(k, self._extract_var(z3model, v)) for (k, v) in vs.items()])
+                #print("recur dict:", name, "=>", vs)
+                model[name] = self._model_aux(z3model, vs)
             else:
+                #print("plain var:", name, "=>", vs)
                 model[name] = self._extract_var(z3model, vs)
         return model
 

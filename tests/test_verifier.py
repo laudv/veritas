@@ -4,7 +4,7 @@ import numpy as np
 import z3
 
 from treeck import *
-from treeck.verifier import Verifier
+from treeck.verifier import Verifier, NotInDomainConstraint
 from treeck.z3backend import Z3Backend as Backend
 
 class TestVerifier(unittest.TestCase):
@@ -21,8 +21,8 @@ class TestVerifier(unittest.TestCase):
 
         st = SplitTree(at, {})
         l0 = st.get_leaf(st.domtree().root())
-
         v = Verifier(at, l0, Backend())
+
         self.assertEqual(v._backend.check(v.fvar() < 0.0), Verifier.Result.SAT)
         v.add_tree(0)
         self.assertEqual(v._backend.check(v.fvar() < 0.0), Verifier.Result.UNSAT)
@@ -107,13 +107,64 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.SAT)
 
         model = v.model()
+        #print(model)
         self.assertEqual(model["ws"], [0.3, -0.3])
-        v.exclude_model(model)
+        #print(v.model_family(model))
+        v.add_constraint(NotInDomainConstraint(v, v.model_family(model)))
         self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.SAT)
         model = v.model()
         self.assertEqual(model["ws"], [0.3, -0.3])
-        v.exclude_model(model)
+        v.add_constraint(NotInDomainConstraint(v, v.model_family(model)))
         self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.UNSAT)
+
+    def test_multi_instance(self):
+        at = AddTree(2)
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 0, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+        t.set_leaf_value( t.left(t.right(t.root())), 0.3)
+        t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 1, 1)
+        t.split(t.right(t.root()), 1, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+        t.set_leaf_value( t.left(t.right(t.root())), -0.3)
+        t.set_leaf_value(t.right(t.right(t.root())), -0.4)
+
+        #print(at)
+
+        st = SplitTree(at, {})
+        l0 = st.get_leaf(st.domtree().root())
+        v = Verifier(at, l0, Backend(), num_instances=2);
+        v.add_all_trees(0); v.add_all_trees(1)
+        v.add_constraint(v.instance(0).fvar() > v.instance(1).fvar())
+        v.add_constraint(v.instance(1).fvar() > 0)
+        v.add_constraint(v.instance(0).xvar(0) == v.instance(1).xvar(0))
+        v.add_constraint(v.instance(1).xvar(1) < 1)
+        models = []
+        while v.check() == Verifier.Result.SAT:
+            m = v.model()
+
+            self.assertGreater(m[0]["f"], m[1]["f"])
+            self.assertGreater(m[1]["f"], 0.0)
+            self.assertEqual(m[0]["xs"][0], m[1]["xs"][0])
+            self.assertLess(m[1]["xs"][1], 1.0)
+
+            print("MODEL xs", m[0]["xs"], m[1]["xs"],
+                    "ws", m[0]["ws"], m[1]["ws"],
+                    "f", m[0]["f"], m[1]["f"])
+            models.append(m)
+            fam = v.model_family(m)
+            #print("FAM", fam)
+            v.add_constraint(NotInDomainConstraint(v, fam[0]))
+            v.add_constraint(NotInDomainConstraint(v, fam[1]))
+
+        self.assertEqual(len(models), 4)
 
     #def test_img(self):
     #    with open("tests/models/xgb-img-easy-values.json") as f:
@@ -183,51 +234,6 @@ class TestVerifier(unittest.TestCase):
     #    #for (x, y) in models:
     #    #    ax.scatter([x], [y], marker="s", c="b")
     #    #plt.show()
-
-    #def test_multi_instance(self):
-    #    at = AddTree(2)
-    #    t = at.add_tree();
-    #    t.split(t.root(), 0, 2)
-    #    t.split( t.left(t.root()), 0, 1)
-    #    t.split(t.right(t.root()), 0, 3)
-    #    t.set_leaf_value( t.left( t.left(t.root())), 0.1)
-    #    t.set_leaf_value(t.right( t.left(t.root())), 0.2)
-    #    t.set_leaf_value( t.left(t.right(t.root())), 0.3)
-    #    t.set_leaf_value(t.right(t.right(t.root())), 0.4)
-    #    t = at.add_tree();
-    #    t.split(t.root(), 0, 2)
-    #    t.split( t.left(t.root()), 1, 1)
-    #    t.split(t.right(t.root()), 1, 3)
-    #    t.set_leaf_value( t.left( t.left(t.root())), 0.1)
-    #    t.set_leaf_value(t.right( t.left(t.root())), 0.2)
-    #    t.set_leaf_value( t.left(t.right(t.root())), -0.3)
-    #    t.set_leaf_value(t.right(t.right(t.root())), -0.4)
-
-    #    mv = MultiInstanceVerifier([RealDomain(), RealDomain()], at, Backend())
-    #    mv.add_constraint(mv[0].fvar() > mv[1].fvar())
-    #    mv.add_constraint(mv[1].fvar() > 0)
-    #    mv.add_constraint(mv[0].xvar(0) == mv[1].xvar(0))
-    #    mv.add_constraint(mv[1].xvar(1) < 1)
-    #    models = []
-    #    while mv.verify() == Verifier.Result.SAT:
-    #        m = mv.model()
-    #        models.append(m)
-    #        mv.exclude_model(m)
-
-    #    self.assertEqual(mv[1]._strategy._reachability[(1, 1.0)], Verifier.Reachable.LEFT)
-    #    self.assertEqual(mv[1]._strategy._reachability[(1, 3.0)], Verifier.Reachable.LEFT)
-
-    #    #print(mv._backend._solver)
-
-    #    self.assertEqual(len(models), 2)
-    #    for mm in models:
-    #        self.assertTrue(mm[0]["f"] > mm[1]["f"])
-    #        self.assertTrue(mm[1]["f"] > 0)
-    #        self.assertEqual(mm[0]["xs"][0], mm[1]["xs"][0])
-    #        self.assertTrue(mm[1]["xs"][1] < 1)
-
-    #        #for m in mm: print(m)
-    #        #print()
 
     #def test_mnist_multi_instance(self):
     #    at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
