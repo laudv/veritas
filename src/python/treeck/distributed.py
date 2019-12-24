@@ -23,6 +23,7 @@ class DistributedVerifier:
         self._client = client # dask client
         self._st = splittree
         self._at = splittree.addtree()
+        self._at_fut = client.scatter(self._at, broadcast=True) # distribute addtree to all workers
         self._verifier_factory = verifier_factory # (addtree, splittree_leaf) -> Verifier
 
         self._check_paths_opt = check_paths
@@ -33,9 +34,6 @@ class DistributedVerifier:
         l0 = self._st.get_leaf(0)
 
         # TODO add domain constraints to verifier
-
-        # 0: distribute addtree to all workers
-        self._at_fut = self._client.scatter(self._at, broadcast=True)
 
         # 1: loop over trees, check reachability of each path from root
         if self._check_paths_opt:
