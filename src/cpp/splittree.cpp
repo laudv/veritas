@@ -406,6 +406,12 @@ namespace treeck {
         return *this;
     }
 
+    NodeId
+    SplitTreeLeaf::domtree_node_id() const
+    {
+        return domtree_node_id_;
+    }
+
     bool
     SplitTreeLeaf::is_reachable(size_t tree_index, NodeId node_id) const
     {

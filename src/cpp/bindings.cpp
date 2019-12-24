@@ -144,6 +144,7 @@ PYBIND11_MODULE(pytreeck, m) {
     py::class_<SplitTreeLeaf>(m, "SplitTreeLeaf")
         .def_readonly("split_score", &SplitTreeLeaf::split_score)
         .def_readonly("split_balance", &SplitTreeLeaf::split_balance)
+        .def("domtree_node_id", &SplitTreeLeaf::domtree_node_id)
         .def("is_reachable", &SplitTreeLeaf::is_reachable)
         .def("mark_unreachable", &SplitTreeLeaf::mark_unreachable)
         .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split)

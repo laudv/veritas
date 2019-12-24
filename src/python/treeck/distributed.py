@@ -1,4 +1,5 @@
 import codecs, time, io, json
+
 from enum import Enum
 from dask.distributed import wait, get_worker
 
@@ -14,6 +15,7 @@ class DistributedVerifier:
             verifier_factory,
             check_paths = True,
             saturate_workers_from_start = True,
+            saturate_workers_factor = 1.0,
             stop_when_sat = False):
 
         self._timeout_start = 60
@@ -28,6 +30,7 @@ class DistributedVerifier:
 
         self._check_paths_opt = check_paths
         self._saturate_workers_opt = saturate_workers_from_start
+        self._saturate_workers_factor_opt = saturate_workers_factor
         self._stop_when_sat_opt = stop_when_sat
 
     def check(self):
@@ -42,7 +45,8 @@ class DistributedVerifier:
         # 2: splits until we have a piece of work for each worker
         if self._saturate_workers_opt:
             nworkers = sum(self._client.nthreads().values())
-            ls = self._generate_tasks(l0, nworkers)
+            ntasks = int(round(self._saturate_workers_factor_opt * nworkers))
+            ls = self._generate_splits(l0, ntasks)
         else:
             ls = [l0]
 
@@ -68,9 +72,33 @@ class DistributedVerifier:
         wait(fs)
         return SplitTreeLeaf.merge(list(map(lambda f: f.result(), fs)))
 
-    def _generate_tasks(self, l0, ntasks):
+    def _generate_splits(self, l0, ntasks):
         # split and collects splittree_leafs
-        pass
+        l0.find_best_domtree_split(self._at)
+        ls = [l0]
+        while len(ls) < ntasks:
+            max_score = 0
+            max_lx = None
+            for lx in ls:
+                print("lx", lx, "with score", lx.split_score)
+                if lx.split_score > max_score:
+                    max_score = lx.split_score
+                    max_lx = lx
+
+            ls.remove(max_lx)
+            nid = max_lx.domtree_node_id()
+
+            print("splitting domtree_node_id", nid, max_lx.get_best_split())
+            self._st.split(max_lx)
+
+            domtree = self._st.domtree()
+            l, r = domtree.left(nid), domtree.right(nid)
+            ll, lr = self._st.get_leaf(l), self._st.get_leaf(r)
+            ll.find_best_domtree_split(self._at)
+            lr.find_best_domtree_split(self._at)
+            ls += [ll, lr]
+
+        return ls
 
 
     # - WORKERS ------------------------------------------------------------- #

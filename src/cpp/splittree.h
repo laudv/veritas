@@ -136,6 +136,7 @@ namespace treeck {
         SplitTreeLeaf& operator=(const SplitTreeLeaf& other);
         SplitTreeLeaf& operator=(SplitTreeLeaf&& other);
 
+        NodeId domtree_node_id() const;
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 

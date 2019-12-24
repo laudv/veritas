@@ -14,7 +14,7 @@ from dask.distributed import Client
 from start_dask import start_local
 
 class TestDistributedVerifier(unittest.TestCase):
-    def test_img1(self):
+    def test_img_check_paths(self):
         def vfactory(at, leaf):
             v = Verifier(at, leaf, Backend())
             v.add_constraint(v.fvar() < 0.0)
@@ -91,6 +91,23 @@ class TestDistributedVerifier(unittest.TestCase):
             test_reachable(self.assertTrue, l0)
             l0 = dv._check_paths(l0)
             test_reachable(self.assertFalse, l0)
+
+    def test_img_generate_splits(self):
+        def vfactory(at, leaf):
+            v = Verifier(at, leaf, Backend())
+            v.add_constraint(v.fvar() < 0.0)
+            v.add_constraint(v.xvar(0) > 50)
+            return v
+
+        with Client("tcp://localhost:30333") as client:
+        #with start_local() as client:
+            client.run(importlib.reload, treeck)
+            at = AddTree.read("tests/models/xgb-img-easy.json")
+            st = SplitTree(at, {})
+            dv = DistributedVerifier(client, st, vfactory,
+                    saturate_workers_factor = 10)
+
+            dv.check()
 
 
             #client.shutdown()
