@@ -1,8 +1,8 @@
 import codecs, time, io, json
 from enum import Enum
-from dask.distributed import wait
+from dask.distributed import wait, get_worker
 
-from .pytreeck import AddTree, RealDomain
+from .pytreeck import AddTree, RealDomain, SplitTreeLeaf
 from .verifier import Verifier, VerifierTimeout
 
 
@@ -21,7 +21,8 @@ class DistributedVerifier:
         self._timeout_rate = 1.5
 
         self._client = client # dask client
-        self._st = splittree # _st.addtree() has addtree
+        self._st = splittree
+        self._at = splittree.addtree()
         self._verifier_factory = verifier_factory # (addtree, splittree_leaf) -> Verifier
 
         self._check_paths_opt = check_paths
@@ -31,12 +32,14 @@ class DistributedVerifier:
     def check(self):
         l0 = self._st.get_leaf(0)
 
+        # TODO add domain constraints to verifier
+
         # 0: distribute addtree to all workers
-        # TODO
+        self._at_fut = self._client.scatter(self._at, broadcast=True)
 
         # 1: loop over trees, check reachability of each path from root
         if self._check_paths_opt:
-            self._check_paths(l0)
+            l0 = self._check_paths(l0)
 
         # 2: splits until we have a piece of work for each worker
         if self._saturate_workers_opt:
@@ -55,11 +58,55 @@ class DistributedVerifier:
 
     def _check_paths(self, l0):
         # update reachabilities in splittree_leaf 0 in parallel
-        pass
+        fs = []
+        for tree_index in range(len(self._at)):
+            f = self._client.submit(DistributedVerifier._check_tree_paths,
+                self._at_fut,
+                tree_index,
+                l0,
+                self._verifier_factory)
+            fs.append(f)
+            pass
+        wait(fs)
+        return SplitTreeLeaf.merge(list(map(lambda f: f.result(), fs)))
 
     def _generate_tasks(self, l0, ntasks):
         # split and collects splittree_leafs
         pass
+
+
+    # - WORKERS ------------------------------------------------------------- #
+
+    @staticmethod
+    def _check_tree_paths(at, tree_index, l0, vfactory):
+        tree = at[tree_index]
+        stack = [(tree.root(), True)]
+        v = vfactory(at, l0)
+
+        while len(stack) > 0:
+            node, path_constraint = stack.pop()
+
+            l, r = tree.left(node), tree.right(node)
+            feat_id, split_value = tree.get_split(node)
+            xvar = v.xvar(feat_id)
+
+            if tree.is_internal(l) and l0.is_reachable(tree_index, l):
+                path_constraint_l = (xvar < split_value) & path_constraint;
+                if v.check(path_constraint_l).is_sat():
+                    stack.append((l, path_constraint_l))
+                else:
+                    print(f"unreachable  left: {tree_index} {l}")
+                    l0.mark_unreachable(tree_index, l)
+
+            if tree.is_internal(r) and l0.is_reachable(tree_index, r):
+                path_constraint_r = (xvar >= split_value) & path_constraint;
+                if v.check(path_constraint_r).is_sat():
+                    stack.append((r, path_constraint_r))
+                else:
+                    print(f"unreachable right: {tree_index} {r}")
+                    l0.mark_unreachable(tree_index, r)
+
+        return l0
 
 
     #def run(self):

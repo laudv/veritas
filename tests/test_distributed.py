@@ -16,7 +16,7 @@ from start_dask import start_local
 class TestDistributedVerifier(unittest.TestCase):
     def test_img1(self):
         def vfactory(at, leaf):
-            v = Verifier(at, l0, Backend())
+            v = Verifier(at, leaf, Backend())
             v.add_constraint(v.fvar() < 0.0)
             v.add_constraint(v.xvar(0) > 50)
             return v
