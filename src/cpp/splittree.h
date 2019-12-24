@@ -55,6 +55,8 @@ namespace treeck {
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
+        void combine(const IsReachable& other);
+
         template <typename Archive>
         void serialize(Archive& archive);
     };
@@ -140,6 +142,8 @@ namespace treeck {
         void find_best_domtree_split(const AddTree& addtree);
         LtSplit get_best_split() const;
         std::tuple<double, double> get_tree_bounds(const AddTree& at, size_t tree_index);
+
+        static SplitTreeLeaf merge(const std::vector<SplitTreeLeaf>& leafs);
 
         std::string to_json() const;
         static SplitTreeLeaf from_json(const std::string& json);

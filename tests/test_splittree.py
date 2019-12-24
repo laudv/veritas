@@ -161,6 +161,33 @@ class TestSplitTree(unittest.TestCase):
         l2t = stt.get_leaf(2)
         test_l2(l2t)
 
+    def test_merge(self):
+        at = AddTree(1)
+        at.base_score = 10
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 0, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+        t.set_leaf_value( t.left(t.right(t.root())), 0.3)
+        t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+
+        st = SplitTree(at, {})
+        l0_0 = st.get_leaf(0)
+        l0_1 = st.get_leaf(0)
+
+        l0_0.mark_unreachable(0, 1)
+        self.assertFalse(l0_0.is_reachable(0, 1))
+        self.assertTrue( l0_0.is_reachable(0, 2))
+        l0_1.mark_unreachable(0, 2)
+        self.assertFalse(l0_1.is_reachable(0, 2))
+        self.assertTrue( l0_1.is_reachable(0, 1))
+
+        l0_m = SplitTreeLeaf.merge([l0_0, l0_1]);
+        self.assertFalse(l0_m.is_reachable(0, 2))
+        self.assertFalse(l0_m.is_reachable(0, 1))
+
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-hard.json")
         st = SplitTree(at, {})

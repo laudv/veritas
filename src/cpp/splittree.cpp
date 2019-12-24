@@ -99,6 +99,12 @@ namespace treeck {
         unreachable_.insert(k);
     }
 
+    void
+    IsReachable::combine(const IsReachable& other)
+    {
+        unreachable_.insert(other.unreachable_.begin(), other.unreachable_.end());
+    }
+
     template <typename Archive>
     void
     IsReachable::serialize(Archive& archive)
@@ -572,6 +578,26 @@ namespace treeck {
                     feat_id, new_dom, marked_l) +
             count_unreachable_leafs(addtree, tree_index, node.right(),
                     feat_id, new_dom, marked_r);
+    }
+
+    SplitTreeLeaf
+    SplitTreeLeaf::merge(const std::vector<SplitTreeLeaf>& leafs)
+    {
+        {
+            auto it = leafs.cbegin();
+            NodeId id = it->domtree_node_id_;
+            ++it;
+            for (; it != leafs.cend(); ++it)
+                if (id != it->domtree_node_id_)
+                    throw std::runtime_error("domtree_node_ids do not match");
+        }
+
+        auto it = leafs.begin();
+        SplitTreeLeaf l(*it);
+        ++it;
+        for (; it != leafs.end(); ++it)
+            l.is_reachable_.combine(it->is_reachable_);
+        return l;
     }
 
     std::string
