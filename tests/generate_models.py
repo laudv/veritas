@@ -144,6 +144,32 @@ def generate_img():
             objective="reg:squarederror",
             nthread=4,
             tree_method="hist",
+            max_depth=3,
+            learning_rate=1.0,
+            n_estimators=3)
+    model = regr.fit(X, y)
+    at = addtree_from_xgb_model(num_features, model)
+    yhat = model.predict(X)
+    sqerr = sum((y - yhat)**2)
+    sqcorr = sum((model.predict(X[:1000]) - at.predict(X[:1000]))**2)
+    print(f"easy img: rmse train {np.sqrt(sqerr)/len(X)}")
+    print(f"easy img: rmse model difference {np.sqrt(sqcorr)/len(X[:1000])}")
+
+    fig, ax = plt.subplots(1, 2)
+    im0 = ax[0].imshow(img)
+    fig.colorbar(im0, ax=ax[0])
+    im1 = ax[1].imshow(yhat.reshape((100,100)))
+    fig.colorbar(im1, ax=ax[1])
+    plt.show()
+
+    at.write("tests/models/xgb-img-very-easy.json")
+    with open("tests/models/xgb-img-very-easy-values.json", "w") as f:
+        json.dump(list(map(float, yhat)), f)
+
+    regr = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            nthread=4,
+            tree_method="hist",
             max_depth=6,
             learning_rate=0.5,
             n_estimators=10)
@@ -235,5 +261,5 @@ def generate_mnist():
 if __name__ == "__main__":
     #generate_california_housing()
     #generate_covertype()
-    #generate_img()
-    generate_mnist()
+    generate_img()
+    #generate_mnist()

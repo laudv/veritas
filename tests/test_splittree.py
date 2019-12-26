@@ -223,6 +223,61 @@ class TestSplitTree(unittest.TestCase):
         #    p.add_splittree_leaf(at[i], st.get_leaf(2))
         #    p.render(f"/tmp/plots/test2-{i}")
 
+    def test_img_multisplit(self):
+        def plt(at, ll, lr, fid, sval):
+            for i in range(len(at)):
+                p = TreePlot()
+                idl = ll.domtree_node_id()
+                idr = lr.domtree_node_id()
+                p.g.attr(label=f"X{fid} split at {sval} (ids={idl}, {idr})")
+                p.add_splittree_leaf(at[i], ll)
+                p.add_splittree_leaf(at[i], lr)
+                p.render(f"/tmp/plots/multisplit-{idl}-{idr}-{i}")
+
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+        st = SplitTree(at, {})
+        l0 = st.get_leaf(0)
+        l0.find_best_domtree_split(at)
+        b0 = l0.get_best_split()
+        print("l0", b0)
+
+        st.split(l0)
+
+        l1 = st.get_leaf(1)
+        l2 = st.get_leaf(2)
+
+        l1.find_best_domtree_split(at)
+        l2.find_best_domtree_split(at)
+        b1 = l1.get_best_split()
+        b2 = l2.get_best_split()
+
+        plt(at, l1, l2, *b0)
+
+        print("l1", b1)
+        print("l2", b2)
+
+        self.assertNotEqual(b0, b1)
+        self.assertNotEqual(b0, b2)
+
+        st.split(l1)
+
+        l3 = st.get_leaf(3)
+        l4 = st.get_leaf(4)
+
+        l3.find_best_domtree_split(at)
+        l4.find_best_domtree_split(at)
+        b3 = l3.get_best_split()
+        b4 = l4.get_best_split()
+
+        plt(at, l3, l4, *b1)
+
+        print("l3", b3)
+        print("l4", b4)
+
+        self.assertNotEqual(b1, b3)
+        self.assertNotEqual(b1, b4)
+
+
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)
     #z3.set_pp_option("precision", 3)

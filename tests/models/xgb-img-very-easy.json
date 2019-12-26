@@ -1,0 +1,435 @@
+{
+    "num_features": 2,
+    "base_score": 0.5,
+    "trees": [
+        {
+            "tree_nodes": [
+                {
+                    "id": 0,
+                    "parent": 0,
+                    "tree_size": 15,
+                    "left": 1,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 63.0
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "parent": 0,
+                    "tree_size": 7,
+                    "left": 3,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 37.0
+                        }
+                    }
+                },
+                {
+                    "id": 2,
+                    "parent": 0,
+                    "tree_size": 7,
+                    "left": 9,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 66.0
+                        }
+                    }
+                },
+                {
+                    "id": 3,
+                    "parent": 1,
+                    "tree_size": 3,
+                    "left": 5,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 16.0
+                        }
+                    }
+                },
+                {
+                    "id": 4,
+                    "parent": 1,
+                    "tree_size": 3,
+                    "left": 7,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 91.0
+                        }
+                    }
+                },
+                {
+                    "id": 5,
+                    "parent": 3,
+                    "tree_size": 1,
+                    "leaf_value": 115.435074
+                },
+                {
+                    "id": 6,
+                    "parent": 3,
+                    "tree_size": 1,
+                    "leaf_value": 174.834198
+                },
+                {
+                    "id": 7,
+                    "parent": 4,
+                    "tree_size": 1,
+                    "leaf_value": 131.689102
+                },
+                {
+                    "id": 8,
+                    "parent": 4,
+                    "tree_size": 1,
+                    "leaf_value": 93.8512344
+                },
+                {
+                    "id": 9,
+                    "parent": 2,
+                    "tree_size": 3,
+                    "left": 11,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 29.0
+                        }
+                    }
+                },
+                {
+                    "id": 10,
+                    "parent": 2,
+                    "tree_size": 3,
+                    "left": 13,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 91.0
+                        }
+                    }
+                },
+                {
+                    "id": 11,
+                    "parent": 9,
+                    "tree_size": 1,
+                    "leaf_value": 85.9790497
+                },
+                {
+                    "id": 12,
+                    "parent": 9,
+                    "tree_size": 1,
+                    "leaf_value": 37.9660568
+                },
+                {
+                    "id": 13,
+                    "parent": 10,
+                    "tree_size": 1,
+                    "leaf_value": 105.972466
+                },
+                {
+                    "id": 14,
+                    "parent": 10,
+                    "tree_size": 1,
+                    "leaf_value": 46.2709579
+                }
+            ]
+        },
+        {
+            "tree_nodes": [
+                {
+                    "id": 0,
+                    "parent": 0,
+                    "tree_size": 15,
+                    "left": 1,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 22.0
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "parent": 0,
+                    "tree_size": 7,
+                    "left": 3,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 41.0
+                        }
+                    }
+                },
+                {
+                    "id": 2,
+                    "parent": 0,
+                    "tree_size": 7,
+                    "left": 9,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 54.0
+                        }
+                    }
+                },
+                {
+                    "id": 3,
+                    "parent": 1,
+                    "tree_size": 3,
+                    "left": 5,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 12.0
+                        }
+                    }
+                },
+                {
+                    "id": 4,
+                    "parent": 1,
+                    "tree_size": 3,
+                    "left": 7,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 91.0
+                        }
+                    }
+                },
+                {
+                    "id": 5,
+                    "parent": 3,
+                    "tree_size": 1,
+                    "leaf_value": -20.0399857
+                },
+                {
+                    "id": 6,
+                    "parent": 3,
+                    "tree_size": 1,
+                    "leaf_value": 5.43067265
+                },
+                {
+                    "id": 7,
+                    "parent": 4,
+                    "tree_size": 1,
+                    "leaf_value": -19.4387035
+                },
+                {
+                    "id": 8,
+                    "parent": 4,
+                    "tree_size": 1,
+                    "leaf_value": 9.77615833
+                },
+                {
+                    "id": 9,
+                    "parent": 2,
+                    "tree_size": 3,
+                    "left": 11,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 86.0
+                        }
+                    }
+                },
+                {
+                    "id": 10,
+                    "parent": 2,
+                    "tree_size": 3,
+                    "left": 13,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 63.0
+                        }
+                    }
+                },
+                {
+                    "id": 11,
+                    "parent": 9,
+                    "tree_size": 1,
+                    "leaf_value": 15.0427885
+                },
+                {
+                    "id": 12,
+                    "parent": 9,
+                    "tree_size": 1,
+                    "leaf_value": -4.4084897
+                },
+                {
+                    "id": 13,
+                    "parent": 10,
+                    "tree_size": 1,
+                    "leaf_value": -19.5567608
+                },
+                {
+                    "id": 14,
+                    "parent": 10,
+                    "tree_size": 1,
+                    "leaf_value": 0.0746253207
+                }
+            ]
+        },
+        {
+            "tree_nodes": [
+                {
+                    "id": 0,
+                    "parent": 0,
+                    "tree_size": 15,
+                    "left": 1,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 61.0
+                        }
+                    }
+                },
+                {
+                    "id": 1,
+                    "parent": 0,
+                    "tree_size": 7,
+                    "left": 3,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 83.0
+                        }
+                    }
+                },
+                {
+                    "id": 2,
+                    "parent": 0,
+                    "tree_size": 7,
+                    "left": 9,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 38.0
+                        }
+                    }
+                },
+                {
+                    "id": 3,
+                    "parent": 1,
+                    "tree_size": 3,
+                    "left": 5,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 63.0
+                        }
+                    }
+                },
+                {
+                    "id": 4,
+                    "parent": 1,
+                    "tree_size": 3,
+                    "left": 7,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 1,
+                            "split_value": 9.0
+                        }
+                    }
+                },
+                {
+                    "id": 5,
+                    "parent": 3,
+                    "tree_size": 1,
+                    "leaf_value": -5.65600824
+                },
+                {
+                    "id": 6,
+                    "parent": 3,
+                    "tree_size": 1,
+                    "leaf_value": 13.6476927
+                },
+                {
+                    "id": 7,
+                    "parent": 4,
+                    "tree_size": 1,
+                    "leaf_value": 5.96940279
+                },
+                {
+                    "id": 8,
+                    "parent": 4,
+                    "tree_size": 1,
+                    "leaf_value": -24.5021248
+                },
+                {
+                    "id": 9,
+                    "parent": 2,
+                    "tree_size": 3,
+                    "left": 11,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 11.0
+                        }
+                    }
+                },
+                {
+                    "id": 10,
+                    "parent": 2,
+                    "tree_size": 3,
+                    "left": 13,
+                    "split": {
+                        "index": 0,
+                        "data": {
+                            "feat_id": 0,
+                            "split_value": 60.0
+                        }
+                    }
+                },
+                {
+                    "id": 11,
+                    "parent": 9,
+                    "tree_size": 1,
+                    "leaf_value": 7.15059757
+                },
+                {
+                    "id": 12,
+                    "parent": 9,
+                    "tree_size": 1,
+                    "leaf_value": -12.1444035
+                },
+                {
+                    "id": 13,
+                    "parent": 10,
+                    "tree_size": 1,
+                    "leaf_value": 34.9817467
+                },
+                {
+                    "id": 14,
+                    "parent": 10,
+                    "tree_size": 1,
+                    "leaf_value": 3.5143981
+                }
+            ]
+        }
+    ]
+}

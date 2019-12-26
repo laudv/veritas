@@ -427,7 +427,7 @@ namespace treeck {
     void
     SplitTreeLeaf::find_best_domtree_split(const AddTree& addtree)
     {
-        size_t tree_index;
+        size_t tree_index = 0;
         std::unordered_map<FeatId, std::unordered_set<double>> duplicates;
 
         FeatId max_feat_id = -1;
@@ -446,9 +446,20 @@ namespace treeck {
                       &max_score,
                       &min_balance]
                     (AddTree::TreeT::CRef node) {
-                if (node.is_leaf() || !this->is_reachable_.is_reachable(
-                            tree_index, node.id()))
-                    return TreeVisitStatus::ADD_NONE;
+                if (node.is_leaf())
+                    return ADD_NONE;
+
+                int is_reachable_l = is_reachable_.is_reachable(tree_index, node.left().id());
+                int is_reachable_r = is_reachable_.is_reachable(tree_index, node.right().id());
+
+                if (!is_reachable_l && !is_reachable_r)
+                    throw std::runtime_error("unexpected UNSAT?");
+                if (!is_reachable_l)
+                    return ADD_RIGHT;
+                if (!is_reachable_r)
+                    return ADD_LEFT;
+
+                // only consider split if both left and right subtree are reachable
 
                 LtSplit split = std::get<LtSplit>(node.get_split());
                 FeatId feat_id = split.feat_id;
@@ -466,13 +477,13 @@ namespace treeck {
                 RealDomain dom_l, dom_r;
                 std::tie(dom_l, dom_r) = RealDomain().split(sval);
 
-                int unreachable_l = this->count_unreachable_leafs(addtree, feat_id, dom_l);
-                int unreachable_r = this->count_unreachable_leafs(addtree, feat_id, dom_r);
+                int unreachable_l = count_unreachable_leafs(addtree, feat_id, dom_l);
+                int unreachable_r = count_unreachable_leafs(addtree, feat_id, dom_r);
                 int score = unreachable_l + unreachable_r;
                 int balance = std::abs(unreachable_l - unreachable_r);
 
-                //printf("feat_id=%d, split_value=%.10f, score=%d, balance=%d\n",
-                //        feat_id, sval, score, balance);
+                //printf("tree_index=%lu feat_id=%d, split_value=%.10f, score=%d, balance=%d\n",
+                //        tree_index, feat_id, sval, score, balance);
 
                 if (score >= max_score)
                 if (score > max_score || min_balance > balance)
@@ -483,13 +494,14 @@ namespace treeck {
                     min_balance = balance;
                 }
 
-                return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
+                return ADD_LEFT_AND_RIGHT;
             });
             ++tree_index;
         }
 
-        printf("best split: X%d <> %.10f with score %d, balance %d\n",
-                max_feat_id, max_split_value, max_score, min_balance);
+        printf("best split l%d: X%d <> %.10f with score %d, balance %d\n",
+                domtree_node_id_, max_feat_id, max_split_value, max_score,
+                min_balance);
 
         best_split_.emplace(max_feat_id, max_split_value);
         this->split_score = max_score;
