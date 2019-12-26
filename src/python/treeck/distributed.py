@@ -16,11 +16,14 @@ class DistributedVerifier:
             check_paths = True,
             saturate_workers_from_start = True,
             saturate_workers_factor = 1.0,
-            stop_when_sat = False):
+            stop_when_sat = False,
+            timeout_start = 60,
+            timeout_max = 3600,
+            timeout_grow_rate = 1.5):
 
-        self._timeout_start = 60
-        self._timeout_max = 3600
-        self._timeout_rate = 1.5
+        self._timeout_start = timeout_start
+        self._timeout_max = timeout_max
+        self._timeout_rate = timeout_grow_rate
 
         self._client = client # dask client
         self._st = splittree
@@ -32,6 +35,9 @@ class DistributedVerifier:
         self._saturate_workers_opt = saturate_workers_from_start
         self._saturate_workers_factor_opt = saturate_workers_factor
         self._stop_when_sat_opt = stop_when_sat
+
+        self.results = dict() # domtree_node_id => result info
+        self._stop_flag = False
 
     def check(self):
         l0 = self._st.get_leaf(0)
@@ -51,12 +57,27 @@ class DistributedVerifier:
             ls = [l0]
 
         # 3: submit verifier 'check' tasks for each
-        # TODO fs = submit(ls)
+        fs = [self._client.submit(DistributedVerifier._verify_fun,
+            self._at_fut, lk, self._timeout_start, self._verifier_factory)
+            for lk in ls]
 
         # 4: wait for future to complete, act on result
         # - if sat/unsat -> done (finish if sat if opt set)
         # - if new split -> schedule two new tasks
-        # TODO check loop wait(fs, return_when="FIRST_COMPLETED")
+        while len(fs) > 0: # while task are running...
+            if self._stop_flag:
+                print("Stop flag: cancelling remaining tasks")
+                for f in fs:
+                    f.cancel()
+                    self._stop_flag = False
+                break
+
+            wait(fs, return_when="FIRST_COMPLETED")
+            next_fs = []
+            for f in fs:
+                if f.done(): next_fs += self._handle_done_future(f)
+                else:        next_fs.append(f)
+            fs = next_fs
 
     def _check_paths(self, l0):
         # update reachabilities in splittree_leaf 0 in parallel
@@ -70,6 +91,9 @@ class DistributedVerifier:
             fs.append(f)
             pass
         wait(fs)
+        for f in fs:
+            assert f.done()
+            assert f.exception() is None
         return SplitTreeLeaf.merge(list(map(lambda f: f.result(), fs)))
 
     def _generate_splits(self, l0, ntasks):
@@ -78,18 +102,17 @@ class DistributedVerifier:
         ls = [l0]
         while len(ls) < ntasks:
             max_score = 0
-            max_lx = None
-            for lx in ls:
-                print("lx", lx, "with score", lx.split_score)
-                if lx.split_score > max_score:
-                    max_score = lx.split_score
-                    max_lx = lx
+            max_lk = None
+            for lk in ls:
+                if lk.split_score > max_score:
+                    max_score = lk.split_score
+                    max_lk = lk
 
-            ls.remove(max_lx)
-            nid = max_lx.domtree_node_id()
+            ls.remove(max_lk)
+            nid = max_lk.domtree_node_id()
 
-            print("splitting domtree_node_id", nid, max_lx.get_best_split())
-            self._st.split(max_lx)
+            #print("splitting domtree_node_id", nid, max_lk.get_best_split())
+            self._st.split(max_lk)
 
             domtree = self._st.domtree()
             l, r = domtree.left(nid), domtree.right(nid)
@@ -99,6 +122,49 @@ class DistributedVerifier:
             ls += [ll, lr]
 
         return ls
+
+    def _handle_done_future(self, f):
+        t = f.result()
+        status = t[0]
+
+        # We're finished with this branch!
+        if status != Verifier.Result.UNKNOWN:
+            model, domtree_node_id, check_time = t[1:]
+            print(f"{status} for {domtree_node_id} in {check_time}s!")
+            self.results[domtree_node_id] = {"status": status, "check_time": check_time}
+            if status.is_sat() and self._stop_when_sat_opt:
+                self._stop_flag = True
+            return []
+
+        # We timed out, split and try again
+        lk, check_time, timeout = t[1:]
+        domtree_node_id = lk.domtree_node_id()
+        split = lk.get_best_split()
+        score, balance = lk.split_score, lk.split_balance
+
+        self._st.split(lk)
+
+        domtree = self._st.domtree()
+        domtree_node_id_l = domtree.left(domtree_node_id)
+        domtree_node_id_r = domtree.right(domtree_node_id)
+        self.results[domtree_node_id]["check_time"] = check_time
+        self.results[domtree_node_id_l] = {}
+        self.results[domtree_node_id_r] = {}
+
+        print(f"UNKNOWN for {domtree_node_id} in {check_time}s with timeout {timeout}")
+        print(f"> splitting {domtree_node_id} into {domtree_node_id_l} and {domtree_node_id_r}")
+        print(f"> with score {score} and balance {balance}")
+
+        next_timeout = min(self._timeout_max, self._timeout_rate * timeout)
+
+        fs = [self._client.submit(DistributedVerifier._verify_fun,
+            self._at_fut, lk, next_timeout, self._verifier_factory)
+            for lk in [self._st.get_leaf(domtree_node_id_l),
+                       self._st.get_leaf(domtree_node_id_r)]]
+        return fs
+
+
+
 
 
     # - WORKERS ------------------------------------------------------------- #
@@ -134,123 +200,18 @@ class DistributedVerifier:
 
         return l0
 
-
-    #def run(self):
-    #    at_enc = DistributedVerifier._enc_at(self._addtree)
-    #    splittree = SplitTree([], at_enc)
-
-    #    f0 = self._client.submit(DistributedVerifier._split_fun, None, at_enc,
-    #            self._branch_factor)
-    #    f0.meta = Meta()
-    #    f0.meta.splittree = splittree
-    #    f0.meta.timeout = self._timeout_start
-    #    fs = [f0]
-
-    #    # Compute reachabilities while trees are being split
-    #    f1 = self._client.submit(DistributedVerifier._reachability_fun,
-    #            self._verifier_factory, at_enc)
-    #    self._reachability = f1.result() # blocks
-
-    #    while len(fs) > 0: # while task are running...
-    #        wait(fs, return_when="FIRST_COMPLETED")
-    #        next_fs = []
-    #        for f in fs:
-    #            if f.done(): next_fs += self._handle_done_future(f)
-    #            else:        next_fs.append(f)
-    #        fs = next_fs
-
-    #    print("done!")
-    #    print(splittree)
-    #    print(splittree.to_json())
-
-    #def _handle_done_future(self, future):
-    #    assert future.done()
-    #    result = future.result()
-    #    if result[0] == DistributedVerifier.TaskType.SPLIT:
-    #        subprobs = result[1]
-    #        return self._handle_split_result(future.meta, subprobs)
-    #    if result[0] == DistributedVerifier.TaskType.VERIFY:
-    #        status, doms, at_enc, verify_time = result[1:]
-    #        return self._handle_verify_result(future.meta, status, doms, at_enc, verify_time)
-    #    raise RuntimeError("unhandled future")
-
-    #def _handle_split_result(self, meta, subprobs):
-    #    print("SPLIT HANDLER with", len(subprobs), "subprobs")
-    #    timeout = meta.timeout
-    #    fs = []
-    #    children = meta.splittree.split(subprobs)
-    #    for subsplittree, (doms, at_enc) in zip(children, subprobs):
-    #        f = self._client.submit(DistributedVerifier._verify_fun,
-    #                self._verifier_factory, doms, at_enc,
-    #                self._reachability, timeout)
-    #        f.meta = Meta()
-    #        f.meta.timeout = meta.timeout
-    #        f.meta.splittree = subsplittree
-    #        fs.append(f)
-    #    return fs
-
-    #def _handle_verify_result(self, meta, status, doms, at_enc, verify_time):
-    #    print("VERIFY HANDLER", status)
-    #    meta.splittree.status = status
-    #    meta.splittree.verify_time = verify_time
-    #    meta.splittree.timeout = meta.timeout
-    #    if status == Verifier.Result.UNKNOWN:
-    #        assert doms is not None
-    #        assert at_enc is not None
-    #        f = self._client.submit(DistributedVerifier._split_fun,
-    #                doms, at_enc, self._branch_factor)
-    #        f.timeout = min(self._timeout_max, meta.timeout * self._timeout_rate)
-    #        f.splittree = meta.splittree
-    #        return [f]
-    #    return []
-
-    #@staticmethod
-    #def _reachability_fun(vfactory, at_enc):
-    #    at = DistributedVerifier._dec_at(at_enc)
-    #    num_features = at.num_features()
-    #    domains = [RealDomain() for i in range(num_features)]
-    #    v = vfactory(domains, at)
-    #    assert isinstance(v._strategy, SplitCheckStrategy) # only support this for now
-    #    v._strategy.verify_setup()
-    #    return v._strategy._reachability
-
-    #@staticmethod
-    #def _split_fun(domains, at_enc, branch_factor):
-    #    at = DistributedVerifier._dec_at(at_enc)
-    #    if domains is None: sp = SearchSpace(at)
-    #    else:               sp = SearchSpace(at, domains)
-
-    #    sp.split(branch_factor)
-
-    #    subprobs = []
-    #    for leaf_id in sp.leafs():
-    #        sub_doms = sp.get_domains(leaf_id)
-    #        sub_at = sp.get_pruned_addtree(leaf_id)
-    #        sub_at_enc = DistributedVerifier._enc_at(sub_at)
-    #        subprobs.append((sub_doms, sub_at_enc))
-
-    #    return DistributedVerifier.TaskType.SPLIT, subprobs
-
-    #@staticmethod
-    #def _verify_fun(vfactory, domains, at_enc, reachability, timeout):
-    #    at = DistributedVerifier._dec_at(at_enc)
-    #    v = vfactory(domains, at)
-    #    assert isinstance(v._strategy, SplitCheckStrategy) # only support this for now
-    #    v._strategy.set_reachability(reachability)
-    #    v.set_timeout(timeout)
-    #    try:
-    #        status = v.verify() # maybe also return logs, stats
-    #    except VerifierTimeout as e:
-    #        status = Verifier.Result.UNKNOWN
-    #        print(f"timeout after ", e.unk_after, " (timeout =", timeout, ")")
-    #    return DistributedVerifier.TaskType.VERIFY, status, domains, at_enc, v.verify_time
-
-    #@staticmethod
-    #def _enc_at(at):
-    #    b = bytes(at.to_json(), encoding="ascii")
-    #    return codecs.encode(b, encoding="zlib")
-
-    #@staticmethod
-    #def _dec_at(b):
-    #    at_json = codecs.decode(b, encoding="zlib").decode("ascii")
-    #    return AddTree.from_json(at_json)
+    @staticmethod
+    def _verify_fun(at, lk, timeout, vfactory):
+        v = vfactory(at, lk)
+        v.set_timeout(timeout)
+        v.add_all_trees()
+        try:
+            status = v.check()
+            model = {}
+            if status.is_sat():
+                model = v.model()
+            return status, model, lk.domtree_node_id(), v.check_time
+        except VerifierTimeout as e:
+            print(f"timeout after {e.unk_after} (timeout = {timeout}) -> splitting l{lk.domtree_node_id()}")
+            lk.find_best_domtree_split(at)
+            return Verifier.Result.UNKNOWN, lk, v.check_time, timeout

@@ -97,17 +97,25 @@ class TestDistributedVerifier(unittest.TestCase):
             v = Verifier(at, leaf, Backend())
             v.add_constraint(v.fvar() < 0.0)
             v.add_constraint(v.xvar(0) > 50)
+            v.add_constraint(v.xvar(1) < 50)
             return v
 
         with Client("tcp://localhost:30333") as client:
         #with start_local() as client:
-            client.run(importlib.reload, treeck)
+            client.restart()
+            nworkers = sum(client.nthreads().values())
+            N = 10
             at = AddTree.read("tests/models/xgb-img-easy.json")
             st = SplitTree(at, {})
             dv = DistributedVerifier(client, st, vfactory,
-                    saturate_workers_factor = 10)
+                    check_paths = False,
+                    saturate_workers_factor = N,
+                    stop_when_sat = False)
 
             dv.check()
+            #print(dv.results)
+            self.assertEqual(len(dv.results), nworkers * N)
+            self.assertTrue(len(list(filter(lambda p: p[1]["status"] == Verifier.Result.SAT, dv.results.items()))) > 0)
 
 
             #client.shutdown()
