@@ -131,7 +131,10 @@ class DistributedVerifier:
         if status != Verifier.Result.UNKNOWN:
             model, domtree_node_id, check_time = t[1:]
             print(f"{status} for {domtree_node_id} in {check_time}s!")
-            self.results[domtree_node_id] = {"status": status, "check_time": check_time}
+            self.results[domtree_node_id] = {
+                "status": status,
+                "check_time": check_time,
+                "model": model }
             if status.is_sat() and self._stop_when_sat_opt:
                 self._stop_flag = True
             return []
