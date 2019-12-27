@@ -260,8 +260,12 @@ class Verifier:
     def add_tree(self, tree_index, instance=0):
         self.instance(instance).add_tree(tree_index)
 
-    def add_all_trees(self, instance=0):
-        self.instance(instance).add_all_trees()
+    def add_all_trees(self, instance=None):
+        if instance is None:
+            for inst in self._instances:
+                inst.add_all_trees()
+        else:
+            self.instance(instance).add_all_trees()
 
     def add_rvar(self, name):
         """ Add an additional decision variable to the problem. """
