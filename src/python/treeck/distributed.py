@@ -1,4 +1,4 @@
-import codecs, time, io, json
+import codecs, time, io, json, timeit
 
 from enum import Enum
 from dask.distributed import wait, get_worker
@@ -36,10 +36,10 @@ class DistributedVerifier:
         self._saturate_workers_factor_opt = saturate_workers_factor
         self._stop_when_sat_opt = stop_when_sat
 
-        self.results = dict() # domtree_node_id => result info
         self._stop_flag = False
 
     def check(self):
+        self.results = {0: {}} # domtree_node_id => result info
         l0 = self._st.get_leaf(0)
 
         # TODO add domain constraints to verifier
@@ -81,6 +81,7 @@ class DistributedVerifier:
 
     def _check_paths(self, l0):
         # update reachabilities in splittree_leaf 0 in parallel
+        t0 = timeit.default_timer()
         fs = []
         for tree_index in range(len(self._at)):
             f = self._client.submit(DistributedVerifier._check_tree_paths,
@@ -94,6 +95,8 @@ class DistributedVerifier:
         for f in fs:
             assert f.done()
             assert f.exception() is None
+        t1 = timeit.default_timer()
+        self.results[l0.domtree_node_id()]["check_paths_time"] = t1 - t0
         return SplitTreeLeaf.merge(list(map(lambda f: f.result(), fs)))
 
     def _generate_splits(self, l0, ntasks):
@@ -116,6 +119,8 @@ class DistributedVerifier:
 
             domtree = self._st.domtree()
             l, r = domtree.left(nid), domtree.right(nid)
+            self.results[l] = {}
+            self.results[r] = {}
             ll, lr = self._st.get_leaf(l), self._st.get_leaf(r)
             ll.find_best_domtree_split(self._at)
             lr.find_best_domtree_split(self._at)
@@ -131,10 +136,10 @@ class DistributedVerifier:
         if status != Verifier.Result.UNKNOWN:
             model, domtree_node_id, check_time = t[1:]
             print(f"{status} for {domtree_node_id} in {check_time}s!")
-            self.results[domtree_node_id] = {
-                "status": status,
-                "check_time": check_time,
-                "model": model }
+            r = self.results[domtree_node_id]
+            r["status"] = status
+            r["check_time"] = check_time
+            r["model"] = model
             if status.is_sat() and self._stop_when_sat_opt:
                 self._stop_flag = True
             return []

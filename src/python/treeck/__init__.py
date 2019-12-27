@@ -41,11 +41,11 @@ def __addtree_predict_single(self, example):
 
 def __addtree_predict(self, examples):
     predictions = []
-    print("predicting...", end="")
+    #print("predicting...", end="")
     for i, example in enumerate(examples):
-        print("\rpredicting...", i, "/", len(examples), end="")
+        #print("\rpredicting...", i, "/", len(examples), end="")
         predictions.append(self.predict_single(example))
-    print("\rdone                    ")
+    #print("\rdone                    ")
     return predictions
 
 def __addtree_write(self, f):

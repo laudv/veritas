@@ -453,7 +453,7 @@ namespace treeck {
                 int is_reachable_r = is_reachable_.is_reachable(tree_index, node.right().id());
 
                 if (!is_reachable_l && !is_reachable_r)
-                    throw std::runtime_error("unexpected UNSAT?");
+                    return ADD_NONE;
                 if (!is_reachable_l)
                     return ADD_RIGHT;
                 if (!is_reachable_r)

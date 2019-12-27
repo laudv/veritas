@@ -84,7 +84,7 @@ class Z3Backend(VerifierBackend):
         for c in cs:
             enc = self._enc_constraint(c)
             if isinstance(enc, bool):
-                if not enc: return False
+                if not enc: return [False]
                 # skip True
             else: encs.append(enc)
         return encs
@@ -100,8 +100,8 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, VerifierBoolExpr):
             return self._enc_verifier_bool_expr(c)
         else:
-            raise RuntimeError("unsupported bool expression of type",
-                    type(c).__qualname__)
+            raise RuntimeError("unsupported bool expression of type"
+                    + type(c).__qualname__)
 
     def _enc_verifier_bool_expr(self, c):
         if isinstance(c, VerifierAndExpr):
@@ -119,8 +119,8 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, VerifierVar):
             return c.get()
         else:
-            raise RuntimeError("unsupported VerifierBoolExpr of type",
-                    type(c).__qualname__)
+            raise RuntimeError("unsupported VerifierBoolExpr of type"
+                    + type(c).__qualname__)
 
     def _enc_real_expr(self, c):
         if z3.is_real(c):
@@ -137,8 +137,8 @@ class Z3Backend(VerifierBackend):
                 s += self._enc_real_expr(p)
             return s
         else:
-            raise RuntimeError("unsupported VerifierRealExpr of type",
-                    type(c).__qualname__)
+            raise RuntimeError("unsupported VerifierRealExpr of type"
+                    + type(c).__qualname__)
 
     def _extract_var(self, z3model, var):
         val = z3model[var]
