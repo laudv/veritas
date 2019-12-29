@@ -5,7 +5,7 @@ from xgboost.core import Booster
 
 from . import AddTree
 
-def addtree_from_xgb_model(num_features, model):
+def addtree_from_xgb_model(num_features, model, feat2id_map=lambda x: int(x[1:])):
     base_score = 0.5
     if isinstance(model, XGBModel):
         base_score = model.base_score
@@ -17,18 +17,18 @@ def addtree_from_xgb_model(num_features, model):
     at.base_score = base_score
 
     for tree_dump in dump:
-        _parse_tree(at, tree_dump)
+        _parse_tree(at, tree_dump, feat2id_map)
 
     return at
     
-def _parse_tree(at, tree_dump):
+def _parse_tree(at, tree_dump, feat2id_map):
     tree = at.add_tree()
     stack = [(tree.root(), json.loads(tree_dump))]
 
     while len(stack) > 0:
         node, node_json = stack.pop()
         if "leaf" not in node_json:
-            feat_id = int(node_json["split"][1:])
+            feat_id = feat2id_map(node_json["split"])
             split_value = node_json["split_condition"]
             tree.split(node, feat_id, split_value)
 
