@@ -9,10 +9,10 @@
 namespace treeck {
 
     RealDomain::RealDomain()
-        : lo(-std::numeric_limits<double>::infinity())
-        , hi(std::numeric_limits<double>::infinity()) {}
+        : lo(-std::numeric_limits<FloatT>::infinity())
+        , hi(std::numeric_limits<FloatT>::infinity()) {}
 
-    RealDomain::RealDomain(double lo, double hi)
+    RealDomain::RealDomain(FloatT lo, FloatT hi)
         : lo(lo)
         , hi(hi)
     {
@@ -27,12 +27,12 @@ namespace treeck {
     bool
     RealDomain::is_everything() const
     {
-        return lo == -std::numeric_limits<double>::infinity()
-            && hi == std::numeric_limits<double>::infinity();
+        return lo == -std::numeric_limits<FloatT>::infinity()
+            && hi == std::numeric_limits<FloatT>::infinity();
     }
 
     WhereFlag
-    RealDomain::where_is(double value) const
+    RealDomain::where_is(FloatT value) const
     {
         if (hi <= value) // hi is excluded from the domain
             return WhereFlag::RIGHT;
@@ -42,7 +42,7 @@ namespace treeck {
     }
 
     WhereFlag
-    RealDomain::where_is_strict(double value) const
+    RealDomain::where_is_strict(FloatT value) const
     {
         if (hi <= value)
             return WhereFlag::RIGHT;
@@ -52,13 +52,13 @@ namespace treeck {
     }
 
     bool
-    RealDomain::contains(double value) const
+    RealDomain::contains(FloatT value) const
     {
         return where_is(value) == WhereFlag::IN_DOMAIN;
     }
 
     bool
-    RealDomain::contains_strict(double value) const
+    RealDomain::contains_strict(FloatT value) const
     {
         return where_is_strict(value) == WhereFlag::IN_DOMAIN;
     }
@@ -85,7 +85,7 @@ namespace treeck {
 
     
     std::tuple<RealDomain, RealDomain>
-    RealDomain::split(double value) const
+    RealDomain::split(FloatT value) const
     {
         return std::make_tuple(
                 RealDomain(this->lo, value),

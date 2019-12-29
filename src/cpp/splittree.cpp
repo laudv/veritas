@@ -156,7 +156,7 @@ namespace treeck {
             node = node.parent();
 
             LtSplit split = std::get<LtSplit>(node.get_split());
-            double sval = split.split_value;
+            FloatT sval = split.split_value;
 
             if (split.feat_id != feat_id) continue;
             if (child_node.is_left_child())
@@ -179,7 +179,7 @@ namespace treeck {
             node = node.parent();
 
             LtSplit split = std::get<LtSplit>(node.get_split());
-            double sval = split.split_value;
+            FloatT sval = split.split_value;
 
             auto domptr = domains.find(split.feat_id);
             if (domptr == domains.end())
@@ -274,7 +274,7 @@ namespace treeck {
             return;
 
         LtSplit split = std::get<LtSplit>(node.get_split());
-        double sval = split.split_value;
+        FloatT sval = split.split_value;
 
         bool marked_l = marked;
         bool marked_r = marked;
@@ -428,10 +428,10 @@ namespace treeck {
     SplitTreeLeaf::find_best_domtree_split(const AddTree& addtree)
     {
         size_t tree_index = 0;
-        std::unordered_map<FeatId, std::unordered_set<double>> duplicates;
+        std::unordered_map<FeatId, std::unordered_set<FloatT>> duplicates;
 
         FeatId max_feat_id = -1;
-        double max_split_value = std::numeric_limits<double>::quiet_NaN();
+        FloatT max_split_value = std::numeric_limits<FloatT>::quiet_NaN();
         int max_score = 0;
         int min_balance = -1;
 
@@ -463,7 +463,7 @@ namespace treeck {
 
                 LtSplit split = std::get<LtSplit>(node.get_split());
                 FeatId feat_id = split.feat_id;
-                double sval = split.split_value;
+                FloatT sval = split.split_value;
 
                 auto& feat_id_dups = duplicates[split.feat_id]; // auto-initialize set for feat_id
                 auto p = feat_id_dups.find(split.split_value);
@@ -516,17 +516,17 @@ namespace treeck {
         return *best_split_;
     }
 
-    std::tuple<double, double>
+    std::tuple<FloatT, FloatT>
     SplitTreeLeaf::get_tree_bounds(const AddTree& at, size_t tree_index)
     {
-        double min =  std::numeric_limits<double>::infinity();
-        double max = -std::numeric_limits<double>::infinity();
+        FloatT min =  std::numeric_limits<FloatT>::infinity();
+        FloatT max = -std::numeric_limits<FloatT>::infinity();
         at[tree_index].dfs([this, tree_index, &min, &max](AddTree::TreeT::CRef node) {
             if (!is_reachable(tree_index, node.id()))
                 return TreeVisitStatus::ADD_NONE;
             if (node.is_leaf())
             {
-                double leaf_value = node.leaf_value();
+                FloatT leaf_value = node.leaf_value();
                 min = std::min(min, leaf_value);
                 max = std::max(max, leaf_value);
                 return TreeVisitStatus::ADD_NONE;

@@ -7,6 +7,8 @@
 
 namespace treeck {
 
+    using FloatT = float;
+
     /**          lo                  hi
      *           [--- real domain ---)
      * ---X1--------------x2-----------------x3-----------> (real axis)
@@ -23,20 +25,20 @@ namespace treeck {
 
     /** An interval [lo, hi) */
     struct RealDomain {
-        double lo, hi;
+        FloatT lo, hi;
 
         RealDomain();
-        RealDomain(double lo, double hi);
+        RealDomain(FloatT lo, FloatT hi);
         
         bool is_everything() const;
-        WhereFlag where_is(double value) const;
-        WhereFlag where_is_strict(double value) const;
-        bool contains(double value) const;
-        bool contains_strict(double value) const;
+        WhereFlag where_is(FloatT value) const;
+        WhereFlag where_is_strict(FloatT value) const;
+        bool contains(FloatT value) const;
+        bool contains_strict(FloatT value) const;
         bool overlaps(const RealDomain& other) const;
         bool covers(const RealDomain& other) const;
         bool covers_strict(const RealDomain& value) const;
-        std::tuple<RealDomain, RealDomain> split(double value) const;
+        std::tuple<RealDomain, RealDomain> split(FloatT value) const;
     };
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d);

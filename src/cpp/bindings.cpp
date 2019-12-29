@@ -24,7 +24,7 @@ std::string tostr(T& o)
     return s.str();
 }
 
-using TreeD = Tree<double>;
+using TreeD = Tree<FloatT>;
 using NodeRefD = TreeD::MRef;
 using DomTreeT = SplitTree::DomTreeT;
 
@@ -33,7 +33,7 @@ PYBIND11_MODULE(pytreeck, m) {
 
     py::class_<RealDomain>(m, "RealDomain")
         .def(py::init<>())
-        .def(py::init<double, double>())
+        .def(py::init<FloatT, FloatT>())
         .def_readwrite("lo", &RealDomain::lo)
         .def_readwrite("hi", &RealDomain::hi)
         .def("contains", &RealDomain::contains)
@@ -45,7 +45,7 @@ PYBIND11_MODULE(pytreeck, m) {
             [](const RealDomain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
             [](py::tuple t) { // __setstate__
                 if (t.size() != 2) throw std::runtime_error("invalid pickle state");
-                return RealDomain(t[0].cast<double>(), t[1].cast<double>());
+                return RealDomain(t[0].cast<FloatT>(), t[1].cast<FloatT>());
             }));
 
     /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
@@ -69,11 +69,11 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get()[n].tree_size(); })
         .def("depth", [](const TreeRef& r, NodeId n) { return r.get()[n].depth(); })
         .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get()[n].leaf_value(); })
-        .def("get_split", [](const TreeRef& r, NodeId n) -> std::tuple<FeatId, double> {
+        .def("get_split", [](const TreeRef& r, NodeId n) -> std::tuple<FeatId, FloatT> {
                 auto split = std::get<LtSplit>(r.get()[n].get_split());
                 return {split.feat_id, split.split_value}; })
-        .def("set_leaf_value", [](TreeRef& r, NodeId n, double v) { r.get()[n].set_leaf_value(v); })
-        .def("split", [](TreeRef& r, NodeId n, FeatId fid, double sv) { r.get()[n].split(LtSplit(fid, sv)); })
+        .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
+        .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split(LtSplit(fid, sv)); })
         .def("skip_branch", [](TreeRef& r, NodeId n) { r.get()[n].skip_branch(); })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
@@ -173,7 +173,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("left", [](const DomTreeT& t, NodeId n) { return t[n].left().id(); })
         .def("right", [](const DomTreeT& t, NodeId n) { return t[n].right().id(); })
         .def("parent", [](const DomTreeT& t, NodeId n) { return t[n].parent().id(); })
-        .def("get_split", [](const DomTreeT& t, NodeId n) -> std::tuple<FeatId, double> {
+        .def("get_split", [](const DomTreeT& t, NodeId n) -> std::tuple<FeatId, FloatT> {
                 auto split = std::get<LtSplit>(t[n].get_split());
                 return {split.feat_id, split.split_value}; });
 

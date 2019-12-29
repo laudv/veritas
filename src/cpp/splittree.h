@@ -120,7 +120,7 @@ namespace treeck {
         int split_score;
         int split_balance;
 
-        using SplitMapT = std::unordered_map<FeatId, std::vector<double>>;
+        using SplitMapT = std::unordered_map<FeatId, std::vector<FloatT>>;
 
         SplitTreeLeaf(const SplitTreeLeaf& other);
         SplitTreeLeaf(SplitTreeLeaf&& other);
@@ -142,7 +142,7 @@ namespace treeck {
 
         void find_best_domtree_split(const AddTree& addtree);
         LtSplit get_best_split() const;
-        std::tuple<double, double> get_tree_bounds(const AddTree& at, size_t tree_index);
+        std::tuple<FloatT, FloatT> get_tree_bounds(const AddTree& at, size_t tree_index);
 
         static SplitTreeLeaf merge(const std::vector<SplitTreeLeaf>& leafs);
 

@@ -72,7 +72,7 @@ namespace treeck {
 
 
 
-    TREECK_INSTANTIATE_TREE_TEMPLATE(double);
+    TREECK_INSTANTIATE_TREE_TEMPLATE(FloatT);
 
 
     AddTree::AddTree(size_t num_features)
@@ -157,7 +157,7 @@ namespace treeck {
     {
         std::istringstream ss(json);
 
-        double base_score;
+        FloatT base_score;
         std::vector<AddTree::TreeT> trees;
         size_t num_features;
 
@@ -193,7 +193,7 @@ namespace treeck {
             if (search != splits.end()) // found it!
                 splits[split.feat_id].push_back(split.split_value);
             else
-                splits.emplace(split.feat_id,  std::vector<double>{split.split_value});
+                splits.emplace(split.feat_id,  std::vector<FloatT>{split.split_value});
         }
 
         static
@@ -226,7 +226,7 @@ namespace treeck {
     AddTree::SplitMapT
     AddTree::get_splits() const
     {
-        std::unordered_map<FeatId, std::vector<double>> splits;
+        std::unordered_map<FeatId, std::vector<FloatT>> splits;
 
         // collect all the split values
         for (const TreeT& tree : trees_)
@@ -237,7 +237,7 @@ namespace treeck {
         // sort the split values, remove duplicates
         for (auto& n : splits)
         {
-            std::vector<double>& v = n.second;
+            std::vector<FloatT>& v = n.second;
             std::sort(v.begin(), v.end());
             v.erase(std::unique(v.begin(), v.end()), v.end());
         }

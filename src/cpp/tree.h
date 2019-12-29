@@ -14,6 +14,8 @@
 #include <cereal/types/vector.hpp>
 #include <cereal/types/variant.hpp>
 
+#include "domain.h"
+
 namespace treeck {
 
     using NodeId = int; /* Node Id type */
@@ -26,7 +28,7 @@ namespace treeck {
     };
 
     struct LtSplit : public SplitBase {
-        using ValueT = double;
+        using ValueT = FloatT;
         ValueT split_value;
 
         LtSplit();
@@ -211,15 +213,15 @@ namespace treeck {
 
     class AddTree {
     public:
-        using TreeT = Tree<double>;
-        using SplitMapT = std::unordered_map<FeatId, std::vector<double>>;
+        using TreeT = Tree<FloatT>;
+        using SplitMapT = std::unordered_map<FeatId, std::vector<FloatT>>;
 
     private:
         std::vector<TreeT> trees_;
         size_t num_features_;
 
     public:
-        double base_score;
+        FloatT base_score;
 
         AddTree(size_t num_features);
 
