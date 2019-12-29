@@ -626,7 +626,9 @@ namespace treeck {
             cereal::JSONOutputArchive ar(ss);
             ar(cereal::make_nvp("domtree_node_id", domtree_node_id_),
                cereal::make_nvp("is_reachable", is_reachable_),
-               cereal::make_nvp("best_split", best_split_));
+               cereal::make_nvp("best_split", best_split_),
+               cereal::make_nvp("split_score", split_score),
+               cereal::make_nvp("split_balance", split_balance));
         }
         return ss.str();
     }
@@ -639,14 +641,19 @@ namespace treeck {
         NodeId domtree_node_id;
         IsReachable is_reachable;
         std::optional<LtSplit> best_split;
+        int split_score, split_balance;
         {
             cereal::JSONInputArchive ar(ss);
             ar(cereal::make_nvp("domtree_node_id", domtree_node_id),
                cereal::make_nvp("is_reachable", is_reachable),
-               cereal::make_nvp("best_split", best_split));
+               cereal::make_nvp("best_split", best_split),
+               cereal::make_nvp("split_score", split_score),
+               cereal::make_nvp("split_balance", split_balance));
         }
         SplitTreeLeaf leaf(domtree_node_id, std::move(is_reachable));
         std::swap(leaf.best_split_, best_split);
+        leaf.split_score = split_score;
+        leaf.split_balance = split_balance;
         return leaf;
     }
 

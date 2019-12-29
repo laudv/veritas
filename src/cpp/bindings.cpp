@@ -173,6 +173,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("left", [](const DomTreeT& t, NodeId n) { return t[n].left().id(); })
         .def("right", [](const DomTreeT& t, NodeId n) { return t[n].right().id(); })
         .def("parent", [](const DomTreeT& t, NodeId n) { return t[n].parent().id(); })
+        .def("__str__", [](const DomTreeT& at) { return tostr(at); })
         .def("get_split", [](const DomTreeT& t, NodeId n) -> std::tuple<FeatId, FloatT> {
                 auto split = std::get<LtSplit>(t[n].get_split());
                 return {split.feat_id, split.split_value}; });

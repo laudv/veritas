@@ -25,7 +25,11 @@ class TreePlot:
         while len(stack) > 0:
             node = stack.pop()
             if tree.is_leaf(node):
-                g.node(self.name(node), "{:.3f}".format(tree.get_leaf_value(node)))
+                if hasattr(tree, "get_leaf_value"):
+                    s = "{:.3f}".format(tree.get_leaf_value(node))
+                else:
+                    s = f"l{node}"
+                g.node(self.name(node), s)
             else:
                 feat_id, split_value = tree.get_split(node)
                 g.node(self.name(node), "X{} < {:.3f}".format(feat_id, split_value))
