@@ -39,6 +39,8 @@ class DistributedVerifier:
         self._stop_flag = False
 
     def check(self):
+        self.done_count = 0
+        self.start_time = timeit.default_timer()
         self.results = {0: {}} # domtree_node_id => result info
         l0 = self._st.get_leaf(0)
 
@@ -57,27 +59,27 @@ class DistributedVerifier:
             ls = [l0]
 
         # 3: submit verifier 'check' tasks for each
-        fs = [self._client.submit(DistributedVerifier._verify_fun,
+        self._fs = [self._client.submit(DistributedVerifier._verify_fun,
             self._at_fut, lk, self._timeout_start, self._verifier_factory)
             for lk in ls]
 
         # 4: wait for future to complete, act on result
         # - if sat/unsat -> done (finish if sat if opt set)
         # - if new split -> schedule two new tasks
-        while len(fs) > 0: # while task are running...
+        while len(self._fs) > 0: # while task are running...
             if self._stop_flag:
-                print("Stop flag: cancelling remaining tasks")
-                for f in fs:
+                self._print("Stop flag: cancelling remaining tasks")
+                for f in self._fs:
                     f.cancel()
                     self._stop_flag = False
                 break
 
-            wait(fs, return_when="FIRST_COMPLETED")
+            wait(self._fs, return_when="FIRST_COMPLETED")
             next_fs = []
-            for f in fs:
+            for f in self._fs:
                 if f.done(): next_fs += self._handle_done_future(f)
                 else:        next_fs.append(f)
-            fs = next_fs
+            self._fs = next_fs
 
     def _check_paths(self, l0):
         # update reachabilities in splittree_leaf 0 in parallel
@@ -134,8 +136,9 @@ class DistributedVerifier:
 
         # We're finished with this branch!
         if status != Verifier.Result.UNKNOWN:
+            self.done_count += 1
             model, domtree_node_id, check_time = t[1:]
-            print(f"{status} for {domtree_node_id} in {check_time}s!")
+            self._print(f"{status} for {domtree_node_id} in {check_time:.2f}s")
             r = self.results[domtree_node_id]
             r["status"] = status
             r["check_time"] = check_time
@@ -159,9 +162,8 @@ class DistributedVerifier:
         self.results[domtree_node_id_l] = {}
         self.results[domtree_node_id_r] = {}
 
-        print(f"UNKNOWN for {domtree_node_id} in {check_time}s with timeout {timeout}")
-        print(f"> splitting {domtree_node_id} into {domtree_node_id_l} and {domtree_node_id_r}")
-        print(f"> with score {score} and balance {balance}")
+        self._print(f"TIMEOUT for {domtree_node_id} in {check_time:.1f}s (timeout={timeout:.1f})")
+        self._print(f"> splitting {domtree_node_id} into {domtree_node_id_l}, {domtree_node_id_r} with score {score}")
 
         next_timeout = min(self._timeout_max, self._timeout_rate * timeout)
 
@@ -170,6 +172,13 @@ class DistributedVerifier:
             for lk in [self._st.get_leaf(domtree_node_id_l),
                        self._st.get_leaf(domtree_node_id_r)]]
         return fs
+
+    def _print(self, msg):
+        time = int(timeit.default_timer() - self.start_time)
+        m, s = time // 60, time % 60
+        done = self.done_count
+        rem = len(self._fs)
+        print(f"[{m}m{s:02d}s {done:>4} {rem:<4}]", msg)
 
 
 

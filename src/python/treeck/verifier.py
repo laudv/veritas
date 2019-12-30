@@ -227,6 +227,11 @@ class Verifier:
                 raise RuntimeError(f"Unexpected {Verifier.Result.UNKNOWN}")
             return self == Verifier.Result.SAT
 
+        def __str__(self):
+            if self == Verifier.Result.SAT:     return "SAT"
+            if self == Verifier.Result.UNSAT:   return "UNSAT"
+            if self == Verifier.Result.UNKNOWN: return "UNKNOWN"
+
     def __init__(self, addtree, splittree_leaf, backend,
             num_instances=1):
 
