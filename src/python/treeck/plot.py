@@ -18,18 +18,22 @@ class TreePlot:
                 and (not btree.is_leaf(bnode) or \
                         (btree.get_leaf_value(bnode) == stree.get_leaf_value(snode)))
 
-    def add_tree(self, tree):
+    def add_tree(self, tree, leaf_labels=None):
         g = gv.Graph()
         self.index += 1
         stack = [tree.root()]
         while len(stack) > 0:
             node = stack.pop()
             if tree.is_leaf(node):
+                style = ""
                 if hasattr(tree, "get_leaf_value"):
                     s = "{:.3f}".format(tree.get_leaf_value(node))
+                elif leaf_labels is not None and node in leaf_labels:
+                    s = str(leaf_labels[node])
+                    style = "bold"
                 else:
                     s = f"l{node}"
-                g.node(self.name(node), s)
+                g.node(self.name(node), s, style=style)
             else:
                 feat_id, split_value = tree.get_split(node)
                 g.node(self.name(node), "X{} < {:.3f}".format(feat_id, split_value))
