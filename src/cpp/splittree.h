@@ -15,15 +15,6 @@
 
 namespace treeck {
 
-    struct LeafSplitInfo {
-        LeafSplitInfo();
-
-        template <typename Archive>
-        void serialize(Archive& archive);
-    };
-
-    std::ostream& operator<<(std::ostream& s, LeafSplitInfo info);
-
     struct IsReachableKey {
         int tree_index;
         NodeId node_id;
@@ -67,7 +58,7 @@ namespace treeck {
 
     class SplitTree {
     public:
-        using DomTreeT = Tree<LeafSplitInfo>;
+        using DomTreeT = Tree<FloatT>; /* we don't use the float */
         using DomainsT = std::unordered_map<FeatId, RealDomain>;
         using ReachableT = std::unordered_map<NodeId, IsReachable>;
 

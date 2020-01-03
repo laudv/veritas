@@ -26,16 +26,6 @@
 
 namespace treeck {
 
-    LeafSplitInfo::LeafSplitInfo() {}
-
-    template <typename Archive>
-    void
-    LeafSplitInfo::serialize(Archive& archive) {}
-
-    std::ostream&
-    operator<<(std::ostream& s, LeafSplitInfo info) { return s; }
-
-
     bool
     operator==(const IsReachableKey& a, const IsReachableKey& b)
     {

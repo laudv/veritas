@@ -11,7 +11,6 @@
 #include "tree.h"
 #include "searchspace.h"
 #include "splittree.h"
-#include "prune.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -90,7 +89,6 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_splits", &AddTree::get_splits)
         .def("to_json", &AddTree::to_json)
         .def("from_json", AddTree::from_json)
-        .def("prune", [](const AddTree& at, const Domains::vec_t& doms) { return prune(at, doms); })
         .def("__str__", [](const AddTree& at) { return tostr(at); })
         .def(py::pickle(
             [](const AddTree& at) { // __getstate__
@@ -99,27 +97,6 @@ PYBIND11_MODULE(pytreeck, m) {
             [](const std::string& json) { // __setstate__
                 return AddTree::from_json(json);
             }));
-
-    py::class_<SearchSpace>(m, "SearchSpace")
-        .def(py::init<std::shared_ptr<AddTree>>())
-        .def(py::init<std::shared_ptr<AddTree>, const Domains::vec_t&>())
-        .def("split", [](SearchSpace& sp, size_t nleafs) {
-            sp.split(UnreachableNodesMeasure{}, NumDomTreeLeafsStopCond{nleafs});
-        })
-        //.def("num_features", &SearchSpace::num_features)
-        .def("scores", &SearchSpace::scores)
-        .def("leafs", &SearchSpace::leafs)
-        .def("get_domains", [](SearchSpace& sp, NodeId leaf_id) {
-            Domains doms;
-            sp.get_domains(leaf_id, doms);
-            return doms.vec();
-        })
-        .def("get_pruned_addtree", [](const SearchSpace& sp, NodeId node_id) {
-            Domains doms;
-            sp.get_domains(node_id, doms);
-            AddTree new_at = prune(sp.addtree(), doms);
-            return new_at;
-        });
 
     py::class_<SplitTree>(m, "SplitTree")
         .def(py::init<std::shared_ptr<AddTree>, SplitTree::DomainsT>())
