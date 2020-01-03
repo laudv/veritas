@@ -113,6 +113,9 @@ class DistributedVerifier:
                     max_score = lk.split_score
                     max_lk = lk
 
+            if max_lk is None:
+                raise RuntimeError("no more splits!")
+
             ls.remove(max_lk)
             nid = max_lk.domtree_node_id()
 
@@ -227,6 +230,7 @@ class DistributedVerifier:
             model = {}
             if status.is_sat():
                 model = v.model()
+                model["family"] = v.model_family(model)
             return status, model, lk.domtree_node_id(), v.check_time
         except VerifierTimeout as e:
             print(f"timeout after {e.unk_after} (timeout = {timeout}) -> splitting l{lk.domtree_node_id()}")

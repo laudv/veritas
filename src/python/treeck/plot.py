@@ -18,7 +18,10 @@ class TreePlot:
                 and (not btree.is_leaf(bnode) or \
                         (btree.get_leaf_value(bnode) == stree.get_leaf_value(snode)))
 
-    def add_tree(self, tree, leaf_labels=None):
+    def add_tree(self, tree,
+            leaf_labels=None,
+            feat_labels=None,
+            plot_node_ids=False):
         g = gv.Graph()
         self.index += 1
         stack = [tree.root()]
@@ -33,10 +36,15 @@ class TreePlot:
                     style = "bold"
                 else:
                     s = f"l{node}"
+                if plot_node_ids: s = f"{node}: {s}"
                 g.node(self.name(node), s, style=style)
             else:
                 feat_id, split_value = tree.get_split(node)
-                g.node(self.name(node), "X{} < {:.3f}".format(feat_id, split_value))
+                s = f"X{feat_id}"
+                if feat_labels is not None:
+                    s = feat_labels[feat_id]
+                if plot_node_ids: s = f"{node}: {s}"
+                g.node(self.name(node), f"{s} < {split_value:.3f}")
                 stack.append(tree.right(node))
                 stack.append(tree.left(node))
 
