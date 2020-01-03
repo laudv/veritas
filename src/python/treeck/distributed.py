@@ -14,12 +14,13 @@ class DistributedVerifier:
             splittree,
             verifier_factory,
             check_paths = True,
-            saturate_workers_from_start = True,
+            saturate_workers_from_start = False,
             saturate_workers_factor = 1.0,
+            num_initial_tasks = 1,
             stop_when_sat = False,
-            timeout_start = 60,
-            timeout_max = 3600,
-            timeout_grow_rate = 1.5):
+            timeout_start = 5,
+            timeout_max = 120,
+            timeout_grow_rate = 1.2):
 
         self._timeout_start = timeout_start
         self._timeout_max = timeout_max
@@ -34,6 +35,7 @@ class DistributedVerifier:
         self._check_paths_opt = check_paths
         self._saturate_workers_opt = saturate_workers_from_start
         self._saturate_workers_factor_opt = saturate_workers_factor
+        self._num_initial_tasks_opt = num_initial_tasks
         self._stop_when_sat_opt = stop_when_sat
 
         self._stop_flag = False
@@ -55,6 +57,8 @@ class DistributedVerifier:
             nworkers = sum(self._client.nthreads().values())
             ntasks = int(round(self._saturate_workers_factor_opt * nworkers))
             ls = self._generate_splits(l0, ntasks)
+        elif self._num_initial_tasks_opt > 1:
+            ls = self._generate_splits(l0, self._num_initial_tasks_opt)
         else:
             ls = [l0]
 
@@ -102,7 +106,7 @@ class DistributedVerifier:
         return SplitTreeLeaf.merge(list(map(lambda f: f.result(), fs)))
 
     def _generate_splits(self, l0, ntasks):
-        # split and collects splittree_leafs
+        # split and collect splittree_leafs; this runs locally
         l0.find_best_domtree_split(self._at)
         ls = [l0]
         while len(ls) < ntasks:
