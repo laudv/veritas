@@ -98,21 +98,4 @@ namespace treeck {
         return s << "RealDomain(" << d.lo << ", " << d.hi << ')';
     }
 
-
-    Domains::Domains() : domains_{} {}
-    Domains::Domains(vec_t v) : domains_(v) {}
-    size_t Domains::size() const { return domains_.size(); }
-    void Domains::resize(size_t size) { domains_.resize(size); }
-    Domains::iterator Domains::begin() { return domains_.begin(); }
-    Domains::iterator Domains::end() { return domains_.end(); }
-    Domains::const_iterator Domains::begin() const { return domains_.cbegin(); }
-    Domains::const_iterator Domains::end() const { return domains_.cend(); }
-    Domains::const_iterator Domains::cbegin() const { return domains_.cbegin(); }
-    Domains::const_iterator Domains::cend() const { return domains_.cend(); }
-
-    const RealDomain& Domains::operator[](size_t i) const { return domains_.at(i); }
-    RealDomain& Domains::operator[](size_t i) { return domains_.at(i); }
-
-    const Domains::vec_t& Domains::vec() const { return domains_; }
-
 } /* namespace treeck */

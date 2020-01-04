@@ -9,7 +9,6 @@
 
 #include "domain.h"
 #include "tree.h"
-#include "searchspace.h"
 #include "splittree.h"
 
 namespace py = pybind11;
