@@ -6,10 +6,11 @@
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
+#include <pybind11/cast.h>
 
 #include "domain.h"
 #include "tree.h"
-#include "splittree.h"
+#include "subspaces.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -22,9 +23,25 @@ std::string tostr(T& o)
     return s.str();
 }
 
+static
+py::tuple
+encode_split(const Split& split)
+{
+    return visit_split(
+        [](const LtSplit& s) -> py::tuple {
+            return py::make_tuple("lt_split", s.feat_id, s.split_value);
+        },
+        [](const BoolSplit& s) -> py::tuple {
+            return py::make_tuple("bool_split", s.feat_id);
+        },
+        split);
+}
+
+
 using TreeD = Tree<FloatT>;
 using NodeRefD = TreeD::MRef;
-using DomTreeT = SplitTree::DomTreeT;
+using DomTreeT = Subspaces::DomTreeT;
+
 
 PYBIND11_MODULE(pytreeck, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
@@ -67,9 +84,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get()[n].tree_size(); })
         .def("depth", [](const TreeRef& r, NodeId n) { return r.get()[n].depth(); })
         .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get()[n].leaf_value(); })
-        .def("get_split", [](const TreeRef& r, NodeId n) -> std::tuple<FeatId, FloatT> {
-                auto split = std::get<LtSplit>(r.get()[n].get_split());
-                return {split.feat_id, split.split_value}; })
+        .def("get_split", [](const TreeRef& r, NodeId n) { return encode_split(r.get()[n].get_split()); })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split(LtSplit(fid, sv)); })
         .def("skip_branch", [](TreeRef& r, NodeId n) { r.get()[n].skip_branch(); })
@@ -97,47 +112,44 @@ PYBIND11_MODULE(pytreeck, m) {
                 return AddTree::from_json(json);
             }));
 
-    py::class_<SplitTree>(m, "SplitTree")
-        .def(py::init<std::shared_ptr<AddTree>, SplitTree::DomainsT>())
-        .def("domtree", &SplitTree::domtree)
-        .def("addtree", &SplitTree::addtree)
-        .def("get_root_domain", &SplitTree::get_root_domain)
-        .def("get_leaf_domains", [](const SplitTree& st, NodeId n) {
-            SplitTree::DomainsT domains;
+    py::class_<Subspaces>(m, "Subspaces")
+        .def(py::init<std::shared_ptr<AddTree>, Subspaces::DomainsT>())
+        .def("domtree", &Subspaces::domtree)
+        .def("addtree", &Subspaces::addtree)
+        .def("get_root_domain", &Subspaces::get_root_domain)
+        .def("get_leaf_domains", [](const Subspaces& st, NodeId n) {
+            Subspaces::DomainsT domains;
             st.get_leaf_domains(n, domains);
             return domains;
         })
-        .def("get_leaf", &SplitTree::get_leaf)
-        .def("split_leaf", &SplitTree::split_domtree_leaf)
-        .def("to_json", &SplitTree::to_json)
-        .def("from_json", &SplitTree::from_json)
-        .def("split", [](SplitTree& st, SplitTreeLeaf& leaf) {
-            st.split(std::move(leaf));
+        .def("get_subspace", &Subspaces::get_subspace)
+        .def("split_leaf", &Subspaces::split_domtree_leaf)
+        .def("to_json", &Subspaces::to_json)
+        .def("from_json", &Subspaces::from_json)
+        .def("split", [](Subspaces& st, Subspace& subspace) {
+            st.split(std::move(subspace));
             // C++ standard specifies `leaf` is in valid but unspecified state afterwards
             // Python users really shouldn't reuse `leaf` afterwards
         });
 
-    py::class_<SplitTreeLeaf>(m, "SplitTreeLeaf")
-        .def_readonly("split_score", &SplitTreeLeaf::split_score)
-        .def_readonly("split_balance", &SplitTreeLeaf::split_balance)
-        .def("domtree_node_id", &SplitTreeLeaf::domtree_node_id)
-        .def("is_reachable", &SplitTreeLeaf::is_reachable)
-        .def("mark_unreachable", &SplitTreeLeaf::mark_unreachable)
-        .def("find_best_domtree_split", &SplitTreeLeaf::find_best_domtree_split)
-        .def("get_best_split", [](const SplitTreeLeaf& leaf) {
-            auto split = leaf.get_best_split();
-            return std::make_tuple(split.feat_id, split.split_value);
-        })
-        .def("get_tree_bounds", &SplitTreeLeaf::get_tree_bounds)
-        .def("merge", &SplitTreeLeaf::merge)
-        .def("to_json", &SplitTreeLeaf::to_json)
-        .def("from_json", &SplitTreeLeaf::from_json)
+    py::class_<Subspace>(m, "Subspace")
+        .def_readonly("split_score", &Subspace::split_score)
+        .def_readonly("split_balance", &Subspace::split_balance)
+        .def("domtree_node_id", &Subspace::domtree_node_id)
+        .def("is_reachable", &Subspace::is_reachable)
+        .def("mark_unreachable", &Subspace::mark_unreachable)
+        .def("find_best_domtree_split", &Subspace::find_best_domtree_split)
+        .def("get_best_split", [](const Subspace& ss) { return encode_split(ss.get_best_split()); })
+        .def("get_tree_bounds", &Subspace::get_tree_bounds)
+        .def("merge", &Subspace::merge)
+        .def("to_json", &Subspace::to_json)
+        .def("from_json", &Subspace::from_json)
         .def(py::pickle(
-            [](const SplitTreeLeaf& p) { // __getstate__
+            [](const Subspace& p) { // __getstate__
                 return p.to_json();
             },
             [](const std::string& json) { // __setstate__
-                return SplitTreeLeaf::from_json(json);
+                return Subspace::from_json(json);
             }));
 
     py::class_<DomTreeT>(m, "DomTree")
@@ -150,8 +162,6 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("right", [](const DomTreeT& t, NodeId n) { return t[n].right().id(); })
         .def("parent", [](const DomTreeT& t, NodeId n) { return t[n].parent().id(); })
         .def("__str__", [](const DomTreeT& at) { return tostr(at); })
-        .def("get_split", [](const DomTreeT& t, NodeId n) -> std::tuple<FeatId, FloatT> {
-                auto split = std::get<LtSplit>(t[n].get_split());
-                return {split.feat_id, split.split_value}; });
+        .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
 
 } /* PYBIND11_MODULE */
