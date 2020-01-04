@@ -3,6 +3,7 @@
 
 #include <tuple>
 #include <ostream>
+#include <type_traits>
 #include <vector>
 #include <variant>
 
@@ -65,7 +66,7 @@ namespace treeck {
 
         bool contains(bool value) const;
 
-        std::tuple<BoolDomain, BoolDomain> split(bool value) const;
+        std::tuple<BoolDomain, BoolDomain> split() const;
     };
 
     std::ostream& operator<<(std::ostream& s, const BoolDomain& d);
@@ -73,7 +74,11 @@ namespace treeck {
     using Domain = std::variant<RealDomain, BoolDomain>;
 
     template <typename RealF, typename BoolF>
-    std::invoke_result_t<RealF, RealDomain>
+    static
+    std::enable_if_t<std::is_same_v<
+            std::invoke_result_t<RealF, const RealDomain&>,
+            std::invoke_result_t<BoolF, const BoolDomain&>>,
+        std::invoke_result_t<RealF, const RealDomain&>>
     visit_domain(RealF&& f1, BoolF&& f2, const Domain& dom)
     {
         return std::visit([f1, f2](auto&& arg) {

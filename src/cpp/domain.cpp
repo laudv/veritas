@@ -140,7 +140,7 @@ namespace treeck {
     }
 
     std::tuple<BoolDomain, BoolDomain>
-    BoolDomain::split(bool value) const
+    BoolDomain::split() const
     {
         if (!is_everything()) throw std::runtime_error("cannot split BoolDomain");
         return {false, true};
