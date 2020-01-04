@@ -4,6 +4,9 @@
 #include <tuple>
 #include <ostream>
 #include <vector>
+#include <variant>
+
+#include "util.h"
 
 namespace treeck {
 
@@ -23,13 +26,14 @@ namespace treeck {
         RIGHT     = 1    // x3: value lies to the right of the domain
     };
 
-    /** An interval [lo, hi) */
+    // real domain
     struct RealDomain {
         FloatT lo, hi;
 
         RealDomain();
         RealDomain(FloatT lo, FloatT hi);
-        
+        RealDomain(FloatT value, bool is_lo);
+
         bool is_everything() const;
         WhereFlag where_is(FloatT value) const;
         WhereFlag where_is_strict(FloatT value) const;
@@ -38,10 +42,52 @@ namespace treeck {
         bool overlaps(const RealDomain& other) const;
         bool covers(const RealDomain& other) const;
         bool covers_strict(const RealDomain& value) const;
+
         std::tuple<RealDomain, RealDomain> split(FloatT value) const;
     };
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d);
+
+    // bool domain
+    struct BoolDomain {
+    private:
+        short value_; // -1 unset (everything), 0 false, 1 true
+
+    public:
+        BoolDomain();
+        BoolDomain(bool value);
+
+        bool is_everything() const;
+        bool is_true() const;
+        bool is_false() const;
+
+        WhereFlag where_is(bool value) const;
+
+        bool contains(bool value) const;
+
+        std::tuple<BoolDomain, BoolDomain> split(bool value) const;
+    };
+
+    std::ostream& operator<<(std::ostream& s, const BoolDomain& d);
+
+    using Domain = std::variant<RealDomain, BoolDomain>;
+
+    template <typename RealF, typename BoolF>
+    std::invoke_result_t<RealF, RealDomain>
+    visit_domain(RealF&& f1, BoolF&& f2, const Domain& dom)
+    {
+        return std::visit([f1, f2](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, RealDomain>)
+                return f1(arg);
+            else if constexpr (std::is_same_v<T, BoolDomain>)
+                return f2(arg);
+            else 
+                static_assert(util::always_false<T>::value, "non-exhaustive visit_domain");
+        }, dom);
+    }
+
+    bool operator==(const Domain& a, const Domain& b);
 
 } /* namespace treeck */
 
