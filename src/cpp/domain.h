@@ -51,18 +51,14 @@ namespace treeck {
 
     // bool domain
     struct BoolDomain {
-    private:
         short value_; // -1 unset (everything), 0 false, 1 true
 
-    public:
         BoolDomain();
         BoolDomain(bool value);
 
         bool is_everything() const;
         bool is_true() const;
         bool is_false() const;
-
-        WhereFlag where_is(bool value) const;
 
         bool contains(bool value) const;
 

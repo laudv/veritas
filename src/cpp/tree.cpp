@@ -1,4 +1,3 @@
-#include "util.h"
 #include "tree.hpp"
 
 namespace treeck {
@@ -37,37 +36,40 @@ namespace treeck {
         return a.feat_id == b.feat_id && a.category == b.category;
     }
 
+    BoolSplit::BoolSplit() : SplitBase(-1) {}
+    BoolSplit::BoolSplit(FeatId feat_id) : SplitBase(feat_id) {}
+
+    bool
+    BoolSplit::test(BoolSplit::ValueT value) const
+    {
+        return value;
+    }
+
+    bool operator==(const BoolSplit& a, const BoolSplit& b)
+    {
+        return a.feat_id == b.feat_id;
+    }
+
     std::ostream&
     operator<<(std::ostream& s, const Split& split)
     {
-        std::visit(util::overloaded {
+        visit_split(
             [&s](const LtSplit& x) { s << "LtSplit(" << x.feat_id << ", " << x.split_value << ')'; },
-            [&s](const EqSplit& x) { s << "EqSplit(" << x.feat_id << ", " << x.category << ')'; },
-            [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
-        }, split);
+            [&s](const BoolSplit& x) { s << "BoolSplit(" << x.feat_id << ')'; },
+            split);
         return s;
     }
 
     bool
     operator==(const Split& a, const Split& b)
     {
-        bool out = false;
-        std::visit(util::overloaded{
-            [&b, &out](const LtSplit& x) {
-                if (std::holds_alternative<LtSplit>(b)) {
-                    auto y = std::get<LtSplit>(b);
-                    out = x == y;
-                }
+        return visit_split(
+            [b](const LtSplit& x) {
+                return std::holds_alternative<LtSplit>(b) && x == std::get<LtSplit>(b);
             },
-            [&b, &out](const EqSplit& x) {
-                if (std::holds_alternative<EqSplit>(b)) {
-                    auto y = std::get<EqSplit>(b);
-                    out = x == y;
-                }
-            },
-            [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
-        }, a);
-        return out;
+            [b](const BoolSplit& x) {
+                return std::holds_alternative<BoolSplit>(b) && x == std::get<BoolSplit>(b);
+            }, a);
     }
 
 
@@ -193,7 +195,16 @@ namespace treeck {
             if (search != splits.end()) // found it!
                 splits[split.feat_id].push_back(split.split_value);
             else
-                splits.emplace(split.feat_id,  std::vector<FloatT>{split.split_value});
+                splits.emplace(split.feat_id, std::vector<FloatT>{split.split_value});
+        }
+
+        static
+        void
+        insert_split_value(AddTree::SplitMapT& splits, const BoolSplit& split)
+        {
+            auto search = splits.find(split.feat_id);
+            if (search == splits.end()) // found it!
+                splits.emplace(split.feat_id, std::vector<FloatT>()); // empty vector
         }
 
         static
@@ -210,12 +221,10 @@ namespace treeck {
 
                 if (n.is_leaf()) continue;
 
-                Split split = n.get_split();
-                std::visit(util::overloaded {
-                    [&splits](LtSplit& x) { insert_split_value(splits, x);  },
-                    [](EqSplit&) { throw std::runtime_error("EqSplit not supported"); },
-                    [](auto& x) { static_assert(util::always_false<decltype(x)>::value, "non-exhaustive visit"); }
-                }, split);
+                visit_split(
+                    [&splits](const LtSplit& x) { insert_split_value(splits, x); },
+                    [&splits](const BoolSplit& x) { insert_split_value(splits, x); },
+                    n.get_split());
 
                 stack.push(n.right());
                 stack.push(n.left());

@@ -119,20 +119,6 @@ namespace treeck {
         return value_ == 0;
     }
 
-    WhereFlag
-    BoolDomain::where_is(bool value) const
-    {
-        // [ false -------- true ]
-        //   LEFT      IN_DOMAIN     if this->is_true()
-        //   IN_DOMAIN     RIGHT     if this->is_false()
-        if (is_everything())
-            return IN_DOMAIN;
-        if (is_true())
-            return value ? IN_DOMAIN : LEFT;
-        else
-            return value ? RIGHT : IN_DOMAIN; 
-    }
-
     bool
     BoolDomain::contains(bool value) const
     {

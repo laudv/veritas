@@ -6,6 +6,7 @@
 #include <iostream>
 #include <optional>
 #include <sstream>
+#include <type_traits>
 #include <variant>
 #include <vector>
 #include <unordered_map>
@@ -53,10 +54,43 @@ namespace treeck {
     };
     bool operator==(const EqSplit& a, const EqSplit& b);
 
-    using Split = std::variant<LtSplit, EqSplit>;
+    struct BoolSplit : public SplitBase {
+        using ValueT = bool;
+
+        BoolSplit();
+        BoolSplit(FeatId feat_id);
+        bool test(ValueT value) const;
+
+        template<typename Archive>
+        void serialize(Archive& archive);
+    };
+    bool operator==(const BoolSplit& a, const BoolSplit& b);
+
+    using Split = std::variant<LtSplit, BoolSplit>;
+
+    template <typename LtSplitF, typename BoolSplitF>
+    static
+    std::enable_if_t<std::is_same_v<
+            std::invoke_result_t<LtSplitF, const LtSplit&>,
+            std::invoke_result_t<BoolSplitF, const BoolSplit&>>,
+        std::invoke_result_t<LtSplitF, const LtSplit&>>
+    visit_split(LtSplitF&& f1, BoolSplitF&& f2, const Split& split)
+    {
+        return std::visit([f1, f2](auto&& arg) {
+            using T = std::decay_t<decltype(arg)>;
+            if constexpr (std::is_same_v<T, LtSplit>)
+                return f1(arg);
+            else if constexpr (std::is_same_v<T, BoolSplit>)
+                return f2(arg);
+            else 
+                static_assert(util::always_false<T>::value, "non-exhaustive visit_split");
+        }, split);
+    }
 
     std::ostream& operator<<(std::ostream& strm, const Split& s);
     bool operator==(const Split& a, const Split& b);
+
+
 
     template <typename LeafT>
     class Tree;

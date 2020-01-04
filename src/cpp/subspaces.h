@@ -1,5 +1,5 @@
-#ifndef TREECK_SPLITTREE_H
-#define TREECK_SPLITTREE_H
+#ifndef TREECK_SUBSPACES_H
+#define TREECK_SUBSPACES_H
 
 #include <string>
 #include <utility>
@@ -52,14 +52,40 @@ namespace treeck {
         void serialize(Archive& archive);
     };
 
+    /*
+     *   +------------(Sub-)space---------------+
+     *   |                                      |
+     *   |  +-----------+                       |
+     *   |  | Attribute |                       |
+     *   |  +-----------+                       |
+     *   |       |                              |
+     *   |       | has                          |
+     *   |       v                              |
+     *   |  +-----------+                       |
+     *   |  | Domain    +-----> RealDomain      |
+     *   |  +-----------+  |                    |
+     *   |                 +--> BoolDomain      |
+     *   |                                      |
+     *   +--------------------------------------+
+     *
+     * A (sub-)space defines (additionally constrained) domains for each
+     * feature. A (sub-)space can be split to produce more constrained
+     * sub-spaces. This concept is captured by the `Subspace` class.
+     *
+     * The `Subspaces` class keeps track of all produced sub-spaces.
+     *
+     * The more constrained a sub-space is, the more nodes in a tree become
+     * unreachable.
+     */
 
-    class SplitTreeLeaf;
+
+    class Subspace;
 
 
-    class SplitTree {
+    class Subspaces {
     public:
         using DomTreeT = Tree<FloatT>; /* we don't use the float */
-        using DomainsT = std::unordered_map<FeatId, RealDomain>;
+        using DomainsT = std::unordered_map<FeatId, Domain>;
         using ReachableT = std::unordered_map<NodeId, IsReachable>;
 
     private:
@@ -70,42 +96,42 @@ namespace treeck {
         ReachableT is_reachables_;
 
     public:
-        SplitTree(std::shared_ptr<const AddTree> addtree, DomainsT root_domains);
+        Subspaces(std::shared_ptr<const AddTree> addtree, DomainsT root_domains);
 
         const AddTree& addtree() const;
         const DomTreeT& domtree() const;
 
-        RealDomain get_root_domain(FeatId) const;
+        Domain get_root_domain(FeatId) const;
 
-        void get_leaf_domains(NodeId domtree_node_id, DomainsT& domains) const;
-        SplitTreeLeaf get_leaf(NodeId domtree_node_id);
+        void get_leaf_domains(NodeId domtree_leaf_id, DomainsT& domains) const;
+        Subspace get_subspace(NodeId domtree_leaf_id);
 
-        void split_domtree_leaf(NodeId domtree_node_id);
-        void split(SplitTreeLeaf&& leaf);
+        void split_domtree_leaf(NodeId domtree_leaf_id);
+        void split(Subspace&& leaf);
 
         std::string to_json() const;
-        static SplitTree from_json(
+        static Subspaces from_json(
                 std::shared_ptr<const AddTree> addtree,
                 const std::string& json);
 
     private:
         void update_is_reachable(IsReachable& is_reachable,
-                FeatId feat_id, RealDomain new_dom);
+                FeatId feat_id, Domain new_dom);
         void update_is_reachable(IsReachable& is_reachable,
                 size_t tree_index,
                 AddTree::TreeT::CRef node,
                 FeatId feat_id,
-                RealDomain new_dom,
+                Domain new_dom,
                 bool marked);
     };
 
 
-    class SplitTreeLeaf {
+    class Subspace {
         NodeId domtree_node_id_;
         IsReachable is_reachable_;
-        std::optional<LtSplit> best_split_;
+        std::optional<Split> best_split_;
 
-        friend SplitTree;
+        friend Subspaces;
 
     public:
         int split_score;
@@ -113,48 +139,48 @@ namespace treeck {
 
         using SplitMapT = std::unordered_map<FeatId, std::vector<FloatT>>;
 
-        SplitTreeLeaf(const SplitTreeLeaf& other);
-        SplitTreeLeaf(SplitTreeLeaf&& other);
+        Subspace(const Subspace& other);
+        Subspace(Subspace&& other);
 
-        SplitTreeLeaf(
+        Subspace(
                 NodeId domtree_node_id,
                 const IsReachable& is_reachable);
 
-        SplitTreeLeaf(
+        Subspace(
                 NodeId domtree_node_id,
                 IsReachable&& is_reachable);
 
-        SplitTreeLeaf& operator=(const SplitTreeLeaf& other);
-        SplitTreeLeaf& operator=(SplitTreeLeaf&& other);
+        Subspace& operator=(const Subspace& other);
+        Subspace& operator=(Subspace&& other);
 
         NodeId domtree_node_id() const;
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
         void find_best_domtree_split(const AddTree& addtree);
-        LtSplit get_best_split() const;
+        Split get_best_split() const;
         std::tuple<FloatT, FloatT> get_tree_bounds(const AddTree& at, size_t tree_index);
 
-        static SplitTreeLeaf merge(const std::vector<SplitTreeLeaf>& leafs);
+        static Subspace merge(const std::vector<Subspace>& leafs);
 
         std::string to_json() const;
-        static SplitTreeLeaf from_json(const std::string& json);
+        static Subspace from_json(const std::string& json);
 
     private:
         int count_unreachable_leafs(
                 const AddTree& addtree,
                 FeatId feat_id,
-                RealDomain new_dom) const;
+                Domain new_dom) const;
 
         int count_unreachable_leafs(
                 const AddTree& addtree,
                 size_t tree_index,
                 AddTree::TreeT::CRef node,
                 FeatId feat_id,
-                RealDomain new_dom,
+                Domain new_dom,
                 bool marked) const;
     };
 
 } /* namespace treeck */
 
-#endif /* TREECK_SPLITTREE_H */
+#endif /* TREECK_SUBSPACES_H */

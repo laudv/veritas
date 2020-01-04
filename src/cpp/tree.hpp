@@ -7,7 +7,6 @@
 #include "tree.h"
 
 namespace treeck {
-
     template <typename Archive>
     void
     LtSplit::serialize(Archive& archive)
@@ -20,6 +19,13 @@ namespace treeck {
     EqSplit::serialize(Archive& archive)
     {
         archive(CEREAL_NVP(feat_id), CEREAL_NVP(category));
+    }
+
+    template <typename Archive>
+    void
+    BoolSplit::serialize(Archive& archive)
+    {
+        archive(CEREAL_NVP(feat_id));
     }
 
     namespace inner {

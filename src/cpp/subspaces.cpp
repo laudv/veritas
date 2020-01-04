@@ -22,7 +22,7 @@
 #include "util.h"
 #include "tree.hpp"
 
-#include "splittree.h"
+#include "subspaces.h"
 
 namespace treeck {
 
@@ -104,7 +104,7 @@ namespace treeck {
 
 
 
-    SplitTree::SplitTree(std::shared_ptr<const AddTree> addtree, SplitTree::DomainsT domains)
+    Subspaces::Subspaces(std::shared_ptr<const AddTree> addtree, Subspaces::DomainsT domains)
         : addtree_(addtree)
         , domtree_()
         , root_domains_(domains)
@@ -120,13 +120,13 @@ namespace treeck {
     }
 
     const AddTree&
-    SplitTree::addtree() const { return *addtree_; }
+    Subspaces::addtree() const { return *addtree_; }
 
-    const SplitTree::DomTreeT&
-    SplitTree::domtree() const { return domtree_; }
+    const Subspaces::DomTreeT&
+    Subspaces::domtree() const { return domtree_; }
 
-    RealDomain
-    SplitTree::get_root_domain(FeatId feat_id) const
+    Domain
+    Subspaces::get_root_domain(FeatId feat_id) const
     {
         auto search = root_domains_.find(feat_id);
         if (search != root_domains_.end())
@@ -134,89 +134,81 @@ namespace treeck {
         return RealDomain(); // unconstrained domain
     }
 
-    /*
-    RealDomain
-    SplitTree::get_domain(NodeId domtree_node_id, FeatId feat_id) const
-    {
-        RealDomain dom = get_root_domain(feat_id);
-        DomTreeT::CRef node = domtree_[domtree_node_id];
-        while (!node.is_root())
-        {
-            DomTreeT::CRef child_node = node;
-            node = node.parent();
-
-            LtSplit split = std::get<LtSplit>(node.get_split());
-            FloatT sval = split.split_value;
-
-            if (split.feat_id != feat_id) continue;
-            if (child_node.is_left_child())
-                if (dom.hi > sval) dom.hi = sval;
-            else
-                if (dom.lo < sval) dom.lo = sval;
-        }
-        return dom;
-    }
-    */
-
     void
-    SplitTree::get_leaf_domains(NodeId domtree_node_id,
-            SplitTree::DomainsT& domains) const
+    Subspaces::get_leaf_domains(NodeId domtree_leaf_id,
+            Subspaces::DomainsT& domains) const
     {
-        DomTreeT::CRef node = domtree_[domtree_node_id];
+        DomTreeT::CRef node = domtree_[domtree_leaf_id];
         while (!node.is_root())
         {
             DomTreeT::CRef child_node = node;
             node = node.parent();
 
-            LtSplit split = std::get<LtSplit>(node.get_split());
-            FloatT sval = split.split_value;
+            FeatId fid = visit_split(
+                [](const LtSplit& s) { return s.feat_id; },
+                [](const BoolSplit& s) { return s.feat_id; },
+                node.get_split());
 
-            auto domptr = domains.find(split.feat_id);
+            auto domptr = domains.find(fid);
             if (domptr == domains.end())
-                domains[split.feat_id] = get_root_domain(split.feat_id);
-            auto& dom = domains[split.feat_id];
-
-            if (child_node.is_left_child())
-            {
-                if (dom.hi > sval) dom.hi = sval;
-            }
-            else
-            {
-                if (dom.lo < sval) dom.lo = sval;
-            }
+                domains[fid] = get_root_domain(fid);
+            Domain dom = domains.at(fid);
+            Domain new_dom = visit_split(
+                [&child_node, &dom](const LtSplit& s) {
+                    RealDomain rdom = std::get<RealDomain>(dom);
+                    FloatT sval = s.split_value;
+                    if (child_node.is_left_child())
+                    {
+                        if (rdom.hi > sval) rdom.hi = sval;
+                    }
+                    else
+                    {
+                        if (rdom.lo < sval) rdom.lo = sval;
+                    }
+                    return Domain(rdom);
+                },
+                [&child_node, &dom](const BoolSplit& s) { 
+                    auto rdom = std::get<BoolDomain>(dom);
+                    if (child_node.is_left_child())
+                        rdom = std::get<0>(rdom.split());
+                    else
+                        rdom = std::get<1>(rdom.split());
+                    return Domain(rdom);
+                },
+                node.get_split());
         }
     }
 
-    SplitTreeLeaf
-    SplitTree::get_leaf(NodeId domtree_node_id)
+    Subspace
+    Subspaces::get_subspace(NodeId domtree_leaf_id)
     {
-        auto node = domtree_[domtree_node_id];
+        auto node = domtree_[domtree_leaf_id];
         if (!node.is_leaf())
-            throw std::runtime_error("SplitTree::get_leaf on non-leaf domtree node");
+            throw std::runtime_error("Subspaces::get_leaf on non-leaf domtree node");
 
-        // SplitTreeLeaf owns all its values so that we can easily transmit it
+        // Subspace owns all its values so that we can easily transmit it
         // over the network to worker nodes. The structures should be
         // reasonably small.
-        return SplitTreeLeaf(
-            domtree_node_id,
-            is_reachables_.at(domtree_node_id)
+        return Subspace(
+            domtree_leaf_id,
+            is_reachables_.at(domtree_leaf_id)
         );
     }
 
     void // shorthand method
-    SplitTree::split_domtree_leaf(NodeId domtree_node_id)
+    Subspaces::split_domtree_leaf(NodeId domtree_leaf_id)
     {
-        split(get_leaf(domtree_node_id));
+        split(get_subspace(domtree_leaf_id));
     }
 
     void
-    SplitTree::split(SplitTreeLeaf&& leaf)
+    Subspaces::split(Subspace&& leaf)
     {
         auto node = domtree_[leaf.domtree_node_id_];
         if (!node.is_leaf())
-            throw std::runtime_error("SplitTree::split on non-leaf");
+            throw std::runtime_error("Subspaces::split on non-leaf");
         if (is_reachables_.find(node.id()) == is_reachables_.end())
-            throw std::runtime_error("SplitTree::split assertion error: no is_reachable for this node");
+            throw std::runtime_error("Subspaces::split assertion error: no is_reachable for this node");
         if (!leaf.best_split_.has_value())
             leaf.find_best_domtree_split(*addtree_);
 
@@ -226,9 +218,19 @@ namespace treeck {
         is_reachables_.emplace(node.left().id(), leaf.is_reachable_); // copy once
         is_reachables_.emplace(node.right().id(), std::move(leaf.is_reachable_)); // reuse for right
 
-        FeatId feat_id = leaf.best_split_->feat_id;
-        RealDomain dom_l, dom_r;
-        std::tie(dom_l, dom_r) = RealDomain().split(leaf.best_split_->split_value);
+        Domain dom_l, dom_r;
+        FeatId feat_id;
+        visit_split(
+            [&dom_l, &dom_r, &feat_id](const LtSplit& s) {
+                std::tie(dom_l, dom_r) = RealDomain().split(s.split_value);
+                feat_id = s.feat_id;
+            },
+            [&dom_l, &dom_r, &feat_id](const BoolSplit& s) {
+                std::tie(dom_l, dom_r) = BoolDomain().split();
+                feat_id = s.feat_id;
+            },
+            *leaf.best_split_
+        );
 
         auto& is_reachable_l = is_reachables_.at(node.left().id());
         update_is_reachable(is_reachable_l, feat_id, dom_l);
@@ -237,8 +239,8 @@ namespace treeck {
     }
 
     void
-    SplitTree::update_is_reachable(IsReachable& is_reachable,
-                FeatId feat_id, RealDomain new_dom)
+    Subspaces::update_is_reachable(IsReachable& is_reachable,
+                FeatId feat_id, Domain new_dom)
     {
         size_t tree_index = 0;
         for (auto& tree : addtree_->trees())
@@ -249,11 +251,11 @@ namespace treeck {
         }
     }
     void
-    SplitTree::update_is_reachable(IsReachable& is_reachable,
+    Subspaces::update_is_reachable(IsReachable& is_reachable,
                 size_t tree_index,
                 AddTree::TreeT::CRef node,
                 FeatId feat_id,
-                RealDomain new_dom,
+                Domain new_dom,
                 bool marked)
     {
         if(!is_reachable.is_reachable(tree_index, node.id()))
@@ -263,31 +265,50 @@ namespace treeck {
         if (node.is_leaf())
             return;
 
-        LtSplit split = std::get<LtSplit>(node.get_split());
-        FloatT sval = split.split_value;
-
         bool marked_l = marked;
         bool marked_r = marked;
 
-        if (!marked && split.feat_id == feat_id)
-        {
-            //       case 1       case 3          case 2
-            //       [----)   |-------------)     |----)
-            // ---------------------x-------------------------->
-            //                 split_value
-            //
-            switch (new_dom.where_is_strict(split.split_value))
-            {
-            case WhereFlag::LEFT: // case 2: split value to the left of the domain
-                marked_l = true; // left becomes unreachable -> start marking
-                break;
-            case WhereFlag::RIGHT: // case 1
-                marked_r = true; // right becomes unreachable -> start marking
-                break;
-            default: // case 3: IN_DOMAIN
-                break; // both branches still reachable
-            }
-        }
+        visit_split(
+            [feat_id, new_dom, marked, &marked_l, &marked_r]
+            (const LtSplit& s) {
+                if (marked || s.feat_id != feat_id) return;
+
+                RealDomain rnew_dom = std::get<RealDomain>(new_dom);
+                if (rnew_dom.is_everything()) // TODO remove check if slow
+                    throw std::runtime_error("stupid LtSplit");
+
+                //       case 1       case 3          case 2
+                //       [----)   |-------------)     |----)
+                // ---------------------x-------------------------->
+                //                 split_value
+                //
+                switch (rnew_dom.where_is_strict(s.split_value))
+                {
+                case WhereFlag::LEFT: // case 2: split value to the left of the domain
+                    marked_l = true; // left becomes unreachable -> start marking
+                    break;
+                case WhereFlag::RIGHT: // case 1
+                    marked_r = true; // right becomes unreachable -> start marking
+                    break;
+                default: // case 3: IN_DOMAIN
+                    break; // both branches still reachable
+                }
+            },
+            [feat_id, new_dom, marked, &marked_l, &marked_r]
+            (const BoolSplit& s) {
+                if (marked || s.feat_id != feat_id) return;
+
+                auto bnew_dom = std::get<BoolDomain>(new_dom);
+                if (bnew_dom.is_everything())
+                    throw std::runtime_error("stupid BoolSplit");
+
+                // false goes left, true goes right
+                if (bnew_dom.is_true())
+                    marked_l = true;
+                if (bnew_dom.is_false())
+                    marked_r = true;
+            },
+            node.get_split());
 
         update_is_reachable(is_reachable, tree_index, node.left(), feat_id, new_dom, marked_l);
         update_is_reachable(is_reachable, tree_index, node.right(), feat_id, new_dom, marked_r);
@@ -299,8 +320,14 @@ namespace treeck {
         ar(cereal::make_nvp("lo", m.lo), cereal::make_nvp("hi", m.hi));
     }
 
+    template<class Archive>
+    void serialize(Archive& ar, BoolDomain& m)
+    {
+        ar(cereal::make_nvp("state", m.value_));
+    }
+
     std::string
-    SplitTree::to_json() const
+    Subspaces::to_json() const
     {
         std::stringstream ss;
         {
@@ -313,8 +340,8 @@ namespace treeck {
         return ss.str();
     }
 
-    SplitTree
-    SplitTree::from_json(
+    Subspaces
+    Subspaces::from_json(
             std::shared_ptr<const AddTree> addtree,
             const std::string& json)
     {
@@ -330,11 +357,11 @@ namespace treeck {
                cereal::make_nvp("is_reachables", is_reachables));
         }
 
-        SplitTree splittree(addtree, root_domains);
-        std::swap(splittree.domtree_, domtree);
-        std::swap(splittree.is_reachables_, is_reachables);
+        Subspaces subspaces(addtree, root_domains);
+        std::swap(subspaces.domtree_, domtree);
+        std::swap(subspaces.is_reachables_, is_reachables);
 
-        return splittree;
+        return subspaces;
     }
 
 
@@ -342,7 +369,7 @@ namespace treeck {
 
     /* --------------------------------------------------------------------- */
 
-    SplitTreeLeaf::SplitTreeLeaf(const SplitTreeLeaf& other)
+    Subspace::Subspace(const Subspace& other)
         : domtree_node_id_(other.domtree_node_id_)
         , is_reachable_(other.is_reachable_)
         , best_split_(other.best_split_)
@@ -350,7 +377,7 @@ namespace treeck {
         , split_balance(other.split_balance)
     {}
 
-    SplitTreeLeaf::SplitTreeLeaf(SplitTreeLeaf&& other)
+    Subspace::Subspace(Subspace&& other)
         : domtree_node_id_(other.domtree_node_id_)
         , is_reachable_(std::move(other.is_reachable_))
         , best_split_(other.best_split_)
@@ -358,7 +385,7 @@ namespace treeck {
         , split_balance(other.split_balance)
     {}
 
-    SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
+    Subspace::Subspace(NodeId domtree_node_id,
             const IsReachable& is_reachable)
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(is_reachable)
@@ -366,7 +393,7 @@ namespace treeck {
         , split_score(0), split_balance(0)
     {}
 
-    SplitTreeLeaf::SplitTreeLeaf(NodeId domtree_node_id,
+    Subspace::Subspace(NodeId domtree_node_id,
             IsReachable&& is_reachable)
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(std::move(is_reachable))
@@ -374,8 +401,8 @@ namespace treeck {
         , split_score(0), split_balance(0)
     {}
 
-    SplitTreeLeaf&
-    SplitTreeLeaf::operator=(const SplitTreeLeaf& other)
+    Subspace&
+    Subspace::operator=(const Subspace& other)
     {
         domtree_node_id_ = other.domtree_node_id_;
         is_reachable_ = other.is_reachable_;
@@ -385,8 +412,8 @@ namespace treeck {
         return *this;
     }
 
-    SplitTreeLeaf&
-    SplitTreeLeaf::operator=(SplitTreeLeaf&& other)
+    Subspace&
+    Subspace::operator=(Subspace&& other)
     {
         domtree_node_id_ = other.domtree_node_id_;
         is_reachable_ = std::move(other.is_reachable_);
@@ -397,31 +424,32 @@ namespace treeck {
     }
 
     NodeId
-    SplitTreeLeaf::domtree_node_id() const
+    Subspace::domtree_node_id() const
     {
         return domtree_node_id_;
     }
 
     bool
-    SplitTreeLeaf::is_reachable(size_t tree_index, NodeId node_id) const
+    Subspace::is_reachable(size_t tree_index, NodeId node_id) const
     {
         return is_reachable_.is_reachable(tree_index, node_id);
     }
 
     void
-    SplitTreeLeaf::mark_unreachable(size_t tree_index, NodeId node_id)
+    Subspace::mark_unreachable(size_t tree_index, NodeId node_id)
     {
         is_reachable_.mark_unreachable(tree_index, node_id);
     }
 
     void
-    SplitTreeLeaf::find_best_domtree_split(const AddTree& addtree)
+    Subspace::find_best_domtree_split(const AddTree& addtree)
     {
         size_t tree_index = 0;
         std::unordered_map<FeatId, std::unordered_set<FloatT>> duplicates;
 
         FeatId max_feat_id = -1;
         FloatT max_split_value = std::numeric_limits<FloatT>::quiet_NaN();
+        Split max_split = LtSplit();
         int max_score = 0;
         int min_balance = -1;
 
@@ -431,8 +459,7 @@ namespace treeck {
                       &addtree,
                       &duplicates,
                       tree_index,
-                      &max_feat_id,
-                      &max_split_value,
+                      &max_split,
                       &max_score,
                       &min_balance]
                     (AddTree::TreeT::CRef node) {
@@ -442,6 +469,7 @@ namespace treeck {
                 int is_reachable_l = is_reachable_.is_reachable(tree_index, node.left().id());
                 int is_reachable_r = is_reachable_.is_reachable(tree_index, node.right().id());
 
+                // only consider split if both left and right subtree are reachable
                 if (!is_reachable_l && !is_reachable_r)
                     return ADD_NONE;
                 if (!is_reachable_l)
@@ -449,37 +477,64 @@ namespace treeck {
                 if (!is_reachable_r)
                     return ADD_LEFT;
 
-                // only consider split if both left and right subtree are reachable
+                Domain dom_l, dom_r;
+                FeatId feat_id;
 
-                LtSplit split = std::get<LtSplit>(node.get_split());
-                FeatId feat_id = split.feat_id;
-                FloatT sval = split.split_value;
+                bool skip = visit_split(
+                    [&dom_l, &dom_r, &feat_id, &duplicates]
+                    (const LtSplit& split) -> bool {
+                        feat_id = split.feat_id;
 
-                auto& feat_id_dups = duplicates[split.feat_id]; // auto-initialize set for feat_id
-                auto p = feat_id_dups.find(split.split_value);
-                if (p != feat_id_dups.end()) // already checked
-                    return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
-                feat_id_dups.insert(split.split_value);
+                        auto& feat_id_dups = duplicates[split.feat_id]; // auto-initialize set for feat_id
+                        auto p = feat_id_dups.find(split.split_value);
+                        if (p != feat_id_dups.end())
+                            return true; // already checked, skip!
+                        feat_id_dups.insert(split.split_value);
+
+                        std::tie(dom_l, dom_r) = RealDomain().split(split.split_value);
+                        return false;
+                    },
+                    [&dom_l, &dom_r, &feat_id, &duplicates]
+                    (const BoolSplit& split) -> bool {
+                        feat_id = split.feat_id;
+
+                        if (duplicates.find(split.feat_id) != duplicates.end())
+                            return true; // already in duplicates, skip!
+                        duplicates[split.feat_id]; // use duplicates as set for bool attributes
+
+                        // TODO remove check
+                        if (duplicates.find(split.feat_id) == duplicates.end())
+                            throw std::runtime_error("assertion fail");
+
+                        std::tie(dom_l, dom_r) = BoolDomain().split();
+
+                        return false;
+                    },
+                    node.get_split());
+
+                if (skip) // we've already checked this split
+                    return ADD_LEFT_AND_RIGHT;
+
 
                 // compute the number of unreachable nodes when we split the domain
                 // on split.feat_id <> split.split_value
-
-                RealDomain dom_l, dom_r;
-                std::tie(dom_l, dom_r) = RealDomain().split(sval);
-
                 int unreachable_l = count_unreachable_leafs(addtree, feat_id, dom_l);
                 int unreachable_r = count_unreachable_leafs(addtree, feat_id, dom_r);
                 int score = unreachable_l + unreachable_r;
                 int balance = std::abs(unreachable_l - unreachable_r);
 
-                //printf("tree_index=%lu feat_id=%d, split_value=%.10f, score=%d, balance=%d\n",
-                //        tree_index, feat_id, sval, score, balance);
+                std::cout
+                    << "tree_index=" << tree_index
+                    << ", feat_id=" << feat_id
+                    << ", split=" << node.get_split()
+                    << ", score=" << score
+                    << ", balance=" << balance
+                    << std::endl;
 
                 if (score >= max_score)
                 if (score > max_score || min_balance > balance)
                 {
-                    max_feat_id = feat_id;
-                    max_split_value = sval;
+                    max_split = node.get_split();
                     max_score = score;
                     min_balance = balance;
                 }
@@ -493,13 +548,14 @@ namespace treeck {
                 domtree_node_id_, max_feat_id, max_split_value, max_score,
                 min_balance);
 
-        best_split_.emplace(max_feat_id, max_split_value);
+        best_split_.emplace(max_split);
         this->split_score = max_score;
         this->split_balance = min_balance;
     }
 
-    LtSplit
-    SplitTreeLeaf::get_best_split() const
+
+    Split
+    Subspace::get_best_split() const
     {
         if (!best_split_.has_value())
             throw std::runtime_error("call find_best_domtree_split first");
@@ -507,7 +563,7 @@ namespace treeck {
     }
 
     std::tuple<FloatT, FloatT>
-    SplitTreeLeaf::get_tree_bounds(const AddTree& at, size_t tree_index)
+    Subspace::get_tree_bounds(const AddTree& at, size_t tree_index)
     {
         FloatT min =  std::numeric_limits<FloatT>::infinity();
         FloatT max = -std::numeric_limits<FloatT>::infinity();
@@ -527,10 +583,10 @@ namespace treeck {
     }
 
     int
-    SplitTreeLeaf::count_unreachable_leafs(
+    Subspace::count_unreachable_leafs(
             const AddTree& addtree,
             FeatId feat_id,
-            RealDomain new_dom) const
+            Domain new_dom) const
     {
         int unreachable = 0;
         size_t tree_index = 0;
@@ -544,12 +600,12 @@ namespace treeck {
     }
 
     int
-    SplitTreeLeaf::count_unreachable_leafs(
+    Subspace::count_unreachable_leafs(
             const AddTree& addtree,
             size_t tree_index,
             AddTree::TreeT::CRef node,
             FeatId feat_id,
-            RealDomain new_dom,
+            Domain new_dom,
             bool marked) const
     {
         if (node.is_leaf())
@@ -557,39 +613,60 @@ namespace treeck {
         if (!is_reachable(tree_index, node.id()))
             return 0;
 
-        LtSplit split = std::get<LtSplit>(node.get_split());
-
         bool marked_l = marked; // remain marked if already marked
         bool marked_r = marked;
-        if (!marked && split.feat_id == feat_id)
-        {
-            //       case 1       case 3          case 2
-            //       [----)   |-------------)     |----)
-            // ---------------------x-------------------------->
-            //                 split_value
-            //
-            switch (new_dom.where_is_strict(split.split_value))
-            {
-            case WhereFlag::LEFT: // case 2: split value to the left of the domain
-                marked_l = true; // left becomes unreachable -> start counting
-                break;
-            case WhereFlag::RIGHT: // case 1
-                marked_r = true; // right becomes unreachable -> start counting
-                break;
-            default: // case 3: IN_DOMAIN
-                break; // both branches still reachable
-            }
-        }
 
-        return //((marked_l || marked_r) ? 1 : 0) + // this node's split became deterministic
-            count_unreachable_leafs(addtree, tree_index, node.left(),
+        visit_split(
+            [feat_id, new_dom, marked, &marked_l, &marked_r]
+            (const LtSplit& split) {
+                if (marked || split.feat_id != feat_id) return;
+
+                RealDomain rnew_dom = std::get<RealDomain>(new_dom);
+                if (rnew_dom.is_everything()) // TODO remove check if slow
+                    throw std::runtime_error("stupid LtSplit");
+
+                //       case 1       case 3          case 2
+                //       [----)   |-------------)     |----)
+                // ---------------------x-------------------------->
+                //                 split_value
+                //
+                switch (rnew_dom.where_is_strict(split.split_value))
+                {
+                case WhereFlag::LEFT: // case 2: split value to the left of the domain
+                    marked_l = true; // left becomes unreachable -> start counting
+                    break;
+                case WhereFlag::RIGHT: // case 1
+                    marked_r = true; // right becomes unreachable -> start counting
+                    break;
+                default: // case 3: IN_DOMAIN
+                    break; // both branches still reachable
+                }
+            },
+            [feat_id, new_dom, marked, &marked_l, &marked_r]
+            (const BoolSplit& split) {
+                if (marked || split.feat_id != feat_id) return;
+
+                auto bnew_dom = std::get<BoolDomain>(new_dom);
+                if (bnew_dom.is_everything())
+                    throw std::runtime_error("stupid BoolSplit");
+
+                // false goes left, true goes right
+                if (bnew_dom.is_true())
+                    marked_l = true;
+                if (bnew_dom.is_false())
+                    marked_r = true;
+            },
+            node.get_split());
+
+        return //((marked_l || marked_r) ? 1 : 0) + // this node's split became deterministic..
+            count_unreachable_leafs(addtree, tree_index, node.left(), // ..or just count leafs
                     feat_id, new_dom, marked_l) +
             count_unreachable_leafs(addtree, tree_index, node.right(),
                     feat_id, new_dom, marked_r);
     }
 
-    SplitTreeLeaf
-    SplitTreeLeaf::merge(const std::vector<SplitTreeLeaf>& leafs)
+    Subspace
+    Subspace::merge(const std::vector<Subspace>& leafs)
     {
         {
             auto it = leafs.cbegin();
@@ -601,7 +678,7 @@ namespace treeck {
         }
 
         auto it = leafs.begin();
-        SplitTreeLeaf l(*it);
+        Subspace l(*it);
         ++it;
         for (; it != leafs.end(); ++it)
             l.is_reachable_.combine(it->is_reachable_);
@@ -609,7 +686,7 @@ namespace treeck {
     }
 
     std::string
-    SplitTreeLeaf::to_json() const
+    Subspace::to_json() const
     {
         std::stringstream ss;
         {
@@ -623,14 +700,14 @@ namespace treeck {
         return ss.str();
     }
 
-    SplitTreeLeaf
-    SplitTreeLeaf::from_json(const std::string& json)
+    Subspace
+    Subspace::from_json(const std::string& json)
     {
         std::istringstream ss(json);
 
         NodeId domtree_node_id;
         IsReachable is_reachable;
-        std::optional<LtSplit> best_split;
+        std::optional<Split> best_split;
         int split_score, split_balance;
         {
             cereal::JSONInputArchive ar(ss);
@@ -640,7 +717,7 @@ namespace treeck {
                cereal::make_nvp("split_score", split_score),
                cereal::make_nvp("split_balance", split_balance));
         }
-        SplitTreeLeaf leaf(domtree_node_id, std::move(is_reachable));
+        Subspace leaf(domtree_node_id, std::move(is_reachable));
         std::swap(leaf.best_split_, best_split);
         leaf.split_score = split_score;
         leaf.split_balance = split_balance;
