@@ -101,9 +101,9 @@ namespace treeck {
         const AddTree& addtree() const;
         const DomTreeT& domtree() const;
 
-        Domain get_root_domain(FeatId) const;
+        std::optional<Domain> get_root_domain(FeatId) const;
 
-        void get_leaf_domains(NodeId domtree_leaf_id, DomainsT& domains) const;
+        void get_domains(NodeId domtree_leaf_id, DomainsT& domains) const;
         Subspace get_subspace(NodeId domtree_leaf_id);
 
         void split_domtree_leaf(NodeId domtree_leaf_id);

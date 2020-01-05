@@ -142,7 +142,7 @@ namespace treeck {
             return s << "BoolDomain(true)";
         if (d.is_false())
             return s << "BoolDomain(false)";
-        return s << "BoolDomain(-)"; // is_everything == true
+        return s << "BoolDomain()"; // is_everything == true
     }
 
 

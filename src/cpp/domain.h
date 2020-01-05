@@ -90,6 +90,10 @@ namespace treeck {
 
     bool operator==(const Domain& a, const Domain& b);
 
+    TREECK_ENABLE_TYPENAME(RealDomain);
+    TREECK_ENABLE_TYPENAME(BoolDomain);
+
+
 } /* namespace treeck */
 
 #endif /* TREECK_DOMAIN_H */

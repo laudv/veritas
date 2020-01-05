@@ -4,33 +4,33 @@ import numpy as np
 from treeck import *
 from treeck.plot import TreePlot
 
-class TestSplitTree(unittest.TestCase):
+class TestSubspaces(unittest.TestCase):
     def test_single_tree1(self):
-        at = AddTree(1)
+        at = AddTree()
         at.base_score = 10
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
         t.split(t.right(t.root()), 0, 3)
-        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
-        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
-        t.set_leaf_value( t.left(t.right(t.root())), 0.3)
-        t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
 
         #print(at)
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(0)
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(0)
         l0.find_best_domtree_split(at)
-        self.assertEqual(l0.get_best_split(), (0, 2))
+        self.assertEqual(l0.get_best_split(), ("lt", 0, 2))
         self.assertEqual(l0.split_score, 4)   # 2 leafs left, 2 right
         self.assertEqual(l0.split_balance, 0) # perfectly balanced
         m, M = l0.get_tree_bounds(at, 0)
-        self.assertEqual(m, 0.1)
-        self.assertEqual(M, 0.4)
-        st.split(l0)
+        self.assertEqual(m, 1.0)
+        self.assertEqual(M, 8.0)
+        sb.split(l0)
 
-        l1 = st.get_leaf(1)
+        l1 = sb.get_subspace(1)
         self.assertTrue(l1.is_reachable(0, 0))
         self.assertTrue(l1.is_reachable(0, 1))
         self.assertTrue(l1.is_reachable(0, 3))
@@ -39,10 +39,10 @@ class TestSplitTree(unittest.TestCase):
         self.assertFalse(l1.is_reachable(0, 5))
         self.assertFalse(l1.is_reachable(0, 6))
         m, M = l1.get_tree_bounds(at, 0)
-        self.assertEqual(m, 0.1)
-        self.assertEqual(M, 0.2)
+        self.assertEqual(m, 1.0)
+        self.assertEqual(M, 2.0)
 
-        l2 = st.get_leaf(2)
+        l2 = sb.get_subspace(2)
         self.assertTrue(l2.is_reachable(0, 0))
         self.assertFalse(l2.is_reachable(0, 1))
         self.assertFalse(l2.is_reachable(0, 3))
@@ -51,13 +51,13 @@ class TestSplitTree(unittest.TestCase):
         self.assertTrue(l2.is_reachable(0, 5))
         self.assertTrue(l2.is_reachable(0, 6))
         m, M = l2.get_tree_bounds(at, 0)
-        self.assertEqual(m, 0.3)
-        self.assertEqual(M, 0.4)
+        self.assertEqual(m, 4.0)
+        self.assertEqual(M, 8.0)
 
         # with root_domain
-        st = SplitTree(at, {0: RealDomain(0, 2)})
-        self.assertEqual(st.get_root_domain(0), RealDomain(0, 2))
-        l0 = st.get_leaf(0)
+        sb = Subspaces(at, {0: RealDomain(0, 2)})
+        self.assertEqual(sb.get_root_domain(0), RealDomain(0, 2))
+        l0 = sb.get_subspace(0)
         self.assertTrue(l0.is_reachable(0, 0))
         self.assertTrue(l0.is_reachable(0, 1))
         self.assertTrue(l0.is_reachable(0, 3))
@@ -66,17 +66,56 @@ class TestSplitTree(unittest.TestCase):
         self.assertFalse(l0.is_reachable(0, 5))
         self.assertFalse(l0.is_reachable(0, 6))
         m, M = l0.get_tree_bounds(at, 0)
-        self.assertEqual(m, 0.1)
-        self.assertEqual(M, 0.2)
+        self.assertEqual(m, 1.0)
+        self.assertEqual(M, 2.0)
 
         l0.find_best_domtree_split(at)
-        self.assertEqual(l0.get_best_split(), (0, 1))
+        self.assertEqual(l0.get_best_split(), ("lt", 0, 1))
         self.assertEqual(l0.split_score, 2)
         self.assertEqual(l0.split_balance, 0)
-        st.split(l0)
+        sb.split(l0)
 
-        self.assertEqual(st.get_leaf_domains(1), {0: RealDomain(0, 1)})
-        self.assertEqual(st.get_leaf_domains(2), {0: RealDomain(1, 2)})
+        self.assertEqual(sb.get_domains(1), {0: RealDomain(0, 1)})
+        self.assertEqual(sb.get_domains(2), {0: RealDomain(1, 2)})
+
+    def test_get_domains1(self):
+        at = AddTree()
+        at.base_score = 10
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 1) # bool split
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
+
+        sb = Subspaces(at, {0: RealDomain(0, 2)})
+        sb.split(0)
+
+        self.assertEqual(sb.get_domains(1), {0: RealDomain(0, 1)})
+        self.assertEqual(sb.get_domains(2), {0: RealDomain(1, 2)})
+
+    def test_get_domains2(self):
+        at = AddTree()
+        at.base_score = 10
+        t = at.add_tree();
+        t.split(t.root(), 0)
+        t.split( t.left(t.root()), 1, 2) # bool split
+        t.split(t.right(t.root()), 1, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
+
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(0);
+        l0.find_best_domtree_split(at);
+        self.assertEqual(l0.get_best_split(), ("bool", 0))
+        sb.split(l0)
+
+        self.assertEqual(sb.get_domains(1), {0: BoolDomain(False)})
+        self.assertEqual(sb.get_domains(2), {0: BoolDomain(True)})
 
     def test_two_trees1(self):
         at = AddTree(1)
@@ -103,8 +142,8 @@ class TestSplitTree(unittest.TestCase):
 
         #print(at)
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(0)
+        sb = Subspaces(at, {})
+        l0 = sb.get_leaf(0)
         l0.find_best_domtree_split(at)
         self.assertEqual(l0.get_best_split(), (0, 3.0))
         self.assertEqual(l0.split_score, 9)
@@ -115,8 +154,8 @@ class TestSplitTree(unittest.TestCase):
         self.assertEqual(l0.split_score, 6)
         self.assertEqual(l0.split_balance, 4)
 
-        l0 = st.get_leaf(0)
-        st.split(l0)
+        l0 = sb.get_leaf(0)
+        sb.split(l0)
 
         def test_l1(l1):
             self.assertFalse(l1.is_reachable(0, 6))
@@ -129,7 +168,7 @@ class TestSplitTree(unittest.TestCase):
             self.assertTrue(l1.is_reachable(0, 1))
             self.assertTrue(l1.is_reachable(1, 1))
 
-        l1 = st.get_leaf(1)
+        l1 = sb.get_leaf(1)
         test_l1(l1)
 
         def test_l2(l2):
@@ -144,7 +183,7 @@ class TestSplitTree(unittest.TestCase):
             self.assertTrue(l2.is_reachable(0, 6))
             self.assertTrue(l2.is_reachable(1, 2))
 
-        l2 = st.get_leaf(2)
+        l2 = sb.get_leaf(2)
         test_l2(l2)
 
         x = pickle.dumps(l1)
@@ -155,7 +194,7 @@ class TestSplitTree(unittest.TestCase):
         l2c = pickle.loads(pickle.dumps(l2))
         test_l2(l2c)
 
-        stt = SplitTree.from_json(at, st.to_json())
+        stt = Subspaces.from_json(at, sb.to_json())
         l1t = stt.get_leaf(1)
         test_l1(l1t)
         l2t = stt.get_leaf(2)
@@ -173,9 +212,9 @@ class TestSplitTree(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
         t.set_leaf_value(t.right(t.right(t.root())), 0.4)
 
-        st = SplitTree(at, {})
-        l0_0 = st.get_leaf(0)
-        l0_1 = st.get_leaf(0)
+        sb = Subspaces(at, {})
+        l0_0 = sb.get_leaf(0)
+        l0_1 = sb.get_leaf(0)
 
         l0_0.mark_unreachable(0, 1)
         self.assertFalse(l0_0.is_reachable(0, 1))
@@ -184,21 +223,21 @@ class TestSplitTree(unittest.TestCase):
         self.assertFalse(l0_1.is_reachable(0, 2))
         self.assertTrue( l0_1.is_reachable(0, 1))
 
-        l0_m = SplitTreeLeaf.merge([l0_0, l0_1]);
+        l0_m = Subspaces.merge([l0_0, l0_1]);
         self.assertFalse(l0_m.is_reachable(0, 2))
         self.assertFalse(l0_m.is_reachable(0, 1))
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-hard.json")
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(0)
+        sb = Subspaces(at, {})
+        l0 = sb.get_leaf(0)
         l0.find_best_domtree_split(at)
 
         fid, sval = l0.get_best_split()
         split_score = l0.split_score
         split_balance = l0.split_balance
         
-        st.split(l0)
+        sb.split(l0)
 
         num_leafs = at.num_leafs();
 
@@ -219,8 +258,8 @@ class TestSplitTree(unittest.TestCase):
         #for i in range(len(at)):
         #    p = TreePlot()
         #    p.g.attr(label=f"X{fid} split at {sval}")
-        #    p.add_splittree_leaf(at[i], st.get_leaf(1))
-        #    p.add_splittree_leaf(at[i], st.get_leaf(2))
+        #    p.add_splittree_leaf(at[i], sb.get_leaf(1))
+        #    p.add_splittree_leaf(at[i], sb.get_leaf(2))
         #    p.render(f"/tmp/plots/test2-{i}")
 
     def test_img_multisplit(self):
@@ -235,16 +274,16 @@ class TestSplitTree(unittest.TestCase):
                 p.render(f"/tmp/plots/multisplit-{idl}-{idr}-{i}")
 
         at = AddTree.read("tests/models/xgb-img-easy.json")
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(0)
+        sb = Subspaces(at, {})
+        l0 = sb.get_leaf(0)
         l0.find_best_domtree_split(at)
         b0 = l0.get_best_split()
         print("l0", b0)
 
-        st.split(l0)
+        sb.split(l0)
 
-        l1 = st.get_leaf(1)
-        l2 = st.get_leaf(2)
+        l1 = sb.get_leaf(1)
+        l2 = sb.get_leaf(2)
 
         l1.find_best_domtree_split(at)
         l2.find_best_domtree_split(at)
@@ -259,10 +298,10 @@ class TestSplitTree(unittest.TestCase):
         self.assertNotEqual(b0, b1)
         self.assertNotEqual(b0, b2)
 
-        st.split(l1)
+        sb.split(l1)
 
-        l3 = st.get_leaf(3)
-        l4 = st.get_leaf(4)
+        l3 = sb.get_leaf(3)
+        l4 = sb.get_leaf(4)
 
         l3.find_best_domtree_split(at)
         l4.find_best_domtree_split(at)

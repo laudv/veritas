@@ -55,12 +55,30 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("overlaps", &RealDomain::overlaps)
         .def("is_everything", &RealDomain::is_everything)
         .def("split", &RealDomain::split)
-        .def("__repr__", [](RealDomain& d) { return tostr(d); })
+        .def("__repr__", [](const RealDomain& d) { return tostr(d); })
         .def(py::pickle(
             [](const RealDomain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
             [](py::tuple t) { // __setstate__
                 if (t.size() != 2) throw std::runtime_error("invalid pickle state");
                 return RealDomain(t[0].cast<FloatT>(), t[1].cast<FloatT>());
+            }));
+
+    py::class_<BoolDomain>(m, "BoolDomain")
+        .def(py::init<>())
+        .def(py::init<bool>())
+        .def_readonly("_value", &BoolDomain::value_)
+        .def("is_everything", &BoolDomain::is_everything)
+        .def("is_true", &BoolDomain::is_true)
+        .def("is_false", &BoolDomain::is_false)
+        .def("split", &BoolDomain::split)
+        .def("__repr__", [](BoolDomain& d) { return tostr(d); })
+        .def(py::pickle(
+            [](const BoolDomain& d) { return py::make_tuple(d.value_); }, // __getstate__
+            [](py::tuple t) { // __setstate__
+                if (t.size() != 1) throw std::runtime_error("invalid pickle state");
+                BoolDomain dom;
+                dom.value_ = t[0].cast<int>();
+                return dom;
             }));
 
     /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
@@ -117,15 +135,16 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("domtree", &Subspaces::domtree)
         .def("addtree", &Subspaces::addtree)
         .def("get_root_domain", &Subspaces::get_root_domain)
-        .def("get_leaf_domains", [](const Subspaces& st, NodeId n) {
+        .def("get_domains", [](const Subspaces& st, NodeId n) {
             Subspaces::DomainsT domains;
-            st.get_leaf_domains(n, domains);
+            st.get_domains(n, domains);
             return domains;
         })
         .def("get_subspace", &Subspaces::get_subspace)
         .def("split_leaf", &Subspaces::split_domtree_leaf)
         .def("to_json", &Subspaces::to_json)
         .def("from_json", &Subspaces::from_json)
+        .def("split", &Subspaces::split_domtree_leaf)
         .def("split", [](Subspaces& st, Subspace& subspace) {
             st.split(std::move(subspace));
             // C++ standard specifies `leaf` is in valid but unspecified state afterwards

@@ -12,8 +12,23 @@ def __realdomain__eq(self, o):
 def __realdomain__hash(self):
     return hash((self.lo, self.hi))
 
+def __booldomain__str(self):
+    return "{True}" if self.is_true() \
+        else "{False}" if self.is_false() \
+        else "{False, True}"
+
+def __booldomain__eq(self, o):
+    return self._value == o._value
+
+def __booldomain__hash(self):
+    return hash(self._value)
+
 RealDomain.__str__ = __realdomain__str
 RealDomain.__eq__ = __realdomain__eq
+RealDomain.__hash__ = __realdomain__hash
+BoolDomain.__str__ = __booldomain__str
+BoolDomain.__eq__ = __booldomain__eq
+BoolDomain.__hash__ = __booldomain__hash
 
 def __tree_predict_single(self, example):
     node = self.root()
