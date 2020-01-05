@@ -2,7 +2,7 @@ import math, timeit
 from bisect import bisect
 
 from enum import Enum
-from . import RealDomain
+from . import RealDomain, AddTreeFeatureTypes
 
 class VerifierExpr:
     pass
@@ -109,11 +109,17 @@ def f(self, other):
 
 class VerifierAndExpr(VerifierBoolExpr):
     def __init__(self, *conjuncts):
-        self.conjuncts = conjuncts
+        self.conjuncts = []
+        for d in conjuncts:
+            if isinstance(d, VerifierAndExpr): self.conjuncts += d.conjuncts;
+            else: self.conjuncts.append(d)
 
 class VerifierOrExpr(VerifierBoolExpr):
     def __init__(self, *disjuncts):
-        self.disjuncts = disjuncts
+        self.disjuncts = []
+        for d in disjuncts:
+            if isinstance(d, VerifierOrExpr): self.disjuncts += d.disjuncts;
+            else: self.disjuncts.append(d)
 
 def in_domain_constraint(verifier, domains):
     cs = []
@@ -178,7 +184,7 @@ class VerifierBackend:
         """ Encode the leaf node """
         raise RuntimeError("abstract method")
 
-    def encode_split(self, feat_var, split_value, left, right):
+    def encode_split(self, feat_var, split, left, right):
         """
         Encode the given split using left and right as the encodings of the
         subtrees.
@@ -236,6 +242,7 @@ class Verifier:
             num_instances=1):
 
         self._addtree = addtree
+        self._ftypes = AddTreeFeatureTypes(addtree)
         self._stree = splittree_leaf
         self._backend = backend
         self._instances = [AddTreeInstance(self, f"_{i}")
@@ -361,19 +368,20 @@ class Verifier:
             self._splits = self._addtree.get_splits()
 
         domains = {}
-        for feat_id, _, lo, hi in self._find_sample_intervals(xs):
+        for feat_id, x, lo, hi in self._find_sample_intervals(xs):
             d = RealDomain(lo, hi)
             if d.is_everything():
                 raise RuntimeError("Unconstrained feature!")
-            #print("{:.6g} <= {:.6g} < {:.6g}".format(lo, x, hi))
+            #print("[feat_id={:<3}] {:.6g} <= {:.6g} < {:.6g}".format(feat_id, lo, x, hi))
             domains[feat_id] = d
         return domains
 
-    def _find_sample_intervals(self, xs):
-        for i, x in enumerate(xs):
+    def _find_sample_intervals(self, xs): # TODO test with BoolSplit
+        assert isinstance(xs, dict)
+        for feat_id, x in xs.items():
             if x == None: continue
-            if i not in self._splits: continue # feature not used in splits of trees
-            split_values = self._splits[i]
+            if feat_id not in self._splits: continue # feature not used in splits of trees
+            split_values = self._splits[feat_id]
             j = bisect(split_values, x)
             lo = -math.inf if j == 0 else split_values[j-1]
             hi = math.inf if j == len(split_values) else split_values[j]
@@ -381,7 +389,7 @@ class Verifier:
             assert x >= lo
             assert x < hi
 
-            yield i, x, lo, hi
+            yield feat_id, x, lo, hi
 
 
 
@@ -395,8 +403,10 @@ class AddTreeInstance:
     def __init__(self, verifier, suffix):
         self._v = verifier
 
-        self._xvars = [self._v._backend.add_real_var(f"x{i}{suffix}")
-                for i in range(self._v._addtree.num_features())]
+        self._xvars = {fid: self._v._backend.add_real_var(f"x{fid}{suffix}")
+                if typ == "lt"
+                else self._v._backend.add_bool_var(f"xb{fid}{suffix}")
+                for fid, typ in self._v._ftypes}
         self._wvars = [self._v._backend.add_real_var(f"w{i}{suffix}")
                 for i in range(len(self._v._addtree))]
         self._fvar = self._v._backend.add_real_var(f"f{suffix}")
@@ -435,15 +445,15 @@ class AddTreeInstance:
             return self._v._backend.encode_leaf(wvar, leaf_value)
         else:
             tree_index = tree.index()
-            feat_id, split_value = tree.get_split(node)
-            xvar = self._xvars[feat_id]
+            split = tree.get_split(node)
+            xvar = self._xvars[split[1]]
             left, right = tree.left(node), tree.right(node)
             l, r = False, False
             if self._v._stree.is_reachable(tree_index, left):
                 l = self._enc_tree(tree, left)
             if self._v._stree.is_reachable(tree_index, right):
                 r = self._enc_tree(tree, right)
-            return self._v._backend.encode_split(xvar, split_value, l, r)
+            return self._v._backend.encode_split(xvar, split, l, r)
 
 
 

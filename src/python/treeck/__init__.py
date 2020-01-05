@@ -94,6 +94,9 @@ class AddTreeFeatureTypes:
             tree = at[tree_index]
             self._check_types(tree, tree.root())
 
+        # sort by key
+        self._types = {fid: self._types[fid] for fid in sorted(self._types)}
+
     def _check_types(self, tree, node):
         l, r = tree.left(node), tree.right(node)
 
@@ -114,7 +117,7 @@ class AddTreeFeatureTypes:
     def feat_ids(self):
         yield from self._types.keys()
 
-    def feature_types(self):
+    def __iter__(self):
         yield from self._types.items()
 
     def __getitem__(self, feat_id):

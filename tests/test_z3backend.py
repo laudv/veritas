@@ -47,7 +47,7 @@ class TestZ3Backend(unittest.TestCase):
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)
 
-    def test_tree(self):
+    def test_tree_lt(self):
         b = Z3Backend()
 
         w = b.add_real_var("w1")
@@ -55,7 +55,7 @@ class TestZ3Backend(unittest.TestCase):
 
         ll = b.encode_leaf(w, 1.0)
         lr = b.encode_leaf(w, 2.0)
-        s = b.encode_split(x, 5.0, ll, lr)
+        s = b.encode_split(x, ("lt", 0, 5.0), ll, lr)
         b.add_constraint(s)
 
         b.add_constraint((w > 1.5))
@@ -65,6 +65,27 @@ class TestZ3Backend(unittest.TestCase):
         self.assertGreaterEqual(x_value, 5.0)
 
         b.add_constraint((x < 5.0))
+        status = b.check()
+        self.assertEqual(status, Verifier.Result.UNSAT)
+
+    def test_tree_bool(self):
+        b = Z3Backend()
+
+        w = b.add_real_var("w1")
+        x = b.add_bool_var("x")
+
+        ll = b.encode_leaf(w, 1.0)
+        lr = b.encode_leaf(w, 2.0)
+        s = b.encode_split(x, ("bool", 0), ll, lr)
+        b.add_constraint(s)
+
+        b.add_constraint((w > 1.5))
+        status = b.check()
+        self.assertEqual(status, Verifier.Result.SAT)
+        x_value = b.model(("x", x))["x"]
+        self.assertTrue(x_value)
+
+        b.add_constraint(z3.Not(x, b._ctx))
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)
 

@@ -8,8 +8,20 @@ from treeck.verifier import Verifier, not_in_domain_constraint
 from treeck.z3backend import Z3Backend as Backend
 
 class TestVerifier(unittest.TestCase):
+
+    def myAssertAlmostEqual(self, a, b, eps=1e-6):
+        self.assertTrue(type(a) == type(b))
+        if isinstance(a, list) or isinstance(a, tuple):
+            self.assertEqual(len(a), len(b))
+            for x, y in zip(a, b):
+                self.myAssertAlmostEqual(x, y, eps=eps)
+        elif isinstance(a, float):
+            self.assertAlmostEqual(a, b, delta=eps)
+        else:
+            self.assertEqual(a, b)
+
     def test_single_tree(self):
-        at = AddTree(1)
+        at = AddTree()
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -19,8 +31,8 @@ class TestVerifier(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
         t.set_leaf_value(t.right(t.right(t.root())), 0.4)
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend())
 
         self.assertEqual(v._backend.check(v.fvar() < 0.0), Verifier.Result.SAT)
@@ -30,15 +42,16 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v._backend.check(v.fvar() < 0.41), Verifier.Result.SAT)
         self.assertEqual(v._backend.check(v.fvar() > 0.41), Verifier.Result.UNSAT)
 
-        st = SplitTree(at, {0: RealDomain(1, 3)})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {0: RealDomain(1, 3)})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend())
         v.add_constraint(v.xvar(0) < 2.0)
         v.add_tree(0)
-        self.assertEqual(v._backend.check(v.fvar() != 0.2), Verifier.Result.UNSAT)
+        check = v.check(v.fvar() != t.get_leaf_value(t.right( t.left(t.root()))))
+        self.assertEqual(check, Verifier.Result.UNSAT)
 
-        st = SplitTree(at, {0: RealDomain(1, 3)})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {0: RealDomain(1, 3)})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend())
         v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < 0.0), Verifier.Result.UNSAT)
@@ -47,7 +60,7 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v.check(v.fvar() > 0.41), Verifier.Result.UNSAT)
 
     def test_two_trees(self):
-        at = AddTree(2)
+        at = AddTree()
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -65,42 +78,42 @@ class TestVerifier(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), -0.3)
         t.set_leaf_value(t.right(t.right(t.root())), -0.4)
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < -0.11), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.SAT)
-        self.assertEqual(v.model()["ws"], [0.3, -0.4])
+        self.myAssertAlmostEqual(v.model()["ws"], [0.3, -0.4])
         self.assertEqual(v.check(v.fvar() > -0.09), Verifier.Result.SAT)
         self.assertEqual(v.check(v.fvar() > 0.41), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.SAT)
-        self.assertEqual(v.model()["ws"], [0.2, 0.2])
+        self.myAssertAlmostEqual(v.model()["ws"], [0.2, 0.2])
 
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         v.add_constraint(v.xvar(0) < 2.0)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.SAT)
-        self.assertEqual(v.model()["ws"], [0.2, 0.2])
+        self.myAssertAlmostEqual(v.model()["ws"], [0.2, 0.2])
 
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         v.add_constraint(v.xvar(0) >= 2.0)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.SAT)
-        self.assertEqual(v.model()["ws"], [0.3, -0.4])
+        self.myAssertAlmostEqual(v.model()["ws"], [0.3, -0.4])
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.UNSAT)
 
 
-        st = SplitTree(at, {0: RealDomain(-math.inf, 2.0)})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {0: RealDomain(-math.inf, 2.0)})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.SAT)
-        self.assertEqual(v.model()["ws"], [0.2, 0.2])
+        self.myAssertAlmostEqual(v.model()["ws"], [0.2, 0.2])
 
-        st = SplitTree(at, {0: RealDomain(2.0, math.inf)})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {0: RealDomain(2.0, math.inf)})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.SAT)
-        self.assertEqual(v.model()["ws"], [0.3, -0.4])
+        self.myAssertAlmostEqual(v.model()["ws"], [0.3, -0.4])
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.UNSAT)
         v.add_constraint(v.xvar(1) < 2.0)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.UNSAT)
@@ -108,17 +121,18 @@ class TestVerifier(unittest.TestCase):
 
         model = v.model()
         #print(model)
-        self.assertEqual(model["ws"], [0.3, -0.3])
+        self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
         #print(v.model_family(model))
         v.add_constraint(not_in_domain_constraint(v, v.model_family(model)))
         self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.SAT)
         model = v.model()
-        self.assertEqual(model["ws"], [0.3, -0.3])
+        self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
         v.add_constraint(not_in_domain_constraint(v, v.model_family(model)))
-        self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.UNSAT)
+        check = v.check(v.fvar() < 0.01) 
+        self.assertEqual(check, Verifier.Result.UNSAT)
 
     def test_multi_instance(self):
-        at = AddTree(2)
+        at = AddTree()
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -138,8 +152,8 @@ class TestVerifier(unittest.TestCase):
 
         #print(at)
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend(), num_instances=2)
         v.add_all_trees(0); v.add_all_trees(1)
         v.add_constraint(v.instance(0).fvar() > v.instance(1).fvar())
@@ -182,8 +196,8 @@ class TestVerifier(unittest.TestCase):
         #plt.show()
 
         print("< 0")
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < 0.0), Verifier.Result.SAT)
         model = v.model()
@@ -202,8 +216,8 @@ class TestVerifier(unittest.TestCase):
                 imgq = img[x0:x1, y0:y1]
                 m, M = imgq.min(), imgq.max()
 
-                st = SplitTree(at, {0: RealDomain(x0, x1), 1: RealDomain(y0, y1)})
-                l0 = st.get_leaf(st.domtree().root())
+                sb = Subspaces(at, {0: RealDomain(x0, x1), 1: RealDomain(y0, y1)})
+                l0 = sb.get_subspace(sb.domtree().root())
                 v = Verifier(at, l0, Backend()); v.add_all_trees()
 
                 self.assertEqual(v.check(v.fvar() < m+1e-4), Verifier.Result.SAT)
@@ -220,8 +234,8 @@ class TestVerifier(unittest.TestCase):
         img = np.array(ys).reshape((100, 100))
         at = AddTree.read("tests/models/xgb-img-easy.json")
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend()); v.add_all_trees()
         v.add_constraint(v.fvar() < 0.0)
 
@@ -247,15 +261,15 @@ class TestVerifier(unittest.TestCase):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
         doms = [RealDomain() for i in range(28*28)]
 
-        st = SplitTree(at, {})
-        l0 = st.get_leaf(st.domtree().root())
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
         v = Verifier(at, l0, Backend(), num_instances=2);
         v.add_all_trees(0); v.add_all_trees(1)
         v.add_constraint(v.fvar(0) >  5.0) # it is with high certainty X
         v.add_constraint(v.fvar(1) < -5.0) # it is with high certainty not X
 
         pbeq = []
-        for feat_id in range(at.num_features()):
+        for feat_id in v._ftypes.feat_ids():
             bvar_name = f"b{feat_id}"
             v.add_bvar(bvar_name)
 
@@ -278,42 +292,46 @@ class TestVerifier(unittest.TestCase):
             model = v.model()
             img1 = np.zeros((28, 28))
             img2 = np.zeros((28, 28))
-            for i, (x1, x2) in enumerate(zip(model[0]["xs"], model[1]["xs"])):
-                p = np.unravel_index(i, (28, 28))
-                if x1 is not None:
-                    img1[p[1], p[0]] = x1
-                if x2 is not None:
-                    img2[p[1], p[0]] = x2
+            hash1 = 127
+            hash2 = 91
+            for fid, x in model[0]["xs"].items():
+                p = np.unravel_index(fid, (28, 28))
+                img1[p[1], p[0]] = x
+                hash1 = hash((hash1, fid, x))
+            for fid, x in model[1]["xs"].items():
+                p = np.unravel_index(fid, (28, 28))
+                img2[p[1], p[0]] = x
+                hash2 = hash((hash2, fid, x))
+            uniques.add(hash((hash1, hash2)))
 
             if count > 0:
                 print("norm difference:", abs(img1-img1_prev).sum(), abs(img2-img2_prev).sum())
             img1_prev, img2_prev = img1, img2
 
             fam = v.model_family(model)
-            v.add_constraint(not_in_domain_constraint(v, fam[0]))#, strict=False))
-            v.add_constraint(not_in_domain_constraint(v, fam[1]))#, strict=False))
+            v.add_constraint(not_in_domain_constraint(v, fam[0], strict=True))
+            v.add_constraint(not_in_domain_constraint(v, fam[1], strict=True))
 
             count += 1
-            uniques.add(hash((str(img1), str(img2))))
 
             print("iteration", count, "uniques", len(uniques))
-            #if count % 100 != 0: continue
+            if count % 100 != 0: continue
 
-            #fig, (ax1, ax2) = plt.subplots(1, 2)
-            #ax1.imshow(img1, vmin=0, vmax=255)
-            #ax2.imshow(img2, vmin=0, vmax=255)
-            #ax1.set_title("instance 1: f={:.3f}".format(model[0]["f"]))
-            #ax2.set_title("instance 2: f={:.3f}".format(model[1]["f"]))
-            #
-            #for n, b in model["bs"].items():
-            #    if not b: continue
-            #    i = int(n[1:])
-            #    p = np.unravel_index(i, (28, 28))
-            #    print("different pixel (bvar):", i, p, model[0]["xs"][i], model[1]["xs"][i])
-            #    ax1.scatter([p[0]], [p[1]], marker=".", color="r")
-            #    ax2.scatter([p[0]], [p[1]], marker=".", color="r")
-            #
-            #plt.show()
+            fig, (ax1, ax2) = plt.subplots(1, 2)
+            ax1.imshow(img1, vmin=0, vmax=255)
+            ax2.imshow(img2, vmin=0, vmax=255)
+            ax1.set_title("instance 1: f={:.3f}".format(model[0]["f"]))
+            ax2.set_title("instance 2: f={:.3f}".format(model[1]["f"]))
+
+            for n, b in model["bs"].items():
+                if not b: continue
+                i = int(n[1:])
+                p = np.unravel_index(i, (28, 28))
+                print("different pixel (bvar):", i, p, model[0]["xs"][i], model[1]["xs"][i])
+                ax1.scatter([p[0]], [p[1]], marker=".", color="r")
+                ax2.scatter([p[0]], [p[1]], marker=".", color="r")
+
+            plt.show()
 
         self.assertEqual(count, 10)
         self.assertEqual(len(uniques), 10)

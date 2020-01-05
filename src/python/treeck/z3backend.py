@@ -35,10 +35,17 @@ class Z3Backend(VerifierBackend):
     def encode_leaf(self, tree_var, leaf_value):
         return (tree_var == leaf_value)
 
-    def encode_split(self, feat_var, split_value, left, right):
+    def encode_split(self, feat_var, split, left, right):
         if left == False and right == False:
             return False
-        cond = (feat_var < split_value)
+
+        if split[0] == "lt":
+            cond = (feat_var < split[2])
+        elif split[0] == "bool":
+            cond = z3.Not(feat_var, self._ctx)
+        else:
+            raise RuntimeError(f"unknown split {split}")
+
         if left == False:
             return z3.And(z3.Not(cond, self._ctx), right, self._ctx)
         if right == False:
