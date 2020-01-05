@@ -118,7 +118,7 @@ class TestSubspaces(unittest.TestCase):
         self.assertEqual(sb.get_domains(2), {0: BoolDomain(True)})
 
     def test_two_trees1(self):
-        at = AddTree(1)
+        at = AddTree()
         at.base_score = 10
         t = at.add_tree();
         t.split(t.root(), 0, 2)
@@ -133,7 +133,7 @@ class TestSubspaces(unittest.TestCase):
         t.split(t.root(), 0, 3)
         t.split( t.left(t.root()), 1, 1.2)
         t.split(t.right(t.root()), 1, 3.3)
-        t.split(t.right(t.right(t.root())), 0, 4)
+        t.split(t.right(t.right(t.root())), 2)
         t.set_leaf_value( t.left( t.left(t.root())), 0.1)
         t.set_leaf_value(t.right( t.left(t.root())), 0.2)
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
@@ -143,18 +143,18 @@ class TestSubspaces(unittest.TestCase):
         #print(at)
 
         sb = Subspaces(at, {})
-        l0 = sb.get_leaf(0)
+        l0 = sb.get_subspace(0)
         l0.find_best_domtree_split(at)
-        self.assertEqual(l0.get_best_split(), (0, 3.0))
+        self.assertEqual(l0.get_best_split(), ("lt", 0, 3.0))
         self.assertEqual(l0.split_score, 9)
         self.assertEqual(l0.split_balance, 1)
         l0.mark_unreachable(1, 2)
         l0.find_best_domtree_split(at)
-        self.assertEqual(l0.get_best_split(), (0, 3.0))
+        self.assertEqual(l0.get_best_split(), ("lt", 0, 3.0))
         self.assertEqual(l0.split_score, 6)
         self.assertEqual(l0.split_balance, 4)
 
-        l0 = sb.get_leaf(0)
+        l0 = sb.get_subspace(0)
         sb.split(l0)
 
         def test_l1(l1):
@@ -168,7 +168,7 @@ class TestSubspaces(unittest.TestCase):
             self.assertTrue(l1.is_reachable(0, 1))
             self.assertTrue(l1.is_reachable(1, 1))
 
-        l1 = sb.get_leaf(1)
+        l1 = sb.get_subspace(1)
         test_l1(l1)
 
         def test_l2(l2):
@@ -183,7 +183,7 @@ class TestSubspaces(unittest.TestCase):
             self.assertTrue(l2.is_reachable(0, 6))
             self.assertTrue(l2.is_reachable(1, 2))
 
-        l2 = sb.get_leaf(2)
+        l2 = sb.get_subspace(2)
         test_l2(l2)
 
         x = pickle.dumps(l1)
@@ -195,26 +195,26 @@ class TestSubspaces(unittest.TestCase):
         test_l2(l2c)
 
         stt = Subspaces.from_json(at, sb.to_json())
-        l1t = stt.get_leaf(1)
+        l1t = stt.get_subspace(1)
         test_l1(l1t)
-        l2t = stt.get_leaf(2)
+        l2t = stt.get_subspace(2)
         test_l2(l2t)
 
     def test_merge(self):
-        at = AddTree(1)
+        at = AddTree()
         at.base_score = 10
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
-        t.split(t.right(t.root()), 0, 3)
+        t.split(t.right(t.root()), 1)
         t.set_leaf_value( t.left( t.left(t.root())), 0.1)
         t.set_leaf_value(t.right( t.left(t.root())), 0.2)
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
         t.set_leaf_value(t.right(t.right(t.root())), 0.4)
 
         sb = Subspaces(at, {})
-        l0_0 = sb.get_leaf(0)
-        l0_1 = sb.get_leaf(0)
+        l0_0 = sb.get_subspace(0)
+        l0_1 = sb.get_subspace(0)
 
         l0_0.mark_unreachable(0, 1)
         self.assertFalse(l0_0.is_reachable(0, 1))
@@ -223,27 +223,28 @@ class TestSubspaces(unittest.TestCase):
         self.assertFalse(l0_1.is_reachable(0, 2))
         self.assertTrue( l0_1.is_reachable(0, 1))
 
-        l0_m = Subspaces.merge([l0_0, l0_1]);
+        l0_m = Subspace.merge([l0_0, l0_1]);
         self.assertFalse(l0_m.is_reachable(0, 2))
         self.assertFalse(l0_m.is_reachable(0, 1))
 
-    def test_calhouse(self):
+    def _test_calhouse(self): # Prune removed
         at = AddTree.read("tests/models/xgb-calhouse-hard.json")
         sb = Subspaces(at, {})
-        l0 = sb.get_leaf(0)
+        l0 = sb.get_subspace(0)
         l0.find_best_domtree_split(at)
 
-        fid, sval = l0.get_best_split()
+        _, fid, sval = l0.get_best_split()
         split_score = l0.split_score
         split_balance = l0.split_balance
         
         sb.split(l0)
 
         num_leafs = at.num_leafs();
+        ftypes = AddTreeFeatureTypes(at)
 
-        doms_l = [RealDomain() for i in range(at.num_features())]
+        doms_l = [RealDomain() for i in ftypes.feat_ids()]
         doms_l[fid].hi = sval
-        doms_r = [RealDomain() for i in range(at.num_features())]
+        doms_r = [RealDomain() for i in ftypes.feat_ids()]
         doms_r[fid].lo = sval
         at_l = at.prune(doms_l)
         at_r = at.prune(doms_r)
@@ -258,12 +259,12 @@ class TestSubspaces(unittest.TestCase):
         #for i in range(len(at)):
         #    p = TreePlot()
         #    p.g.attr(label=f"X{fid} split at {sval}")
-        #    p.add_splittree_leaf(at[i], sb.get_leaf(1))
-        #    p.add_splittree_leaf(at[i], sb.get_leaf(2))
+        #    p.add_splittree_leaf(at[i], sb.get_subspace(1))
+        #    p.add_splittree_leaf(at[i], sb.get_subspace(2))
         #    p.render(f"/tmp/plots/test2-{i}")
 
     def test_img_multisplit(self):
-        def plt(at, ll, lr, fid, sval):
+        def plt(at, ll, lr, split_type, fid, sval):
             for i in range(len(at)):
                 p = TreePlot()
                 idl = ll.domtree_node_id()
@@ -275,15 +276,15 @@ class TestSubspaces(unittest.TestCase):
 
         at = AddTree.read("tests/models/xgb-img-easy.json")
         sb = Subspaces(at, {})
-        l0 = sb.get_leaf(0)
+        l0 = sb.get_subspace(0)
         l0.find_best_domtree_split(at)
         b0 = l0.get_best_split()
         print("l0", b0)
 
         sb.split(l0)
 
-        l1 = sb.get_leaf(1)
-        l2 = sb.get_leaf(2)
+        l1 = sb.get_subspace(1)
+        l2 = sb.get_subspace(2)
 
         l1.find_best_domtree_split(at)
         l2.find_best_domtree_split(at)
@@ -300,8 +301,8 @@ class TestSubspaces(unittest.TestCase):
 
         sb.split(l1)
 
-        l3 = sb.get_leaf(3)
-        l4 = sb.get_leaf(4)
+        l3 = sb.get_subspace(3)
+        l4 = sb.get_subspace(4)
 
         l3.find_best_domtree_split(at)
         l4.find_best_domtree_split(at)
@@ -315,6 +316,10 @@ class TestSubspaces(unittest.TestCase):
 
         self.assertNotEqual(b1, b3)
         self.assertNotEqual(b1, b4)
+
+    def test_mnist_bool(self):
+        pass
+
 
 
 if __name__ == "__main__":

@@ -85,6 +85,12 @@ class TreePlot:
                 if not btree.is_root(bnode):
                     self.g.edge(self.name(btree.parent(bnode)), self.name(bnode), color="gray")
 
+    def get_split_label(self, split):
+        if split[0] == "lt":
+            return "X{} < {:.3f}".format(split[1], split[2])
+        if split[0] == "bool":
+            return "X{}".format(split[1])
+
     def add_splittree_leaf(self, tree, splittree_leaf):
         g = gv.Graph()
         self.index += 1
@@ -100,9 +106,8 @@ class TreePlot:
                 g.node(self.name(node), "{:.3f}".format(tree.get_leaf_value(node)),
                         style=s, color=c, fontcolor=c)
             else:
-                feat_id, split_value = tree.get_split(node)
-                g.node(self.name(node), "X{} < {:.3f}".format(feat_id, split_value),
-                        style=s, color=c, fontcolor=c)
+                label = self.get_split_label(tree.get_split(node))
+                g.node(self.name(node), label, style=s, color=c, fontcolor=c)
                 stack.append(tree.right(node))
                 stack.append(tree.left(node))
 
