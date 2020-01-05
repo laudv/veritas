@@ -4,6 +4,7 @@ import scipy.io
 import imageio
 import numpy as np
 import xgboost as xgb
+import pandas as pd
 
 from sklearn.metrics import accuracy_score
 from sklearn.metrics import mean_absolute_error
@@ -256,8 +257,34 @@ def generate_mnist():
             dd[str(k)] = list(v)
         json.dump(dd, f)
 
+def generate_bin_mnist():
+    print("loading MNIST MAT file")
+    mat = scipy.io.loadmat("tests/data/mnist.mat") # much faster
+    X = mat["X"] > 50.0
+    pdX = pd.DataFrame(X, columns=[f"f{i}" for i in range(X.shape[1])]) # xgboost produces binary splits
+    y = mat["y"].reshape((70000,))
+
+    print("Training MNIST y==1")
+    y1 = y==1
+    clf = xgb.XGBClassifier(
+            nthread=4,
+            tree_method="hist",
+            max_depth=4,
+            learning_rate=0.5,
+            n_estimators=10)
+    model = clf.fit(pdX, y1)
+    pred = model.predict(pdX, output_margin=True)
+    at = addtree_from_xgb_model(model)
+    at.base_score = 0.0
+    acc = accuracy_score(pred > 0.0, y1)
+    print(f"mnist y==1: accuracy y==1: {acc}")
+    mae = mean_absolute_error(pred[:5000], at.predict(X[:5000]))
+    print(f"mnist y==1: mae model difference {mae}")
+    at.write("tests/models/xgb-mnist-bin-yis1-easy.json")
+
 if __name__ == "__main__":
     #generate_california_housing()
     #generate_covertype()
     #generate_img()
-    generate_mnist()
+    #generate_mnist()
+    generate_bin_mnist()

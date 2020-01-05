@@ -317,10 +317,21 @@ class TestSubspaces(unittest.TestCase):
         self.assertNotEqual(b1, b3)
         self.assertNotEqual(b1, b4)
 
-    def test_mnist_bool(self):
-        pass
+    def test_bin_mnist(self):
+        at = AddTree.read("tests/models/xgb-mnist-bin-yis1-easy.json")
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(0)
+        l0.find_best_domtree_split(at)
+        b0 = l0.get_best_split()
+        print("l0", b0)
 
+        self.assertEqual(at[0].get_split(0), b0)
 
+        sb.split(l0)
+
+        l1 = sb.get_subspace(1)
+        self.assertTrue(l1.is_reachable(0, 1))
+        self.assertFalse(l1.is_reachable(0, 2))
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

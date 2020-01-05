@@ -540,13 +540,13 @@ namespace treeck {
                 int score = unreachable_l + unreachable_r;
                 int balance = std::abs(unreachable_l - unreachable_r);
 
-                std::cout
-                    << "tree_index=" << tree_index
-                    << ", feat_id=" << feat_id
-                    << ", split=" << node.get_split()
-                    << ", score=" << score
-                    << ", balance=" << balance
-                    << std::endl;
+                //std::cout
+                //    << "tree_index=" << tree_index
+                //    << ", feat_id=" << feat_id
+                //    << ", split=" << node.get_split()
+                //    << ", score=" << score
+                //    << ", balance=" << balance
+                //    << std::endl;
 
                 if (score >= max_score)
                 if (score > max_score || min_balance > balance)

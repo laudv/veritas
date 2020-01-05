@@ -29,8 +29,11 @@ def _parse_tree(at, tree_dump, feat2id_map):
         node, node_json = stack.pop()
         if "leaf" not in node_json:
             feat_id = feat2id_map(node_json["split"])
-            split_value = node_json["split_condition"]
-            tree.split(node, feat_id, split_value)
+            if "split_condition" in node_json:
+                split_value = node_json["split_condition"]
+                tree.split(node, feat_id, split_value)
+            else:
+                tree.split(node, feat_id) # binary split
 
             # let's hope the ordering of "children" is [left,right]
             stack.append((tree.right(node), node_json["children"][1]))
