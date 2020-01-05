@@ -15,8 +15,8 @@ from start_dask import start_local
 
 class TestDistributedVerifier(unittest.TestCase):
     def test_img_check_paths(self):
-        def vfactory(at, leaf):
-            v = Verifier(at, leaf, Backend())
+        def vfactory(at, lk):
+            v = Verifier(at, lk, Backend())
             v.add_constraint(v.fvar() < 0.0)
             v.add_constraint(v.xvar(0) > 50)
             v.add_constraint(v.xvar(0) <= 80)
@@ -24,12 +24,12 @@ class TestDistributedVerifier(unittest.TestCase):
 
         with Client("tcp://localhost:30333") as client:
         #with start_local() as client:
-            client.run(importlib.reload, treeck)
+            client.restart()
             at = AddTree.read("tests/models/xgb-img-easy.json")
-            st = SplitTree(at, {})
-            dv = DistributedVerifier(client, st, vfactory)
+            sb = Subspaces(at, {})
+            dv = DistributedVerifier(client, sb, vfactory)
 
-            l0 = dv._st.get_leaf(0)
+            l0 = dv._sb.get_subspace(0)
 
             def test_reachable(m, l0):
                 m(l0.is_reachable(9, 109))
@@ -106,17 +106,25 @@ class TestDistributedVerifier(unittest.TestCase):
             nworkers = sum(client.nthreads().values())
             N = 10
             at = AddTree.read("tests/models/xgb-img-easy.json")
-            st = SplitTree(at, {})
-            dv = DistributedVerifier(client, st, vfactory,
+            sb = Subspaces(at, {})
+            dv = DistributedVerifier(client, sb, vfactory,
                     check_paths = False,
+                    saturate_workers_from_start = True,
                     saturate_workers_factor = N,
                     stop_when_sat = False)
 
             dv.check()
-            #print(dv.results)
-            self.assertEqual(len(dv.results), nworkers * N)
-            self.assertTrue(len(list(filter(lambda p: p[1]["status"] == Verifier.Result.SAT, dv.results.items()))) > 0)
+            count_with_status = 0
+            count_with_sat = 0
+            for nid, d in dv.results.items():
+                if "status" in d:
+                    count_with_status += 1
+                    if d["status"].is_sat():
+                        count_with_sat += 1
 
+            self.assertGreater(len(dv.results), nworkers * N)
+            self.assertEqual(count_with_status, nworkers * N)
+            self.assertGreater(count_with_sat, 0)
 
             #client.shutdown()
 
