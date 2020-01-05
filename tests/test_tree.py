@@ -3,6 +3,17 @@ from treeck import *
 
 class TestTree(unittest.TestCase):
 
+    def myAssertAlmostEqual(self, a, b, eps=1e-6):
+        self.assertTrue(type(a) == type(b))
+        if isinstance(a, list) or isinstance(a, tuple):
+            self.assertEqual(len(a), len(b))
+            for x, y in zip(a, b):
+                self.myAssertAlmostEqual(x, y, eps=eps)
+        elif isinstance(a, float):
+            self.assertAlmostEqual(a, b, delta=eps)
+        else:
+            self.assertEqual(a, b)
+
     def test_tree1(self):
         at = AddTree(2)
         t = at.add_tree()
@@ -12,7 +23,7 @@ class TestTree(unittest.TestCase):
 
         y = t.predict([[1,1,3], [1,2,3]])
 
-        self.assertEqual([1.1,2.2], y)
+        self.myAssertAlmostEqual([1.1, 2.2], y)
 
     def test_tree_json(self):
         at = AddTree(3)
@@ -29,14 +40,14 @@ class TestTree(unittest.TestCase):
 
         self.assertTrue(tt.is_internal(0))
         self.assertTrue(tt.is_internal(1))
-        self.assertEqual(tt.get_split(0), (1, 1.5))
-        self.assertEqual(tt.get_split(1), (2, 0.12))
+        self.myAssertAlmostEqual(tt.get_split(0), ("lt", 1, 1.5))
+        self.myAssertAlmostEqual(tt.get_split(1), ("lt", 2, 0.12))
         self.assertTrue(tt.is_leaf(2))
         self.assertTrue(tt.is_leaf(3))
         self.assertTrue(tt.is_leaf(4))
-        self.assertEqual(tt.get_leaf_value(2), 2.2)
-        self.assertEqual(tt.get_leaf_value(3), 0.25)
-        self.assertEqual(tt.get_leaf_value(4), 0.45)
+        self.assertAlmostEqual(tt.get_leaf_value(2), 2.2)
+        self.assertAlmostEqual(tt.get_leaf_value(3), 0.25)
+        self.assertAlmostEqual(tt.get_leaf_value(4), 0.45)
 
     def test_addtree_get_splits(self):
         at = AddTree(3)
@@ -54,8 +65,8 @@ class TestTree(unittest.TestCase):
 
         s = at.get_splits()
 
-        self.assertEqual(s[1], [1.5, 2.0])
-        self.assertEqual(s[2], [0.12])
+        self.myAssertAlmostEqual(s[1], [1.5, 2.0])
+        self.myAssertAlmostEqual(s[2], [0.12])
         self.assertEqual(sorted(list(s.keys())), [1, 2])
 
     def test_skip_branch_left(self):
@@ -113,8 +124,8 @@ class TestTree(unittest.TestCase):
         self.assertTrue(t.is_internal(t.root()))
         self.assertTrue(t.is_leaf(t.left(t.root())))
         self.assertTrue(t.is_leaf(t.right(t.root())))
-        self.assertEqual(t.get_leaf_value(t.left(t.root())), 0.45)
-        self.assertEqual(t.get_leaf_value(t.right(t.root())), 2.2)
+        self.assertAlmostEqual(t.get_leaf_value(t.left(t.root())), 0.45)
+        self.assertAlmostEqual(t.get_leaf_value(t.right(t.root())), 2.2)
 
     def test_pickle(self):
         at = AddTree.read("tests/models/xgb-covtype-easy.json")

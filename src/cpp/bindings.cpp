@@ -29,10 +29,10 @@ encode_split(const Split& split)
 {
     return visit_split(
         [](const LtSplit& s) -> py::tuple {
-            return py::make_tuple("lt_split", s.feat_id, s.split_value);
+            return py::make_tuple("lt", s.feat_id, s.split_value);
         },
         [](const BoolSplit& s) -> py::tuple {
-            return py::make_tuple("bool_split", s.feat_id);
+            return py::make_tuple("bool", s.feat_id);
         },
         split);
 }
@@ -87,6 +87,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_split", [](const TreeRef& r, NodeId n) { return encode_split(r.get()[n].get_split()); })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split(LtSplit(fid, sv)); })
+        .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(BoolSplit(fid)); })
         .def("skip_branch", [](TreeRef& r, NodeId n) { r.get()[n].skip_branch(); })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
