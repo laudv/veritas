@@ -1,5 +1,4 @@
 {
-    "num_features": 784,
     "base_score": 0.0,
     "trees": [
         {
@@ -99,37 +98,37 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.877314568
+                    "leaf_value": -0.877314567565918
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.725490212
+                    "leaf_value": 0.7254902124404907
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.37711212
+                    "leaf_value": 0.37711212038993838
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.932163715
+                    "leaf_value": -0.9321637153625488
                 },
                 {
                     "id": 11,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.995800436
+                    "leaf_value": -0.9958004355430603
                 },
                 {
                     "id": 12,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.200000003
+                    "leaf_value": -0.20000000298023225
                 },
                 {
                     "id": 13,
@@ -187,19 +186,19 @@
                     "id": 17,
                     "parent": 15,
                     "tree_size": 1,
-                    "leaf_value": -0.662207365
+                    "leaf_value": -0.6622073650360107
                 },
                 {
                     "id": 18,
                     "parent": 15,
                     "tree_size": 1,
-                    "leaf_value": 0.536723137
+                    "leaf_value": 0.5367231369018555
                 },
                 {
                     "id": 19,
                     "parent": 16,
                     "tree_size": 1,
-                    "leaf_value": 0.906810045
+                    "leaf_value": 0.9068100452423096
                 },
                 {
                     "id": 20,
@@ -237,25 +236,25 @@
                     "id": 23,
                     "parent": 21,
                     "tree_size": 1,
-                    "leaf_value": -0.972210526
+                    "leaf_value": -0.9722105264663696
                 },
                 {
                     "id": 24,
                     "parent": 21,
                     "tree_size": 1,
-                    "leaf_value": -0.690607727
+                    "leaf_value": -0.6906077265739441
                 },
                 {
                     "id": 25,
                     "parent": 22,
                     "tree_size": 1,
-                    "leaf_value": -0.830845773
+                    "leaf_value": -0.8308457732200623
                 },
                 {
                     "id": 26,
                     "parent": 22,
                     "tree_size": 1,
-                    "leaf_value": 0.400000006
+                    "leaf_value": 0.4000000059604645
                 }
             ]
         },
@@ -356,25 +355,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.679371834
+                    "leaf_value": -0.6793718338012695
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.149856374
+                    "leaf_value": -0.1498563438653946
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.706491351
+                    "leaf_value": 0.7064913511276245
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.262922466
+                    "leaf_value": -0.262922465801239
                 },
                 {
                     "id": 11,
@@ -406,25 +405,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": 0.00807764102
+                    "leaf_value": 0.008077648468315602
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.687402725
+                    "leaf_value": -0.6874027252197266
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.63387394
+                    "leaf_value": 0.6338739395141602
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.389837176
+                    "leaf_value": -0.3898371756076813
                 },
                 {
                     "id": 17,
@@ -482,25 +481,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.684616208
+                    "leaf_value": -0.684616208076477
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.230474785
+                    "leaf_value": -0.2304747849702835
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.499322683
+                    "leaf_value": -0.49932268261909487
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.673590362
+                    "leaf_value": -0.673590362071991
                 },
                 {
                     "id": 25,
@@ -532,25 +531,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.682226598
+                    "leaf_value": -0.6822265982627869
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.40835169
+                    "leaf_value": -0.40835168957710268
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.600660026
+                    "leaf_value": -0.6006600260734558
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.379817575
+                    "leaf_value": 0.3798176050186157
                 }
             ]
         },
@@ -651,25 +650,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.554545403
+                    "leaf_value": -0.5545454025268555
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.28437832
+                    "leaf_value": 0.284378319978714
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.399862558
+                    "leaf_value": -0.3998625576496124
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.696639121
+                    "leaf_value": 0.6966391205787659
                 },
                 {
                     "id": 11,
@@ -701,25 +700,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": 0.0765600279
+                    "leaf_value": 0.07656003534793854
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.60133779
+                    "leaf_value": -0.6013377904891968
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.594833612
+                    "leaf_value": 0.5948336124420166
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.557381511
+                    "leaf_value": -0.5573815107345581
                 },
                 {
                     "id": 17,
@@ -777,25 +776,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.593132555
+                    "leaf_value": -0.5931325554847717
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.505048811
+                    "leaf_value": -0.5050488114356995
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.577812552
+                    "leaf_value": -0.5778125524520874
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.342786282
+                    "leaf_value": -0.3427863121032715
                 },
                 {
                     "id": 25,
@@ -827,25 +826,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.573286295
+                    "leaf_value": -0.5732862949371338
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.00908128917
+                    "leaf_value": -0.009081292897462845
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.397936314
+                    "leaf_value": -0.39793631434440615
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.634289145
+                    "leaf_value": 0.6342891454696655
                 }
             ]
         },
@@ -946,25 +945,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.257749856
+                    "leaf_value": -0.2577498257160187
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.627447307
+                    "leaf_value": 0.6274473071098328
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.521080017
+                    "leaf_value": -0.5210800170898438
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.266203582
+                    "leaf_value": 0.2662035822868347
                 },
                 {
                     "id": 11,
@@ -996,25 +995,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.597677171
+                    "leaf_value": -0.5976771712303162
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.295751333
+                    "leaf_value": -0.2957513630390167
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.524951756
+                    "leaf_value": -0.5249517560005188
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.487089396
+                    "leaf_value": 0.4870893955230713
                 },
                 {
                     "id": 17,
@@ -1072,25 +1071,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.54865247
+                    "leaf_value": -0.5486524701118469
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.341561705
+                    "leaf_value": -0.3415617048740387
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.519733608
+                    "leaf_value": -0.5197336077690125
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.190516278
+                    "leaf_value": -0.19051629304885865
                 },
                 {
                     "id": 25,
@@ -1122,25 +1121,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.240676299
+                    "leaf_value": -0.24067631363868714
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.522506535
+                    "leaf_value": -0.5225065350532532
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.886085451
+                    "leaf_value": 0.8860854506492615
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.196253881
+                    "leaf_value": -0.19625388085842133
                 }
             ]
         },
@@ -1241,25 +1240,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.0882551149
+                    "leaf_value": -0.08825512230396271
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.534973979
+                    "leaf_value": -0.5349739789962769
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.422025412
+                    "leaf_value": 0.4220254123210907
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.351114661
+                    "leaf_value": -0.3511146605014801
                 },
                 {
                     "id": 11,
@@ -1291,25 +1290,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.526628852
+                    "leaf_value": -0.526628851890564
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": 0.0542528927
+                    "leaf_value": 0.05425288900732994
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.472023726
+                    "leaf_value": -0.47202372550964358
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.401206225
+                    "leaf_value": 0.40120622515678408
                 },
                 {
                     "id": 17,
@@ -1354,19 +1353,19 @@
                     "id": 20,
                     "parent": 17,
                     "tree_size": 1,
-                    "leaf_value": 0.0259918831
+                    "leaf_value": 0.025991883128881456
                 },
                 {
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.528804302
+                    "leaf_value": -0.5288043022155762
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.482123494
+                    "leaf_value": -0.4821234941482544
                 },
                 {
                     "id": 23,
@@ -1398,25 +1397,25 @@
                     "id": 25,
                     "parent": 23,
                     "tree_size": 1,
-                    "leaf_value": -0.510871172
+                    "leaf_value": -0.510871171951294
                 },
                 {
                     "id": 26,
                     "parent": 23,
                     "tree_size": 1,
-                    "leaf_value": -0.117815971
+                    "leaf_value": -0.11781597882509232
                 },
                 {
                     "id": 27,
                     "parent": 24,
                     "tree_size": 1,
-                    "leaf_value": -0.405074626
+                    "leaf_value": -0.4050746262073517
                 },
                 {
                     "id": 28,
                     "parent": 24,
                     "tree_size": 1,
-                    "leaf_value": 0.477994442
+                    "leaf_value": 0.477994441986084
                 }
             ]
         },
@@ -1517,25 +1516,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.573118985
+                    "leaf_value": -0.5731189846992493
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.0408143289
+                    "leaf_value": 0.04081431403756142
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.40971130100000005
+                    "leaf_value": 0.4097113013267517
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.461887866
+                    "leaf_value": -0.4618878662586212
                 },
                 {
                     "id": 11,
@@ -1567,25 +1566,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.419512451
+                    "leaf_value": -0.41951245069503786
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": 0.275748074
+                    "leaf_value": 0.275748074054718
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.522166371
+                    "leaf_value": 0.52216637134552
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.332716346
+                    "leaf_value": -0.33271634578704836
                 },
                 {
                     "id": 17,
@@ -1643,25 +1642,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.511008978
+                    "leaf_value": -0.5110089778900147
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.0105591416
+                    "leaf_value": -0.010559141635894776
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.46707496
+                    "leaf_value": -0.4670749604701996
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": 0.22083807
+                    "leaf_value": 0.22083809971809388
                 },
                 {
                     "id": 25,
@@ -1693,25 +1692,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.221692339
+                    "leaf_value": -0.22169233858585359
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.518732011
+                    "leaf_value": -0.5187320113182068
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.520276129
+                    "leaf_value": -0.5202761292457581
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.236671671
+                    "leaf_value": 0.23667167127132417
                 }
             ]
         },
@@ -1812,25 +1811,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.496473908
+                    "leaf_value": -0.49647390842437746
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.0502713583
+                    "leaf_value": 0.050271350890398028
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.279603273
+                    "leaf_value": -0.2796032726764679
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.418740779
+                    "leaf_value": 0.41874077916145327
                 },
                 {
                     "id": 11,
@@ -1862,25 +1861,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.503559589
+                    "leaf_value": -0.5035595893859863
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": 0.194461241
+                    "leaf_value": 0.19446124136447907
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.0766167343
+                    "leaf_value": -0.07661673426628113
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.509241402
+                    "leaf_value": 0.5092414021492004
                 },
                 {
                     "id": 17,
@@ -1938,25 +1937,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.506419718
+                    "leaf_value": -0.5064197182655335
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.437808335
+                    "leaf_value": -0.4378083348274231
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.434228688
+                    "leaf_value": -0.43422868847846987
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": 0.143544406
+                    "leaf_value": 0.14354440569877625
                 },
                 {
                     "id": 25,
@@ -1988,25 +1987,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.500203967
+                    "leaf_value": -0.5002039670944214
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.074816063
+                    "leaf_value": -0.07481606304645539
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.382296979
+                    "leaf_value": 0.38229697942733767
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.471124828
+                    "leaf_value": -0.4711248278617859
                 }
             ]
         },
@@ -2107,25 +2106,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.486405164
+                    "leaf_value": -0.4864051938056946
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.203014642
+                    "leaf_value": 0.20301464200019837
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.0194887538
+                    "leaf_value": 0.019488751888275148
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.580527604
+                    "leaf_value": 0.5805276036262512
                 },
                 {
                     "id": 11,
@@ -2157,25 +2156,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.506863952
+                    "leaf_value": -0.5068639516830444
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.0551782064
+                    "leaf_value": -0.0551781989634037
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.345411897
+                    "leaf_value": -0.34541189670562746
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.584621489
+                    "leaf_value": 0.5846215486526489
                 },
                 {
                     "id": 17,
@@ -2233,25 +2232,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.500799954
+                    "leaf_value": -0.5007999539375305
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.2898736
+                    "leaf_value": -0.2898736000061035
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.494277418
+                    "leaf_value": -0.4942774176597595
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": 0.605845153
+                    "leaf_value": 0.6058451533317566
                 },
                 {
                     "id": 25,
@@ -2283,25 +2282,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.382607371
+                    "leaf_value": -0.3826073706150055
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": 0.628332019
+                    "leaf_value": 0.6283320784568787
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.454971641
+                    "leaf_value": -0.45497164130210879
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.0706141517
+                    "leaf_value": 0.07061415165662766
                 }
             ]
         },
@@ -2402,25 +2401,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.483462244
+                    "leaf_value": -0.48346224427223208
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.499948084
+                    "leaf_value": 0.49994808435440066
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.266663671
+                    "leaf_value": 0.26666367053985598
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.616546154
+                    "leaf_value": -0.6165461540222168
                 },
                 {
                     "id": 11,
@@ -2452,25 +2451,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.298058629
+                    "leaf_value": -0.2980586290359497
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": 0.195673481
+                    "leaf_value": 0.19567348062992097
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.166671991
+                    "leaf_value": -0.1666719913482666
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.499460757
+                    "leaf_value": 0.49946075677871706
                 },
                 {
                     "id": 17,
@@ -2528,25 +2527,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.488935113
+                    "leaf_value": -0.48893511295318606
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.0478305519
+                    "leaf_value": -0.04783055558800697
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.445636958
+                    "leaf_value": -0.44563695788383486
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": 0.110519812
+                    "leaf_value": 0.11051980406045914
                 },
                 {
                     "id": 25,
@@ -2578,25 +2577,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.484768748
+                    "leaf_value": -0.48476874828338625
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.0654346943
+                    "leaf_value": -0.06543470174074173
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.84828186
+                    "leaf_value": 0.8482818603515625
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.324233621
+                    "leaf_value": -0.32423359155654909
                 }
             ]
         },
@@ -2697,25 +2696,25 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.075408496
+                    "leaf_value": -0.07540850341320038
                 },
                 {
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.444789261
+                    "leaf_value": 0.44478926062583926
                 },
                 {
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.652566314
+                    "leaf_value": -0.6525663137435913
                 },
                 {
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.0399698466
+                    "leaf_value": -0.039969850331544879
                 },
                 {
                     "id": 11,
@@ -2747,25 +2746,25 @@
                     "id": 13,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.516497254
+                    "leaf_value": -0.5164972543716431
                 },
                 {
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.110253163
+                    "leaf_value": -0.11025317013263703
                 },
                 {
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.297026366
+                    "leaf_value": -0.2970263659954071
                 },
                 {
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.472126126
+                    "leaf_value": 0.4721261262893677
                 },
                 {
                     "id": 17,
@@ -2823,25 +2822,25 @@
                     "id": 21,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.489801109
+                    "leaf_value": -0.4898011088371277
                 },
                 {
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.307415843
+                    "leaf_value": -0.30741584300994875
                 },
                 {
                     "id": 23,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.390319288
+                    "leaf_value": -0.390319287776947
                 },
                 {
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": 0.725097001
+                    "leaf_value": 0.7250970005989075
                 },
                 {
                     "id": 25,
@@ -2873,25 +2872,25 @@
                     "id": 27,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": 0.310125858
+                    "leaf_value": 0.31012585759162905
                 },
                 {
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.432780772
+                    "leaf_value": -0.43278077244758608
                 },
                 {
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": -0.210757211
+                    "leaf_value": -0.21075721085071565
                 },
                 {
                     "id": 30,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.565796793
+                    "leaf_value": 0.5657967925071716
                 }
             ]
         }

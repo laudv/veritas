@@ -1,5 +1,4 @@
 {
-    "num_features": 8,
     "base_score": 0.5,
     "trees": [
         {
@@ -13,7 +12,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 5.07359982
+                            "split_value": 5.073599815368652
                         }
                     }
                 },
@@ -26,7 +25,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 3.10419989
+                            "split_value": 3.1041998863220217
                         }
                     }
                 },
@@ -39,7 +38,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 6.80889988
+                            "split_value": 6.808899879455566
                         }
                     }
                 },
@@ -52,7 +51,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 2,
-                            "split_value": 4.31160593
+                            "split_value": 4.311605930328369
                         }
                     }
                 },
@@ -65,7 +64,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.39308167
+                            "split_value": 2.3930816650390627
                         }
                     }
                 },
@@ -73,25 +72,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.564151108
+                    "leaf_value": 0.5641511082649231
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.338140517
+                    "leaf_value": 0.3381405174732208
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 1.14120579
+                    "leaf_value": 1.1412057876586915
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.691750526
+                    "leaf_value": 0.6917505264282227
                 },
                 {
                     "id": 9,
@@ -102,7 +101,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.7464788
+                            "split_value": 2.746478796005249
                         }
                     }
                 },
@@ -115,7 +114,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 7.80310011
+                            "split_value": 7.803100109100342
                         }
                     }
                 },
@@ -123,25 +122,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 1.45299315
+                    "leaf_value": 1.4529931545257569
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 1.03716135
+                    "leaf_value": 1.0371613502502442
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 1.6097157
+                    "leaf_value": 1.6097157001495362
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 2.02720809
+                    "leaf_value": 2.027208089828491
                 }
             ]
         },
@@ -156,7 +155,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 4.12890005
+                            "split_value": 4.128900051116943
                         }
                     }
                 },
@@ -169,7 +168,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.13822126
+                            "split_value": 2.138221263885498
                         }
                     }
                 },
@@ -182,7 +181,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 6.26830006
+                            "split_value": 6.2683000564575199
                         }
                     }
                 },
@@ -195,7 +194,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.9500008
+                            "split_value": 37.95000076293945
                         }
                     }
                 },
@@ -208,7 +207,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 2.22219992
+                            "split_value": 2.2221999168395998
                         }
                     }
                 },
@@ -216,25 +215,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.615308523
+                    "leaf_value": 0.6153085231781006
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.153869703
+                    "leaf_value": 0.15386970341205598
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0713623017
+                    "leaf_value": 0.07136230170726776
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.265983105
+                    "leaf_value": 0.26598310470581057
                 },
                 {
                     "id": 9,
@@ -245,7 +244,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.59964728
+                            "split_value": 2.599647283554077
                         }
                     }
                 },
@@ -266,25 +265,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.727531672
+                    "leaf_value": 0.7275316715240479
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.444726408
+                    "leaf_value": 0.4447264075279236
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.762589574
+                    "leaf_value": 0.7625895738601685
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 1.08291888
+                    "leaf_value": 1.0829188823699952
                 }
             ]
         },
@@ -299,7 +298,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 5.60169983
+                            "split_value": 5.6016998291015629
                         }
                     }
                 },
@@ -312,7 +311,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.9300003
+                            "split_value": 37.93000030517578
                         }
                     }
                 },
@@ -338,7 +337,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -122.300003
+                            "split_value": -122.30000305175781
                         }
                     }
                 },
@@ -351,7 +350,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -122.379997
+                            "split_value": -122.37999725341797
                         }
                     }
                 },
@@ -359,25 +358,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.71786046
+                    "leaf_value": 0.7178604602813721
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.168382078
+                    "leaf_value": 0.16838207840919496
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.100134395
+                    "leaf_value": 0.10013439506292343
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0498224832
+                    "leaf_value": -0.04982248321175575
                 },
                 {
                     "id": 9,
@@ -388,7 +387,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 8.75909996
+                            "split_value": 8.759099960327149
                         }
                     }
                 },
@@ -409,25 +408,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.301757663
+                    "leaf_value": 0.30175766348838808
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.685411811
+                    "leaf_value": 0.685411810874939
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.138829842
+                    "leaf_value": -0.13882984220981599
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.567244709
+                    "leaf_value": 0.5672447085380554
                 }
             ]
         },
@@ -455,7 +454,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 34.5699997
+                            "split_value": 34.56999969482422
                         }
                     }
                 },
@@ -468,7 +467,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 33.6599998
+                            "split_value": 33.65999984741211
                         }
                     }
                 },
@@ -481,7 +480,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 3.14285707
+                            "split_value": 3.142857074737549
                         }
                     }
                 },
@@ -494,7 +493,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -121.650002
+                            "split_value": -121.6500015258789
                         }
                     }
                 },
@@ -502,25 +501,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.333417416
+                    "leaf_value": 0.3334174156188965
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.0821449906
+                    "leaf_value": 0.08214499056339264
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.176895499
+                    "leaf_value": 0.17689549922943116
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.121714912
+                    "leaf_value": -0.12171491235494614
                 },
                 {
                     "id": 9,
@@ -531,7 +530,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -117.150002
+                            "split_value": -117.1500015258789
                         }
                     }
                 },
@@ -552,25 +551,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.192572311
+                    "leaf_value": 0.19257231056690217
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": -0.0872841701
+                    "leaf_value": -0.08728417009115219
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.0873245075
+                    "leaf_value": -0.08732450753450394
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.20073323
+                    "leaf_value": -0.2007332295179367
                 }
             ]
         },
@@ -585,7 +584,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.90387869
+                            "split_value": 2.903878688812256
                         }
                     }
                 },
@@ -611,7 +610,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 2,
-                            "split_value": 6.38554239
+                            "split_value": 6.385542392730713
                         }
                     }
                 },
@@ -637,7 +636,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.8100014
+                            "split_value": 37.810001373291019
                         }
                     }
                 },
@@ -645,25 +644,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.0286351107
+                    "leaf_value": 0.028635110706090928
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": -0.0713957697
+                    "leaf_value": -0.07139576971530914
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.176179215
+                    "leaf_value": 0.1761792153120041
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.00460076565
+                    "leaf_value": -0.004600765649229288
                 },
                 {
                     "id": 9,
@@ -674,7 +673,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 34.4799995
+                            "split_value": 34.47999954223633
                         }
                     }
                 },
@@ -687,7 +686,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 9.28730011
+                            "split_value": 9.287300109863282
                         }
                     }
                 },
@@ -695,25 +694,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.000343767955
+                    "leaf_value": 0.00034376795520074666
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": -0.0684338585
+                    "leaf_value": -0.06843385845422745
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.0680974796
+                    "leaf_value": 0.06809747964143753
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.301208913
+                    "leaf_value": 0.30120891332626345
                 }
             ]
         },
@@ -728,7 +727,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 3.66179991
+                            "split_value": 3.661799907684326
                         }
                     }
                 },
@@ -741,7 +740,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 39.3600006
+                            "split_value": 39.36000061035156
                         }
                     }
                 },
@@ -754,7 +753,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.05729175
+                            "split_value": 2.0572917461395265
                         }
                     }
                 },
@@ -767,7 +766,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -117.779999
+                            "split_value": -117.77999877929688
                         }
                     }
                 },
@@ -780,7 +779,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -121.900002
+                            "split_value": -121.9000015258789
                         }
                     }
                 },
@@ -788,25 +787,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.0161589421
+                    "leaf_value": 0.016158942133188249
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": -0.071966365
+                    "leaf_value": -0.07196636497974396
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.233112767
+                    "leaf_value": -0.23311276733875276
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0661610812
+                    "leaf_value": -0.06616108119487763
                 },
                 {
                     "id": 9,
@@ -830,7 +829,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -118.269997
+                            "split_value": -118.2699966430664
                         }
                     }
                 },
@@ -838,25 +837,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": -0.129615545
+                    "leaf_value": -0.12961554527282716
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.441259027
+                    "leaf_value": 0.4412590265274048
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.0854494497
+                    "leaf_value": 0.0854494497179985
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.00535783591
+                    "leaf_value": -0.005357835907489061
                 }
             ]
         },
@@ -884,7 +883,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 34.6500015
+                            "split_value": 34.650001525878909
                         }
                     }
                 },
@@ -897,7 +896,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -122.400002
+                            "split_value": -122.4000015258789
                         }
                     }
                 },
@@ -910,7 +909,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -118.349998
+                            "split_value": -118.3499984741211
                         }
                     }
                 },
@@ -923,7 +922,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -119.870003
+                            "split_value": -119.87000274658203
                         }
                     }
                 },
@@ -931,25 +930,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.16637823
+                    "leaf_value": 0.1663782298564911
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": -0.00285885809
+                    "leaf_value": -0.0028588580898940565
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": 0.0133049106
+                    "leaf_value": 0.013304910622537136
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.265126318
+                    "leaf_value": -0.2651263177394867
                 },
                 {
                     "id": 9,
@@ -960,7 +959,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.7599983
+                            "split_value": 37.7599983215332
                         }
                     }
                 },
@@ -973,7 +972,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.6399994
+                            "split_value": 37.63999938964844
                         }
                     }
                 },
@@ -981,25 +980,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.0958242491
+                    "leaf_value": 0.09582424908876419
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.379817486
+                    "leaf_value": 0.37981748580932619
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.135076985
+                    "leaf_value": 0.13507698476314546
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.0204397626
+                    "leaf_value": -0.020439762622117997
                 }
             ]
         },
@@ -1014,7 +1013,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 3,
-                            "split_value": 1.00641024
+                            "split_value": 1.0064102411270142
                         }
                     }
                 },
@@ -1027,7 +1026,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -121.559998
+                            "split_value": -121.55999755859375
                         }
                     }
                 },
@@ -1053,7 +1052,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.5999985
+                            "split_value": 37.599998474121097
                         }
                     }
                 },
@@ -1066,7 +1065,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 35.3199997
+                            "split_value": 35.31999969482422
                         }
                     }
                 },
@@ -1074,25 +1073,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.11705137
+                    "leaf_value": 0.1170513704419136
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": -0.0640923753
+                    "leaf_value": -0.06409237533807755
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0371366329
+                    "leaf_value": -0.037136632949113849
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.140719652
+                    "leaf_value": -0.14071965217590333
                 },
                 {
                     "id": 9,
@@ -1103,7 +1102,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 2,
-                            "split_value": 2.6622808
+                            "split_value": 2.662280797958374
                         }
                     }
                 },
@@ -1116,7 +1115,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.28181815
+                            "split_value": 2.281818151473999
                         }
                     }
                 },
@@ -1124,25 +1123,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.193754181
+                    "leaf_value": 0.193754181265831
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": -0.0717556775
+                    "leaf_value": -0.07175567746162415
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.0833508819
+                    "leaf_value": 0.08335088193416596
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.0189360641
+                    "leaf_value": 0.01893606409430504
                 }
             ]
         },
@@ -1157,7 +1156,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -116.150002
+                            "split_value": -116.1500015258789
                         }
                     }
                 },
@@ -1170,7 +1169,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 39.8199997
+                            "split_value": 39.81999969482422
                         }
                     }
                 },
@@ -1183,7 +1182,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 3.11940002
+                            "split_value": 3.1194000244140627
                         }
                     }
                 },
@@ -1196,7 +1195,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -122.360001
+                            "split_value": -122.36000061035156
                         }
                     }
                 },
@@ -1209,7 +1208,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 3.10419989
+                            "split_value": 3.1041998863220217
                         }
                     }
                 },
@@ -1217,25 +1216,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.0842583627
+                    "leaf_value": 0.08425836265087128
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.00224792282
+                    "leaf_value": 0.002247922820970416
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0953363106
+                    "leaf_value": -0.09533631056547165
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.277709126
+                    "leaf_value": -0.27770912647247317
                 },
                 {
                     "id": 9,
@@ -1246,7 +1245,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.13822126
+                            "split_value": 2.138221263885498
                         }
                     }
                 },
@@ -1259,7 +1258,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 4.55679989
+                            "split_value": 4.55679988861084
                         }
                     }
                 },
@@ -1267,25 +1266,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": -0.37566331
+                    "leaf_value": -0.37566331028938296
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": -0.147637695
+                    "leaf_value": -0.14763769507408143
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.316688925
+                    "leaf_value": -0.3166889250278473
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.544337094
+                    "leaf_value": -0.5443370938301086
                 }
             ]
         },
@@ -1300,7 +1299,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 2,
-                            "split_value": 6.49550152
+                            "split_value": 6.495501518249512
                         }
                     }
                 },
@@ -1313,7 +1312,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -118.269997
+                            "split_value": -118.2699966430664
                         }
                     }
                 },
@@ -1326,7 +1325,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.6699982
+                            "split_value": 37.66999816894531
                         }
                     }
                 },
@@ -1339,7 +1338,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 34.1599998
+                            "split_value": 34.15999984741211
                         }
                     }
                 },
@@ -1352,7 +1351,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 1.5068965
+                            "split_value": 1.5068964958190919
                         }
                     }
                 },
@@ -1360,25 +1359,25 @@
                     "id": 5,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": 0.148898497
+                    "leaf_value": 0.14889849722385407
                 },
                 {
                     "id": 6,
                     "parent": 3,
                     "tree_size": 1,
-                    "leaf_value": -0.0194425508
+                    "leaf_value": -0.019442550837993623
                 },
                 {
                     "id": 7,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.356202632
+                    "leaf_value": -0.356202632188797
                 },
                 {
                     "id": 8,
                     "parent": 4,
                     "tree_size": 1,
-                    "leaf_value": -0.0245458949
+                    "leaf_value": -0.02454589493572712
                 },
                 {
                     "id": 9,
@@ -1389,7 +1388,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -121.910004
+                            "split_value": -121.91000366210938
                         }
                     }
                 },
@@ -1402,7 +1401,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -121.220001
+                            "split_value": -121.22000122070313
                         }
                     }
                 },
@@ -1410,25 +1409,25 @@
                     "id": 11,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.222213551
+                    "leaf_value": 0.22221355140209199
                 },
                 {
                     "id": 12,
                     "parent": 9,
                     "tree_size": 1,
-                    "leaf_value": 0.051018063
+                    "leaf_value": 0.051018062978982928
                 },
                 {
                     "id": 13,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": -0.0494670235
+                    "leaf_value": -0.049467023462057117
                 },
                 {
                     "id": 14,
                     "parent": 10,
                     "tree_size": 1,
-                    "leaf_value": 0.0572128221
+                    "leaf_value": 0.05721282213926315
                 }
             ]
         }

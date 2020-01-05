@@ -36,10 +36,10 @@ def __tree_predict_single(self, example):
         split = self.get_split(node) # ("lt", feat_id, split_value) OR ("bool", feat_id)
         value = example[split[1]]
         if split[0] == "lt":
-            assert isinstance(value, float)
+            assert isinstance(value, float), f"is {type(value)} instead"
             go_left = value < split[2]
         elif split[0] == "bool": # false left, true right
-            assert isinstance(value, bool)
+            assert isinstance(value, bool), f"is {type(value)} instead"
             go_left = not value
         node = self.left(node) if go_left else self.right(node)
     return self.get_leaf_value(node)
