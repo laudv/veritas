@@ -69,3 +69,40 @@ AddTree.predict_single = __addtree_predict_single
 AddTree.predict = __addtree_predict
 AddTree.write = __addtree_write
 AddTree.read = __addtree_read
+
+
+class AddTreeFeatureTypes:
+    def __init__(self, at):
+        self._types = dict()
+
+        for tree_index in range(len(at)):
+            tree = at[tree_index]
+            self._check_types(tree, tree.root())
+
+    def _check_types(self, tree, node):
+        l, r = tree.left(node), tree.right(node)
+
+        if not tree.is_internal(node): return
+
+        split = tree.get_split(node)
+        split_type = split[0]
+        feat_id = split[1]
+
+        if feat_id in self._types and self._types[feat_id] != split_type:
+            raise RuntimeError(f"AddTree split type error for feat_id {feat_id}")
+
+        self._types[feat_id] = split_type
+
+        if not tree.is_leaf(l): self._check_types(tree, l)
+        if not tree.is_leaf(r): self._check_types(tree, r)
+
+    def feat_ids(self):
+        yield from self._types.keys()
+
+    def feature_types(self):
+        yield from self._types.items()
+
+    def __getitem__(self, feat_id):
+        if feat_id not in self._types:
+            raise KeyError(f"unknown feat_id {feat_id}")
+        return self._types[feat_id]

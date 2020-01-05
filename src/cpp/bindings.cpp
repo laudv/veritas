@@ -92,12 +92,11 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); });
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
-        .def(py::init<size_t>())
+        .def(py::init<>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("__len__", &AddTree::size)
         .def("num_nodes", &AddTree::num_nodes)
         .def("num_leafs", &AddTree::num_leafs)
-        .def("num_features", &AddTree::num_features)
         .def("add_tree", [](AddTree& at) -> TreeRef { return TreeRef{&at, at.add_tree(TreeD())}; } )
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })

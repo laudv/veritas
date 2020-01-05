@@ -77,9 +77,8 @@ namespace treeck {
     TREECK_INSTANTIATE_TREE_TEMPLATE(FloatT);
 
 
-    AddTree::AddTree(size_t num_features)
+    AddTree::AddTree()
         : trees_{}
-        , num_features_(num_features)
         , base_score(0.0)
     {
         trees_.reserve(16);
@@ -117,12 +116,6 @@ namespace treeck {
         return c;
     }
 
-    size_t
-    AddTree::num_features() const
-    {
-        return num_features_;
-    }
-
     AddTree::TreeT&
     AddTree::operator[](size_t index)
     {
@@ -147,8 +140,7 @@ namespace treeck {
         std::stringstream ss;
         {
             cereal::JSONOutputArchive ar(ss);
-            ar(cereal::make_nvp("num_features", num_features_),
-               cereal::make_nvp("base_score", base_score),
+            ar(cereal::make_nvp("base_score", base_score),
                cereal::make_nvp("trees", trees_));
         }
         return ss.str();
@@ -161,15 +153,13 @@ namespace treeck {
 
         FloatT base_score;
         std::vector<AddTree::TreeT> trees;
-        size_t num_features;
 
         {
             cereal::JSONInputArchive ar(ss);
-            ar(cereal::make_nvp("num_features", num_features),
-               cereal::make_nvp("base_score", base_score),
+            ar(cereal::make_nvp("base_score", base_score),
                cereal::make_nvp("trees", trees));
         }
-        AddTree addtree(num_features);
+        AddTree addtree;
         addtree.base_score = base_score;
         addtree.trees_ = std::move(trees);
         return addtree;
