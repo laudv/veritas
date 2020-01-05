@@ -49,6 +49,31 @@ class TestTree(unittest.TestCase):
         self.assertAlmostEqual(tt.get_leaf_value(3), 0.25)
         self.assertAlmostEqual(tt.get_leaf_value(4), 0.45)
 
+    def test_boolsplit(self):
+        at = AddTree(3)
+        t = at.add_tree()
+        t.split(t.root(), 0, 1.5)
+        t.split(t.left(t.root()), 1, 1.0)
+        t.split(t.right(t.root()), 2)
+        t.set_leaf_value(t.left(t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right(t.left(t.root())), 2.0)
+        t.set_leaf_value(t.left(t.right(t.root())), 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
+
+        self.assertEqual(t.get_split( t.left(t.root())), ("lt", 1, 1.0))
+        self.assertEqual(t.get_split(t.right(t.root())), ("bool", 2))
+
+        self.assertEqual([1.0, 2.0, 4.0, 8.0], at.predict([
+            [0.0, 0.5, True], [0.0, 1.5, True],
+            [2.0, 0.5, False], [2.0, 0.5, True]]))
+
+        s = at.to_json();
+        att = AddTree.from_json(s)
+        t = att[0]
+
+        self.assertEqual(t.get_split( t.left(t.root())), ("lt", 1, 1.0))
+        self.assertEqual(t.get_split(t.right(t.root())), ("bool", 2))
+
     def test_addtree_get_splits(self):
         at = AddTree(3)
         t = at.add_tree()

@@ -18,11 +18,14 @@ RealDomain.__eq__ = __realdomain__eq
 def __tree_predict_single(self, example):
     node = self.root()
     while not self.is_leaf(node):
-        split_type, fid, sv = self.get_split(node)
-        if split_type == "lt":
-            go_left = example[fid] < sv
-        elif split_type == "bool": # false left, true right
-            go_left = not example[fid]
+        split = self.get_split(node) # ("lt", feat_id, split_value) OR ("bool", feat_id)
+        value = example[split[1]]
+        if split[0] == "lt":
+            assert isinstance(value, float)
+            go_left = value < split[2]
+        elif split[0] == "bool": # false left, true right
+            assert isinstance(value, bool)
+            go_left = not value
         node = self.left(node) if go_left else self.right(node)
     return self.get_leaf_value(node)
 
