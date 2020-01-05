@@ -2,7 +2,7 @@ import math, timeit
 from bisect import bisect
 
 from enum import Enum
-from . import RealDomain, AddTreeFeatureTypes
+from . import RealDomain, BoolDomain, AddTreeFeatureTypes
 
 class VerifierExpr:
     pass
@@ -12,23 +12,10 @@ class VerifierRealExpr(VerifierExpr):
 
 class VerifierBoolExpr(VerifierExpr):
     def __and__(self, other):
-        if isinstance(self, VerifierAndExpr):
-            if isinstance(other, VerifierAndExpr):
-                self.conjuncts += other.conjuncts
-            else:
-                self.conjuncts.append(other)
-        else:
-            return VerifierAndExpr(self, other)
+        return VerifierAndExpr(self, other)
 
     def __or__(self, other):
-        if isinstance(self, VerifierOrExpr):
-            if isinstance(other, VerifierOrExpr):
-                self.disjuncts += other.disjuncts
-            else:
-                self.disjuncts.append(other)
-            return self
-        else:
-            return VerifierOrExpr(self, other)
+        return VerifierOrExpr(self, other)
 
 class VerifierVar:
     def __init__(self, verifier):
@@ -37,7 +24,7 @@ class VerifierVar:
     def get(self):
         raise RuntimeError("abstract method")
 
-class Xvar(VerifierVar, VerifierRealExpr):
+class Xvar(VerifierVar, VerifierRealExpr, VerifierBoolExpr): # can be both real/bool
     def __init__(self, verifier, feat_id):
         super().__init__(verifier)
         self._feat_id = feat_id
@@ -110,9 +97,9 @@ def f(self, other):
 class VerifierAndExpr(VerifierBoolExpr):
     def __init__(self, *conjuncts):
         self.conjuncts = []
-        for d in conjuncts:
-            if isinstance(d, VerifierAndExpr): self.conjuncts += d.conjuncts;
-            else: self.conjuncts.append(d)
+        for c in conjuncts:
+            if isinstance(c, VerifierAndExpr): self.conjuncts += c.conjuncts;
+            else: self.conjuncts.append(c)
 
 class VerifierOrExpr(VerifierBoolExpr):
     def __init__(self, *disjuncts):
@@ -120,6 +107,10 @@ class VerifierOrExpr(VerifierBoolExpr):
         for d in disjuncts:
             if isinstance(d, VerifierOrExpr): self.disjuncts += d.disjuncts;
             else: self.disjuncts.append(d)
+
+class VerifierNotExpr(VerifierBoolExpr):
+    def __init__(self, expr):
+        self.expr = expr
 
 def in_domain_constraint(verifier, domains):
     cs = []
@@ -136,14 +127,22 @@ def in_domain_constraint(verifier, domains):
 
 def not_in_domain_constraint(verifier, domains, strict=True):
     cs = []
-    for feat_id, d in domains.items():
+    for feat_id, dom in domains.items():
         var = verifier.xvar(feat_id)
-        if math.isinf(d.lo) and math.isinf(d.hi):
-            raise RuntimeError("Unconstrained feature -> nothing possible?")
-        elif math.isinf(d.lo): cs.append(var >= d.hi)
-        elif math.isinf(d.hi): cs.append(var <  d.lo)
-        else:
-            cs.append((var < d.lo) | (var >= d.hi))
+        if isinstance(dom, RealDomain):
+            if math.isinf(dom.lo) and math.isinf(dom.hi):
+                raise RuntimeError("Unconstrained feature -> nothing possible?")
+            elif math.isinf(dom.lo): cs.append(var >= dom.hi)
+            elif math.isinf(dom.hi): cs.append(var <  dom.lo)
+            else:
+                cs.append((var < dom.lo) | (var >= dom.hi))
+        elif isinstance(dom, BoolDomain):
+            if dom.is_true():
+                cs.append(VerifierNotExpr(var))
+            if dom.is_false():
+                cs.append(var)
+        else: raise RuntimeError(f"unknown domain type {type(dom)}")
+
     if strict:
         return VerifierOrExpr(*cs)
     return VerifierAndExpr(*cs)
@@ -304,7 +303,7 @@ class Verifier:
         Add a user-defined constraint. Use add_rvar, rvar, bvar, xvar, and fvar
         to get access to the variables.
         """
-        self._backend.add_constraint(constraint)
+        return self._backend.add_constraint(constraint)
 
     def set_timeout(self, timeout):
         """ Set the timeout of the backend solver. """
@@ -368,28 +367,33 @@ class Verifier:
             self._splits = self._addtree.get_splits()
 
         domains = {}
-        for feat_id, x, lo, hi in self._find_sample_intervals(xs):
-            d = RealDomain(lo, hi)
-            if d.is_everything():
+        for feat_id, x, dom in self._find_sample_intervals(xs):
+            if dom.is_everything():
                 raise RuntimeError("Unconstrained feature!")
-            #print("[feat_id={:<3}] {:.6g} <= {:.6g} < {:.6g}".format(feat_id, lo, x, hi))
-            domains[feat_id] = d
+            #print("[feat_id={:<3}] {} in {}".format(feat_id, x, dom))
+            domains[feat_id] = dom
         return domains
 
-    def _find_sample_intervals(self, xs): # TODO test with BoolSplit
+    def _find_sample_intervals(self, xs):
         assert isinstance(xs, dict)
         for feat_id, x in xs.items():
             if x == None: continue
-            if feat_id not in self._splits: continue # feature not used in splits of trees
-            split_values = self._splits[feat_id]
-            j = bisect(split_values, x)
-            lo = -math.inf if j == 0 else split_values[j-1]
-            hi = math.inf if j == len(split_values) else split_values[j]
-            assert lo < hi
-            assert x >= lo
-            assert x < hi
-
-            yield feat_id, x, lo, hi
+            ftype = self._ftypes[feat_id] 
+            if ftype == "lt":
+                if feat_id not in self._splits: continue # feature not used in splits of trees
+                split_values = self._splits[feat_id]
+                j = bisect(split_values, x)
+                lo = -math.inf if j == 0 else split_values[j-1]
+                hi = math.inf if j == len(split_values) else split_values[j]
+                assert lo < hi
+                assert x >= lo
+                assert x < hi
+                dom = RealDomain(lo, hi)
+            elif ftype == "bool":
+                dom = BoolDomain(x)
+            else:
+                raise RuntimeError("unknown ftype")
+            yield feat_id, x, dom
 
 
 

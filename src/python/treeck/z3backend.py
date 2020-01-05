@@ -3,7 +3,7 @@ import z3
 from .verifier import Verifier, ORDER_CONSTRAINTS
 from .verifier import VerifierBoolExpr, VerifierVar
 from .verifier import VerifierLtExpr, VerifierGtExpr, VerifierLeExpr, VerifierGeExpr, VerifierEqExpr, VerifierNeExpr
-from .verifier import VerifierAndExpr, VerifierOrExpr
+from .verifier import VerifierAndExpr, VerifierOrExpr, VerifierNotExpr
 from .verifier import SumExpr
 from .verifier import VerifierBackend
 
@@ -28,6 +28,7 @@ class Z3Backend(VerifierBackend):
     def add_constraint(self, *constraints):
         encs = self._enc_constraints(constraints)
         self._solver.add(*encs)
+        return encs
 
     def simplify(self):
         pass
@@ -107,7 +108,7 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, VerifierBoolExpr):
             return self._enc_verifier_bool_expr(c)
         else:
-            raise RuntimeError("unsupported bool expression of type"
+            raise RuntimeError("unsupported expression of type "
                     + type(c).__qualname__)
 
     def _enc_verifier_bool_expr(self, c):
@@ -117,6 +118,8 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, VerifierOrExpr):
             cs = list(map(self._enc_bool_expr, c.disjuncts))
             return z3.Or(*cs, self._ctx) if len(cs) > 0 else False
+        elif isinstance(c, VerifierNotExpr):
+            return z3.Not(self._enc_bool_expr(c.expr))
         elif type(c) in Z3Backend.ORDER_CONSTRAINTS_MAP.keys():
             real1 = self._enc_real_expr(c.lhs)
             real2 = self._enc_real_expr(c.rhs)
@@ -126,7 +129,7 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, VerifierVar):
             return c.get()
         else:
-            raise RuntimeError("unsupported VerifierBoolExpr of type"
+            raise RuntimeError("unsupported VerifierBoolExpr of type "
                     + type(c).__qualname__)
 
     def _enc_real_expr(self, c):
@@ -144,7 +147,7 @@ class Z3Backend(VerifierBackend):
                 s += self._enc_real_expr(p)
             return s
         else:
-            raise RuntimeError("unsupported VerifierRealExpr of type"
+            raise RuntimeError("unsupported VerifierRealExpr of type "
                     + type(c).__qualname__)
 
     def _extract_var(self, z3model, var):

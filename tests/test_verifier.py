@@ -259,7 +259,6 @@ class TestVerifier(unittest.TestCase):
 
     def test_mnist_multi_instance(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
-        doms = [RealDomain() for i in range(28*28)]
 
         sb = Subspaces(at, {})
         l0 = sb.get_subspace(sb.domtree().root())
@@ -296,16 +295,20 @@ class TestVerifier(unittest.TestCase):
             hash2 = 91
             for fid, x in model[0]["xs"].items():
                 p = np.unravel_index(fid, (28, 28))
-                img1[p[1], p[0]] = x
+                if x is not None: img1[p[1], p[0]] = x
                 hash1 = hash((hash1, fid, x))
             for fid, x in model[1]["xs"].items():
                 p = np.unravel_index(fid, (28, 28))
-                img2[p[1], p[0]] = x
+                if x is not None: img2[p[1], p[0]] = x
                 hash2 = hash((hash2, fid, x))
             uniques.add(hash((hash1, hash2)))
 
             if count > 0:
-                print("norm difference:", abs(img1-img1_prev).sum(), abs(img2-img2_prev).sum())
+                diff1 = abs(img1-img1_prev).sum()
+                diff2 = abs(img2-img2_prev).sum()
+                print("mnist_multi_instance: norm difference:", diff1, diff2)
+                self.assertGreater(diff1, 0.0)
+                self.assertGreater(diff2, 0.0)
             img1_prev, img2_prev = img1, img2
 
             fam = v.model_family(model)
@@ -336,7 +339,47 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(count, 10)
         self.assertEqual(len(uniques), 10)
 
+    def test_bin_mnist(self):
+        at = AddTree.read(f"tests/models/xgb-mnist-bin-yis1-easy.json")
+        sb = Subspaces(at, {})
+        l0 = sb.get_subspace(sb.domtree().root())
+        v = Verifier(at, l0, Backend());
+        v.add_all_trees()
+        v.add_constraint(v.fvar(0) > 5.0) # it is with high certainty X
 
+        count = 0;
+        uniques = set()
+        img_prev = None
+        while v.check().is_sat() and count < 10:
+            model = v.model()
+            img = np.zeros((28, 28), dtype=bool)
+            hash1 = 91
+            for fid, x in model["xs"].items():
+                p = np.unravel_index(fid, (28, 28))
+                if x is not None: img[p[1], p[0]] = x
+                hash1 = hash((hash1, fid, x))
+            uniques.add(hash1)
+
+            fam = v.model_family(model)
+            v.add_constraint(not_in_domain_constraint(v, fam))
+
+            if count > 0:
+                ndiff = (img_prev != img).sum()
+                print("bin_mnist: different =", ndiff)
+                self.assertGreater(ndiff, 0)
+
+            img_prev = img
+            count += 1
+
+            if count % 100 != 0: continue
+
+            fig, ax = plt.subplots()
+            ax.imshow(img)
+            ax.set_title("instance: f={:.3f}".format(model["f"]))
+            plt.show()
+
+        self.assertEqual(count, 10)
+        self.assertEqual(len(uniques), 10)
 
 if __name__ == "__main__":
     z3.set_pp_option("rational_to_decimal", True)
