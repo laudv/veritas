@@ -101,6 +101,9 @@ namespace treeck {
 
 
 
+    BoolDomain::BoolDomain() : value_(-1) {}
+    BoolDomain::BoolDomain(bool value) : value_(value ? 1 : 0) {}
+
     bool
     BoolDomain::is_everything() const
     {
