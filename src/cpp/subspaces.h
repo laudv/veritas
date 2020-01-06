@@ -43,6 +43,7 @@ namespace treeck {
         IsReachable& operator=(const IsReachable& other);
         IsReachable& operator=(IsReachable&& other);
 
+        size_t num_unreachable() const;
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
@@ -154,6 +155,7 @@ namespace treeck {
         Subspace& operator=(Subspace&& other);
 
         NodeId domtree_node_id() const;
+        size_t num_unreachable() const;
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);
 

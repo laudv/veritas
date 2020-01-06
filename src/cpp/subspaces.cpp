@@ -76,6 +76,12 @@ namespace treeck {
         return *this;
     }
 
+    size_t
+    IsReachable::num_unreachable() const
+    {
+        return unreachable_.size();
+    }
+
     bool
     IsReachable::is_reachable(size_t tree_index, NodeId node_id) const
     {
@@ -447,6 +453,12 @@ namespace treeck {
     Subspace::domtree_node_id() const
     {
         return domtree_node_id_;
+    }
+
+    size_t
+    Subspace::num_unreachable() const
+    {
+        return is_reachable_.num_unreachable();
     }
 
     bool
