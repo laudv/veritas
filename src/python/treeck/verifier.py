@@ -2,7 +2,7 @@ import math, timeit
 from bisect import bisect
 
 from enum import Enum
-from . import RealDomain, BoolDomain, AddTreeFeatureTypes
+from . import RealDomain, BoolDomain, AddTreeFeatureTypes, Subspace
 
 class VerifierExpr:
     pass
@@ -125,10 +125,10 @@ def in_domain_constraint(verifier, domains):
             cs.append(var <  d.hi)
     return VerifierAndExpr(*cs)
 
-def not_in_domain_constraint(verifier, domains, strict=True):
+def not_in_domain_constraint(verifier, domains, instance, strict=True):
     cs = []
     for feat_id, dom in domains.items():
-        var = verifier.xvar(feat_id)
+        var = verifier.xvar(feat_id, instance=instance)
         if isinstance(dom, RealDomain):
             if math.isinf(dom.lo) and math.isinf(dom.hi):
                 raise RuntimeError("Unconstrained feature -> nothing possible?")
@@ -237,20 +237,22 @@ class Verifier:
             if self == Verifier.Result.UNSAT:   return "UNSAT"
             if self == Verifier.Result.UNKNOWN: return "UNKNOWN"
 
-    def __init__(self, addtree, splittree_leaf, backend,
-            num_instances=1):
-
-        self._addtree = addtree
-        self.feat_types = AddTreeFeatureTypes(addtree)
-        self._stree = splittree_leaf
+    def __init__(self, addtree, subspace, backend):
         self._backend = backend
-        self._instances = [AddTreeInstance(self, f"_{i}")
-                for i in range(num_instances)]
+        if isinstance(subspace, Subspace):
+            self._instances = [AddTreeInstance(self, addtree, subspace, "")]
+        elif isinstance(subspace, list):
+            if not isinstance(addtree, list):
+                addtree = [addtree] * len(subspace)
+            self._instances = [AddTreeInstance(self, at, sb, f"_{i}")
+                    for i, (at, sb) in enumerate(zip(addtree, subspace))]
+        else:
+            raise ValueError("subspace not a Subspace or list of Subspace instances ("
+                    + type(subspace).__qualname__ + ")")
 
         self._rvars = {} # real additional variables
         self._bvars = {} # boolean additional variables
 
-        self._splits = None
         self._status = Verifier.Result.UNKNOWN
 
         self.check_time = -math.inf
@@ -358,9 +360,78 @@ class Verifier:
         change its predicted value.
         """
         if len(self._instances) == 1:
-            return self._xs_family(model["xs"])
-        return [self._xs_family(model[i]["xs"])
-                for i in range(len(self._instances))]
+            return self._instances[0]._xs_family(model["xs"])
+        return [inst._xs_family(model[i]["xs"])
+                for i, inst in enumerate(self._instances)]
+
+
+
+
+# -----------------------------------------------------------------------------
+
+
+
+class AddTreeInstance:
+
+    def __init__(self, verifier, addtree, subspace, suffix):
+        self._v = verifier
+        self._addtree = addtree
+        self._subspace = subspace
+        self._feat_types = AddTreeFeatureTypes(addtree)
+
+        self._xvars = {fid: self._v._backend.add_real_var(f"x{fid}{suffix}")
+                if typ == "lt"
+                else self._v._backend.add_bool_var(f"xb{fid}{suffix}")
+                for fid, typ in self._feat_types}
+        self._wvars = [self._v._backend.add_real_var(f"w{i}{suffix}")
+                for i in range(len(self._addtree))]
+        self._fvar = self._v._backend.add_real_var(f"f{suffix}")
+
+        # FVAR = sum{WVARS}
+        fexpr = SumExpr(self._addtree.base_score, *self._wvars)
+        self._v.add_constraint(fexpr == self.fvar())
+
+        self._splits = None
+
+    def xvar(self, feat_id):
+        """ Get the decision variable associated with feature `feat_id`. """
+        return Xvar(self, feat_id)
+
+    def wvar(self, tree_index):
+        """ Get the decision variable associated with the output value of tree `tree_index`. """
+        return Wvar(self, tree_index)
+
+    def fvar(self):
+        """ Get the decision variable associated with the output of the model. """
+        return Fvar(self)
+
+    def add_tree(self, tree_index):
+        """ Add the full encoding of a tree to the backend.  """
+        tree = self._addtree[tree_index]
+        enc = self._enc_tree(tree, tree.root())
+        self._v._backend.add_constraint(enc)
+
+    def add_all_trees(self):
+        """ Add all trees in the addtree. """
+        for tree_index in range(len(self._addtree)):
+            self.add_tree(tree_index)
+
+    def _enc_tree(self, tree, node):
+        if tree.is_leaf(node):
+            wvar = self._wvars[tree.index()]
+            leaf_value = tree.get_leaf_value(node)
+            return self._v._backend.encode_leaf(wvar, leaf_value)
+        else:
+            tree_index = tree.index()
+            split = tree.get_split(node)
+            xvar = self._xvars[split[1]]
+            left, right = tree.left(node), tree.right(node)
+            l, r = False, False
+            if self._subspace.is_reachable(tree_index, left):
+                l = self._enc_tree(tree, left)
+            if self._subspace.is_reachable(tree_index, right):
+                r = self._enc_tree(tree, right)
+            return self._v._backend.encode_split(xvar, split, l, r)
 
     def _xs_family(self, xs):
         if self._splits is None:
@@ -378,7 +449,7 @@ class Verifier:
         assert isinstance(xs, dict)
         for feat_id, x in xs.items():
             if x == None: continue
-            ftype = self.feat_types[feat_id]
+            ftype = self._feat_types[feat_id]
             if ftype == "lt":
                 if feat_id not in self._splits: continue # feature not used in splits of trees
                 split_values = self._splits[feat_id]
@@ -394,70 +465,6 @@ class Verifier:
             else:
                 raise RuntimeError("unknown ftype")
             yield feat_id, x, dom
-
-
-
-
-# -----------------------------------------------------------------------------
-
-
-
-class AddTreeInstance:
-
-    def __init__(self, verifier, suffix):
-        self._v = verifier
-
-        self._xvars = {fid: self._v._backend.add_real_var(f"x{fid}{suffix}")
-                if typ == "lt"
-                else self._v._backend.add_bool_var(f"xb{fid}{suffix}")
-                for fid, typ in self._v.feat_types}
-        self._wvars = [self._v._backend.add_real_var(f"w{i}{suffix}")
-                for i in range(len(self._v._addtree))]
-        self._fvar = self._v._backend.add_real_var(f"f{suffix}")
-
-        # FVAR = sum{WVARS}
-        fexpr = SumExpr(self._v._addtree.base_score, *self._wvars)
-        self._v.add_constraint(fexpr == self.fvar())
-
-    def xvar(self, feat_id):
-        """ Get the decision variable associated with feature `feat_id`. """
-        return Xvar(self, feat_id)
-
-    def wvar(self, tree_index):
-        """ Get the decision variable associated with the output value of tree `tree_index`. """
-        return Wvar(self, tree_index)
-
-    def fvar(self):
-        """ Get the decision variable associated with the output of the model. """
-        return Fvar(self)
-
-    def add_tree(self, tree_index):
-        """ Add the full encoding of a tree to the backend.  """
-        tree = self._v._addtree[tree_index]
-        enc = self._enc_tree(tree, tree.root())
-        self._v._backend.add_constraint(enc)
-
-    def add_all_trees(self):
-        """ Add all trees in the addtree. """
-        for tree_index in range(len(self._v._addtree)):
-            self.add_tree(tree_index)
-
-    def _enc_tree(self, tree, node):
-        if tree.is_leaf(node):
-            wvar = self._wvars[tree.index()]
-            leaf_value = tree.get_leaf_value(node)
-            return self._v._backend.encode_leaf(wvar, leaf_value)
-        else:
-            tree_index = tree.index()
-            split = tree.get_split(node)
-            xvar = self._xvars[split[1]]
-            left, right = tree.left(node), tree.right(node)
-            l, r = False, False
-            if self._v._stree.is_reachable(tree_index, left):
-                l = self._enc_tree(tree, left)
-            if self._v._stree.is_reachable(tree_index, right):
-                r = self._enc_tree(tree, right)
-            return self._v._backend.encode_split(xvar, split, l, r)
 
 
 

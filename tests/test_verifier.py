@@ -123,11 +123,11 @@ class TestVerifier(unittest.TestCase):
         #print(model)
         self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
         #print(v.model_family(model))
-        v.add_constraint(not_in_domain_constraint(v, v.model_family(model)))
+        v.add_constraint(not_in_domain_constraint(v, v.model_family(model), 0))
         self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.SAT)
         model = v.model()
         self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
-        v.add_constraint(not_in_domain_constraint(v, v.model_family(model)))
+        v.add_constraint(not_in_domain_constraint(v, v.model_family(model), 0))
         check = v.check(v.fvar() < 0.01) 
         self.assertEqual(check, Verifier.Result.UNSAT)
 
@@ -152,10 +152,11 @@ class TestVerifier(unittest.TestCase):
 
         #print(at)
 
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend(), num_instances=2)
-        v.add_all_trees(0); v.add_all_trees(1)
+        sb0, sb1 = Subspaces(at, {}), Subspaces(at, {})
+        l0_0 = sb0.get_subspace(sb0.domtree().root())
+        l1_0 = sb1.get_subspace(sb0.domtree().root())
+        v = Verifier(at, [l0_0, l1_0], Backend())
+        v.add_all_trees();
         v.add_constraint(v.instance(0).fvar() > v.instance(1).fvar())
         v.add_constraint(v.instance(1).fvar() > 0)
         v.add_constraint(v.instance(0).xvar(0) == v.instance(1).xvar(0))
@@ -169,14 +170,14 @@ class TestVerifier(unittest.TestCase):
             self.assertEqual(m[0]["xs"][0], m[1]["xs"][0])
             self.assertLess(m[1]["xs"][1], 1.0)
 
-            print("MODEL xs", m[0]["xs"], m[1]["xs"],
-                    "ws", m[0]["ws"], m[1]["ws"],
-                    "f", m[0]["f"], m[1]["f"])
+            print("MODEL xs", m[0]["xs"], m[1]["xs"])
+            print("      ws", m[0]["ws"], m[1]["ws"])
+            print("       f", m[0]["f"], m[1]["f"])
             models.append(m)
             fam = v.model_family(m)
             #print("FAM", fam)
-            v.add_constraint(not_in_domain_constraint(v, fam[0]))
-            v.add_constraint(not_in_domain_constraint(v, fam[1]))
+            v.add_constraint(not_in_domain_constraint(v, fam[0], 0) |
+                             not_in_domain_constraint(v, fam[1], 1))
 
         self.assertEqual(len(models), 4)
 
@@ -247,7 +248,7 @@ class TestVerifier(unittest.TestCase):
             self.assertLess(m["f"], 0.0)
             self.assertAlmostEqual(img[y][x], m["f"], delta=1e-4)
             models.append((x, y))
-            v.add_constraint(not_in_domain_constraint(v, v.model_family(m)))
+            v.add_constraint(not_in_domain_constraint(v, v.model_family(m), 0))
 
         self.assertEqual(len(models), 60)
 
@@ -260,15 +261,16 @@ class TestVerifier(unittest.TestCase):
     def test_mnist_multi_instance(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
 
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend(), num_instances=2);
+        sb0, sb1 = Subspaces(at, {}), Subspaces(at, {})
+        l0_0 = sb0.get_subspace(sb0.domtree().root())
+        l1_0 = sb0.get_subspace(sb1.domtree().root())
+        v = Verifier(at, [l0_0, l1_0], Backend());
         v.add_all_trees(0); v.add_all_trees(1)
         v.add_constraint(v.fvar(0) >  5.0) # it is with high certainty X
         v.add_constraint(v.fvar(1) < -5.0) # it is with high certainty not X
 
         pbeq = []
-        for feat_id in v.feat_types.feat_ids():
+        for feat_id in AddTreeFeatureTypes(at).feat_ids():
             bvar_name = f"b{feat_id}"
             v.add_bvar(bvar_name)
 
@@ -280,14 +282,19 @@ class TestVerifier(unittest.TestCase):
                                                xvar1.get() == xvar2.get()))
             pbeq.append((bvar.get(), 1))
 
-        N = 3
+        N = 4
         v.add_constraint(z3.PbLe(pbeq, N)) # at most N variables differ
 
         count = 0
         uniques = set()
 
         img1_prev, img2_prev = None, None
-        while v.check().is_sat() and count < 10:
+        while count < 10:
+            check = v.check()
+            if not check.is_sat():
+                print("UNSAT")
+                break
+
             model = v.model()
             img1 = np.zeros((28, 28))
             img2 = np.zeros((28, 28))
@@ -311,9 +318,20 @@ class TestVerifier(unittest.TestCase):
                 self.assertGreater(diff2, 0.0)
             img1_prev, img2_prev = img1, img2
 
+            # Ensure that the different pixels have different values in the next iteration
+            # We do not care about the other pixels
             fam = v.model_family(model)
-            v.add_constraint(not_in_domain_constraint(v, fam[0], strict=True))
-            v.add_constraint(not_in_domain_constraint(v, fam[1], strict=True))
+            fam_diff0 = {}
+            fam_diff1 = {}
+            for n, b in model["bs"].items():
+                if not b: continue
+                i = int(n[1:])
+                p = np.unravel_index(i, (28, 28))
+                print("different pixel (bvar):", i, p, model[0]["xs"][i], model[1]["xs"][i])
+                fam_diff0[i] = fam[0][i]
+                fam_diff1[i] = fam[1][i]
+            v.add_constraint(not_in_domain_constraint(v, fam_diff0, 0) &
+                             not_in_domain_constraint(v, fam_diff1, 1))
 
             count += 1
 
@@ -330,7 +348,6 @@ class TestVerifier(unittest.TestCase):
                 if not b: continue
                 i = int(n[1:])
                 p = np.unravel_index(i, (28, 28))
-                print("different pixel (bvar):", i, p, model[0]["xs"][i], model[1]["xs"][i])
                 ax1.scatter([p[0]], [p[1]], marker=".", color="r")
                 ax2.scatter([p[0]], [p[1]], marker=".", color="r")
 
@@ -361,7 +378,7 @@ class TestVerifier(unittest.TestCase):
             uniques.add(hash1)
 
             fam = v.model_family(model)
-            v.add_constraint(not_in_domain_constraint(v, fam))
+            v.add_constraint(not_in_domain_constraint(v, fam, 0))
 
             if count > 0:
                 ndiff = (img_prev != img).sum()
