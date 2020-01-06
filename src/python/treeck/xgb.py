@@ -10,7 +10,7 @@ def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:])):
     if isinstance(model, XGBModel):
         base_score = model.base_score
         model = model.get_booster()
-    assert isinstance(model, Booster)
+    assert isinstance(model, Booster), f"not xgb.Booster but {type(model)}"
 
     dump = model.get_dump("", dump_format="json")
     at = AddTree()

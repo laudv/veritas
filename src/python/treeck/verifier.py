@@ -241,7 +241,7 @@ class Verifier:
             num_instances=1):
 
         self._addtree = addtree
-        self._ftypes = AddTreeFeatureTypes(addtree)
+        self.feat_types = AddTreeFeatureTypes(addtree)
         self._stree = splittree_leaf
         self._backend = backend
         self._instances = [AddTreeInstance(self, f"_{i}")
@@ -378,7 +378,7 @@ class Verifier:
         assert isinstance(xs, dict)
         for feat_id, x in xs.items():
             if x == None: continue
-            ftype = self._ftypes[feat_id] 
+            ftype = self.feat_types[feat_id]
             if ftype == "lt":
                 if feat_id not in self._splits: continue # feature not used in splits of trees
                 split_values = self._splits[feat_id]
@@ -410,7 +410,7 @@ class AddTreeInstance:
         self._xvars = {fid: self._v._backend.add_real_var(f"x{fid}{suffix}")
                 if typ == "lt"
                 else self._v._backend.add_bool_var(f"xb{fid}{suffix}")
-                for fid, typ in self._v._ftypes}
+                for fid, typ in self._v.feat_types}
         self._wvars = [self._v._backend.add_real_var(f"w{i}{suffix}")
                 for i in range(len(self._v._addtree))]
         self._fvar = self._v._backend.add_real_var(f"f{suffix}")

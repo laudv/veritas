@@ -268,7 +268,7 @@ class TestVerifier(unittest.TestCase):
         v.add_constraint(v.fvar(1) < -5.0) # it is with high certainty not X
 
         pbeq = []
-        for feat_id in v._ftypes.feat_ids():
+        for feat_id in v.feat_types.feat_ids():
             bvar_name = f"b{feat_id}"
             v.add_bvar(bvar_name)
 
