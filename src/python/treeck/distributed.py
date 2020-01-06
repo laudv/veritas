@@ -4,7 +4,7 @@ from enum import Enum
 from dask.distributed import wait, get_worker
 
 from .pytreeck import Subspace
-from .verifier import Verifier, VerifierTimeout
+from .verifier import Verifier, VerifierTimeout, VerifierNotExpr
 
 
 class DistributedVerifier:
