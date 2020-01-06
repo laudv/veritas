@@ -29,22 +29,24 @@ class TreePlot:
             node = stack.pop()
             if tree.is_leaf(node):
                 style = ""
+                color = "black"
                 if hasattr(tree, "get_leaf_value"):
                     s = "{:.3f}".format(tree.get_leaf_value(node))
                 elif leaf_labels is not None and node in leaf_labels:
                     s = str(leaf_labels[node])
+                    if s == "SAT": color = "darkgreen"
+                    if s == "UNSAT": color = "red"
                     style = "bold"
                 else:
                     s = f"l{node}"
                 if plot_node_ids: s = f"{node}: {s}"
-                g.node(self.name(node), s, style=style)
+                g.node(self.name(node), s, style=style, color=color)
             else:
-                feat_id, split_value = tree.get_split(node)
-                s = f"X{feat_id}"
-                if feat_labels is not None:
-                    s = feat_labels[feat_id]
-                if plot_node_ids: s = f"{node}: {s}"
-                g.node(self.name(node), f"{s} < {split_value:.3f}")
+                split = tree.get_split(node)
+                feat_id = split[1]
+                s = ""
+                if plot_node_ids: s = f"{node}:"
+                g.node(self.name(node), f"{s} {self.get_split_label(split, feat_labels)}")
                 stack.append(tree.right(node))
                 stack.append(tree.left(node))
 
@@ -85,20 +87,24 @@ class TreePlot:
                 if not btree.is_root(bnode):
                     self.g.edge(self.name(btree.parent(bnode)), self.name(bnode), color="gray")
 
-    def get_split_label(self, split):
+    def get_split_label(self, split, feat_labels=None):
+        feat_id = split[1]
+        fname = f"X{feat_id}"
+        if feat_labels is not None:
+            fname = feat_labels[feat_id]
         if split[0] == "lt":
-            return "X{} < {:.3f}".format(split[1], split[2])
+            return "{} < {:.3f}".format(fname, split[2])
         if split[0] == "bool":
-            return "X{}".format(split[1])
+            return "{}".format(fname)
 
-    def add_splittree_leaf(self, tree, splittree_leaf):
+    def add_subspace(self, tree, subspace):
         g = gv.Graph()
         self.index += 1
         stack = [tree.root()]
         while len(stack) > 0:
             node = stack.pop()
 
-            is_reachable = splittree_leaf.is_reachable(tree.index(), node)
+            is_reachable = subspace.is_reachable(tree.index(), node)
             c = "darkgreen" if is_reachable else "gray"
             s = "bold" if is_reachable else ""
 
