@@ -158,6 +158,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("is_reachable", &Subspace::is_reachable)
         .def("mark_unreachable", &Subspace::mark_unreachable)
         .def("find_best_domtree_split", &Subspace::find_best_domtree_split)
+        .def("has_best_split", &Subspace::has_best_split)
         .def("get_best_split", [](const Subspace& ss) { return encode_split(ss.get_best_split()); })
         .def("get_tree_bounds", &Subspace::get_tree_bounds)
         .def("merge", &Subspace::merge)

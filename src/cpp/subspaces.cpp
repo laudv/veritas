@@ -561,18 +561,24 @@ namespace treeck {
             ++tree_index;
         }
 
-        std::cout
-            << "best split l" << domtree_node_id_
-            << ", split=" << max_split
-            << ", score=" << max_score
-            << ", balance=" << min_balance
-            << std::endl;
+        //std::cout
+        //    << "best split l" << domtree_node_id_
+        //    << ", split=" << max_split
+        //    << ", score=" << max_score
+        //    << ", balance=" << min_balance
+        //    << std::endl;
 
         best_split_.emplace(max_split);
         this->split_score = max_score;
         this->split_balance = min_balance;
     }
 
+
+    bool
+    Subspace::has_best_split() const
+    {
+        return best_split_.has_value();
+    }
 
     Split
     Subspace::get_best_split() const

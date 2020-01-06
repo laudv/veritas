@@ -158,6 +158,7 @@ namespace treeck {
         void mark_unreachable(size_t tree_index, NodeId node_id);
 
         void find_best_domtree_split(const AddTree& addtree);
+        bool has_best_split() const;
         Split get_best_split() const;
         std::tuple<FloatT, FloatT> get_tree_bounds(const AddTree& at, size_t tree_index);
 
