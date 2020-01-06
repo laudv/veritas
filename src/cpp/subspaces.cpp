@@ -692,6 +692,11 @@ namespace treeck {
     Subspace
     Subspace::merge(const std::vector<Subspace>& leafs)
     {
+        if (leafs.size() == 0)
+            throw std::runtime_error("Subspace merge: empty leafs");
+        if (leafs.size() == 1)
+            return leafs.at(0);
+
         {
             auto it = leafs.cbegin();
             NodeId id = it->domtree_node_id_;
