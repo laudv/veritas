@@ -15,6 +15,7 @@ class VerifierFactory:
             + "factory defining your problem's constraints.")
 
     def inv_logit(self, prob):
+        """ Convert probability to raw output values for binary classification. """
         return -math.log(1.0 / x - 1)
 
 
@@ -69,6 +70,7 @@ class DistributedVerifier:
 
         self._fs = []
         self._split_id = 0
+        self.results = {}
 
         # TODO add domain constraints to verifier
 
@@ -81,12 +83,9 @@ class DistributedVerifier:
             ls = self._check_paths(ls)
             t1 = timeit.default_timer()
             self.results["check_paths_time"] = t1 - t0
-            self.results[0]["num_unreachable"] = self._num_unreachable(ls)
 
         # split_id => result info per instance + additional info
-        self.results = {}
         self.results["num_leafs"] = [inst.addtree.num_leafs() for inst in self._instances]
-        self.results["num_nodes"] = [inst.addtree.num_nodes() for inst in self._instances]
         self.results[0] = self._init_results(ls)
 
         # 2: splits until we have a piece of work for each worker
@@ -131,14 +130,17 @@ class DistributedVerifier:
                 f = self._client.submit(DistributedVerifier._check_tree_paths,
                         self._addtrees_fut, ls, instance.index, tree_index,
                         self._verifier_factory)
+                f.instance_index = instance.index
                 fs.append(f)
         wait(fs)
+        results_per_instance = [[] for _ in self._instances]
         for f in fs:
             if not f.done():
                 raise RuntimeError("future not done?")
             if f.exception():
                 raise f.exception() from RuntimeError("exception on worker")
-        return Subspace.merge(list(map(lambda f: f.result(), fs)))
+            results_per_instance[f.instance_index].append(f.result())
+        return [Subspace.merge(lks) for lks in results_per_instance]
 
     def _generate_splits(self, ls, ntasks):
         # split domtrees until we have ntask `Subspace`s; this runs locally
