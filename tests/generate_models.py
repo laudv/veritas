@@ -269,9 +269,9 @@ def generate_bin_mnist():
     clf = xgb.XGBClassifier(
             nthread=4,
             tree_method="hist",
-            max_depth=4,
-            learning_rate=0.5,
-            n_estimators=10)
+            max_depth=5,
+            learning_rate=0.4,
+            n_estimators=20)
     model = clf.fit(pdX, y1)
     pred = model.predict(pdX, output_margin=True)
     at = addtree_from_xgb_model(model)
@@ -280,7 +280,7 @@ def generate_bin_mnist():
     print(f"mnist y==1: accuracy y==1: {acc}")
     mae = mean_absolute_error(pred[:5000], at.predict(X[:5000]))
     print(f"mnist y==1: mae model difference {mae}")
-    at.write("tests/models/xgb-mnist-bin-yis1-easy.json")
+    at.write("tests/models/xgb-mnist-bin-yis1-intermediate.json")
 
 if __name__ == "__main__":
     #generate_california_housing()

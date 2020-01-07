@@ -764,11 +764,11 @@ namespace treeck {
                cereal::make_nvp("split_score", split_score),
                cereal::make_nvp("split_balance", split_balance));
         }
-        Subspace leaf(domtree_node_id, std::move(is_reachable));
-        std::swap(leaf.best_split_, best_split);
-        leaf.split_score = split_score;
-        leaf.split_balance = split_balance;
-        return leaf;
+        Subspace subspace(domtree_node_id, std::move(is_reachable));
+        std::swap(subspace.best_split_, best_split);
+        subspace.split_score = split_score;
+        subspace.split_balance = split_balance;
+        return subspace;
     }
 
 } /* namespace treeck */
