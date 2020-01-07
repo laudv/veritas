@@ -130,6 +130,7 @@ namespace treeck {
     class Subspace {
         NodeId domtree_node_id_;
         IsReachable is_reachable_;
+        Subspaces::DomainsT domains_;
         std::optional<Split> best_split_;
 
         friend Subspaces;
@@ -145,16 +146,20 @@ namespace treeck {
 
         Subspace(
                 NodeId domtree_node_id,
-                const IsReachable& is_reachable);
+                const IsReachable& is_reachable,
+                Subspaces::DomainsT&& domains);
 
         Subspace(
                 NodeId domtree_node_id,
-                IsReachable&& is_reachable);
+                IsReachable&& is_reachable,
+                Subspaces::DomainsT&& domains);
 
         Subspace& operator=(const Subspace& other);
         Subspace& operator=(Subspace&& other);
 
         NodeId domtree_node_id() const;
+        const Subspaces::DomainsT& get_domains() const;
+        std::optional<Domain> get_domain(FeatId) const;
         size_t num_unreachable() const;
         bool is_reachable(size_t tree_index, NodeId node_id) const;
         void mark_unreachable(size_t tree_index, NodeId node_id);

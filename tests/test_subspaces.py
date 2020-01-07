@@ -1,3 +1,4 @@
+import math
 import unittest, pickle
 import numpy as np
 
@@ -20,6 +21,7 @@ class TestSubspaces(unittest.TestCase):
         #print(at)
 
         sb = Subspaces(at, {})
+        self.assertTrue(sb.get_root_domain(0) is None)
         l0 = sb.get_subspace(0)
         l0.find_best_domtree_split(at)
         self.assertEqual(l0.get_best_split(), ("lt", 0, 2))
@@ -38,6 +40,8 @@ class TestSubspaces(unittest.TestCase):
         self.assertFalse(l1.is_reachable(0, 2))
         self.assertFalse(l1.is_reachable(0, 5))
         self.assertFalse(l1.is_reachable(0, 6))
+        self.assertEqual(l1.get_domains(), {0: RealDomain(-math.inf, 2)})
+        self.assertEqual(l1.get_domain(0), RealDomain(-math.inf, 2))
         m, M = l1.get_tree_bounds(at, 0)
         self.assertEqual(m, 1.0)
         self.assertEqual(M, 2.0)
@@ -50,6 +54,8 @@ class TestSubspaces(unittest.TestCase):
         self.assertTrue(l2.is_reachable(0, 2))
         self.assertTrue(l2.is_reachable(0, 5))
         self.assertTrue(l2.is_reachable(0, 6))
+        self.assertEqual(l2.get_domains(), {0: RealDomain(2, math.inf)})
+        self.assertEqual(l2.get_domain(0), RealDomain(2, math.inf))
         m, M = l2.get_tree_bounds(at, 0)
         self.assertEqual(m, 4.0)
         self.assertEqual(M, 8.0)
@@ -65,6 +71,8 @@ class TestSubspaces(unittest.TestCase):
         self.assertFalse(l0.is_reachable(0, 2))
         self.assertFalse(l0.is_reachable(0, 5))
         self.assertFalse(l0.is_reachable(0, 6))
+        self.assertEqual(l0.get_domains(), {0: RealDomain(0, 2)})
+        self.assertEqual(l0.get_domain(0), sb.get_root_domain(0))
         m, M = l0.get_tree_bounds(at, 0)
         self.assertEqual(m, 1.0)
         self.assertEqual(M, 2.0)
@@ -200,6 +208,11 @@ class TestSubspaces(unittest.TestCase):
         l2t = stt.get_subspace(2)
         test_l2(l2t)
 
+        self.assertEqual(l1t.get_domains(), l1.get_domains())
+        self.assertEqual(l2t.get_domains(), l2.get_domains())
+        self.assertEqual(stt.get_domains(1), l1.get_domains())
+        self.assertEqual(stt.get_domains(2), l2.get_domains())
+
     def test_merge(self):
         at = AddTree()
         at.base_score = 10
@@ -259,8 +272,8 @@ class TestSubspaces(unittest.TestCase):
         #for i in range(len(at)):
         #    p = TreePlot()
         #    p.g.attr(label=f"X{fid} split at {sval}")
-        #    p.add_splittree_leaf(at[i], sb.get_subspace(1))
-        #    p.add_splittree_leaf(at[i], sb.get_subspace(2))
+        #    p.add_subspace(at[i], sb.get_subspace(1))
+        #    p.add_subspace(at[i], sb.get_subspace(2))
         #    p.render(f"/tmp/plots/test2-{i}")
 
     def test_img_multisplit(self):
@@ -270,8 +283,8 @@ class TestSubspaces(unittest.TestCase):
                 idl = ll.domtree_node_id()
                 idr = lr.domtree_node_id()
                 p.g.attr(label=f"X{fid} split at {sval} (ids={idl}, {idr})")
-                p.add_splittree_leaf(at[i], ll)
-                p.add_splittree_leaf(at[i], lr)
+                p.add_subspace(at[i], ll)
+                p.add_subspace(at[i], lr)
                 p.render(f"/tmp/plots/multisplit-{idl}-{idr}-{i}")
 
         at = AddTree.read("tests/models/xgb-img-easy.json")

@@ -145,6 +145,12 @@ namespace treeck {
     Subspaces::get_domains(NodeId domtree_leaf_id,
             Subspaces::DomainsT& domains) const
     {
+        if (domains.size() > 0)
+            throw std::runtime_error("Subspaces::get_domains: non-empty domains");
+
+        // copy root domains
+        domains.insert(root_domains_.begin(), root_domains_.end());
+
         DomTreeT::CRef node = domtree_[domtree_leaf_id];
         while (!node.is_root())
         {
@@ -152,20 +158,12 @@ namespace treeck {
             node = node.parent();
 
             visit_split(
-                [this, &child_node, &domains](const LtSplit& s) {
+                [&child_node, &domains](const LtSplit& s) {
                     RealDomain dom; // initially, is_everything == true
 
                     auto domptr = domains.find(s.feat_id);
-                    if (domptr == domains.end()) // not in domains yet, check root domain
-                    {
-                        auto root_dom_opt = get_root_domain(s.feat_id);
-                        if (root_dom_opt)
-                            dom = util::get_or<RealDomain>(*root_dom_opt, "fid=", s.feat_id);
-                    }
-                    else
-                    {
+                    if (domptr != domains.end())
                         dom = util::get_or<RealDomain>(domptr->second);
-                    }
 
                     FloatT sval = s.split_value;
                     if (child_node.is_left_child())
@@ -179,20 +177,12 @@ namespace treeck {
 
                     domains[s.feat_id] = dom;
                 },
-                [this, &child_node, &domains](const BoolSplit& s) {
+                [&child_node, &domains](const BoolSplit& s) {
                     BoolDomain dom; // initally both true and false
 
                     auto domptr = domains.find(s.feat_id);
-                    if (domptr == domains.end()) // not in domains yet, check root domain
-                    {
-                        auto root_dom_opt = get_root_domain(s.feat_id);
-                        if (root_dom_opt)
-                            dom = util::get_or<BoolDomain>(*root_dom_opt, "fid=", s.feat_id);
-                    }
-                    else
-                    {
+                    if (domptr != domains.end()) // not in domains yet, check root domain
                         dom = util::get_or<BoolDomain>(domptr->second);
-                    }
 
                     if (child_node.is_left_child())
                         dom = std::get<0>(dom.split());
@@ -212,12 +202,16 @@ namespace treeck {
         if (!node.is_leaf())
             throw std::runtime_error("Subspaces::get_leaf on non-leaf domtree node");
 
+        DomainsT domains;
+        get_domains(domtree_leaf_id, domains);
+
         // Subspace owns all its values so that we can easily transmit it
         // over the network to worker nodes. The structures should be
         // reasonably small.
         return Subspace(
             domtree_leaf_id,
-            is_reachables_.at(domtree_leaf_id)
+            is_reachables_.at(domtree_leaf_id),
+            std::move(domains)
         );
     }
 
@@ -398,6 +392,7 @@ namespace treeck {
     Subspace::Subspace(const Subspace& other)
         : domtree_node_id_(other.domtree_node_id_)
         , is_reachable_(other.is_reachable_)
+        , domains_(other.domains_)
         , best_split_(other.best_split_)
         , split_score(other.split_score)
         , split_balance(other.split_balance)
@@ -406,23 +401,28 @@ namespace treeck {
     Subspace::Subspace(Subspace&& other)
         : domtree_node_id_(other.domtree_node_id_)
         , is_reachable_(std::move(other.is_reachable_))
+        , domains_(std::move(other.domains_))
         , best_split_(other.best_split_)
         , split_score(other.split_score)
         , split_balance(other.split_balance)
     {}
 
     Subspace::Subspace(NodeId domtree_node_id,
-            const IsReachable& is_reachable)
+            const IsReachable& is_reachable,
+            Subspaces::DomainsT&& domains)
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(is_reachable)
+        , domains_(std::move(domains))
         , best_split_()
         , split_score(0), split_balance(0)
     {}
 
     Subspace::Subspace(NodeId domtree_node_id,
-            IsReachable&& is_reachable)
+            IsReachable&& is_reachable,
+            Subspaces::DomainsT&& domains)
         : domtree_node_id_(domtree_node_id)
         , is_reachable_(std::move(is_reachable))
+        , domains_(std::move(domains))
         , best_split_()
         , split_score(0), split_balance(0)
     {}
@@ -453,6 +453,21 @@ namespace treeck {
     Subspace::domtree_node_id() const
     {
         return domtree_node_id_;
+    }
+
+    const Subspaces::DomainsT&
+    Subspace::get_domains() const
+    {
+        return domains_;
+    }
+
+    std::optional<Domain>
+    Subspace::get_domain(FeatId feat_id) const
+    {
+        auto search = domains_.find(feat_id);
+        if (search != domains_.end())
+            return search->second;
+        return {}; // unconstrained domain
     }
 
     size_t
@@ -740,6 +755,7 @@ namespace treeck {
             cereal::JSONOutputArchive ar(ss);
             ar(cereal::make_nvp("domtree_node_id", domtree_node_id_),
                cereal::make_nvp("is_reachable", is_reachable_),
+               cereal::make_nvp("domains", domains_),
                cereal::make_nvp("best_split", best_split_),
                cereal::make_nvp("split_score", split_score),
                cereal::make_nvp("split_balance", split_balance));
@@ -754,17 +770,21 @@ namespace treeck {
 
         NodeId domtree_node_id;
         IsReachable is_reachable;
+        Subspaces::DomainsT domains;
         std::optional<Split> best_split;
         int split_score, split_balance;
         {
             cereal::JSONInputArchive ar(ss);
             ar(cereal::make_nvp("domtree_node_id", domtree_node_id),
                cereal::make_nvp("is_reachable", is_reachable),
+               cereal::make_nvp("domains", domains),
                cereal::make_nvp("best_split", best_split),
                cereal::make_nvp("split_score", split_score),
                cereal::make_nvp("split_balance", split_balance));
         }
-        Subspace subspace(domtree_node_id, std::move(is_reachable));
+        Subspace subspace(domtree_node_id,
+                std::move(is_reachable),
+                std::move(domains));
         std::swap(subspace.best_split_, best_split);
         subspace.split_score = split_score;
         subspace.split_balance = split_balance;

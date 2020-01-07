@@ -155,6 +155,8 @@ PYBIND11_MODULE(pytreeck, m) {
         .def_readonly("split_score", &Subspace::split_score)
         .def_readonly("split_balance", &Subspace::split_balance)
         .def("domtree_node_id", &Subspace::domtree_node_id)
+        .def("get_domains", &Subspace::get_domains)
+        .def("get_domain", &Subspace::get_domain)
         .def("num_unreachable", &Subspace::num_unreachable)
         .def("is_reachable", &Subspace::is_reachable)
         .def("mark_unreachable", &Subspace::mark_unreachable)
