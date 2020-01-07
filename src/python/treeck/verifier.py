@@ -112,35 +112,37 @@ class VerifierNotExpr(VerifierBoolExpr):
     def __init__(self, expr):
         self.expr = expr
 
-def in_domain_constraint(verifier, domains):
+def in_domain_constraint(verifier, domains, instance):
     cs = []
-    for feat_id, d in domains:
-        var = verifier.xvar(feat_id)
-        if math.isinf(d.lo) and math.isinf(d.hi):
-            continue # unconstrained feature -> everything possible
-        elif math.isinf(d.lo): cs.append(var <  d.hi)
-        elif math.isinf(d.hi): cs.append(var >= d.lo)
-        else:
-            cs.append(var >= d.lo)
-            cs.append(var <  d.hi)
+    for feat_id, dom in domains.items():
+        if dom.is_everything():
+            raise RuntimeError("Unconstrained feature -> should not be in dict")
+        var = verifier.xvar(feat_id, instance=instance)
+        if isinstance(dom, RealDomain):
+            if   math.isinf(dom.lo): cs.append(var <  dom.hi)
+            elif math.isinf(dom.hi): cs.append(var >= dom.lo)
+            else:
+                cs.append((var >= dom.lo) & (var < dom.hi))
+        elif isinstance(dom, BoolDomain):
+            if   dom.is_true():  cs.append(var)
+            elif dom.is_false(): cs.append(VerifierNotExpr(var))
+        else: raise RuntimeError(f"unknown domain type {type(dom)}")
     return VerifierAndExpr(*cs)
 
 def not_in_domain_constraint(verifier, domains, instance, strict=True):
     cs = []
     for feat_id, dom in domains.items():
+        if dom.is_everything():
+            raise RuntimeError("Unconstrained feature -> nothing possible?")
         var = verifier.xvar(feat_id, instance=instance)
         if isinstance(dom, RealDomain):
-            if math.isinf(dom.lo) and math.isinf(dom.hi):
-                raise RuntimeError("Unconstrained feature -> nothing possible?")
-            elif math.isinf(dom.lo): cs.append(var >= dom.hi)
+            if   math.isinf(dom.lo): cs.append(var >= dom.hi)
             elif math.isinf(dom.hi): cs.append(var <  dom.lo)
             else:
                 cs.append((var < dom.lo) | (var >= dom.hi))
         elif isinstance(dom, BoolDomain):
-            if dom.is_true():
-                cs.append(VerifierNotExpr(var))
-            if dom.is_false():
-                cs.append(var)
+            if   dom.is_true():  cs.append(VerifierNotExpr(var))
+            elif dom.is_false(): cs.append(var)
         else: raise RuntimeError(f"unknown domain type {type(dom)}")
 
     if strict:

@@ -4,6 +4,7 @@ from dask.distributed import wait
 
 from .pytreeck import Subspace
 from .verifier import Verifier, VerifierTimeout, VerifierNotExpr
+from .verifier import in_domain_constraint
 
 
 class VerifierFactory:
@@ -17,6 +18,23 @@ class VerifierFactory:
     def inv_logit(self, prob):
         """ Convert probability to raw output values for binary classification. """
         return -math.log(1.0 / x - 1)
+
+
+
+class _VerifierFactoryWrap(VerifierFactory):
+    def __init__(self, vfactory, add_domain_constraints):
+        self._vfactory = vfactory
+        self.add_domain_constraints_opt = add_domain_constraints
+
+    def __call__(self, addtrees, ls):
+        v = self._vfactory(addtrees, ls)
+        if self.add_domain_constraints_opt:
+            for instance_index, lk in enumerate(ls):
+                v.add_constraint(in_domain_constraint(v,
+                    lk.get_domains(), instance=instance_index))
+        return v
+
+
 
 
 
@@ -35,11 +53,15 @@ class DistributedVerifier:
             check_paths = True,
             num_initial_tasks = 1,
             stop_when_sat = False,
+            add_domain_constraints = True,
             timeout_start = 30,
             timeout_max = 600,
             timeout_grow_rate = 1.5):
 
         assert isinstance(verifier_factory, VerifierFactory), "invalid verifier factory"
+
+        verifier_factory = _VerifierFactoryWrap(verifier_factory,
+                add_domain_constraints)
 
         self._timeout_start = float(timeout_start)
         self._timeout_max = float(timeout_max)
@@ -71,8 +93,6 @@ class DistributedVerifier:
         self._fs = []
         self._split_id = 0
         self.results = {}
-
-        # TODO add domain constraints to verifier
 
         # 1: loop over trees, check reachability of each path from root in
         # addtrees of all instances
@@ -194,7 +214,6 @@ class DistributedVerifier:
         ls_r = ls.copy(); ls_r[max_instance_index] = lk_r
 
         # TODO re-check reachabilities in other trees due to new constraint
-        # TODO add constraint to model
 
         self.results[split_id]["split"] = split
         self.results[split_id]["split_score"] = split_score
