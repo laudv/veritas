@@ -142,6 +142,8 @@ class DistributedVerifier:
             self._fs = next_fs
             self._print_flush()
 
+        self.results["check_time"] = timeit.default_timer() - self.start_time
+
     def _check_paths(self, ls):
         # update reachabilities in domtree root leaf 0 in parallel
         fs = []
@@ -169,12 +171,13 @@ class DistributedVerifier:
             lk.find_best_domtree_split(self._instances[instance_index].addtree)
 
         while len(lss) < ntasks:
+            print(list(map(lambda ls: list(map(lambda lk: lk.domtree_node_id(), ls[1])), lss)))
             max_score = 0
             max_instance_index = -1
             max_ls = None
-            max_split_id = 0
+            max_split_id = -1
 
-            for (split_id, ls) in lss:
+            for split_id, ls in lss:
                 for instance_index, lk in enumerate(ls):
                     if lk.split_score > max_score:
                         max_score = lk.split_score
@@ -184,6 +187,9 @@ class DistributedVerifier:
 
             if max_ls is None:
                 raise RuntimeError("no more splits!")
+
+            print("max: ", max_instance_index, max_ls[max_instance_index].domtree_node_id(),
+                    list(map(lambda lk: lk.domtree_node_id(), max_ls)))
 
             lss.remove((max_split_id, max_ls))
             lss += self._split_domtree(max_split_id, max_ls, max_instance_index, True)
@@ -197,6 +203,10 @@ class DistributedVerifier:
         split_score = lk.split_score
         split_balance = lk.split_balance
 
+        for instk in self._instances:
+            print(instk.subspaces.domtree())
+
+        print("splitting", max_instance_index, lk.domtree_node_id())
         inst.subspaces.split(lk) # lk's fields are invalid after .split(lk)
 
         domtree = inst.subspaces.domtree()
@@ -212,8 +222,6 @@ class DistributedVerifier:
         split_id_r = self._new_split_id()
         ls_l = ls.copy(); ls_l[max_instance_index] = lk_l
         ls_r = ls.copy(); ls_r[max_instance_index] = lk_r
-
-        # TODO re-check reachabilities in other trees due to new constraint
 
         self.results[split_id]["split"] = split
         self.results[split_id]["split_score"] = split_score
@@ -251,9 +259,8 @@ class DistributedVerifier:
             if status.is_sat() and self._stop_when_sat_opt:
                 self._stop_flag = True
             return []
-        else:
 
-            # We timed out, split and try again
+        else: # We timed out, split and try again
             ls = t[2]
             next_timeout = min(self._timeout_max, self._timeout_rate * f.timeout)
 
@@ -278,9 +285,19 @@ class DistributedVerifier:
         return split_id
 
     def _make_verify_future(self, split_id, ls, timeout):
+        split_instance_index, split_feat_id = -1, 1
+        if "prev_split_id" in self.results[split_id] \
+                and self._verifier_factory.add_domain_constraints_opt \
+                and self._check_paths_opt:
+            prev_split_id = self.results[split_id]["prev_split_id"]
+            split = self.results[prev_split_id]["split"]
+            split_instance_index = self.results[prev_split_id]["instance_index"]
+
         f = self._client.submit(DistributedVerifier._verify_fun,
                 self._addtrees_fut, ls, timeout,
-                self._verifier_factory)
+                self._verifier_factory,
+                split_instance_index, split_feat_id)
+
         f.timeout = timeout
         f.split_id = split_id
         self._split_id += 1
@@ -329,18 +346,27 @@ class DistributedVerifier:
     # - WORKERS ------------------------------------------------------------- #
 
     @staticmethod
-    def _check_tree_paths(addtrees, ls, instance_index, tree_index, vfactory):
+    def _check_tree_paths(addtrees, ls, instance_index, tree_index,
+            v_or_vfactory, only_feat_id = -1):
         addtree, l0 = addtrees[instance_index], ls[instance_index]
         tree = addtree[tree_index]
         stack = [(tree.root(), True)]
-        v = vfactory(addtrees, ls)
+
+        v = v_or_vfactory
+        if not isinstance(v, Verifier):
+            v = v_or_vfactory(addtrees, ls)
 
         while len(stack) > 0:
             node, path_constraints = stack.pop()
 
             l, r = tree.left(node), tree.right(node)
             split = tree.get_split(node) # (split_type, feat_id...)
-            xvar = v.xvar(split[1])
+            feat_id = split[1]
+            xvar = v.xvar(feat_id)
+
+            if only_feat_id != -1 and feat_id != only_feat_id:
+                continue # only test paths splitting on this feat_id
+
             if split[0] == "lt":
                 split_value = split[2]
                 constraint_l = (xvar < split_value)
@@ -355,7 +381,7 @@ class DistributedVerifier:
                 if v.check(path_constraints_l).is_sat():
                     stack.append((l, path_constraints_l))
                 else:
-                    print(f"unreachable  left: {tree_index} {l}")
+                    print(f"unreachable  left: {instance_index} {tree_index} {l}, {only_feat_id}")
                     l0.mark_unreachable(tree_index, l)
 
             if tree.is_internal(r) and l0.is_reachable(tree_index, r):
@@ -363,14 +389,29 @@ class DistributedVerifier:
                 if v.check(path_constraints_r).is_sat():
                     stack.append((r, path_constraints_r))
                 else:
-                    print(f"unreachable right: {tree_index} {r}")
+                    print(f"unreachable right: {instance_index} {tree_index} {r}, {only_feat_id}")
                     l0.mark_unreachable(tree_index, r)
 
         return l0
 
     @staticmethod
-    def _verify_fun(addtrees, ls, timeout, vfactory):
+    def _verify_fun(addtrees, ls, timeout, vfactory,
+            split_instance_index = -1, split_feat_id = -1):
         v = vfactory(addtrees, ls)
+
+        # TODO re-check reachabilities in other trees due to new constraint
+
+        # this `ls` is a result of splitting on (instance_index, feat_id)
+        # check the other trees' reachabilities again!
+        if split_instance_index != -1 and split_feat_id != -1 and len(ls) > 1:
+            for instance_index, lk in enumerate(ls):
+                if instance_index == split_instance_index: continue # already done by subspaces
+                for tree_index in range(len(addtrees[instance_index])):
+                    DistributedVerifier._check_tree_paths(addtrees, ls,
+                            instance_index, tree_index, v,
+                            only_feat_id=split_feat_id)
+            # TODO this work is lost if lk does not go back to its subspaces
+
         v.set_timeout(timeout)
         v.add_all_trees()
         try:

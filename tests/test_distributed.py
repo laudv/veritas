@@ -165,6 +165,48 @@ class TestDistributedVerifier(unittest.TestCase):
             self.assertGreaterEqual(count_with_status, N)
             self.assertGreater(count_with_sat, 0)
 
+    def test_img_multi_instance(self):
+        class VFactory(VerifierFactory):
+            def __call__(self, addtrees, ls):
+                v = Verifier(addtrees, ls, Backend())
+                v.add_constraint(v.fvar(instance=0) < 0.0)
+                v.add_constraint(v.xvar(0, instance=0) > 50)
+                v.add_constraint(v.xvar(1, instance=0) < 50)
+
+                # instances are exactly the same!
+                for fid1, fid2 in zip(v.instance(0).feat_ids(), v.instance(1).feat_ids()):
+                    v.add_constraint(v.xvar(fid1, instance=0) == v.xvar(fid2, instance=1))
+
+                v.add_constraint(v.fvar(instance=1).get() - v.fvar(instance=0).get() < 99999)
+
+                return v
+
+        with Client(dask_scheduler) as client:
+            client.restart()
+            nworkers = sum(client.nthreads().values())
+            N = 10
+            at0 = AddTree.read("tests/models/xgb-img-easy.json")
+            at1 = AddTree.read("tests/models/xgb-img-easy.json")
+            at1.base_score = 100000
+            sbs = [Subspaces(at0, {}), Subspaces(at1, {})]
+            dv = DistributedVerifier(client, sbs, VFactory(),
+                    check_paths = False,
+                    num_initial_tasks = N,
+                    stop_when_sat = False)
+
+            dv.check()
+            print(json.dumps(dv.results, indent=2, default=str))
+            #count_with_status = 0
+            #count_with_sat = 0
+            #for split_id, d in dv.results.items():
+            #    if isinstance(split_id, int) and "status" in d:
+            #        count_with_status += 1
+            #        if d["status"].is_sat():
+            #            count_with_sat += 1
+
+            #self.assertEqual(count_with_status, N)
+            #self.assertEqual(count_with_sat, 0)
+
 
     #def test_adv(self):
     #    instance_key = 0

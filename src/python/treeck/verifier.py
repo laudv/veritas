@@ -418,6 +418,10 @@ class AddTreeInstance:
         for tree_index in range(len(self._addtree)):
             self.add_tree(tree_index)
 
+    def feat_ids(self):
+        """ Loop over all feature IDs in the associated addtree. """
+        yield from self._feat_types.feat_ids()
+
     def _enc_tree(self, tree, node):
         if tree.is_leaf(node):
             wvar = self._wvars[tree.index()]
