@@ -17,19 +17,19 @@ dask_scheduler = "localhost:8786"
 
 class TestDistributedVerifier(unittest.TestCase):
     def test_img_check_paths(self):
-        def vfactory(at, lk):
-            v = Verifier(at, lk, Backend())
-            v.add_constraint(v.fvar() < 0.0)
-            v.add_constraint(v.xvar(0) > 50)
-            v.add_constraint(v.xvar(0) <= 80)
-            return v
+        class VFactory(VerifierFactory):
+            def __call__(self, addtrees, ls):
+                v = Verifier(addtrees, ls, Backend())
+                v.add_constraint(v.fvar() < 0.0)
+                v.add_constraint(v.xvar(0) > 50)
+                v.add_constraint(v.xvar(0) <= 80)
+                return v
 
         with Client(dask_scheduler) as client:
-        #with start_local() as client:
             client.restart()
             at = AddTree.read("tests/models/xgb-img-easy.json")
             sb = Subspaces(at, {})
-            dv = DistributedVerifier(client, sb, vfactory)
+            dv = DistributedVerifier(client, sb, VFactory())
 
             def test_reachable(m, l0):
                 m(l0.is_reachable(9, 109))
@@ -94,7 +94,7 @@ class TestDistributedVerifier(unittest.TestCase):
             l0 = dv._instances[0].subspaces.get_subspace(0)
             test_reachable(self.assertTrue, l0)
             l0 = dv._check_paths([l0])
-            test_reachable(self.assertFalse, l0)
+            test_reachable(self.assertFalse, l0[0])
 
     def test_img_generate_splits(self):
         class VFactory(VerifierFactory):
@@ -117,19 +117,17 @@ class TestDistributedVerifier(unittest.TestCase):
                     stop_when_sat = False)
 
             dv.check()
-            print(json.dumps(dv.results, indent=2, default=str))
-            #count_with_status = 0
-            #count_with_sat = 0
-            #print(dv.results)
-            #for task_id, d in dv.results.items():
-            #    if isinstance(task_id, int) and "status" in d:
-            #        count_with_status += 1
-            #        if d["status"].is_sat():
-            #            count_with_sat += 1
+            #print(json.dumps(dv.results, indent=2, default=str))
+            count_with_status = 0
+            count_with_sat = 0
+            for split_id, d in dv.results.items():
+                if isinstance(split_id, int) and "status" in d:
+                    count_with_status += 1
+                    if d["status"].is_sat():
+                        count_with_sat += 1
 
-            #self.assertGreater(len(dv.results[0]), N)
-            #self.assertEqual(count_with_status, N)
-            #self.assertGreater(count_with_sat, 0)
+            self.assertEqual(count_with_status, N)
+            self.assertGreater(count_with_sat, 0)
 
     def test_bin_mnist(self):
         class VFactory(VerifierFactory):
@@ -144,17 +142,29 @@ class TestDistributedVerifier(unittest.TestCase):
         with Client(dask_scheduler) as client:
             client.restart()
             nworkers = sum(client.nthreads().values())
+            N = 10
             at = AddTree.read("tests/models/xgb-mnist-bin-yis1-intermediate.json")
             sb = Subspaces(at, {})
             dv = DistributedVerifier(client, sb, VFactory(),
                     check_paths = False,
-                    num_initial_tasks = 4,
-                    timeout_start = 1.2,
+                    num_initial_tasks = N,
+                    timeout_start = 5.0,
                     stop_when_sat = False)
 
             dv.check()
-            print(json.dumps(dv.results, indent=2, default=repr))
+            #print(json.dumps(dv.results, indent=2, default=repr))
             print(sb.domtree())
+            count_with_status = 0
+            count_with_sat = 0
+            for split_id, d in dv.results.items():
+                if isinstance(split_id, int) and "status" in d:
+                    count_with_status += 1
+                    if d["status"] == Verifier.Result.SAT:
+                        count_with_sat += 1
+
+            self.assertGreaterEqual(count_with_status, N)
+            self.assertGreater(count_with_sat, 0)
+
 
     #def test_adv(self):
     #    instance_key = 0
