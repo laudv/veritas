@@ -92,7 +92,7 @@ namespace treeck {
 
 
 
-    template <typename LeafT>
+    template <typename SplitT, typename LeafT>
     class Tree;
 
     namespace inner {
@@ -102,24 +102,25 @@ namespace treeck {
             LeafT value;
         };
 
+        template <typename SplitT>
         struct NodeInternal {
             NodeId left; // right = left + 1
-            Split split;
+            SplitT split;
         };
 
-        template <typename LeafT>
+        template <typename SplitT, typename LeafT>
         struct Node {
             NodeId id;
             NodeId parent; /* root has itself as parent */
             int tree_size; /* size of tree w/ this node as root */
 
             union {
-                NodeInternal internal;
+                NodeInternal<SplitT> internal;
                 NodeLeaf<LeafT> leaf;
             };
 
             Node();
-            Node(const Node<LeafT>&);
+            Node(const Node<SplitT, LeafT>&);
             Node(NodeId id, NodeId parent);
             bool is_leaf() const;
 
@@ -127,17 +128,19 @@ namespace treeck {
             void serialize(Archive& archive);
         };
 
-        template <typename TLeafT>
+        template <typename TSplitT, typename TLeafT>
         struct ConstRef {
+            using SplitT = TSplitT;
             using LeafT = TLeafT;
-            using TreeP = const Tree<LeafT> *;
+            using TreeP = const Tree<SplitT, LeafT> *;
             using is_mut_type = std::false_type;
         };
 
-        template <typename TLeafT>
+        template <typename TSplitT, typename TLeafT>
         struct MutRef {
+            using SplitT = TSplitT;
             using LeafT = TLeafT;
-            using TreeP = Tree<LeafT> *;
+            using TreeP = Tree<SplitT, LeafT> *;
             using is_mut_type = std::true_type;
         };
 
@@ -146,17 +149,19 @@ namespace treeck {
     template <typename RefT>
     class NodeRef {
     public:
+        using SplitT = typename RefT::SplitT;
         using LeafT = typename RefT::LeafT;
+        using NodeT = inner::Node<SplitT, LeafT>;
         using TreeP = typename RefT::TreeP;
 
     private:
         TreeP tree_;
         NodeId node_id_;
 
-        const inner::Node<LeafT>& node() const;
+        const NodeT& node() const;
 
         template <typename T = RefT>
-        std::enable_if_t<T::is_mut_type::value, inner::Node<LeafT>&>
+        std::enable_if_t<T::is_mut_type::value, NodeT&>
         node(); /* mut only */
 
     public:
@@ -176,7 +181,7 @@ namespace treeck {
 
         int tree_size() const;
         int depth() const;
-        const Split& get_split() const; /* internal only */
+        const SplitT& get_split() const; /* internal only */
         LeafT leaf_value() const; /* leaf only */
 
         template <typename T = RefT>
@@ -185,7 +190,7 @@ namespace treeck {
 
         template <typename T = RefT>
         std::enable_if_t<T::is_mut_type::value, void>
-        split(Split split); /* leaf & mut only */
+        split(SplitT split); /* leaf & mut only */
 
         template <typename T = RefT>
         std::enable_if_t<T::is_mut_type::value, void>
@@ -203,21 +208,21 @@ namespace treeck {
         ADD_LEFT_AND_RIGHT = 3
     };
 
-    template <typename LeafT>
+    template <typename SplitT, typename LeafT>
     class Tree {
     public:
-        using CRef = NodeRef<inner::ConstRef<LeafT>>;
-        using MRef = NodeRef<inner::MutRef<LeafT>>;
+        using CRef = NodeRef<inner::ConstRef<SplitT, LeafT>>;
+        using MRef = NodeRef<inner::MutRef<SplitT, LeafT>>;
 
     private:
         friend MRef;
         friend CRef;
 
-        std::vector<inner::Node<LeafT>> nodes_;
+        std::vector<inner::Node<SplitT, LeafT>> nodes_;
 
     public:
         Tree();
-        void split(NodeId node_id, Split split);
+        void split(NodeId node_id, SplitT split);
 
         CRef root() const;
         MRef root();
@@ -241,13 +246,13 @@ namespace treeck {
         static Tree from_json(const std::string& json);
     };
 
-    template <typename LeafT>
-    std::ostream& operator<<(std::ostream& s, const Tree<LeafT>& t);
+    template <typename SplitT, typename LeafT>
+    std::ostream& operator<<(std::ostream& s, const Tree<SplitT, LeafT>& t);
 
 
     class AddTree {
     public:
-        using TreeT = Tree<FloatT>;
+        using TreeT = Tree<Split, FloatT>;
         using SplitMapT = std::unordered_map<FeatId, std::vector<FloatT>>;
 
     private:

@@ -74,7 +74,7 @@ namespace treeck {
 
 
 
-    TREECK_INSTANTIATE_TREE_TEMPLATE(FloatT);
+    TREECK_INSTANTIATE_TREE_TEMPLATE(Split, FloatT);
 
 
     AddTree::AddTree()

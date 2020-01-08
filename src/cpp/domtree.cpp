@@ -164,6 +164,37 @@ namespace treeck {
         archive(cereal::make_nvp("unreachable", unreachable_));
     }
 
+    template <typename Archive>
+    void
+    Nothing::serialize(Archive&) {}
+
+    template <typename Archive>
+    void
+    DomTreeSplit::serialize(Archive& archive)
+    {
+        archive(cereal::make_nvp("instance_index", instance_index),
+                cereal::make_nvp("split", split));
+    }
+
+    std::ostream&
+    operator<<(std::ostream& s, const Nothing& t)
+    {
+        return s << "Nothing";
+    }
+
+    std::ostream&
+    operator<<(std::ostream& s, const DomTreeSplit& t)
+    {
+        return s << "DomTreeSplit(instance " << t.instance_index << ", " << t.split << ')';
+    }
+
+
+    TREECK_INSTANTIATE_TREE_TEMPLATE(DomTreeSplit, Nothing);
+
+
+
+
+
     DomTree::DomTree()
         : tree_()
         , instances_() {}
@@ -218,6 +249,10 @@ namespace treeck {
         {
             DomTreeT::CRef child_node = node;
             node = node.parent();
+            DomTreeSplit split = node.get_split();
+
+            // If this split does not affect the domain of instance i, continue
+            if (split.instance_index != i) continue;
 
             visit_split(
                 [&child_node, &domains](const LtSplit& s) {
@@ -253,7 +288,7 @@ namespace treeck {
 
                     domains[s.feat_id] = dom;
                 },
-                node.get_split());
+                split.split);
         }
 
         return domains;
@@ -348,7 +383,7 @@ namespace treeck {
         return instances_.size();
     }
 
-    std::optional<BestSplit>
+    std::optional<DomTreeSplit>
     DomTreeLeaf::get_best_split() const
     {
         return best_split_;

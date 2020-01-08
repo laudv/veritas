@@ -60,6 +60,21 @@ namespace treeck {
     class DomTreeLeaf;
 
 
+    struct Nothing {
+        template <typename Archive>
+        void serialize(Archive& archive);
+    };
+
+    struct DomTreeSplit {
+        friend DomTree;
+
+        size_t instance_index;
+        Split split;
+
+        template <typename Archive>
+        void serialize(Archive& archive);
+    };
+
     struct DomTreeInstance {
         friend DomTree;
 
@@ -77,15 +92,16 @@ namespace treeck {
         IsReachable is_reachable;
     };
 
-    struct BestSplit {
-        size_t instance_index;
-        Split split;
-    };
+    std::ostream&
+    operator<<(std::ostream& s, const Nothing& t);
+
+    std::ostream&
+    operator<<(std::ostream& s, const DomTreeSplit& t);
 
 
     class DomTree {
     public:
-        using DomTreeT = Tree<FloatT>; /* we don't use the float in the leafs */
+        using DomTreeT = Tree<DomTreeSplit, Nothing>;
 
     private:
         DomTreeT tree_;
@@ -146,7 +162,7 @@ namespace treeck {
     class DomTreeLeaf {
         NodeId domtree_leaf_id_;
         std::vector<DomTreeLeafInstance> instances_;
-        std::optional<BestSplit> best_split_;
+        std::optional<DomTreeSplit> best_split_;
 
         friend DomTree;
 
@@ -161,7 +177,7 @@ namespace treeck {
 
         NodeId domtree_node_id() const;
         size_t num_instances() const;
-        std::optional<BestSplit> get_best_split() const;
+        std::optional<DomTreeSplit> get_best_split() const;
 
         const DomainsT& get_domains(size_t instance) const;
         std::optional<Domain> get_domain(size_t instance, FeatId) const;
