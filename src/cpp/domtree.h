@@ -116,6 +116,7 @@ namespace treeck {
         DomTree();
         const DomTreeT& tree() const;
         size_t num_instances() const;
+        std::shared_ptr<AddTree> addtree(size_t instance) const;
 
         void add_instance(std::shared_ptr<AddTree> addtree, DomainsT&& domains);
 
@@ -157,6 +158,7 @@ namespace treeck {
 
         NodeId domtree_leaf_id() const;
         size_t num_instances() const;
+        std::shared_ptr<AddTree> addtree(size_t instance) const;
         std::optional<DomTreeSplit> get_best_split() const;
 
         const DomainsT& get_domains(size_t instance) const;

@@ -221,6 +221,12 @@ namespace treeck {
         return instances_.size();
     }
 
+    std::shared_ptr<AddTree>
+    DomTree::addtree(size_t instance) const
+    {
+        return instances_.at(instance).addtree;
+    }
+
     void
     DomTree::add_instance(
             std::shared_ptr<AddTree> addtree,
@@ -458,6 +464,12 @@ namespace treeck {
     DomTreeLeaf::num_instances() const
     {
         return instances_.size();
+    }
+
+    std::shared_ptr<AddTree>
+    DomTreeLeaf::addtree(size_t instance) const
+    {
+        return instances_.at(instance).addtree;
     }
 
     std::optional<DomTreeSplit>

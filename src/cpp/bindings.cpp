@@ -159,6 +159,7 @@ PYBIND11_MODULE(pytreeck, m) {
             return dt;
         }))
         .def("tree", &DomTree::tree)
+        .def("addtree", &DomTree::addtree)
         .def("num_instances", &DomTree::num_instances)
         .def("get_root_domain", &DomTree::get_root_domain)
         .def("get_leaf", &DomTree::get_leaf)
@@ -169,6 +170,7 @@ PYBIND11_MODULE(pytreeck, m) {
     py::class_<DomTreeLeaf>(m, "DomTreeLeaf")
         .def_readonly("score", &DomTreeLeaf::score)
         .def_readonly("balance", &DomTreeLeaf::balance)
+        .def("addtree", &DomTreeLeaf::addtree)
         .def("domtree_leaf_id", &DomTreeLeaf::domtree_leaf_id)
         .def("num_instances", &DomTreeLeaf::num_instances)
         .def("get_best_split", [](const DomTreeLeaf& l) -> std::optional<py::tuple> {
