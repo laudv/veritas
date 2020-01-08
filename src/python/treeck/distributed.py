@@ -2,7 +2,7 @@ import timeit, math
 
 from dask.distributed import wait
 
-from .pytreeck import Subspace
+from . import DomTree, DomTreeLeaf
 from .verifier import Verifier, VerifierTimeout, VerifierNotExpr
 from .verifier import in_domain_constraint
 
@@ -10,7 +10,7 @@ from .verifier import in_domain_constraint
 class VerifierFactory:
     """ Must be pickleable """
 
-    def __call__(self, addtree_of_each_instance, subspace_of_each_instance):
+    def __call__(self, domtree_leaf):
         """ Override this method for your verifier factory.  """
         raise RuntimeError("Override this method in your own verifier "
             + "factory defining your problem's constraints.")
@@ -22,16 +22,17 @@ class VerifierFactory:
 
 
 class _VerifierFactoryWrap(VerifierFactory):
-    def __init__(self, vfactory, add_domain_constraints):
+    def __init__(self, vfactory, add_domain_constraints_opt):
         self._vfactory = vfactory
-        self.add_domain_constraints_opt = add_domain_constraints
+        self.add_domain_constraints_opt = add_domain_constraints_opt
 
-    def __call__(self, addtrees, ls):
-        v = self._vfactory(addtrees, ls)
+    def __call__(self, lk):
+        v = self._vfactory(lk)
         if self.add_domain_constraints_opt:
-            for instance_index, lk in enumerate(ls):
+            for instance_index in range(lk.num_instances()):
                 v.add_constraint(in_domain_constraint(v,
-                    lk.get_domains(), instance=instance_index))
+                    lk.get_domains(instance_index),
+                    instance=instance_index))
         return v
 
 
@@ -40,15 +41,9 @@ class _VerifierFactoryWrap(VerifierFactory):
 
 class DistributedVerifier:
 
-    class Instance:
-        def __init__(self, index, client, subspaces):
-            self.index = index
-            self.addtree = subspaces.addtree()
-            self.subspaces = subspaces
-
     def __init__(self,
             client,
-            subspaces,
+            domtree,
             verifier_factory,
             check_paths = True,
             num_initial_tasks = 1,
@@ -60,24 +55,15 @@ class DistributedVerifier:
 
         assert isinstance(verifier_factory, VerifierFactory), "invalid verifier factory"
 
-        verifier_factory = _VerifierFactoryWrap(verifier_factory,
-                add_domain_constraints)
-
         self._timeout_start = float(timeout_start)
         self._timeout_max = float(timeout_max)
         self._timeout_rate = float(timeout_grow_rate)
 
         self._client = client # dask client
-        if not isinstance(subspaces, list):
-            subspaces = [subspaces]
+        self._domtree = domtree
 
-        self._instances = [DistributedVerifier.Instance(index,
-            self._client, sb) for index, sb in enumerate(subspaces)]
-        self._addtrees = [inst.addtree for inst in self._instances]
-        self._addtrees_fut = client.scatter(self._addtrees, broadcast=True)
-
-        # ([addtree], [subspace]) -> Verifier
-        self._verifier_factory = verifier_factory
+        self._verifier_factory = _VerifierFactoryWrap(verifier_factory,
+                add_domain_constraints)
 
         self._check_paths_opt = check_paths
         self._num_initial_tasks_opt = num_initial_tasks
@@ -91,18 +77,20 @@ class DistributedVerifier:
         self.start_time = timeit.default_timer()
 
         self._fs = []
-        self._split_id = 0
         self.results = {}
 
         # 1: loop over trees, check reachability of each path from root in
         # addtrees of all instances
-        ls = [inst.subspaces.get_subspace(0) for inst in self._instances]
+        l0 = self._domtree.get_leaf(self._domtree.tree().root())
         if self._check_paths_opt:
             t0 = timeit.default_timer()
-            ls = [inst.subspaces.get_subspace(0) for inst in self._instances]
-            ls = self._check_paths(ls)
+            print("ls?", ls, "waar is ls??")
+            l0 = self._check_paths(ls)
             t1 = timeit.default_timer()
             self.results["check_paths_time"] = t1 - t0
+
+        print("#TODO 3")
+        return;
 
         # split_id => result info per instance + additional info
         self.results["num_leafs"] = [inst.addtree.num_leafs() for inst in self._instances]
@@ -144,25 +132,21 @@ class DistributedVerifier:
 
         self.results["check_time"] = timeit.default_timer() - self.start_time
 
-    def _check_paths(self, ls):
+    def _check_paths(self, l0):
         # update reachabilities in domtree root leaf 0 in parallel
         fs = []
-        for instance in self._instances:
-            for tree_index in range(len(instance.addtree)):
+        for instance_index in range(l0.num_instances()):
+            for tree_index in range(len(l0.addtree(instance_index))):
                 f = self._client.submit(DistributedVerifier._check_tree_paths,
-                        self._addtrees_fut, ls, instance.index, tree_index,
-                        self._verifier_factory)
-                f.instance_index = instance.index
+                        l0, instance_index, tree_index, self._verifier_factory)
                 fs.append(f)
         wait(fs)
-        results_per_instance = [[] for _ in self._instances]
         for f in fs:
             if not f.done():
                 raise RuntimeError("future not done?")
             if f.exception():
                 raise f.exception() from RuntimeError("exception on worker")
-            results_per_instance[f.instance_index].append(f.result())
-        return [Subspace.merge(lks) for lks in results_per_instance]
+        return DomTreeLeaf.merge([f.result() for f in fs])
 
     def _generate_splits(self, ls, ntasks):
         # split domtrees until we have ntask `Subspace`s; this runs locally
@@ -346,53 +330,19 @@ class DistributedVerifier:
     # - WORKERS ------------------------------------------------------------- #
 
     @staticmethod
-    def _check_tree_paths(addtrees, ls, instance_index, tree_index,
+    def _check_tree_paths(lk, instance_index, tree_index,
             v_or_vfactory, only_feat_id = -1):
-        addtree, l0 = addtrees[instance_index], ls[instance_index]
+        addtree = lk.addtree(instance_index)
         tree = addtree[tree_index]
         stack = [(tree.root(), True)]
 
         v = v_or_vfactory
         if not isinstance(v, Verifier):
-            v = v_or_vfactory(addtrees, ls)
+            v = v_or_vfactory(lk)
 
-        while len(stack) > 0:
-            node, path_constraints = stack.pop()
+        v.instance(instance_index).mark_unreachable_paths(tree_index, only_feat_id)
 
-            l, r = tree.left(node), tree.right(node)
-            split = tree.get_split(node) # (split_type, feat_id...)
-            feat_id = split[1]
-            xvar = v.xvar(feat_id)
-
-            if only_feat_id != -1 and feat_id != only_feat_id:
-                continue # only test paths splitting on this feat_id
-
-            if split[0] == "lt":
-                split_value = split[2]
-                constraint_l = (xvar < split_value)
-                constraint_r = (xvar >= split_value)
-            elif split[0] == "bool":
-                constraint_l = VerifierNotExpr(xvar) # false left, true right
-                constraint_r = xvar
-            else: raise RuntimeError(f"unknown split type {split[0]}")
-
-            if tree.is_internal(l) and l0.is_reachable(tree_index, l):
-                path_constraints_l = constraint_l & path_constraints;
-                if v.check(path_constraints_l).is_sat():
-                    stack.append((l, path_constraints_l))
-                else:
-                    print(f"unreachable  left: {instance_index} {tree_index} {l}, {only_feat_id}")
-                    l0.mark_unreachable(tree_index, l)
-
-            if tree.is_internal(r) and l0.is_reachable(tree_index, r):
-                path_constraints_r = constraint_r & path_constraints;
-                if v.check(path_constraints_r).is_sat():
-                    stack.append((r, path_constraints_r))
-                else:
-                    print(f"unreachable right: {instance_index} {tree_index} {r}, {only_feat_id}")
-                    l0.mark_unreachable(tree_index, r)
-
-        return l0
+        return lk
 
     @staticmethod
     def _verify_fun(addtrees, ls, timeout, vfactory,
