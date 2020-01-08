@@ -97,16 +97,18 @@ class TreePlot:
         if split[0] == "bool":
             return "{}".format(fname)
 
-    def add_subspace(self, tree, subspace):
+    def add_domtree_leaf(self, instance, tree, dtleaf):
         g = gv.Graph()
         self.index += 1
-        stack = [tree.root()]
+        stack = [(tree.root(), False)]
         while len(stack) > 0:
-            node = stack.pop()
+            node, marked = stack.pop()
 
-            is_reachable = subspace.is_reachable(tree.index(), node)
-            c = "darkgreen" if is_reachable else "gray"
-            s = "bold" if is_reachable else ""
+            is_reachable = dtleaf.is_reachable(instance, tree.index(), node)
+            marked |= not is_reachable
+            c = "darkgreen" if not marked else "gray"
+            s = "bold" if not marked else ""
+            if not is_reachable: c = "red"
 
             if tree.is_leaf(node):
                 g.node(self.name(node), "{:.3f}".format(tree.get_leaf_value(node)),
@@ -114,8 +116,8 @@ class TreePlot:
             else:
                 label = self.get_split_label(tree.get_split(node))
                 g.node(self.name(node), label, style=s, color=c, fontcolor=c)
-                stack.append(tree.right(node))
-                stack.append(tree.left(node))
+                stack.append((tree.right(node), marked))
+                stack.append((tree.left(node), marked))
 
             if not tree.is_root(node):
                 g.edge(self.name(tree.parent(node)), self.name(node), color=c)
