@@ -30,7 +30,7 @@ BoolDomain.__str__ = __booldomain__str
 BoolDomain.__eq__ = __booldomain__eq
 BoolDomain.__hash__ = __booldomain__hash
 
-def __tree_predict_single(self, example):
+def __tree_predict_leaf(self, example):
     node = self.root()
     while not self.is_leaf(node):
         split = self.get_split(node) # ("lt", feat_id, split_value) OR ("bool", feat_id)
@@ -42,11 +42,16 @@ def __tree_predict_single(self, example):
             #assert isinstance(value, bool), f"is {type(value)} instead"
             go_left = not value
         node = self.left(node) if go_left else self.right(node)
+    return node
+
+def __tree_predict_single(self, example):
+    node = __tree_predict_leaf(self, example)
     return self.get_leaf_value(node)
 
 def __tree_predict(self, examples):
     return list(map(self.predict_single, examples))
 
+Tree.predict_leaf = __tree_predict_leaf
 Tree.predict_single = __tree_predict_single
 Tree.predict = __tree_predict
 

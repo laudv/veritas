@@ -59,6 +59,30 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v.check(v.fvar() < 0.41), Verifier.Result.SAT)
         self.assertEqual(v.check(v.fvar() > 0.41), Verifier.Result.UNSAT)
 
+    #def test_family(self):
+    #    at = AddTree()
+    #    t = at.add_tree();
+    #    t.split(t.root(), 0, 2)
+    #    t.split( t.left(t.root()), 0, 1)
+    #    t.split(t.right(t.root()), 0, 3)
+    #    t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+    #    t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+    #    t.set_leaf_value( t.left(t.right(t.root())), 0.3)
+    #    t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+
+    #    print(at)
+
+    #    dt = DomTree(at, {})
+    #    l0 = dt.get_leaf(dt.tree().root())
+    #    v = Verifier(l0, Backend())
+    #    v.add_all_trees()
+
+    #    v.check()
+    #    m = v.model()
+
+    #    print(m)
+    #    v.instance(0)._xs_wide_family(m["xs"])
+
     def test_mark_paths(self):
         at = AddTree()
         t = at.add_tree();

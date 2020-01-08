@@ -518,6 +518,30 @@ class AddTreeInstance:
                 raise RuntimeError("unknown ftype")
             yield feat_id, x, dom
 
+    def _xs_wide_family(self, xs):
+        domains = {}
+        for tree_index, tree in enumerate(self._addtree):
+            node = tree.predict_leaf(xs)
+            print(tree_index, leaf_id)
+
+            # TODO complete
+            # scan all paths of tree to compute much less restricted family
+            # idea: as long as the features vary within their domains, the
+            #    prediction is going to remain unchanged
+            # _xs_family based on all splits is too strict
+            while not tree.is_root(node):
+                node = tree.parent(node)
+                split = tree.get_split(node)
+                feat_id = split[1]
+
+                if split[0] == "lt":
+                    dom = domains.get(feat_id, RealDomain())
+                elif split[0] == "bool":
+                    dom = domains.get(feat_id, BoolDomain())
+                else: raise RuntimeError("unknown split")
+
+                if tree.is_root(node):
+                    break
 
 
 
