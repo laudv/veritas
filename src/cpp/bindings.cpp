@@ -10,7 +10,7 @@
 
 #include "domain.h"
 #include "tree.h"
-#include "subspaces.h"
+#include "domtree.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -37,10 +37,25 @@ encode_split(const Split& split)
         split);
 }
 
+static
+py::tuple
+encode_split(const DomTreeSplit& split)
+{
+    size_t i = split.instance_index;
+    return visit_split(
+        [i](const LtSplit& s) -> py::tuple {
+            return py::make_tuple(i, "lt", s.feat_id, s.split_value);
+        },
+        [i](const BoolSplit& s) -> py::tuple {
+            return py::make_tuple(i, "bool", s.feat_id);
+        },
+        split.split);
+}
 
-using TreeD = Tree<FloatT>;
+
+using TreeD = Tree<Split, FloatT>;
 using NodeRefD = TreeD::MRef;
-using DomTreeT = Subspaces::DomTreeT;
+using DomTreeT = DomTree::DomTreeT;
 
 
 PYBIND11_MODULE(pytreeck, m) {
@@ -130,52 +145,107 @@ PYBIND11_MODULE(pytreeck, m) {
                 return AddTree::from_json(json);
             }));
 
-    py::class_<Subspaces>(m, "Subspaces")
-        .def(py::init<std::shared_ptr<AddTree>, Subspaces::DomainsT>())
-        .def("domtree", &Subspaces::domtree)
-        .def("addtree", &Subspaces::addtree)
-        .def("get_root_domain", &Subspaces::get_root_domain)
-        .def("get_domains", [](const Subspaces& st, NodeId n) {
-            Subspaces::DomainsT domains;
-            st.get_domains(n, domains);
-            return domains;
-        })
-        .def("get_subspace", &Subspaces::get_subspace)
-        .def("split_leaf", &Subspaces::split_domtree_leaf)
-        .def("to_json", &Subspaces::to_json)
-        .def("from_json", &Subspaces::from_json)
-        .def("split", &Subspaces::split_domtree_leaf)
-        .def("split", [](Subspaces& st, Subspace& subspace) {
-            st.split(std::move(subspace));
-            // C++ standard specifies `leaf` is in valid but unspecified state afterwards
-            // Python users really shouldn't reuse `leaf` afterwards
+    //py::class_<Subspaces>(m, "Subspaces")
+    //    .def(py::init<std::shared_ptr<AddTree>, Subspaces::DomainsT>())
+    //    .def("domtree", &Subspaces::domtree)
+    //    .def("addtree", &Subspaces::addtree)
+    //    .def("get_root_domain", &Subspaces::get_root_domain)
+    //    .def("get_domains", [](const Subspaces& st, NodeId n) {
+    //        Subspaces::DomainsT domains;
+    //        st.get_domains(n, domains);
+    //        return domains;
+    //    })
+    //    .def("get_subspace", &Subspaces::get_subspace)
+    //    .def("split_leaf", &Subspaces::split_domtree_leaf)
+    //    .def("to_json", &Subspaces::to_json)
+    //    .def("from_json", &Subspaces::from_json)
+    //    .def("split", &Subspaces::split_domtree_leaf)
+    //    .def("split", [](Subspaces& st, Subspace& subspace) {
+    //        st.split(std::move(subspace));
+    //        // C++ standard specifies `leaf` is in valid but unspecified state afterwards
+    //        // Python users really shouldn't reuse `leaf` afterwards
+    //    });
+    //
+    //py::class_<Subspace>(m, "Subspace")
+    //    .def_readonly("split_score", &Subspace::split_score)
+    //    .def_readonly("split_balance", &Subspace::split_balance)
+    //    .def("domtree_node_id", &Subspace::domtree_node_id)
+    //    .def("get_domains", &Subspace::get_domains)
+    //    .def("get_domain", &Subspace::get_domain)
+    //    .def("num_unreachable", &Subspace::num_unreachable)
+    //    .def("is_reachable", &Subspace::is_reachable)
+    //    .def("mark_unreachable", &Subspace::mark_unreachable)
+    //    .def("find_best_domtree_split", &Subspace::find_best_domtree_split)
+    //    .def("has_best_split", &Subspace::has_best_split)
+    //    .def("get_best_split", [](const Subspace& ss) { return encode_split(ss.get_best_split()); })
+    //    .def("get_tree_bounds", &Subspace::get_tree_bounds)
+    //    .def("merge", &Subspace::merge)
+    //    .def("to_json", &Subspace::to_json)
+    //    .def("from_json", &Subspace::from_json)
+    //    .def(py::pickle(
+    //        [](const Subspace& p) { // __getstate__
+    //            return p.to_json();
+    //        },
+    //        [](const std::string& json) { // __setstate__
+    //            return Subspace::from_json(json);
+    //        }));
+
+    py::class_<DomTree>(m, "DomTree")
+        .def(py::init<>())
+        .def(py::init<>([](std::shared_ptr<AddTree> v, DomainsT d) -> DomTree {
+            DomTree dt;
+            dt.add_instance(v, std::move(d));
+            return dt;
+        }))
+        .def(py::init<>([](std::vector<std::tuple<std::shared_ptr<AddTree>, DomainsT>>& v) -> DomTree {
+            DomTree dt;
+            for (auto& item : v)
+                dt.add_instance(std::get<0>(item), std::move(std::get<1>(item)));
+            return dt;
+        }))
+        .def("tree", &DomTree::tree)
+        .def("num_instances", &DomTree::num_instances)
+        .def("get_root_domain", &DomTree::get_root_domain)
+        .def("get_leaf", &DomTree::get_leaf)
+        .def("apply_leaf", [](DomTree& dt, const DomTreeLeaf& leaf) {
+            dt.apply_leaf(DomTreeLeaf { leaf });
         });
 
-    py::class_<Subspace>(m, "Subspace")
-        .def_readonly("split_score", &Subspace::split_score)
-        .def_readonly("split_balance", &Subspace::split_balance)
-        .def("domtree_node_id", &Subspace::domtree_node_id)
-        .def("get_domains", &Subspace::get_domains)
-        .def("get_domain", &Subspace::get_domain)
-        .def("num_unreachable", &Subspace::num_unreachable)
-        .def("is_reachable", &Subspace::is_reachable)
-        .def("mark_unreachable", &Subspace::mark_unreachable)
-        .def("find_best_domtree_split", &Subspace::find_best_domtree_split)
-        .def("has_best_split", &Subspace::has_best_split)
-        .def("get_best_split", [](const Subspace& ss) { return encode_split(ss.get_best_split()); })
-        .def("get_tree_bounds", &Subspace::get_tree_bounds)
-        .def("merge", &Subspace::merge)
-        .def("to_json", &Subspace::to_json)
-        .def("from_json", &Subspace::from_json)
+    py::class_<DomTreeLeaf>(m, "DomTreeLeaf")
+        .def_readonly("score", &DomTreeLeaf::score)
+        .def_readonly("balance", &DomTreeLeaf::balance)
+        .def("domtree_leaf_id", &DomTreeLeaf::domtree_leaf_id)
+        .def("num_instances", &DomTreeLeaf::num_instances)
+        .def("get_best_split", [](const DomTreeLeaf& l) -> std::optional<py::tuple> {
+            std::optional<DomTreeSplit> best_split = l.get_best_split();
+            if (best_split)
+                return encode_split(*best_split);
+            return {};
+        })
+        .def("get_domains", &DomTreeLeaf::get_domains)
+        .def("get_domain", &DomTreeLeaf::get_domain)
+        .def("num_unreachable", &DomTreeLeaf::num_unreachable)
+        .def("is_reachable", &DomTreeLeaf::is_reachable)
+        .def("mark_unreachable", &DomTreeLeaf::mark_unreachable)
+        .def("find_best_split", &DomTreeLeaf::find_best_split)
+        .def("count_unreachable_leafs", &DomTreeLeaf::count_unreachable_leafs)
+        .def("get_tree_bounds", &DomTreeLeaf::get_tree_bounds)
+        .def("merge", &DomTreeLeaf::merge)
         .def(py::pickle(
-            [](const Subspace& p) { // __getstate__
-                return p.to_json();
+            [](const DomTreeLeaf& l) -> py::bytes { // __getstate__
+                std::ostringstream ss(std::ios::binary);
+                l.to_binary(ss);
+                return py::bytes(ss.str());
             },
-            [](const std::string& json) { // __setstate__
-                return Subspace::from_json(json);
+            [](const py::bytes& bytes) -> DomTreeLeaf { // __setstate__
+                std::istringstream ss(bytes);
+                return DomTreeLeaf::from_binary(ss);
             }));
 
-    py::class_<DomTreeT>(m, "DomTree")
+
+
+
+    py::class_<DomTreeT>(m, "RawDomTree")
         .def("root", [](const DomTreeT& t) { return t.root().id(); })
         .def("num_nodes", [](const DomTreeT& t) { return t.num_nodes(); })
         .def("is_root", [](const DomTreeT& t, NodeId n) { return t[n].is_root(); })

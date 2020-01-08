@@ -88,7 +88,7 @@ namespace treeck {
     AddTree::add_tree(AddTree::TreeT&& tree)
     {
         size_t index = trees_.size();
-        trees_.push_back(std::forward<AddTree::TreeT>(tree));
+        trees_.push_back(std::move(tree));
         return index;
     }
 

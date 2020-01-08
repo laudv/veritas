@@ -147,6 +147,14 @@ namespace treeck {
 
 
 
+    std::ostream&
+    operator<<(std::ostream& s, const Domain& d)
+    {
+        visit_domain(
+            [&s](const RealDomain& d) { s << d; },
+            [&s](const BoolDomain& d) { s << d; }, d);
+        return s;
+    }
 
     bool
     operator==(const Domain& a, const Domain& b)

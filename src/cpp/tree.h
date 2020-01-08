@@ -272,11 +272,14 @@ namespace treeck {
         const TreeT& operator[](size_t index) const;
         const std::vector<TreeT>& trees() const;
 
+        SplitMapT get_splits() const;
+
         std::string to_json() const;
         static AddTree from_json(const std::string& json);
         static AddTree from_json_file(const char *file);
 
-        SplitMapT get_splits() const;
+        template <typename Archive>
+        void serialize(Archive& archive);
     };
 
     std::ostream& operator<<(std::ostream& s, const AddTree& at);

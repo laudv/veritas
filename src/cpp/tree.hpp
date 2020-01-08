@@ -299,7 +299,7 @@ namespace treeck {
     Tree<SplitT, LeafT>::Tree()
     {
         // NodeT must be default constructible
-        nodes_.push_back({}); /* add a root leaf node */
+        nodes_.push_back({0, 0}); /* add a root leaf node */
     }
 
     template <typename SplitT, typename LeafT>
@@ -430,6 +430,18 @@ namespace treeck {
             return TreeVisitStatus::ADD_NONE;
         });
         return s;
+    }
+
+
+
+
+
+    template <typename Archive>
+    void
+    AddTree::serialize(Archive& archive)
+    {
+        archive(cereal::make_nvp("base_score", base_score),
+                cereal::make_nvp("trees", trees_));
     }
 
 } /* namespace treeck */

@@ -90,6 +90,8 @@ namespace treeck {
 
     bool operator==(const Domain& a, const Domain& b);
 
+    std::ostream& operator<<(std::ostream& s, const Domain& d);
+
     TREECK_ENABLE_TYPENAME(RealDomain);
     TREECK_ENABLE_TYPENAME(BoolDomain);
 
