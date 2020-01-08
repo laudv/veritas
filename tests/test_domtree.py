@@ -269,6 +269,26 @@ class TestDomTree(unittest.TestCase):
         self.assertFalse(l0_m.is_reachable(1, 0, 2))
         self.assertFalse(l0_m.is_reachable(1, 0, 1))
 
+    def test_multi_instance(self):
+        at = AddTree()
+        at.base_score = 10
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 1)
+        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+        t.set_leaf_value( t.left(t.right(t.root())), 0.3)
+        t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+
+        dt = DomTree([(at, {0: RealDomain(0, 1)}), (at, {})])
+        self.assertEqual(dt.num_instances(), 2)
+        l0 = dt.get_leaf(0)
+        l0.find_best_split()
+        self.assertEqual(l0.get_best_split(), (1, "lt", 0, 2.0))
+        self.assertEqual(l0.score, 4)
+        self.assertEqual(l0.balance, 0)
+
     #def _test_calhouse(self): # Prune removed
     #    at = AddTree.read("tests/models/xgb-calhouse-hard.json")
     #    dt = DomTree(at, {})
