@@ -66,8 +66,6 @@ namespace treeck {
     };
 
     struct DomTreeSplit {
-        friend DomTree;
-
         size_t instance_index;
         Split split;
 
@@ -90,6 +88,9 @@ namespace treeck {
         const AddTree *addtree;
         DomainsT domains;
         IsReachable is_reachable;
+
+        template <typename Archive>
+        void serialize(Archive& archive);
     };
 
     std::ostream&
@@ -125,8 +126,6 @@ namespace treeck {
 
         DomTreeLeaf get_leaf(NodeId domtree_leaf_id) const;
         void return_leaf(DomTreeLeaf&& leaf);
-
-        // TODO serialize
 
     private:
         void update_is_reachable(size_t instance, NodeId domtree_node_id,
@@ -175,7 +174,7 @@ namespace treeck {
 
         void set_addtree(size_t instance, const AddTree& addtree);
 
-        NodeId domtree_node_id() const;
+        NodeId domtree_leaf_id() const;
         size_t num_instances() const;
         std::optional<DomTreeSplit> get_best_split() const;
 
@@ -187,7 +186,7 @@ namespace treeck {
         void mark_unreachable(size_t instance, size_t tree_index, NodeId);
 
         void find_best_split();
-        void find_best_split(size_t instance, Split& max_split,
+        bool find_best_split(size_t instance, Split& max_split,
                 int& max_score, int& min_balance);
 
         int count_unreachable_leafs(size_t instance,
@@ -196,11 +195,13 @@ namespace treeck {
         std::tuple<FloatT, FloatT>
         get_tree_bounds(size_t instance, size_t tree_index);
 
+        static DomTreeLeaf merge(const std::vector<DomTreeLeaf>& leafs);
+
+        std::ostringstream to_binary() const;
+        static DomTreeLeaf from_binary(char *bytes, size_t nbytes);
+
     private:
         const AddTree& addtree(size_t instance) const;
-
-        // TODO merge
-        // TODO serialize
 
         /*
         NodeId domtree_node_id_;

@@ -1,4 +1,4 @@
-#include <cereal/archives/json.hpp>
+#include <cereal/archives/binary.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/unordered_set.hpp>
 #include <cereal/types/optional.hpp>
@@ -176,6 +176,14 @@ namespace treeck {
                 cereal::make_nvp("split", split));
     }
 
+    template <typename Archive>
+    void
+    DomTreeLeafInstance::serialize(Archive& archive)
+    {
+        archive(cereal::make_nvp("domains", domains),
+                cereal::make_nvp("is_reachable", is_reachable));
+    }
+
     std::ostream&
     operator<<(std::ostream& s, const Nothing& t)
     {
@@ -320,20 +328,71 @@ namespace treeck {
     void
     DomTree::return_leaf(DomTreeLeaf&& leaf)
     {
+        if (leaf.num_instances() != num_instances())
+            throw std::runtime_error("DomTree::return_leaf: incompatible leaf");
+
+        NodeId leaf_id = leaf.domtree_leaf_id();
+
+        // update is_reachables for each instance
+        for (size_t i = 0; i < num_instances(); ++i)
+        {
+            IsReachable& is_reachable0 = instances_.at(i).is_reachables.at(leaf_id);
+            IsReachable& is_reachable1 = leaf.instances_.at(i).is_reachable;
+
+            is_reachable0.combine(is_reachable1);
+        }
+
         // split if leaf has best_split
         if (leaf.best_split_)
         {
+            DomTreeSplit split = *leaf.best_split_;
+            
+            DomTreeInstance& inst0 = instances_.at(split.instance_index);
+            DomTreeLeafInstance& inst1 = leaf.instances_.at(split.instance_index);
 
+            auto node = tree_[leaf_id];
+            const AddTree& addtree = *inst0.addtree;
+
+            if (!node.is_leaf())
+                throw std::runtime_error("DomTree::return_leaf: split on non-leaf");
+
+            node.split(*leaf.best_split_);
+
+            auto& is_reachables = inst0.is_reachables;
+
+            is_reachables.erase(node.id()); // might be old! -> mark_unreachable
+            is_reachables.emplace(node.left().id(), inst1.is_reachable); // copy once
+            is_reachables.emplace(node.right().id(), std::move(inst1.is_reachable)); // reuse for right
+
+            Domain dom_l, dom_r;
+            FeatId feat_id;
+            visit_split(
+                [&dom_l, &dom_r, &feat_id](const LtSplit& s) {
+                    std::tie(dom_l, dom_r) = RealDomain().split(s.split_value);
+                    feat_id = s.feat_id;
+                },
+                [&dom_l, &dom_r, &feat_id](const BoolSplit& s) {
+                    std::tie(dom_l, dom_r) = BoolDomain().split();
+                    feat_id = s.feat_id;
+                },
+                split.split
+            );
+
+            auto& is_reachable_l = is_reachables.at(node.left().id());
+            update_is_reachable(split.instance_index, node.left().id(), feat_id, dom_l);
+            auto& is_reachable_r = is_reachables.at(node.right().id());
+            update_is_reachable(split.instance_index, node.right().id(), feat_id, dom_r);
         }
+
     }
 
     void
-    DomTree::update_is_reachable(size_t i, NodeId domtree_node_id,
+    DomTree::update_is_reachable(size_t i, NodeId domtree_leaf_id,
             FeatId feat_id, Domain new_dom)
     {
         DomTreeInstance& inst = instances_.at(i);
         const AddTree& addtree = *inst.addtree;
-        IsReachable& is_reachable = inst.is_reachables.at(domtree_node_id);
+        IsReachable& is_reachable = inst.is_reachables.at(domtree_leaf_id);
 
         auto f = [&is_reachable]( // mark all marked nodes unreachable 
                 size_t tree_index,
@@ -372,7 +431,7 @@ namespace treeck {
         , best_split_{} {}
 
     NodeId
-    DomTreeLeaf::domtree_node_id() const
+    DomTreeLeaf::domtree_leaf_id() const
     {
         return domtree_leaf_id_;
     }
@@ -426,10 +485,28 @@ namespace treeck {
     void
     DomTreeLeaf::find_best_split()
     {
-        // TODO find best split for all instances
+        Split max_split;
+        int max_score = 0, min_balance = 0;
+        size_t max_i = 0;
+        for (size_t i = 0; i < num_instances(); ++i)
+        {
+            bool has_improved = find_best_split(i, max_split, max_score, min_balance);
+            if (has_improved)
+                max_i = i;
+        }
+        if (max_score > 0)
+        {
+            best_split_.emplace(DomTreeSplit { max_i, max_split });
+            score = max_score;
+            balance = min_balance;
+        }
+        else
+        {
+            throw std::runtime_error("no DomTree split found");
+        }
     }
 
-    void
+    bool
     DomTreeLeaf::find_best_split(size_t i, Split& max_split,
             int& max_score, int& min_balance)
     {
@@ -437,13 +514,14 @@ namespace treeck {
         const IsReachable& is_reachable = instances_.at(i).is_reachable;
 
         size_t tree_index = 0;
+        bool has_improved = false;
         std::unordered_map<FeatId, std::unordered_set<FloatT>> duplicates;
 
         for (auto& tree : addtree.trees())
         {
             tree.dfs(
                     [this, &addtree, &is_reachable, &duplicates, tree_index,
-                     &max_split, &max_score, &min_balance, &i]
+                     &max_split, &max_score, &min_balance, &has_improved, &i]
                     (AddTree::TreeT::CRef node) {
                 if (node.is_leaf())
                     return ADD_NONE;
@@ -518,6 +596,7 @@ namespace treeck {
                     max_split = node.get_split();
                     max_score = score;
                     min_balance = balance;
+                    has_improved = true;
                 }
 
                 return ADD_LEFT_AND_RIGHT;
@@ -526,44 +605,13 @@ namespace treeck {
         }
 
         //std::cout
-        //    << "best split l" << domtree_node_id_
+        //    << "best split l" << domtree_leaf_id
         //    << ", split=" << max_split
         //    << ", score=" << max_score
         //    << ", balance=" << min_balance
         //    << std::endl;
-    }
-
-    std::tuple<FloatT, FloatT>
-    DomTreeLeaf::get_tree_bounds(size_t i, size_t tree_index)
-    {
-        const AddTree& at = *instances_.at(i).addtree;
-
-        FloatT min =  std::numeric_limits<FloatT>::infinity();
-        FloatT max = -std::numeric_limits<FloatT>::infinity();
-        at[tree_index].dfs(
-                [this, i, tree_index, &min, &max]
-                (AddTree::TreeT::CRef node) {
-            if (!is_reachable(i, tree_index, node.id()))
-                return TreeVisitStatus::ADD_NONE;
-            if (node.is_leaf())
-            {
-                FloatT leaf_value = node.leaf_value();
-                min = std::min(min, leaf_value);
-                max = std::max(max, leaf_value);
-                return TreeVisitStatus::ADD_NONE;
-            }
-            return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
-        });
-        return {min, max};
-    }
-
-    const AddTree&
-    DomTreeLeaf::addtree(size_t i) const
-    {
-        const AddTree *ptr = instances_.at(i).addtree;
-        if (ptr)
-            return *ptr;
-        throw std::runtime_error("DomTreeLeaf: no addtree set, use set_addtree");
+        
+        return has_improved;
     }
 
     int
@@ -597,4 +645,124 @@ namespace treeck {
         return unreachable;
     }
 
+    std::tuple<FloatT, FloatT>
+    DomTreeLeaf::get_tree_bounds(size_t i, size_t tree_index)
+    {
+        const AddTree& at = *instances_.at(i).addtree;
+
+        FloatT min =  std::numeric_limits<FloatT>::infinity();
+        FloatT max = -std::numeric_limits<FloatT>::infinity();
+        at[tree_index].dfs(
+                [this, i, tree_index, &min, &max]
+                (AddTree::TreeT::CRef node) {
+            if (!is_reachable(i, tree_index, node.id()))
+                return TreeVisitStatus::ADD_NONE;
+            if (node.is_leaf())
+            {
+                FloatT leaf_value = node.leaf_value();
+                min = std::min(min, leaf_value);
+                max = std::max(max, leaf_value);
+                return TreeVisitStatus::ADD_NONE;
+            }
+            return TreeVisitStatus::ADD_LEFT_AND_RIGHT;
+        });
+        return {min, max};
+    }
+
+    DomTreeLeaf
+    DomTreeLeaf::merge(const std::vector<DomTreeLeaf>& leafs)
+    {
+        if (leafs.size() == 0)
+            throw std::runtime_error("DomTreeLeaf::merge: no leafs given");
+        if (leafs.size() == 1)
+            return leafs.at(0);
+
+        {
+            auto it = leafs.cbegin();
+            NodeId id = it->domtree_leaf_id_;
+            ++it;
+            for (; it != leafs.cend(); ++it)
+            {
+                if (id != it->domtree_leaf_id_)
+                    throw std::runtime_error("domtree_leaf_id do not match");
+            }
+        }
+
+        auto it = leafs.begin();
+        DomTreeLeaf l(*it);
+        ++it;
+        for (; it != leafs.end(); ++it)
+        {
+            for (size_t i = 0; i < l.num_instances(); ++i)
+            {
+                auto& instance0 = l.instances_.at(i);
+                auto& instance1 = it->instances_.at(i);
+
+                instance0.is_reachable.combine(instance1.is_reachable);
+            }
+        }
+        return l;
+    }
+
+    template<class Archive>
+    void serialize(Archive& ar, RealDomain& m)
+    {
+        ar(cereal::make_nvp("lo", m.lo), cereal::make_nvp("hi", m.hi));
+    }
+
+    template<class Archive>
+    void serialize(Archive& ar, BoolDomain& m)
+    {
+        ar(m.value_);
+    }
+
+    std::ostringstream
+    DomTreeLeaf::to_binary() const
+    {
+        std::ostringstream ss(std::ios::binary);
+        {
+            cereal::BinaryOutputArchive ar(ss);
+            ar(cereal::make_nvp("id", domtree_leaf_id_),
+               cereal::make_nvp("instances", instances_),
+               cereal::make_nvp("best_split", best_split_),
+               cereal::make_nvp("score", score),
+               cereal::make_nvp("balance", balance));
+        }
+        return ss;
+    }
+
+    DomTreeLeaf
+    DomTreeLeaf::from_binary(char *bytes, size_t nbytes)
+    {
+        std::istringstream ss(std::ios::binary);
+        ss.rdbuf()->pubsetbuf(reinterpret_cast<char*>(bytes), nbytes);
+
+        NodeId id;
+        std::vector<DomTreeLeafInstance> instances;
+        std::optional<DomTreeSplit> best_split;
+        int score, balance;
+        {
+            cereal::BinaryInputArchive ar(ss);
+            ar(cereal::make_nvp("id", id),
+               cereal::make_nvp("instances", instances),
+               cereal::make_nvp("best_split", best_split),
+               cereal::make_nvp("score", score),
+               cereal::make_nvp("balance", balance));
+        }
+        DomTreeLeaf leaf(id, std::move(instances)); 
+        leaf.score = score;
+        leaf.balance = balance;
+        return leaf;
+    }
+
+
+
+    const AddTree&
+    DomTreeLeaf::addtree(size_t i) const
+    {
+        const AddTree *ptr = instances_.at(i).addtree;
+        if (ptr)
+            return *ptr;
+        throw std::runtime_error("DomTreeLeaf: no addtree set, use set_addtree");
+    }
 } /* namespace treeck */
