@@ -2,7 +2,8 @@ import math, timeit
 from bisect import bisect
 
 from enum import Enum
-from . import RealDomain, BoolDomain, AddTreeFeatureTypes, Subspace
+from . import RealDomain, BoolDomain, AddTreeFeatureTypes
+from . import DomTree, DomTreeLeaf
 
 class VerifierExpr:
     pass
@@ -239,18 +240,14 @@ class Verifier:
             if self == Verifier.Result.UNSAT:   return "UNSAT"
             if self == Verifier.Result.UNKNOWN: return "UNKNOWN"
 
-    def __init__(self, addtree, subspace, backend):
+    def __init__(self, domtree_leaf, backend):
+        assert isinstance(backend, VerifierBackend)
+        assert isinstance(domtree_leaf, DomTreeLeaf)
+
         self._backend = backend
-        if isinstance(subspace, Subspace):
-            self._instances = [AddTreeInstance(self, addtree, subspace, "")]
-        elif isinstance(subspace, list):
-            if not isinstance(addtree, list):
-                addtree = [addtree] * len(subspace)
-            self._instances = [AddTreeInstance(self, at, sb, f"_{i}")
-                    for i, (at, sb) in enumerate(zip(addtree, subspace))]
-        else:
-            raise ValueError("subspace not a Subspace or list of Subspace instances ("
-                    + type(subspace).__qualname__ + ")")
+        self._lk = domtree_leaf
+        self._instances = [AddTreeInstance(self, i)
+                for i in range(self._lk.num_instances())]
 
         self._rvars = {} # real additional variables
         self._bvars = {} # boolean additional variables
@@ -375,11 +372,13 @@ class Verifier:
 
 class AddTreeInstance:
 
-    def __init__(self, verifier, addtree, subspace, suffix):
+    def __init__(self, verifier, instance_index):
         self._v = verifier
-        self._addtree = addtree
-        self._subspace = subspace
-        self._feat_types = AddTreeFeatureTypes(addtree)
+        self._instance_index = instance_index
+        self._addtree = self._v._lk.addtree(instance_index)
+        self._feat_types = AddTreeFeatureTypes(self._addtree)
+
+        suffix = f"_{instance_index}"
 
         self._xvars = {fid: self._v._backend.add_real_var(f"x{fid}{suffix}")
                 if typ == "lt"
@@ -422,6 +421,53 @@ class AddTreeInstance:
         """ Loop over all feature IDs in the associated addtree. """
         yield from self._feat_types.feat_ids()
 
+    def mark_unreachable_paths(self, tree_index, only_feat_id = -1):
+        """
+        Check the reachability of the paths in the trees of this instance
+        against the constraints in the Verifier.
+        """
+        i = self._instance_index
+        tree = self._addtree[tree_index]
+        stack = [(tree.root(), True)]
+
+        while len(stack) > 0:
+            node, path_constraints = stack.pop()
+
+            l, r = tree.left(node), tree.right(node)
+            split = tree.get_split(node) # (split_type, feat_id...)
+            feat_id = split[1]
+            xvar = self.xvar(feat_id)
+
+            if only_feat_id != -1 and feat_id != only_feat_id:
+                continue # only test paths splitting on this feat_id
+
+            if split[0] == "lt":
+                split_value = split[2]
+                constraint_l = (xvar < split_value)
+                constraint_r = (xvar >= split_value)
+            elif split[0] == "bool":
+                constraint_l = VerifierNotExpr(xvar) # false left, true right
+                constraint_r = xvar
+            else: raise RuntimeError(f"unknown split type {split[0]}")
+
+            if self._v._lk.is_reachable(i, tree_index, l):
+                path_constraints_l = constraint_l & path_constraints;
+                if self._v.check(path_constraints_l).is_sat():
+                    if tree.is_internal(l):
+                        stack.append((l, path_constraints_l))
+                else:
+                    print(f"unreachable  left: {i} {tree_index} {l}, {only_feat_id}")
+                    self._v._lk.mark_unreachable(i, tree_index, l)
+
+            if self._v._lk.is_reachable(i, tree_index, r):
+                path_constraints_r = constraint_r & path_constraints;
+                if self._v.check(path_constraints_r).is_sat():
+                    if tree.is_internal(r):
+                        stack.append((r, path_constraints_r))
+                else:
+                    print(f"unreachable right: {i} {tree_index} {r}, {only_feat_id}")
+                    self._v._lk.mark_unreachable(i, tree_index, r)
+
     def _enc_tree(self, tree, node):
         if tree.is_leaf(node):
             wvar = self._wvars[tree.index()]
@@ -433,9 +479,9 @@ class AddTreeInstance:
             xvar = self._xvars[split[1]]
             left, right = tree.left(node), tree.right(node)
             l, r = False, False
-            if self._subspace.is_reachable(tree_index, left):
+            if self._v._lk.is_reachable(self._instance_index, tree_index, left):
                 l = self._enc_tree(tree, left)
-            if self._subspace.is_reachable(tree_index, right):
+            if self._v._lk.is_reachable(self._instance_index, tree_index, right):
                 r = self._enc_tree(tree, right)
             return self._v._backend.encode_split(xvar, split, l, r)
 

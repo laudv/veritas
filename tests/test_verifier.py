@@ -4,7 +4,7 @@ import numpy as np
 import z3
 
 from treeck import *
-from treeck.verifier import Verifier, not_in_domain_constraint
+from treeck.verifier import Verifier, not_in_domain_constraint, in_domain_constraint
 from treeck.z3backend import Z3Backend as Backend
 
 class TestVerifier(unittest.TestCase):
@@ -31,9 +31,9 @@ class TestVerifier(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
         t.set_leaf_value(t.right(t.right(t.root())), 0.4)
 
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend())
+        dt = DomTree(at, {})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend())
 
         self.assertEqual(v._backend.check(v.fvar() < 0.0), Verifier.Result.SAT)
         v.add_tree(0)
@@ -42,22 +42,75 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v._backend.check(v.fvar() < 0.41), Verifier.Result.SAT)
         self.assertEqual(v._backend.check(v.fvar() > 0.41), Verifier.Result.UNSAT)
 
-        sb = Subspaces(at, {0: RealDomain(1, 3)})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend())
+        dt = DomTree(at, {0: RealDomain(1, 3)})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend())
         v.add_constraint(v.xvar(0) < 2.0)
         v.add_tree(0)
         check = v.check(v.fvar() != t.get_leaf_value(t.right( t.left(t.root()))))
         self.assertEqual(check, Verifier.Result.UNSAT)
 
-        sb = Subspaces(at, {0: RealDomain(1, 3)})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend())
+        dt = DomTree(at, {0: RealDomain(1, 3)})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend())
         v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < 0.0), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() > 0.0), Verifier.Result.SAT)
         self.assertEqual(v.check(v.fvar() < 0.41), Verifier.Result.SAT)
         self.assertEqual(v.check(v.fvar() > 0.41), Verifier.Result.UNSAT)
+
+    def test_mark_paths(self):
+        at = AddTree()
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 0, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+        t.set_leaf_value( t.left(t.right(t.root())), 0.3)
+        t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+
+        #print(at)
+
+        dt = DomTree([(at, {0: RealDomain(0, 2)}), (at, {})])
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend())
+        v.add_constraint(in_domain_constraint(v, l0.get_domains(0), instance=0))
+        v.add_constraint(v.xvar(0, instance=0) == v.xvar(0, instance=1))
+
+        self.assertFalse(l0.is_reachable(0, 0, 2))
+        self.assertTrue( l0.is_reachable(1, 0, 2))
+
+        v.instance(1).mark_unreachable_paths(0)
+
+        v.add_constraint(v.xvar(0, instance=1) < 1.0)
+
+        self.assertTrue(l0.is_reachable(0, 0, 4))
+        self.assertTrue(l0.is_reachable(1, 0, 4))
+
+        v.instance(0).mark_unreachable_paths(0, only_feat_id=999)
+        v.instance(1).mark_unreachable_paths(0, only_feat_id=999)
+
+        self.assertTrue(l0.is_reachable(0, 0, 4)) # no effect, wrong feat_id
+        self.assertTrue(l0.is_reachable(1, 0, 4))
+
+        v.instance(0).mark_unreachable_paths(0, only_feat_id=0)
+        v.instance(1).mark_unreachable_paths(0, only_feat_id=0)
+
+        self.assertFalse(l0.is_reachable(0, 0, 4))
+        self.assertFalse(l0.is_reachable(1, 0, 4))
+
+        self.assertFalse(l0.is_reachable(1, 0, 2))
+
+        v.add_all_trees()
+        #print(v._backend._solver)
+        v.check()
+        m = v.model()
+
+        self.assertLess(m[0]["xs"][0], 1.0)
+        self.assertGreaterEqual(m[0]["xs"][0], 0.0)
+        self.assertEqual(m[0]["xs"][0], m[1]["xs"][0])
+        self.myAssertAlmostEqual(m[0]["ws"][0], 0.1)
 
     def test_two_trees(self):
         at = AddTree()
@@ -78,9 +131,9 @@ class TestVerifier(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), -0.3)
         t.set_leaf_value(t.right(t.right(t.root())), -0.4)
 
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        dt = DomTree(at, {})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < -0.11), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.SAT)
         self.myAssertAlmostEqual(v.model()["ws"], [0.3, -0.4])
@@ -89,29 +142,29 @@ class TestVerifier(unittest.TestCase):
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.SAT)
         self.myAssertAlmostEqual(v.model()["ws"], [0.2, 0.2])
 
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        v = Verifier(l0, Backend()); v.add_all_trees()
         v.add_constraint(v.xvar(0) < 2.0)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.SAT)
         self.myAssertAlmostEqual(v.model()["ws"], [0.2, 0.2])
 
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        v = Verifier(l0, Backend()); v.add_all_trees()
         v.add_constraint(v.xvar(0) >= 2.0)
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.SAT)
         self.myAssertAlmostEqual(v.model()["ws"], [0.3, -0.4])
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.UNSAT)
 
 
-        sb = Subspaces(at, {0: RealDomain(-math.inf, 2.0)})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        dt = DomTree(at, {0: RealDomain(-math.inf, 2.0)})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.UNSAT)
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.SAT)
         self.myAssertAlmostEqual(v.model()["ws"], [0.2, 0.2])
 
-        sb = Subspaces(at, {0: RealDomain(2.0, math.inf)})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        dt = DomTree(at, {0: RealDomain(2.0, math.inf)})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < -0.09), Verifier.Result.SAT)
         self.myAssertAlmostEqual(v.model()["ws"], [0.3, -0.4])
         self.assertEqual(v.check(v.fvar() > 0.39), Verifier.Result.UNSAT)
@@ -152,10 +205,9 @@ class TestVerifier(unittest.TestCase):
 
         #print(at)
 
-        sb0, sb1 = Subspaces(at, {}), Subspaces(at, {})
-        l0_0 = sb0.get_subspace(sb0.domtree().root())
-        l1_0 = sb1.get_subspace(sb0.domtree().root())
-        v = Verifier(at, [l0_0, l1_0], Backend())
+        dt = DomTree([(at, {}), (at, {})])
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend())
         v.add_all_trees();
         v.add_constraint(v.instance(0).fvar() > v.instance(1).fvar())
         v.add_constraint(v.instance(1).fvar() > 0)
@@ -197,9 +249,9 @@ class TestVerifier(unittest.TestCase):
         #plt.show()
 
         print("< 0")
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        dt = DomTree(at, {})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend()); v.add_all_trees()
         self.assertEqual(v.check(v.fvar() < 0.0), Verifier.Result.SAT)
         model = v.model()
         self.assertLess(model["f"], 0.0)
@@ -217,9 +269,9 @@ class TestVerifier(unittest.TestCase):
                 imgq = img[x0:x1, y0:y1]
                 m, M = imgq.min(), imgq.max()
 
-                sb = Subspaces(at, {0: RealDomain(x0, x1), 1: RealDomain(y0, y1)})
-                l0 = sb.get_subspace(sb.domtree().root())
-                v = Verifier(at, l0, Backend()); v.add_all_trees()
+                dt = DomTree(at, {0: RealDomain(x0, x1), 1: RealDomain(y0, y1)})
+                l0 = dt.get_leaf(dt.tree().root())
+                v = Verifier(l0, Backend()); v.add_all_trees()
 
                 self.assertEqual(v.check(v.fvar() < m+1e-4), Verifier.Result.SAT)
                 self.assertAlmostEqual(v.model()["f"], m, delta=1e-4)
@@ -235,9 +287,9 @@ class TestVerifier(unittest.TestCase):
         img = np.array(ys).reshape((100, 100))
         at = AddTree.read("tests/models/xgb-img-easy.json")
 
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend()); v.add_all_trees()
+        dt = DomTree(at, {})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend()); v.add_all_trees()
         v.add_constraint(v.fvar() < 0.0)
 
         models = []
@@ -261,10 +313,9 @@ class TestVerifier(unittest.TestCase):
     def test_mnist_multi_instance(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
 
-        sb0, sb1 = Subspaces(at, {}), Subspaces(at, {})
-        l0_0 = sb0.get_subspace(sb0.domtree().root())
-        l1_0 = sb0.get_subspace(sb1.domtree().root())
-        v = Verifier(at, [l0_0, l1_0], Backend());
+        dt = DomTree([(at, {}), (at, {})])
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend());
         v.add_all_trees(0); v.add_all_trees(1)
         v.add_constraint(v.fvar(0) >  5.0) # it is with high certainty X
         v.add_constraint(v.fvar(1) < -5.0) # it is with high certainty not X
@@ -358,9 +409,9 @@ class TestVerifier(unittest.TestCase):
 
     def test_bin_mnist(self):
         at = AddTree.read(f"tests/models/xgb-mnist-bin-yis1-easy.json")
-        sb = Subspaces(at, {})
-        l0 = sb.get_subspace(sb.domtree().root())
-        v = Verifier(at, l0, Backend());
+        dt = DomTree(at, {})
+        l0 = dt.get_leaf(dt.tree().root())
+        v = Verifier(l0, Backend());
         v.add_all_trees()
         v.add_constraint(v.fvar(0) > 5.0) # it is with high certainty X
 
