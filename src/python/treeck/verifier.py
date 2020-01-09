@@ -456,7 +456,7 @@ class AddTreeInstance:
                     if tree.is_internal(l):
                         stack.append((l, path_constraints_l))
                 else:
-                    print(f"unreachable  left: {i} {tree_index} {l}, {only_feat_id}")
+                    #print(f"unreachable  left: {i} {tree_index} {l}, {only_feat_id}")
                     self._v._lk.mark_unreachable(i, tree_index, l)
 
             if self._v._lk.is_reachable(i, tree_index, r):
@@ -465,7 +465,7 @@ class AddTreeInstance:
                     if tree.is_internal(r):
                         stack.append((r, path_constraints_r))
                 else:
-                    print(f"unreachable right: {i} {tree_index} {r}, {only_feat_id}")
+                    #print(f"unreachable right: {i} {tree_index} {r}, {only_feat_id}")
                     self._v._lk.mark_unreachable(i, tree_index, r)
 
     def _enc_tree(self, tree, node):

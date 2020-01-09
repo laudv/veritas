@@ -127,8 +127,11 @@ class DistributedVerifier:
             self._print_flush()
 
         self.results["check_time"] = timeit.default_timer() - self.start_time
+        self._print_flush()
 
     def _check_paths(self, l0):
+        num_unreachable_before = [l0.num_unreachable(i) for i in range(l0.num_instances())]
+
         # update reachabilities in domtree root leaf 0 in parallel
         fs = []
         for instance_index in range(l0.num_instances()):
@@ -142,7 +145,14 @@ class DistributedVerifier:
                 raise RuntimeError("future not done?")
             if f.exception():
                 raise f.exception() from RuntimeError("exception on worker")
-        return DomTreeLeaf.merge([f.result() for f in fs])
+
+        l0 = DomTreeLeaf.merge([f.result() for f in fs])
+        num_unreachable_after = [l0.num_unreachable(i) for i in range(l0.num_instances())]
+
+        self._print("check_paths({}): {} -> {}".format(l0.domtree_leaf_id(),
+            num_unreachable_before, num_unreachable_after))
+
+        return l0
 
     def _generate_splits(self, l0, ntasks):
         # split domtrees until we have ntask `Subspace`s; this runs locally
@@ -159,7 +169,10 @@ class DistributedVerifier:
                     max_lk = lk
 
             if max_lk is None:
-                raise RuntimeError("no more splits!")
+                self._print("no more splits -> UNSAT")
+                self._stop_flag = True
+                #raise RuntimeError("no more splits!")
+                return lks
 
             lks.remove(max_lk)
             lks += self._split_domtree(max_lk, True)
@@ -218,6 +231,7 @@ class DistributedVerifier:
 
         else: # We timed out, split and try again
             lk = t[2]
+            self._print(f" - timeout, num_unreachable {[lk.num_unreachable(i) for i in range(lk.num_instances())]}")
             next_timeout = min(self._timeout_max, self._timeout_rate * f.timeout)
 
             new_lks = self._split_domtree(lk, False)
@@ -229,11 +243,19 @@ class DistributedVerifier:
 
 
     def _make_verify_future(self, lk, timeout):
+        nid = lk.domtree_leaf_id()
+        tree = self._domtree.tree()
+        parent_split = None
+
+        if not tree.is_root(nid):
+            pid = tree.parent(nid)
+            parent_split = tree.get_split(pid)
+
         f = self._client.submit(DistributedVerifier._verify_fun,
-                lk, timeout, self._verifier_factory)
+                lk, timeout, self._verifier_factory, parent_split)
 
         f.timeout = timeout
-        f.domtree_leaf_id = lk.domtree_leaf_id()
+        f.domtree_leaf_id = nid
         return f
 
     def _init_results(self, lk):
@@ -294,21 +316,23 @@ class DistributedVerifier:
         return lk
 
     @staticmethod
-    def _verify_fun(lk, timeout, vfactory):
+    def _recheck_tree_paths(lk, v, feat_id):
+        for i in range(lk.num_instances()):
+            num_reach_before = lk.num_unreachable(i)
+            for tree_index in range(len(lk.addtree(i))):
+                lk = DistributedVerifier._check_tree_paths(lk, i, tree_index, v, feat_id)
+            print("_recheck_tree_paths({}): num_unreachable({}): {} -> {}".format(
+                lk.domtree_leaf_id(), i, num_reach_before, lk.num_unreachable(i)))
+        return lk
+
+    @staticmethod
+    def _verify_fun(lk, timeout, vfactory, parent_split = None):
         v = vfactory(lk)
 
-        # TODO re-check reachabilities in other trees due to new constraint
-
-        ## this `ls` is a result of splitting on (instance_index, feat_id)
-        ## check the other trees' reachabilities again!
-        #if split_instance_index != -1 and split_feat_id != -1 and len(ls) > 1:
-        #    for instance_index, lk in enumerate(ls):
-        #        if instance_index == split_instance_index: continue # already done by subspaces
-        #        for tree_index in range(len(addtrees[instance_index])):
-        #            DistributedVerifier._check_tree_paths(addtrees, ls,
-        #                    instance_index, tree_index, v,
-        #                    only_feat_id=split_feat_id)
-        #    # TODO this work is lost if lk does not go back to its subspaces -> done when UNKNOWN
+        # Re-checking reachabilities after split, only for splits involving feat_id
+        if parent_split is not None and lk.num_instances() > 1:
+            feat_id = parent_split[2]
+            lk = DistributedVerifier._recheck_tree_paths(lk, v, feat_id)
 
         v.set_timeout(timeout)
         v.add_all_trees()

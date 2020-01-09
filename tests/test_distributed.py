@@ -151,8 +151,8 @@ class TestDistributedVerifier(unittest.TestCase):
                     stop_when_sat = False)
 
             dv.check()
-            print(json.dumps(dv.results, indent=2, default=repr))
-            print(dt.tree())
+            #print(json.dumps(dv.results, indent=2, default=repr))
+            #print(dt.tree())
             count_with_status = 0
             count_with_sat = 0
             for k, d in dv.results.items():
@@ -176,7 +176,7 @@ class TestDistributedVerifier(unittest.TestCase):
                 for fid1, fid2 in zip(v.instance(0).feat_ids(), v.instance(1).feat_ids()):
                     v.add_constraint(v.xvar(fid1, instance=0) == v.xvar(fid2, instance=1))
 
-                v.add_constraint(v.fvar(instance=1).get() - v.fvar(instance=0).get() < 99999)
+                v.add_constraint(v.fvar(instance=1).get() - v.fvar(instance=0).get() < 9999)
 
                 return v
 
@@ -186,15 +186,16 @@ class TestDistributedVerifier(unittest.TestCase):
             N = 10
             at0 = AddTree.read("tests/models/xgb-img-easy.json")
             at1 = AddTree.read("tests/models/xgb-img-easy.json")
-            at1.base_score = 100000
+            at1.base_score = 10000
             dt = DomTree([(at0, {}), (at1, {})])
             dv = DistributedVerifier(client, dt, VFactory(),
-                    check_paths = False,
+                    check_paths = True,
                     num_initial_tasks = N,
                     stop_when_sat = False)
 
             dv.check()
-            print(json.dumps(dv.results, indent=2, default=str))
+            #print(json.dumps(dv.results, indent=2, default=str))
+            #print(dt.tree())
             count_with_status = 0
             count_with_sat = 0
             for k, d in dv.results.items():
