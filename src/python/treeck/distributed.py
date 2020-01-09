@@ -122,10 +122,7 @@ class DistributedVerifier:
                     self._stop_flag = False
                 break
 
-            if len(self._fs) <= min(1, self._nworkers // 2):
-                wait(self._fs, return_when="FIRST_COMPLETED")
-            else:
-                time.sleep(1.0) # just check every now and then
+            wait(self._fs, return_when="FIRST_COMPLETED")
 
             next_fs = []
             for f in self._fs:
