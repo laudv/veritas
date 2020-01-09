@@ -364,23 +364,24 @@ namespace treeck {
         if (leaf.best_split_)
         {
             DomTreeSplit split = *leaf.best_split_;
-            
-            DomTreeInstance& inst0 = instances_.at(split.instance_index);
-            DomTreeLeafInstance& inst1 = leaf.instances_.at(split.instance_index);
 
             auto node = tree_[leaf_id];
-            const AddTree& addtree = *inst0.addtree;
 
             if (!node.is_leaf())
                 throw std::runtime_error("DomTree::apply_leaf: split on non-leaf");
 
             node.split(*leaf.best_split_);
 
-            auto& is_reachables = inst0.is_reachables;
+            // duplicate is_reachable for the new leafs
+            for (size_t i = 0; i < num_instances(); ++i)
+            {
+                auto& is_reachables0 = instances_.at(i).is_reachables;
+                DomTreeLeafInstance& inst1 = leaf.instances_.at(i);
 
-            is_reachables.erase(node.id()); // might be old! -> mark_unreachable
-            is_reachables.emplace(node.left().id(), inst1.is_reachable); // copy once
-            is_reachables.emplace(node.right().id(), std::move(inst1.is_reachable)); // reuse for right
+                is_reachables0.erase(node.id()); // might be old! -> mark_unreachable
+                is_reachables0.emplace(node.left().id(), inst1.is_reachable); // copy once
+                is_reachables0.emplace(node.right().id(), std::move(inst1.is_reachable)); // reuse for right
+            }
 
             Domain dom_l, dom_r;
             FeatId feat_id;
@@ -396,9 +397,13 @@ namespace treeck {
                 split.split
             );
 
-            auto& is_reachable_l = is_reachables.at(node.left().id());
+            // update is_reachable for instance (addtree) where the best split was found
+            // the split only affects the values of that instance (we don't
+            // know about the additional constraints here).
+            auto& is_reachables0 = instances_.at(split.instance_index).is_reachables;
+            auto& is_reachable_l = is_reachables0.at(node.left().id());
             update_is_reachable(split.instance_index, node.left().id(), feat_id, dom_l);
-            auto& is_reachable_r = is_reachables.at(node.right().id());
+            auto& is_reachable_r = is_reachables0.at(node.right().id());
             update_is_reachable(split.instance_index, node.right().id(), feat_id, dom_r);
         }
 
@@ -412,7 +417,7 @@ namespace treeck {
         const AddTree& addtree = *inst.addtree;
         IsReachable& is_reachable = inst.is_reachables.at(domtree_leaf_id);
 
-        auto f = [&is_reachable]( // mark all marked nodes unreachable 
+        auto f = [&is_reachable]( // mark all marked nodes unreachable
                 size_t tree_index,
                 AddTree::TreeT::CRef node,
                 bool marked)
@@ -448,7 +453,7 @@ namespace treeck {
         , instances_(std::move(instances))
         , best_split_{} {}
 
-    //void 
+    //void
     //DomTreeLeaf::set_addtree(size_t instance, AddTree& addtree)
     //{
     //    instances_.at(instance).addtree = &addtree;
@@ -644,7 +649,7 @@ namespace treeck {
         //    << ", score=" << max_score
         //    << ", balance=" << min_balance
         //    << std::endl;
-        
+
         return has_improved;
     }
 
@@ -780,7 +785,7 @@ namespace treeck {
                cereal::make_nvp("score", score),
                cereal::make_nvp("balance", balance));
         }
-        DomTreeLeaf leaf(id, std::move(instances)); 
+        DomTreeLeaf leaf(id, std::move(instances));
         leaf.score = score;
         leaf.balance = balance;
         leaf.best_split_.swap(best_split);
