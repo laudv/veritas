@@ -47,7 +47,7 @@ class DistributedVerifier:
             verifier_factory,
             check_paths = True,
             num_initial_tasks = 1,
-            stop_when_sat = False,
+            stop_when_num_sats = 1,
             add_domain_constraints = True,
             timeout_start = 30,
             timeout_max = 600,
@@ -68,7 +68,7 @@ class DistributedVerifier:
 
         self._check_paths_opt = check_paths
         self._num_initial_tasks_opt = num_initial_tasks
-        self._stop_when_sat_opt = stop_when_sat
+        self._stop_when_num_sats_opt = stop_when_num_sats
 
         self._stop_flag = False
         self._print_queue = []
@@ -76,6 +76,7 @@ class DistributedVerifier:
     def check(self):
         self.done_count = 0
         self.start_time = timeit.default_timer()
+        self.sat_count = 0
 
         self._fs = []
         self.results = {}
@@ -228,7 +229,8 @@ class DistributedVerifier:
             self.done_count += 1
             model = t[3]
             self.results[f.domtree_leaf_id]["model"] = model
-            if status.is_sat() and self._stop_when_sat_opt:
+            if status.is_sat(): self.sat_count += 1
+            if self.sat_count >= self._stop_when_num_sats_opt:
                 self._stop_flag = True
             return []
 

@@ -113,7 +113,7 @@ class TestDistributedVerifier(unittest.TestCase):
             dv = DistributedVerifier(client, dt, VFactory(),
                     check_paths = True,
                     num_initial_tasks = N,
-                    stop_when_sat = False)
+                    stop_when_num_sats = N)
 
             dv.check()
             print(json.dumps(dv.results, indent=2, default=str))
@@ -146,7 +146,7 @@ class TestDistributedVerifier(unittest.TestCase):
                     check_paths = False,
                     num_initial_tasks = N,
                     timeout_start = 5.0,
-                    stop_when_sat = False)
+                    stop_when_num_sats = N)
 
             dv.check()
             #print(json.dumps(dv.results, indent=2, default=repr))
@@ -188,7 +188,7 @@ class TestDistributedVerifier(unittest.TestCase):
             dv = DistributedVerifier(client, dt, VFactory(),
                     check_paths = True,
                     num_initial_tasks = N,
-                    stop_when_sat = False)
+                    stop_when_num_sats = N)
 
             dv.check()
             #print(json.dumps(dv.results, indent=2, default=str))
