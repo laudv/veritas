@@ -1,4 +1,4 @@
-import timeit, math
+import timeit, math, time
 
 from dask.distributed import wait
 
@@ -58,6 +58,7 @@ class DistributedVerifier:
         self._timeout_start = float(timeout_start)
         self._timeout_max = float(timeout_max)
         self._timeout_rate = float(timeout_grow_rate)
+        self._nworkers = sum(client.nthreads().values())
 
         self._client = client # dask client
         self._domtree = domtree
@@ -93,6 +94,9 @@ class DistributedVerifier:
                 for i in range(l0.num_instances())]
         self.results[0] = self._init_results(l0)
 
+        self._print("num_leafs {}".format(self.results["num_leafs"]))
+        self._print_flush()
+
         # 2: splits until we have a piece of work for each worker
         if self._num_initial_tasks_opt > 1:
             t0 = timeit.default_timer()
@@ -118,7 +122,11 @@ class DistributedVerifier:
                     self._stop_flag = False
                 break
 
-            wait(self._fs, return_when="FIRST_COMPLETED")
+            if len(self._fs) <= min(1, self._nworkers // 2):
+                wait(self._fs, return_when="FIRST_COMPLETED")
+            else:
+                time.sleep(1.0) # just check every now and then
+
             next_fs = []
             for f in self._fs:
                 if f.done(): next_fs += self._handle_done_future(f)
@@ -132,6 +140,9 @@ class DistributedVerifier:
     def _check_paths(self, l0):
         num_unreachable_before = [l0.num_unreachable(i) for i in range(l0.num_instances())]
 
+        self._print("checking paths")
+        self._print_flush()
+
         # update reachabilities in domtree root leaf 0 in parallel
         fs = []
         for instance_index in range(l0.num_instances()):
@@ -139,18 +150,15 @@ class DistributedVerifier:
                 f = self._client.submit(DistributedVerifier._check_tree_paths,
                         l0, instance_index, tree_index, self._verifier_factory)
                 fs.append(f)
+
         wait(fs)
-        for f in fs:
-            if not f.done():
-                raise RuntimeError("future not done?")
-            if f.exception():
-                raise f.exception() from RuntimeError("exception on worker")
 
         l0 = DomTreeLeaf.merge([f.result() for f in fs])
         num_unreachable_after = [l0.num_unreachable(i) for i in range(l0.num_instances())]
 
         self._print("check_paths({}): {} -> {}".format(l0.domtree_leaf_id(),
             num_unreachable_before, num_unreachable_after))
+        self._print_flush()
 
         return l0
 
@@ -169,10 +177,7 @@ class DistributedVerifier:
                     max_lk = lk
 
             if max_lk is None:
-                self._print("no more splits -> UNSAT")
-                self._stop_flag = True
-                #raise RuntimeError("no more splits!")
-                return lks
+                raise RuntimeError("no more splits!")
 
             lks.remove(max_lk)
             lks += self._split_domtree(max_lk, True)
@@ -212,26 +217,27 @@ class DistributedVerifier:
 
     def _handle_done_future(self, f):
         t = f.result()
-        status, check_time = t[0], t[1]
+        status, check_time, num_leafs = t[0], t[1], t[2]
 
-        self._print("{} for domtree leaf {} in {:.2f}s (timeout={:.1f}s)".format(status,
-            f.domtree_leaf_id, check_time, f.timeout))
+        self._print("{} for l{} in {:.2f}s (timeout={:.1f}s, #leafs={})".format(status,
+            f.domtree_leaf_id, check_time, f.timeout, num_leafs))
 
         self.results[f.domtree_leaf_id]["status"] = status
         self.results[f.domtree_leaf_id]["check_time"] = check_time
+        self.results[f.domtree_leaf_id]["num_leafs"] = num_leafs
 
         # We're finished with this branch!
         if status != Verifier.Result.UNKNOWN:
             self.done_count += 1
-            model = t[2]
+            model = t[3]
             self.results[f.domtree_leaf_id]["model"] = model
             if status.is_sat() and self._stop_when_sat_opt:
                 self._stop_flag = True
             return []
 
         else: # We timed out, split and try again
-            lk = t[2]
-            self._print(f" - timeout, num_unreachable {[lk.num_unreachable(i) for i in range(lk.num_instances())]}")
+            lk = t[3]
+            self.results[f.domtree_leaf_id]["num_unreachable_after"] = self._num_unreachable(lk)
             next_timeout = min(self._timeout_max, self._timeout_rate * f.timeout)
 
             new_lks = self._split_domtree(lk, False)
@@ -247,7 +253,7 @@ class DistributedVerifier:
         tree = self._domtree.tree()
         parent_split = None
 
-        if not tree.is_root(nid):
+        if not tree.is_root(nid) and self._check_paths_opt:
             pid = tree.parent(nid)
             parent_split = tree.get_split(pid)
 
@@ -260,8 +266,9 @@ class DistributedVerifier:
 
     def _init_results(self, lk):
         return {
-            "num_unreachable": self._num_unreachable(lk),
-            "bounds": self._tree_bounds(lk)
+            "num_unreachable_before": self._num_unreachable(lk),
+            "bounds": self._tree_bounds(lk),
+            "domains": [lk.get_domains(i) for i in range(lk.num_instances())]
         }
 
     def _num_unreachable(self, lk):
@@ -336,6 +343,7 @@ class DistributedVerifier:
 
         v.set_timeout(timeout)
         v.add_all_trees()
+        num_leafs = [v.instance(i).leaf_count for i in range(lk.num_instances())]
         try:
             status = v.check()
             model = {}
@@ -343,11 +351,11 @@ class DistributedVerifier:
                 model = v.model()
                 model["family"] = v.model_family(model)
 
-            return status, v.check_time, model
+            return status, v.check_time, num_leafs, model
 
         except VerifierTimeout as e:
             lk.find_best_split()
 
             print(f"timeout after {e.unk_after} (timeout = {timeout}) best split = {lk.get_best_split()}")
 
-            return Verifier.Result.UNKNOWN, v.check_time, lk
+            return Verifier.Result.UNKNOWN, v.check_time, num_leafs, lk

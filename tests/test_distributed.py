@@ -107,7 +107,6 @@ class TestDistributedVerifier(unittest.TestCase):
 
         with Client(dask_scheduler) as client:
             client.restart()
-            nworkers = sum(client.nthreads().values())
             N = 10
             at = AddTree.read("tests/models/xgb-img-easy.json")
             dt = DomTree(at, {})
@@ -140,7 +139,6 @@ class TestDistributedVerifier(unittest.TestCase):
 
         with Client(dask_scheduler) as client:
             client.restart()
-            nworkers = sum(client.nthreads().values())
             N = 10
             at = AddTree.read("tests/models/xgb-mnist-bin-yis1-intermediate.json")
             dt = DomTree(at, {})
@@ -182,7 +180,6 @@ class TestDistributedVerifier(unittest.TestCase):
 
         with Client(dask_scheduler) as client:
             client.restart()
-            nworkers = sum(client.nthreads().values())
             N = 10
             at0 = AddTree.read("tests/models/xgb-img-easy.json")
             at1 = AddTree.read("tests/models/xgb-img-easy.json")

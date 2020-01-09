@@ -393,6 +393,7 @@ class AddTreeInstance:
         self._v.add_constraint(fexpr == self.fvar())
 
         self._splits = None
+        self.leaf_count = 0
 
     def xvar(self, feat_id):
         """ Get the decision variable associated with feature `feat_id`. """
@@ -472,6 +473,7 @@ class AddTreeInstance:
         if tree.is_leaf(node):
             wvar = self._wvars[tree.index()]
             leaf_value = tree.get_leaf_value(node)
+            self.leaf_count += 1
             return self._v._backend.encode_leaf(wvar, leaf_value)
         else:
             tree_index = tree.index()
