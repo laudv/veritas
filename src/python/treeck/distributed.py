@@ -84,31 +84,27 @@ class DistributedVerifier:
         l0 = self._domtree.get_leaf(self._domtree.tree().root())
         if self._check_paths_opt:
             t0 = timeit.default_timer()
-            print("ls?", ls, "waar is ls??")
-            l0 = self._check_paths(ls)
+            l0 = self._check_paths(l0)
             t1 = timeit.default_timer()
             self.results["check_paths_time"] = t1 - t0
 
-        print("#TODO 3")
-        return;
-
-        # split_id => result info per instance + additional info
-        self.results["num_leafs"] = [inst.addtree.num_leafs() for inst in self._instances]
-        self.results[0] = self._init_results(ls)
+        # domtree_node_id => result info per instance + additional info
+        self.results["num_leafs"] = [l0.addtree(i).num_leafs()
+                for i in range(l0.num_instances())]
+        self.results[0] = self._init_results(l0)
 
         # 2: splits until we have a piece of work for each worker
         if self._num_initial_tasks_opt > 1:
             t0 = timeit.default_timer()
-            lss = self._generate_splits(ls, self._num_initial_tasks_opt)
+            lks = self._generate_splits(l0, self._num_initial_tasks_opt)
             t1 = timeit.default_timer()
             self.results["generate_splits_time"] = t1 - t0
         else:
-            lss = [(self._new_split_id(), ls)]
-
+            lks = [l0]
 
         # 3: submit verifier 'check' tasks for each item in `ls`
-        for split_id, ls in lss:
-            f = self._make_verify_future(split_id, ls, self._timeout_start)
+        for lk in lks:
+            f = self._make_verify_future(lk, self._timeout_start)
             self._fs.append(f)
 
         # 4: wait for future to complete, act on result
@@ -148,160 +144,113 @@ class DistributedVerifier:
                 raise f.exception() from RuntimeError("exception on worker")
         return DomTreeLeaf.merge([f.result() for f in fs])
 
-    def _generate_splits(self, ls, ntasks):
+    def _generate_splits(self, l0, ntasks):
         # split domtrees until we have ntask `Subspace`s; this runs locally
-        lss = [(self._new_split_id(), ls)]
-        for instance_index, lk in enumerate(ls):
-            lk.find_best_domtree_split(self._instances[instance_index].addtree)
+        l0.find_best_split()
+        lks = [l0]
 
-        while len(lss) < ntasks:
-            print(list(map(lambda ls: list(map(lambda lk: lk.domtree_node_id(), ls[1])), lss)))
+        while len(lks) < ntasks:
             max_score = 0
-            max_instance_index = -1
-            max_ls = None
-            max_split_id = -1
+            max_lk = None
 
-            for split_id, ls in lss:
-                for instance_index, lk in enumerate(ls):
-                    if lk.split_score > max_score:
-                        max_score = lk.split_score
-                        max_instance_index = instance_index
-                        max_ls = ls
-                        max_split_id = split_id
+            for lk in lks:
+                if lk.score > max_score:
+                    max_score = lk.score
+                    max_lk = lk
 
-            if max_ls is None:
+            if max_lk is None:
                 raise RuntimeError("no more splits!")
 
-            print("max: ", max_instance_index, max_ls[max_instance_index].domtree_node_id(),
-                    list(map(lambda lk: lk.domtree_node_id(), max_ls)))
+            lks.remove(max_lk)
+            lks += self._split_domtree(max_lk, True)
 
-            lss.remove((max_split_id, max_ls))
-            lss += self._split_domtree(max_split_id, max_ls, max_instance_index, True)
-        return lss
+            self._print_flush()
+        return lks
 
-    def _split_domtree(self, split_id, ls, max_instance_index, find_best_domtree_split):
-        lk = ls[max_instance_index]
-        inst = self._instances[max_instance_index]
-        nid = lk.domtree_node_id()
+    def _split_domtree(self, lk, find_best_split):
+        nid = lk.domtree_leaf_id()
         split = lk.get_best_split()
-        split_score = lk.split_score
-        split_balance = lk.split_balance
+        score, balance = lk.score, lk.balance
 
-        for instk in self._instances:
-            print(instk.subspaces.domtree())
+        self._domtree.apply_leaf(lk) # lk's fields are invalid after .split(lk)
 
-        print("splitting", max_instance_index, lk.domtree_node_id())
-        inst.subspaces.split(lk) # lk's fields are invalid after .split(lk)
+        l, r = self._domtree.tree().left(nid), self._domtree.tree().right(nid)
+        lk_l = self._domtree.get_leaf(l)
+        lk_r = self._domtree.get_leaf(r)
 
-        domtree = inst.subspaces.domtree()
-        l, r = domtree.left(nid), domtree.right(nid)
-        lk_l = inst.subspaces.get_subspace(l)
-        lk_r = inst.subspaces.get_subspace(r)
+        if find_best_split:
+            lk_l.find_best_split()
+            lk_r.find_best_split()
 
-        if find_best_domtree_split:
-            lk_l.find_best_domtree_split(inst.addtree)
-            lk_r.find_best_domtree_split(inst.addtree)
+        self.results[nid]["split"] = split
+        self.results[nid]["score"] = score
+        self.results[nid]["balance"] = balance
+        self.results[nid]["children"] = [l, r]
 
-        split_id_l = self._new_split_id()
-        split_id_r = self._new_split_id()
-        ls_l = ls.copy(); ls_l[max_instance_index] = lk_l
-        ls_r = ls.copy(); ls_r[max_instance_index] = lk_r
+        self.results[l] = self._init_results(lk_l)
+        self.results[r] = self._init_results(lk_r)
+        self.results[l]["parent"] = nid
+        self.results[r]["parent"] = nid
 
-        self.results[split_id]["split"] = split
-        self.results[split_id]["split_score"] = split_score
-        self.results[split_id]["split_balance"] = split_balance
-        self.results[split_id]["instance_index"] = inst.index
-        self.results[split_id]["domtree_node_id"] = nid
-        self.results[split_id]["next_split_ids"] = [split_id_l, split_id_r]
+        self._print("SPLIT l{}: {} into {}, {}, score {} ".format(
+            nid, split, l, r, score))
 
-        self.results[split_id_l] = self._init_results(ls_l)
-        self.results[split_id_r] = self._init_results(ls_r)
-        self.results[split_id_l]["prev_split_id"] = split_id
-        self.results[split_id_r]["prev_split_id"] = split_id
-
-        self._print("SPLIT {}:{} {} into {}, {}, score {} ".format(
-            inst.index, nid, lk.get_best_split(), l, r, split_score))
-
-        return [(split_id_l, ls_l), (split_id_r, ls_r)]
+        return [lk_l, lk_r]
 
     def _handle_done_future(self, f):
         t = f.result()
         status, check_time = t[0], t[1]
 
-        self._print("{} for task {} in {:.2f}s (timeout={:.1f}s)".format(status,
-            f.split_id, check_time, f.timeout))
+        self._print("{} for domtree leaf {} in {:.2f}s (timeout={:.1f}s)".format(status,
+            f.domtree_leaf_id, check_time, f.timeout))
 
-        self.results[f.split_id]["status"] = status
-        self.results[f.split_id]["check_time"] = check_time
-        self.results[f.split_id]["split_id"] = f.split_id
+        self.results[f.domtree_leaf_id]["status"] = status
+        self.results[f.domtree_leaf_id]["check_time"] = check_time
 
         # We're finished with this branch!
         if status != Verifier.Result.UNKNOWN:
             self.done_count += 1
             model = t[2]
-            self.results[f.split_id]["model"] = model
+            self.results[f.domtree_leaf_id]["model"] = model
             if status.is_sat() and self._stop_when_sat_opt:
                 self._stop_flag = True
             return []
 
         else: # We timed out, split and try again
-            ls = t[2]
+            lk = t[2]
             next_timeout = min(self._timeout_max, self._timeout_rate * f.timeout)
 
-            max_score = 0
-            max_instance_index = -1
-            for instance_index, lk in enumerate(ls):
-                if lk.split_score > max_score:
-                    max_score = lk.split_score
-                    max_instance_index = instance_index
-
-            new_ls = self._split_domtree(f.split_id, ls, max_instance_index, False)
-            new_fs = [self._make_verify_future(sid, ls, next_timeout) for sid, ls in new_ls]
+            new_lks = self._split_domtree(lk, False)
+            new_fs = [self._make_verify_future(lk, next_timeout) for lk in new_lks]
 
             return new_fs
 
 
 
 
-    def _new_split_id(self):
-        split_id = self._split_id
-        self._split_id += 1
-        return split_id
-
-    def _make_verify_future(self, split_id, ls, timeout):
-        split_instance_index, split_feat_id = -1, 1
-        if "prev_split_id" in self.results[split_id] \
-                and self._verifier_factory.add_domain_constraints_opt \
-                and self._check_paths_opt:
-            prev_split_id = self.results[split_id]["prev_split_id"]
-            split = self.results[prev_split_id]["split"]
-            split_instance_index = self.results[prev_split_id]["instance_index"]
-
+    def _make_verify_future(self, lk, timeout):
         f = self._client.submit(DistributedVerifier._verify_fun,
-                self._addtrees_fut, ls, timeout,
-                self._verifier_factory,
-                split_instance_index, split_feat_id)
+                lk, timeout, self._verifier_factory)
 
         f.timeout = timeout
-        f.split_id = split_id
-        self._split_id += 1
+        f.domtree_leaf_id = lk.domtree_leaf_id()
         return f
 
-    def _init_results(self, ls):
+    def _init_results(self, lk):
         return {
-            "num_unreachable": self._num_unreachable(ls),
-            "bounds": self._tree_bounds(ls)
+            "num_unreachable": self._num_unreachable(lk),
+            "bounds": self._tree_bounds(lk)
         }
 
-    def _num_unreachable(self, ls):
-        return sum(map(lambda lk: lk.num_unreachable(), ls))
+    def _num_unreachable(self, lk):
+        return sum(map(lambda i: lk.num_unreachable(i), range(lk.num_instances())))
 
-    def _tree_bounds(self, ls):
+    def _tree_bounds(self, lk):
         bounds = []
-        for at, lk in zip(self._addtrees, ls):
+        for i in range(lk.num_instances()):
             lo, hi = 0.0, 0.0
-            for tree_index in range(len(at)):
-                bnds = lk.get_tree_bounds(at, tree_index)
+            for tree_index in range(len(lk.addtree(i))):
+                bnds = lk.get_tree_bounds(i, tree_index)
                 lo += bnds[0]
                 hi += bnds[1]
             bounds.append((lo, hi))
@@ -345,22 +294,21 @@ class DistributedVerifier:
         return lk
 
     @staticmethod
-    def _verify_fun(addtrees, ls, timeout, vfactory,
-            split_instance_index = -1, split_feat_id = -1):
-        v = vfactory(addtrees, ls)
+    def _verify_fun(lk, timeout, vfactory):
+        v = vfactory(lk)
 
         # TODO re-check reachabilities in other trees due to new constraint
 
-        # this `ls` is a result of splitting on (instance_index, feat_id)
-        # check the other trees' reachabilities again!
-        if split_instance_index != -1 and split_feat_id != -1 and len(ls) > 1:
-            for instance_index, lk in enumerate(ls):
-                if instance_index == split_instance_index: continue # already done by subspaces
-                for tree_index in range(len(addtrees[instance_index])):
-                    DistributedVerifier._check_tree_paths(addtrees, ls,
-                            instance_index, tree_index, v,
-                            only_feat_id=split_feat_id)
-            # TODO this work is lost if lk does not go back to its subspaces
+        ## this `ls` is a result of splitting on (instance_index, feat_id)
+        ## check the other trees' reachabilities again!
+        #if split_instance_index != -1 and split_feat_id != -1 and len(ls) > 1:
+        #    for instance_index, lk in enumerate(ls):
+        #        if instance_index == split_instance_index: continue # already done by subspaces
+        #        for tree_index in range(len(addtrees[instance_index])):
+        #            DistributedVerifier._check_tree_paths(addtrees, ls,
+        #                    instance_index, tree_index, v,
+        #                    only_feat_id=split_feat_id)
+        #    # TODO this work is lost if lk does not go back to its subspaces -> done when UNKNOWN
 
         v.set_timeout(timeout)
         v.add_all_trees()
@@ -374,9 +322,8 @@ class DistributedVerifier:
             return status, v.check_time, model
 
         except VerifierTimeout as e:
-            print(f"timeout after {e.unk_after} (timeout = {timeout}) finding best split...")
-            for instance_index, lk in enumerate(ls):
-                if not lk.has_best_split():
-                    lk.find_best_domtree_split(addtrees[instance_index])
+            lk.find_best_split()
 
-            return Verifier.Result.UNKNOWN, v.check_time, ls
+            print(f"timeout after {e.unk_after} (timeout = {timeout}) best split = {lk.get_best_split()}")
+
+            return Verifier.Result.UNKNOWN, v.check_time, lk
