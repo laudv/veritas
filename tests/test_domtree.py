@@ -103,6 +103,9 @@ class TestDomTree(unittest.TestCase):
         print("num of kb", nbytes2)
         self.assertLess(nbytes2, 2*nbytes1)
 
+        l0.find_best_split()
+        print(l0.get_best_split())
+
         l0c = pickle.loads(pickle.dumps(l0))
         self.assertEqual(l0c.num_instances(), 2)
         self.assertEqual(l0.get_domains(0), {})
@@ -110,7 +113,13 @@ class TestDomTree(unittest.TestCase):
         self.assertNotEqual(l0.get_domains(1), {})
         self.assertNotEqual(l0c.get_domains(1), {})
         self.assertEqual(l0c.get_domains(1), l0.get_domains(1))
-        self.assertEqual(nbytes2, len(pickle.dumps(l0c)))
+        #self.assertEqual(nbytes2, len(pickle.dumps(l0c)))
+        self.assertLess(abs(nbytes2-len(pickle.dumps(l0c))), 100)
+        print(l0c.get_best_split())
+        self.assertNotEqual(l0c.get_best_split(), None)
+        self.assertEqual(l0.get_best_split(), l0c.get_best_split())
+        self.assertEqual(l0.score, l0c.score)
+        self.assertEqual(l0.balance, l0c.balance)
 
     def test_get_domains1(self):
         at = AddTree()

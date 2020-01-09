@@ -614,14 +614,14 @@ namespace treeck {
                 int score = unreachable_l + unreachable_r;
                 int balance = std::abs(unreachable_l - unreachable_r);
 
-                std::cout
-                    << "instance=" << i
-                    << ", tree_index=" << tree_index
-                    << ", split=" << node.get_split()
-                    << ", score=" << score
-                    << ", (" << unreachable_l << ", " << unreachable_r << ")"
-                    << ", balance=" << balance
-                    << std::endl;
+                //std::cout
+                //    << "instance=" << i
+                //    << ", tree_index=" << tree_index
+                //    << ", split=" << node.get_split()
+                //    << ", score=" << score
+                //    << ", (" << unreachable_l << ", " << unreachable_r << ")"
+                //    << ", balance=" << balance
+                //    << std::endl;
 
                 if (score >= max_score)
                 if (score > max_score || min_balance > balance)
@@ -637,13 +637,13 @@ namespace treeck {
             ++tree_index;
         }
 
-        std::cout
-            << "best split l" << domtree_leaf_id_
-            << ", instance=" << i
-            << ", split=" << max_split
-            << ", score=" << max_score
-            << ", balance=" << min_balance
-            << std::endl;
+        //std::cout
+        //    << "best split l" << domtree_leaf_id_
+        //    << ", instance=" << i
+        //    << ", split=" << max_split
+        //    << ", score=" << max_score
+        //    << ", balance=" << min_balance
+        //    << std::endl;
         
         return has_improved;
     }
@@ -783,6 +783,7 @@ namespace treeck {
         DomTreeLeaf leaf(id, std::move(instances)); 
         leaf.score = score;
         leaf.balance = balance;
+        leaf.best_split_.swap(best_split);
         return leaf;
     }
 
