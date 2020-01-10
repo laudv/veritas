@@ -1,4 +1,5 @@
 import graphviz as gv
+from . import LtSplit, BoolSplit
 
 class TreePlot:
 
@@ -88,19 +89,18 @@ class TreePlot:
                     self.g.edge(self.name(btree.parent(bnode)), self.name(bnode), color="gray")
 
     def get_split_label(self, split, feat_labels=None):
-        if isinstance(split[0], int): # its a domtree with splits (instance, type, feat_id, ...)
+        if isinstance(split, tuple): # its a domtree with splits (instance, type, feat_id, ...)
             instance = split[0]
             prefix = f"({instance}) "
-            split = split[1:]
+            split = split[1]
         else: prefix = ""
 
-        feat_id = split[1]
-        fname = f"X{feat_id}"
+        fname = f"X{split.feat_id}"
         if feat_labels is not None:
-            fname = feat_labels[feat_id]
-        if split[0] == "lt":
-            return "{}{} < {:.3f}".format(prefix, fname, split[2])
-        if split[0] == "bool":
+            fname = feat_labels[split.feat_id]
+        if isinstance(split, LtSplit):
+            return "{}{} < {:.3f}".format(prefix, fname, split.split_value)
+        if isinstance(split, BoolSplit):
             return "{}{}".format(prefix, fname)
 
     def add_domtree_leaf(self, instance, tree, dtleaf):

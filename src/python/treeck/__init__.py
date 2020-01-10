@@ -33,14 +33,14 @@ BoolDomain.__hash__ = __booldomain__hash
 def __tree_predict_leaf(self, example):
     node = self.root()
     while not self.is_leaf(node):
-        split = self.get_split(node) # ("lt", feat_id, split_value) OR ("bool", feat_id)
-        value = example[split[1]]
-        if split[0] == "lt":
+        split = self.get_split(node)
+        value = example[split.feat_id]
+        if isinstance(split, LtSplit):
             #assert isinstance(value, float), f"is {type(value)} instead"
-            go_left = value < split[2]
-        elif split[0] == "bool": # false left, true right
+            go_left = split.test(value)
+        elif isinstance(split, BoolSplit):
             #assert isinstance(value, bool), f"is {type(value)} instead"
-            go_left = not value
+            go_left = split.test(value)
         node = self.left(node) if go_left else self.right(node)
     return node
 
@@ -66,9 +66,16 @@ def __addtree_predict_single(self, example):
     return result
 
 def __addtree_predict(self, examples):
+    it = enumerate(examples)
+    try:
+        import pandas as pd
+        if isinstance(examples, pd.DataFrame):
+            it = examples.iterrows()
+    except: pass
+
     predictions = []
     #print("predicting...", end="")
-    for i, example in enumerate(examples):
+    for i, example in it:
         #print("\rpredicting...", i, "/", len(examples), end="")
         predictions.append(self.predict_single(example))
     #print("\rdone                    ")
@@ -108,13 +115,12 @@ class AddTreeFeatureTypes:
         if not tree.is_internal(node): return
 
         split = tree.get_split(node)
-        split_type = split[0]
-        feat_id = split[1]
+        split_type = type(split)
 
-        if feat_id in self._types and self._types[feat_id] != split_type:
-            raise RuntimeError(f"AddTree split type error for feat_id {feat_id}")
+        if split.feat_id in self._types and self._types[split.feat_id] != split_type:
+            raise RuntimeError(f"AddTree split type error for feat_id {split.feat_id}")
 
-        self._types[feat_id] = split_type
+        self._types[split.feat_id] = split_type
 
         if not tree.is_leaf(l): self._check_types(tree, l)
         if not tree.is_leaf(r): self._check_types(tree, r)

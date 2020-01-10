@@ -132,7 +132,7 @@ namespace treeck {
     BoolDomain::split() const
     {
         if (!is_everything()) throw std::runtime_error("cannot split BoolDomain");
-        return {false, true};
+        return {true, false};
     }
 
 

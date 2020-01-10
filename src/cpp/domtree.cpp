@@ -66,11 +66,11 @@ namespace treeck {
                 if (bnew_dom.is_everything())
                     throw std::runtime_error("stupid BoolSplit");
 
-                // false goes left, true goes right
-                if (bnew_dom.is_true())
-                    marked_l = true;
-                if (bnew_dom.is_false())
-                    marked_r = true;
+                bool value = bnew_dom.is_true();
+                if (BoolSplit().test(value))
+                    marked_r = true; // r blocked because test goes left
+                else
+                    marked_l = true; // l blocked because test goes right
             },
             node.get_split());
 
@@ -291,7 +291,7 @@ namespace treeck {
                     FloatT sval = s.split_value;
                     if (child_node.is_left_child())
                     {
-                        if (dom.hi > sval) dom.hi = sval;
+                        if (dom.hi > sval) dom.hi = sval; // TODO ensure this is consistent with Split::test
                     }
                     else
                     {
@@ -600,8 +600,8 @@ namespace treeck {
                         duplicates[split.feat_id]; // use duplicates as set for bool attributes
 
                         // TODO remove check
-                        if (duplicates.find(split.feat_id) == duplicates.end())
-                            throw std::runtime_error("assertion fail");
+                        //if (duplicates.find(split.feat_id) == duplicates.end())
+                        //    throw std::runtime_error("assertion fail");
 
                         std::tie(dom_l, dom_r) = BoolDomain().split();
 

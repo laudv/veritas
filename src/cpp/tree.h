@@ -34,7 +34,7 @@ namespace treeck {
 
         LtSplit();
         LtSplit(FeatId feat_id, ValueT split_value);
-        bool test(ValueT value) const;
+        bool test(ValueT value) const; // true goes left, false goes right
 
         template<typename Archive>
         void serialize(Archive& archive);
@@ -47,7 +47,7 @@ namespace treeck {
 
         EqSplit();
         EqSplit(FeatId feat_id, ValueT category);
-        bool test(ValueT value) const;
+        bool test(ValueT value) const; // true goes left, false goes right
 
         template<typename Archive>
         void serialize(Archive& archive);
@@ -59,7 +59,7 @@ namespace treeck {
 
         BoolSplit();
         BoolSplit(FeatId feat_id);
-        bool test(ValueT value) const;
+        bool test(ValueT value) const; // true goes left, false goes right
 
         template<typename Archive>
         void serialize(Archive& archive);

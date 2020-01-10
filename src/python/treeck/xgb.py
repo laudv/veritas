@@ -36,8 +36,15 @@ def _parse_tree(at, tree_dump, feat2id_map):
                 tree.split(node, feat_id) # binary split
 
             # let's hope the ordering of "children" is [left,right]
-            stack.append((tree.right(node), node_json["children"][1]))
-            stack.append((tree.left(node), node_json["children"][0]))
+            left_id = node_json["yes"]
+            right_id = node_json["no"]
+            if "missing" in node_json:
+                assert node_json["missing"] == left_id, "XGB sparse not supported, set missing=None"
+
+            children = { child["nodeid"]: child for child in node_json["children"] }
+
+            stack.append((tree.right(node), children[right_id]))
+            stack.append((tree.left(node), children[left_id]))
         else:
             leaf_value = node_json["leaf"]
             tree.set_leaf_value(node, leaf_value)

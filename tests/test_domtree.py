@@ -25,7 +25,7 @@ class TestDomTree(unittest.TestCase):
         self.assertTrue(dt.get_root_domain(0, 0) is None)
         l0 = dt.get_leaf(0)
         l0.find_best_split()
-        self.assertEqual(l0.get_best_split(), (0, "lt", 0, 2))
+        self.assertEqual(l0.get_best_split(), (0, LtSplit(0, 2)))
         self.assertEqual(l0.score, 4)   # 2 leafs left, 2 right
         self.assertEqual(l0.balance, 0) # perfectly balanced
         m, M = l0.get_tree_bounds(0, 0)
@@ -79,7 +79,7 @@ class TestDomTree(unittest.TestCase):
         self.assertEqual(M, 2.0)
 
         l0.find_best_split()
-        self.assertEqual(l0.get_best_split(), (0, "lt", 0, 1))
+        self.assertEqual(l0.get_best_split(), (0, LtSplit(0, 1)))
         self.assertEqual(l0.score, 2)
         self.assertEqual(l0.balance, 0)
         dt.apply_leaf(l0)
@@ -156,11 +156,11 @@ class TestDomTree(unittest.TestCase):
         dt = DomTree(at, {})
         l0 = dt.get_leaf(0);
         l0.find_best_split();
-        self.assertEqual(l0.get_best_split(), (0,"bool", 0))
+        self.assertEqual(l0.get_best_split(), (0, BoolSplit(0)))
         dt.apply_leaf(l0)
 
-        self.assertEqual(dt.get_leaf(1).get_domains(0), {0: BoolDomain(False)})
-        self.assertEqual(dt.get_leaf(2).get_domains(0), {0: BoolDomain(True)})
+        self.assertEqual(dt.get_leaf(1).get_domains(0), {0: BoolDomain(True)})
+        self.assertEqual(dt.get_leaf(2).get_domains(0), {0: BoolDomain(False)})
 
     def test_two_trees(self):
         at = AddTree()
@@ -190,12 +190,12 @@ class TestDomTree(unittest.TestCase):
         dt = DomTree(at, {})
         l0 = dt.get_leaf(0)
         l0.find_best_split()
-        self.assertEqual(l0.get_best_split(), (0, "lt", 0, 3.0))
+        self.assertEqual(l0.get_best_split(), (0, LtSplit(0, 3.0)))
         self.assertEqual(l0.score, 9)
         self.assertEqual(l0.balance, 1)
         l0.mark_unreachable(0, 1, 2)
         l0.find_best_split()
-        self.assertEqual(l0.get_best_split(), (0, "lt", 0, 3.0))
+        self.assertEqual(l0.get_best_split(), (0, LtSplit(0, 3.0)))
         self.assertEqual(l0.score, 6)
         self.assertEqual(l0.balance, 4)
 
@@ -294,7 +294,7 @@ class TestDomTree(unittest.TestCase):
         self.assertEqual(dt.num_instances(), 2)
         l0 = dt.get_leaf(0)
         l0.find_best_split()
-        self.assertEqual(l0.get_best_split(), (1, "lt", 0, 2.0))
+        self.assertEqual(l0.get_best_split(), (1, LtSplit(0, 2.0)))
         self.assertEqual(l0.score, 4)
         self.assertEqual(l0.balance, 0)
 
@@ -335,12 +335,12 @@ class TestDomTree(unittest.TestCase):
     #    #    p.render(f"/tmp/plots/test2-{i}")
 
     def test_img_multisplit(self):
-        def plt(at, ll, lr, instance, split_type, fid, sval):
+        def plt(at, ll, lr, instance, split):
             for i in range(len(at)):
                 p = TreePlot()
                 idl = ll.domtree_leaf_id()
                 idr = lr.domtree_leaf_id()
-                p.g.attr(label=f"X{fid} split at {sval} (ids={idl}, {idr})")
+                p.g.attr(label=f"X{split.feat_id} split at {split.split_value} (ids={idl}, {idr})")
                 p.add_domtree_leaf(instance, at[i], ll)
                 p.add_domtree_leaf(instance, at[i], lr)
                 p.render(f"/tmp/plots/multisplit-{idl}-{idr}-{i}")
@@ -396,13 +396,22 @@ class TestDomTree(unittest.TestCase):
         b0 = l0.get_best_split()
         print("l0", b0)
 
-        self.assertEqual(at[0].get_split(0), b0[1:])
+        self.assertEqual(at[0].get_split(0), b0[1])
 
         dt.apply_leaf(l0)
 
+        print(dt.tree())
+
         l1 = dt.get_leaf(1)
+        l2 = dt.get_leaf(2)
+        self.assertEqual(l1.get_domains(0), {b0[1].feat_id: BoolDomain(True)})
+        self.assertEqual(l2.get_domains(0), {b0[1].feat_id: BoolDomain(False)})
+
         self.assertTrue(l1.is_reachable(0, 0, 1))
         self.assertFalse(l1.is_reachable(0, 0, 2))
+
+        self.assertTrue(l2.is_reachable(0, 0, 2))
+        self.assertFalse(l2.is_reachable(0, 0, 1))
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

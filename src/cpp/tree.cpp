@@ -42,7 +42,7 @@ namespace treeck {
     bool
     BoolSplit::test(BoolSplit::ValueT value) const
     {
-        return value;
+        return value; // true left, false right
     }
 
     bool operator==(const BoolSplit& a, const BoolSplit& b)

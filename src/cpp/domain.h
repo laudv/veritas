@@ -44,6 +44,7 @@ namespace treeck {
         bool covers(const RealDomain& other) const;
         bool covers_strict(const RealDomain& value) const;
 
+        // consistent with Split::test, (left_dom, right_dom)
         std::tuple<RealDomain, RealDomain> split(FloatT value) const;
     };
 
@@ -62,6 +63,7 @@ namespace treeck {
 
         bool contains(bool value) const;
 
+        // consistent with Split::test, (left_dom, right_dom)
         std::tuple<BoolDomain, BoolDomain> split() const;
     };
 

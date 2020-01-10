@@ -40,8 +40,8 @@ class TestTree(unittest.TestCase):
 
         self.assertTrue(tt.is_internal(0))
         self.assertTrue(tt.is_internal(1))
-        self.myAssertAlmostEqual(tt.get_split(0), ("lt", 1, 1.5))
-        self.myAssertAlmostEqual(tt.get_split(1), ("lt", 2, 0.12))
+        self.myAssertAlmostEqual(tt.get_split(0), LtSplit(1, 1.5))
+        self.myAssertAlmostEqual(tt.get_split(1), LtSplit(2, 0.12))
         self.assertTrue(tt.is_leaf(2))
         self.assertTrue(tt.is_leaf(3))
         self.assertTrue(tt.is_leaf(4))
@@ -60,26 +60,28 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.right(t.root())), 4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
 
-        self.assertEqual(t.get_split( t.left(t.root())), ("lt", 1, 1.0))
-        self.assertEqual(t.get_split(t.right(t.root())), ("bool", 2))
+        print(at)
+
+        self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
+        self.assertEqual(t.get_split(t.right(t.root())), BoolSplit(2))
 
         y = at.predict([
             [0.0, 0.5, True], [0.0, 1.5, True],
-            [2.0, 0.5, False], [2.0, 0.5, True]])
+            [2.0, 0.5, True], [2.0, 0.5, False]])
 
         self.assertEqual(y, [1.0, 2.0, 4.0, 8.0])
 
         types = AddTreeFeatureTypes(at)
-        self.assertEqual(types[0], "lt")
-        self.assertEqual(types[1], "lt")
-        self.assertEqual(types[2], "bool")
+        self.assertEqual(types[0], LtSplit)
+        self.assertEqual(types[1], LtSplit)
+        self.assertEqual(types[2], BoolSplit)
 
         s = at.to_json();
         att = AddTree.from_json(s)
         t = att[0]
 
-        self.assertEqual(t.get_split( t.left(t.root())), ("lt", 1, 1.0))
-        self.assertEqual(t.get_split(t.right(t.root())), ("bool", 2))
+        self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
+        self.assertEqual(t.get_split(t.right(t.root())), BoolSplit(2))
 
     def test_at_feature_types(self):
         at = AddTree()

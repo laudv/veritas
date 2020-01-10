@@ -25,31 +25,10 @@ std::string tostr(T& o)
 
 static
 py::tuple
-encode_split(const Split& split)
-{
-    return visit_split(
-        [](const LtSplit& s) -> py::tuple {
-            return py::make_tuple("lt", s.feat_id, s.split_value);
-        },
-        [](const BoolSplit& s) -> py::tuple {
-            return py::make_tuple("bool", s.feat_id);
-        },
-        split);
-}
-
-static
-py::tuple
 encode_split(const DomTreeSplit& split)
 {
     size_t i = split.instance_index;
-    return visit_split(
-        [i](const LtSplit& s) -> py::tuple {
-            return py::make_tuple(i, "lt", s.feat_id, s.split_value);
-        },
-        [i](const BoolSplit& s) -> py::tuple {
-            return py::make_tuple(i, "bool", s.feat_id);
-        },
-        split.split);
+    return py::make_tuple(i, split.split);
 }
 
 
@@ -96,6 +75,23 @@ PYBIND11_MODULE(pytreeck, m) {
                 return dom;
             }));
 
+    py::class_<LtSplit>(m, "LtSplit")
+        .def(py::init<FeatId, LtSplit::ValueT>())
+        .def_readonly("feat_id", &LtSplit::feat_id)
+        .def_readonly("split_value", &LtSplit::split_value)
+        .def("test", &LtSplit::test)
+        .def("__eq__", [](const LtSplit& s, const LtSplit t) { return s == t; })
+        .def("__str__", [](const LtSplit& s) { return tostr(s); })
+        .def("__repr__", [](const LtSplit& s) { return tostr(s); });
+
+    py::class_<BoolSplit>(m, "BoolSplit")
+        .def(py::init<FeatId>())
+        .def_readonly("feat_id", &BoolSplit::feat_id)
+        .def("test", &BoolSplit::test)
+        .def("__eq__", [](const BoolSplit& s, const BoolSplit t) { return s == t; })
+        .def("__str__", [](const BoolSplit& s) { return tostr(s); })
+        .def("__repr__", [](const BoolSplit& s) { return tostr(s); });
+
     /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
     struct TreeRef {
         AddTree *at;
@@ -117,7 +113,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get()[n].tree_size(); })
         .def("depth", [](const TreeRef& r, NodeId n) { return r.get()[n].depth(); })
         .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get()[n].leaf_value(); })
-        .def("get_split", [](const TreeRef& r, NodeId n) { return encode_split(r.get()[n].get_split()); })
+        .def("get_split", [](const TreeRef& r, NodeId n) { return r.get()[n].get_split(); })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split(LtSplit(fid, sv)); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(BoolSplit(fid)); })
