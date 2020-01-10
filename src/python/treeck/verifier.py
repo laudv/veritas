@@ -3,6 +3,7 @@ from bisect import bisect
 
 from enum import Enum
 from . import RealDomain, BoolDomain, AddTreeFeatureTypes
+from . import LtSplit, BoolSplit
 from . import DomTree, DomTreeLeaf
 
 class VerifierExpr:
@@ -385,7 +386,7 @@ class AddTreeInstance:
         suffix = f"_{instance_index}"
 
         self._xvars = {fid: self._v._backend.add_real_var(f"x{fid}{suffix}")
-                if typ == "lt"
+                if typ == LtSplit
                 else self._v._backend.add_bool_var(f"xb{fid}{suffix}")
                 for fid, typ in self._feat_types}
         self._wvars = [self._v._backend.add_real_var(f"w{i}{suffix}")
@@ -433,30 +434,23 @@ class AddTreeInstance:
         """
         i = self._instance_index
         tree = self._addtree[tree_index]
-        stack = [(tree.root(), True)]
+        stack = [(tree.root(), VerifierAndExpr())]
 
         while len(stack) > 0:
             node, path_constraints = stack.pop()
 
             l, r = tree.left(node), tree.right(node)
-            split = tree.get_split(node) # (split_type, feat_id...)
-            feat_id = split[1]
-            xvar = self.xvar(feat_id)
+            split = tree.get_split(node)
+            xvar = self._xvars[split.feat_id]
 
-            if only_feat_id != -1 and feat_id != only_feat_id:
+            if only_feat_id != -1 and split.feat_id != only_feat_id:
                 continue # only test paths splitting on this feat_id
 
-            if split[0] == "lt":
-                split_value = split[2]
-                constraint_l = (xvar < split_value)
-                constraint_r = (xvar >= split_value)
-            elif split[0] == "bool":
-                constraint_l = VerifierNotExpr(xvar) # false left, true right
-                constraint_r = xvar
-            else: raise RuntimeError(f"unknown split type {split[0]}")
+            constraint_l = self._v._backend.encode_split(xvar, split)
+            constraint_r = VerifierNotExpr(constraint_l)
 
             if self._v._lk.is_reachable(i, tree_index, l):
-                path_constraints_l = constraint_l & path_constraints;
+                path_constraints_l = VerifierAndExpr(constraint_l, path_constraints);
                 if self._v.check(path_constraints_l).is_sat():
                     if tree.is_internal(l):
                         stack.append((l, path_constraints_l))
@@ -465,7 +459,7 @@ class AddTreeInstance:
                     self._v._lk.mark_unreachable(i, tree_index, l)
 
             if self._v._lk.is_reachable(i, tree_index, r):
-                path_constraints_r = constraint_r & path_constraints;
+                path_constraints_r = VerifierAndExpr(constraint_r, path_constraints);
                 if self._v.check(path_constraints_r).is_sat():
                     if tree.is_internal(r):
                         stack.append((r, path_constraints_r))
@@ -482,7 +476,7 @@ class AddTreeInstance:
         else:
             tree_index = tree.index()
             split = tree.get_split(node)
-            xvar = self._xvars[split[1]]
+            xvar = self._xvars[split.feat_id]
             left, right = tree.left(node), tree.right(node)
             l, r = False, False
             if self._v._lk.is_reachable(self._instance_index, tree_index, left):
@@ -509,7 +503,7 @@ class AddTreeInstance:
         for feat_id, x in xs.items():
             if x == None: continue
             ftype = self._feat_types[feat_id]
-            if ftype == "lt":
+            if ftype == LtSplit:
                 if feat_id not in self._splits: continue # feature not used in splits of trees
                 split_values = self._splits[feat_id]
                 j = bisect(split_values, x)
@@ -519,37 +513,19 @@ class AddTreeInstance:
                 assert x >= lo
                 assert x < hi
                 dom = RealDomain(lo, hi)
-            elif ftype == "bool":
+            elif ftype == BoolSplit:
                 dom = BoolDomain(x)
             else:
                 raise RuntimeError("unknown ftype")
             yield feat_id, x, dom
 
     def _xs_wide_family(self, xs):
-        domains = {}
-        for tree_index, tree in enumerate(self._addtree):
-            node = tree.predict_leaf(xs)
-            print(tree_index, leaf_id)
-
-            # TODO complete
-            # scan all paths of tree to compute much less restricted family
-            # idea: as long as the features vary within their domains, the
-            #    prediction is going to remain unchanged
-            # _xs_family based on all splits is too strict
-            while not tree.is_root(node):
-                node = tree.parent(node)
-                split = tree.get_split(node)
-                feat_id = split[1]
-
-                if split[0] == "lt":
-                    dom = domains.get(feat_id, RealDomain())
-                elif split[0] == "bool":
-                    dom = domains.get(feat_id, BoolDomain())
-                else: raise RuntimeError("unknown split")
-
-                if tree.is_root(node):
-                    break
-
+        # TODO complete
+        # scan all paths of tree to compute much less restricted family
+        # idea: as long as the features vary within their domains, the
+        #    prediction is going to remain unchanged
+        # _xs_family based on all splits is too strict
+        pass
 
 
 
