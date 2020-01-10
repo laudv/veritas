@@ -55,7 +55,7 @@ class TestZ3Backend(unittest.TestCase):
 
         ll = b.encode_leaf(w, 1.0)
         lr = b.encode_leaf(w, 2.0)
-        s = b.encode_split(x, ("lt", 0, 5.0), ll, lr)
+        s = b.encode_split(x, LtSplit(0, 5.0), ll, lr)
         b.add_constraint(s)
 
         b.add_constraint((w > 1.5))
@@ -76,10 +76,10 @@ class TestZ3Backend(unittest.TestCase):
 
         ll = b.encode_leaf(w, 1.0)
         lr = b.encode_leaf(w, 2.0)
-        s = b.encode_split(x, ("bool", 0), ll, lr)
+        s = b.encode_split(x, BoolSplit(0), ll, lr)
         b.add_constraint(s)
 
-        b.add_constraint((w > 1.5))
+        b.add_constraint((w < 1.5))
         status = b.check()
         self.assertEqual(status, Verifier.Result.SAT)
         x_value = b.model(("x", x))["x"]

@@ -1,5 +1,7 @@
 import z3
 
+from . import LtSplit, BoolSplit
+
 from .verifier import Verifier, ORDER_CONSTRAINTS
 from .verifier import VerifierBoolExpr, VerifierVar
 from .verifier import VerifierLtExpr, VerifierGtExpr, VerifierLeExpr, VerifierGeExpr, VerifierEqExpr, VerifierNeExpr
@@ -40,10 +42,10 @@ class Z3Backend(VerifierBackend):
         if left == False and right == False:
             return False
 
-        if split[0] == "lt":
-            cond = (feat_var < split[2])
-        elif split[0] == "bool":
-            cond = z3.Not(feat_var, self._ctx)
+        if isinstance(split, LtSplit):
+            cond = (feat_var < split.split_value)
+        elif isinstance(split, BoolSplit):
+            cond = feat_var
         else:
             raise RuntimeError(f"unknown split {split}")
 
