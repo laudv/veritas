@@ -115,6 +115,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("root", [](const TreeRef& r) { return r.get().root().id(); })
         .def("index", [](const TreeRef& r) { return r.i; })
         .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
+        .def("num_leafs", [](const TreeRef& r) { return r.get().num_leafs(); })
         .def("is_root", [](const TreeRef& r, NodeId n) { return r.get()[n].is_root(); })
         .def("is_leaf", [](const TreeRef& r, NodeId n) { return r.get()[n].is_leaf(); })
         .def("is_internal", [](const TreeRef& r, NodeId n) { return r.get()[n].is_internal(); })
