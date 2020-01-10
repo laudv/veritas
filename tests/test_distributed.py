@@ -37,7 +37,7 @@ class TestDistributedVerifier(unittest.TestCase):
                     stop_when_num_sats = N)
 
             dv.check()
-            print(json.dumps(dv.results, indent=2, default=str))
+            #print(json.dumps(dv.results, indent=2, default=str))
             count_with_status = 0
             count_with_sat = 0
             for k, d in dv.results.items():
@@ -55,7 +55,7 @@ class TestDistributedVerifier(unittest.TestCase):
                 v = Verifier(lk, Backend())
                 v.add_constraint(v.fvar() > 5.0)
                 v.add_constraint(z3.PbLe([(v.xvar(fid).get(), 1)
-                    for fid in v.instance(0).feat_ids()], 25))
+                    for fid in v.instance(0).feat_ids()], 50))
                 return v
 
         with Client(dask_scheduler) as client:
@@ -79,6 +79,12 @@ class TestDistributedVerifier(unittest.TestCase):
                     count_with_status += 1
                     if d["status"] == Verifier.Result.SAT:
                         count_with_sat += 1
+                        self.assertGreater(d["model"]["f"], 5.0)
+                        inst = [True] * (28*28)
+                        for i, x in d["model"]["xs"].items():
+                            inst[i] = x
+                        self.assertEqual(d["model"]["f"], at.predict_single(inst))
+                        #print(d["model"]["f"], at.predict_single(inst))
 
             self.assertGreaterEqual(count_with_status, N)
             self.assertGreater(count_with_sat, 0)

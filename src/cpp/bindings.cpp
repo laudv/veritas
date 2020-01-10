@@ -81,16 +81,27 @@ PYBIND11_MODULE(pytreeck, m) {
         .def_readonly("split_value", &LtSplit::split_value)
         .def("test", &LtSplit::test)
         .def("__eq__", [](const LtSplit& s, const LtSplit t) { return s == t; })
-        .def("__str__", [](const LtSplit& s) { return tostr(s); })
-        .def("__repr__", [](const LtSplit& s) { return tostr(s); });
+        .def("__repr__", [](const LtSplit& s) { return tostr(s); })
+        .def(py::pickle(
+            [](const LtSplit& s) { return py::make_tuple(s.feat_id, s.split_value); }, // __getstate__
+            [](py::tuple t) -> LtSplit { // __setstate__
+                if (t.size() != 2) throw std::runtime_error("invalid pickle state");
+                return { t[0].cast<FeatId>(), t[1].cast<FloatT>() };
+            }));
 
     py::class_<BoolSplit>(m, "BoolSplit")
         .def(py::init<FeatId>())
         .def_readonly("feat_id", &BoolSplit::feat_id)
         .def("test", &BoolSplit::test)
         .def("__eq__", [](const BoolSplit& s, const BoolSplit t) { return s == t; })
-        .def("__str__", [](const BoolSplit& s) { return tostr(s); })
-        .def("__repr__", [](const BoolSplit& s) { return tostr(s); });
+        .def("__repr__", [](const BoolSplit& s) { return tostr(s); })
+        .def(py::pickle(
+            [](const BoolSplit& s) { return py::make_tuple(s.feat_id); }, // __getstate__
+            [](py::tuple t) -> BoolSplit { // __setstate__
+                if (t.size() != 1) throw std::runtime_error("invalid pickle state");
+                return { t[0].cast<FeatId>() };
+            }));
+
 
     /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
     struct TreeRef {

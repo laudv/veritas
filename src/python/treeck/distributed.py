@@ -337,7 +337,7 @@ class DistributedVerifier:
 
         # Re-checking reachabilities after split, only for splits involving feat_id
         if parent_split is not None and lk.num_instances() > 1:
-            feat_id = parent_split[2]
+            feat_id = parent_split[1].feat_id
             lk = DistributedVerifier._recheck_tree_paths(lk, v, feat_id)
 
         v.set_timeout(timeout)
