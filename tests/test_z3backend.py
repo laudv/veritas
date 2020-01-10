@@ -55,8 +55,9 @@ class TestZ3Backend(unittest.TestCase):
 
         ll = b.encode_leaf(w, 1.0)
         lr = b.encode_leaf(w, 2.0)
-        s = b.encode_split(x, LtSplit(0, 5.0), ll, lr)
-        b.add_constraint(s)
+        s = b.encode_split(x, LtSplit(0, 5.0))
+        tr = b.encode_internal(s, ll, lr)
+        b.add_constraint(tr)
 
         b.add_constraint((w > 1.5))
         status = b.check()
@@ -76,8 +77,9 @@ class TestZ3Backend(unittest.TestCase):
 
         ll = b.encode_leaf(w, 1.0)
         lr = b.encode_leaf(w, 2.0)
-        s = b.encode_split(x, BoolSplit(0), ll, lr)
-        b.add_constraint(s)
+        s = b.encode_split(x, BoolSplit(0))
+        tr = b.encode_internal(s, ll, lr)
+        b.add_constraint(tr)
 
         b.add_constraint((w < 1.5))
         status = b.check()

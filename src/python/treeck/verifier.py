@@ -186,11 +186,15 @@ class VerifierBackend:
         """ Encode the leaf node """
         raise RuntimeError("abstract method")
 
-    def encode_split(self, feat_var, split, left, right):
+    def encode_internal(self, split, left, right):
         """
-        Encode the given split using left and right as the encodings of the
-        subtrees.
+        Encode an internal node splitting on `split` and branches `left` and
+        `right`.
         """
+        raise RuntimeError("abstract method")
+
+    def encode_split(self, feat_var, split):
+        """ Encode the given split test. """
         raise RuntimeError("abstract method")
 
     def check(self, *constraints):
@@ -485,7 +489,8 @@ class AddTreeInstance:
                 l = self._enc_tree(tree, left)
             if self._v._lk.is_reachable(self._instance_index, tree_index, right):
                 r = self._enc_tree(tree, right)
-            return self._v._backend.encode_split(xvar, split, l, r)
+            split_enc = self._v._backend.encode_split(xvar, split)
+            return self._v._backend.encode_internal(split_enc, l, r)
 
     def _xs_family(self, xs):
         if self._splits is None:

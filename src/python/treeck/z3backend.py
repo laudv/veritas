@@ -38,22 +38,22 @@ class Z3Backend(VerifierBackend):
     def encode_leaf(self, tree_var, leaf_value):
         return (tree_var == leaf_value)
 
-    def encode_split(self, feat_var, split, left, right):
+    def encode_internal(self, cond, left, right):
         if left == False and right == False:
             return False
-
-        if isinstance(split, LtSplit):
-            cond = (feat_var < split.split_value)
-        elif isinstance(split, BoolSplit):
-            cond = feat_var
-        else:
-            raise RuntimeError(f"unknown split {split}")
-
         if left == False:
             return z3.And(z3.Not(cond, self._ctx), right, self._ctx)
         if right == False:
             return z3.And(cond, left, self._ctx)
         return z3.If(cond, left, right, self._ctx)
+
+    def encode_split(self, feat_var, split):
+        if isinstance(split, LtSplit):
+            return (feat_var < split.split_value) # consistent with AddTree definition
+        elif isinstance(split, BoolSplit):
+            return feat_var # true goes left, false goes right
+        else:
+            raise RuntimeError(f"unknown split {split}")
 
     def check(self, *constraints):
         encs = self._enc_constraints(constraints)
