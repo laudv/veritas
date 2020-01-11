@@ -1,4 +1,4 @@
-import unittest, pickle
+import unittest, pickle, math
 from treeck import *
 
 class TestTree(unittest.TestCase):
@@ -17,22 +17,31 @@ class TestTree(unittest.TestCase):
     def test_tree1(self):
         at = AddTree()
         t = at.add_tree()
-        t.split(t.root(), 1, 1.5)
+        t.split(t.root(), 1, 16.0)
         t.set_leaf_value(t.left(t.root()), 1.1)
         t.set_leaf_value(t.right(t.root()), 2.2)
 
-        y = t.predict([[1.0, 1.0 ,3.0], [1.0, 2.0, 3.0]])
+        y = t.predict([[1.0, 1.0 ,3.0], [1.0, 22.0, 3.0]])
 
         self.myAssertAlmostEqual([1.1, 2.2], y)
+
+        self.assertRaises(RuntimeError, at.get_domains, [0])
+        self.assertRaises(RuntimeError, at.get_domains, [1, 2])
+        self.assertEqual(at.get_domains([1]), {1: RealDomain(-math.inf, 16.0)})
+        self.assertEqual(at.get_domains([2]), {1: RealDomain(16.0, math.inf)})
 
     def test_tree_json(self):
         at = AddTree()
         t = at.add_tree()
-        t.split(t.root(), 1, 1.5)
-        t.split(t.left(t.root()), 2, 0.12)
+        t.split(t.root(), 1, 2.0)
+        t.split(t.left(t.root()), 2, 4.0)
         t.set_leaf_value(t.left(t.left(t.root())), 0.25)
         t.set_leaf_value(t.right(t.left(t.root())), 0.45)
         t.set_leaf_value(t.right(t.root()), 2.2)
+
+        self.assertEqual(at.get_domains([2]), {1: RealDomain(2.0, math.inf)})
+        self.assertEqual(at.get_domains([3]), {1: RealDomain(-math.inf, 2.0), 2: RealDomain(-math.inf, 4.0)})
+        self.assertEqual(at.get_domains([4]), {1: RealDomain(-math.inf, 2.0), 2: RealDomain(4.0, math.inf)})
 
         s = at.to_json();
         att = AddTree.from_json(s)
@@ -40,8 +49,8 @@ class TestTree(unittest.TestCase):
 
         self.assertTrue(tt.is_internal(0))
         self.assertTrue(tt.is_internal(1))
-        self.myAssertAlmostEqual(tt.get_split(0), LtSplit(1, 1.5))
-        self.myAssertAlmostEqual(tt.get_split(1), LtSplit(2, 0.12))
+        self.myAssertAlmostEqual(tt.get_split(0), LtSplit(1, 2.0))
+        self.myAssertAlmostEqual(tt.get_split(1), LtSplit(2, 4.0))
         self.assertTrue(tt.is_leaf(2))
         self.assertTrue(tt.is_leaf(3))
         self.assertTrue(tt.is_leaf(4))
@@ -52,7 +61,7 @@ class TestTree(unittest.TestCase):
     def test_boolsplit(self):
         at = AddTree()
         t = at.add_tree()
-        t.split(t.root(), 0, 1.5)
+        t.split(t.root(), 0, 2.0)
         t.split(t.left(t.root()), 1, 1.0)
         t.split(t.right(t.root()), 2)
         t.set_leaf_value(t.left(t.left(t.root())), 1.0)
@@ -60,14 +69,18 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.right(t.root())), 4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
 
-        print(at)
+        #print(at)
 
+        self.assertEqual(t.get_split(        t.root() ), LtSplit(0, 2.0))
         self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
         self.assertEqual(t.get_split(t.right(t.root())), BoolSplit(2))
 
+        self.assertEqual(at.get_domains([5]), {0: RealDomain(2.0, math.inf), 2: BoolDomain(True)})
+        self.assertEqual(at.get_domains([6]), {0: RealDomain(2.0, math.inf), 2: BoolDomain(False)})
+
         y = at.predict([
             [0.0, 0.5, True], [0.0, 1.5, True],
-            [2.0, 0.5, True], [2.0, 0.5, False]])
+            [2.5, 0.5, True], [2.5, 0.5, False]])
 
         self.assertEqual(y, [1.0, 2.0, 4.0, 8.0])
 
@@ -93,7 +106,7 @@ class TestTree(unittest.TestCase):
     def test_addtree_get_splits(self):
         at = AddTree()
         t = at.add_tree()
-        t.split(t.root(), 1, 1.5)
+        t.split(t.root(), 1, 4.0)
         t.split(t.left(t.root()), 2, 0.12)
         t.set_leaf_value(t.left(t.left(t.root())), 0.25)
         t.set_leaf_value(t.right(t.left(t.root())), 0.45)
@@ -104,9 +117,14 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.root()), 0.5)
         t.set_leaf_value(t.right(t.root()), 2.3)
 
+        #print(at)
+
+        self.assertRaises(RuntimeError, at.get_domains, [2, 1]) # incompatible leafs
+        self.assertEqual(at.get_domains([2, 2]), {1: RealDomain(4.0, math.inf)})
+
         s = at.get_splits()
 
-        self.myAssertAlmostEqual(s[1], [1.5, 2.0])
+        self.myAssertAlmostEqual(s[1], [2.0, 4.0])
         self.myAssertAlmostEqual(s[2], [0.12])
         self.assertEqual(sorted(list(s.keys())), [1, 2])
 

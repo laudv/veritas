@@ -142,6 +142,22 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__getitem__", [](AddTree& at, size_t i) -> TreeRef { return TreeRef{&at, i}; })
         .def("use_count", [](const std::shared_ptr<AddTree>& at) { return at.use_count(); })
         .def("get_splits", &AddTree::get_splits)
+        .def("get_domains", [](const AddTree& at, std::vector<NodeId> leaf_ids) {
+            if (at.size() != leaf_ids.size())
+                throw std::runtime_error("one leaf_id per tree in AddTree");
+
+            DomainsT domains;
+            for (size_t tree_index = 0; tree_index < at.size(); ++tree_index)
+            {
+                NodeId leaf_id = leaf_ids[tree_index];
+                const auto& tree = at[tree_index];
+                auto node = tree[leaf_id];
+                if (!node.is_leaf())
+                    throw std::runtime_error("leaf_id does not point to leaf");
+                node.get_domains(domains);
+            }
+            return domains;
+        })
         .def("to_json", &AddTree::to_json)
         .def("from_json", AddTree::from_json)
         .def("__str__", [](const AddTree& at) { return tostr(at); })
