@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <exception>
 #include <limits>
 #include <tuple>
@@ -73,6 +74,18 @@ namespace treeck {
         return this->lo < other.hi && this->hi > other.lo;
     }
 
+    RealDomain
+    RealDomain::intersect(const RealDomain& o) const
+    {
+        if (!overlaps(o))
+            throw std::runtime_error("RealDomain::intersect: does not overlap");
+
+        FloatT nlo = std::max(lo, o.lo);
+        FloatT nhi = std::min(hi, o.hi);
+
+        return { nlo, nhi };
+    }
+
     bool
     RealDomain::covers(const RealDomain& other) const
     {
@@ -126,6 +139,18 @@ namespace treeck {
     BoolDomain::contains(bool value) const
     {
         return is_everything() || (value && is_true()) || (!value && is_false());
+    }
+
+    BoolDomain
+    BoolDomain::intersect(const BoolDomain& o) const
+    {
+        if (is_everything())
+            return o;
+        if (o.is_everything())
+            return *this;
+        if (value_ != o.value_)
+            throw std::runtime_error("BoolDomain::intersect: non-overlapping domain");
+        return o;
     }
 
     std::tuple<BoolDomain, BoolDomain>

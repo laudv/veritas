@@ -280,41 +280,7 @@ namespace treeck {
             // If this split does not affect the domain of instance i, continue
             if (split.instance_index != i) continue;
 
-            visit_split(
-                [&child_node, &domains](const LtSplit& s) {
-                    RealDomain dom; // initially, is_everything == true
-
-                    auto domptr = domains.find(s.feat_id);
-                    if (domptr != domains.end())
-                        dom = util::get_or<RealDomain>(domptr->second);
-
-                    FloatT sval = s.split_value;
-                    if (child_node.is_left_child())
-                    {
-                        if (dom.hi > sval) dom.hi = sval; // TODO ensure this is consistent with Split::test
-                    }
-                    else
-                    {
-                        if (dom.lo < sval) dom.lo = sval;
-                    }
-
-                    domains[s.feat_id] = dom;
-                },
-                [&child_node, &domains](const BoolSplit& s) {
-                    BoolDomain dom; // initally both true and false
-
-                    auto domptr = domains.find(s.feat_id);
-                    if (domptr != domains.end()) // not in domains yet, check root domain
-                        dom = util::get_or<BoolDomain>(domptr->second);
-
-                    if (child_node.is_left_child())
-                        dom = std::get<0>(dom.split());
-                    else
-                        dom = std::get<1>(dom.split());
-
-                    domains[s.feat_id] = dom;
-                },
-                split.split);
+            refine_domains(domains, split.split, child_node.is_left_child());
         }
 
         return domains;
@@ -387,11 +353,11 @@ namespace treeck {
             FeatId feat_id;
             visit_split(
                 [&dom_l, &dom_r, &feat_id](const LtSplit& s) {
-                    std::tie(dom_l, dom_r) = RealDomain().split(s.split_value);
+                    std::tie(dom_l, dom_r) = s.get_domains();
                     feat_id = s.feat_id;
                 },
                 [&dom_l, &dom_r, &feat_id](const BoolSplit& s) {
-                    std::tie(dom_l, dom_r) = BoolDomain().split();
+                    std::tie(dom_l, dom_r) = s.get_domains();
                     feat_id = s.feat_id;
                 },
                 split.split

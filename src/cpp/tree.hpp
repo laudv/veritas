@@ -4,6 +4,7 @@
 #include <iostream>
 #include <utility>
 
+#include "util.h"
 #include "tree.h"
 
 namespace treeck {
@@ -14,18 +15,42 @@ namespace treeck {
         archive(CEREAL_NVP(feat_id), CEREAL_NVP(split_value));
     }
 
-    template <typename Archive>
-    void
-    EqSplit::serialize(Archive& archive)
-    {
-        archive(CEREAL_NVP(feat_id), CEREAL_NVP(category));
-    }
+    //template <typename Archive>
+    //void
+    //EqSplit::serialize(Archive& archive)
+    //{
+    //    archive(CEREAL_NVP(feat_id), CEREAL_NVP(category));
+    //}
 
     template <typename Archive>
     void
     BoolSplit::serialize(Archive& archive)
     {
         archive(CEREAL_NVP(feat_id));
+    }
+
+    template <typename SplitT>
+    typename SplitT::DomainT
+    refine_domain(const typename SplitT::DomainT& base_dom,
+                  const SplitT& split, bool is_left_child)
+    {
+        if (is_left_child)
+            return base_dom.intersect(std::get<0>(split.get_domains()));
+        else
+            return base_dom.intersect(std::get<1>(split.get_domains()));
+    }
+
+    template <typename SplitT>
+    void
+    refine_domains(DomainsT& domains, const SplitT& s, bool is_left_child)
+    {
+        typename SplitT::DomainT dom; // initially, is_everything == true
+
+        auto domptr = domains.find(s.feat_id);
+        if (domptr != domains.end())
+            dom = util::get_or<typename SplitT::DomainT>(domptr->second);
+
+        domains[s.feat_id] = refine_domain(dom, s, is_left_child);
     }
 
     namespace inner {

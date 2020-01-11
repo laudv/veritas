@@ -15,26 +15,32 @@ namespace treeck {
         return value < this->split_value;
     }
 
+    std::tuple<LtSplit::DomainT, LtSplit::DomainT>
+    LtSplit::get_domains() const
+    {
+        return RealDomain().split(split_value);
+    }
+
     bool operator==(const LtSplit& a, const LtSplit& b)
     {
         return a.feat_id == b.feat_id && a.split_value == b.split_value;
     }
 
-    EqSplit::EqSplit() : EqSplit(-1, 0) {}
-    EqSplit::EqSplit(FeatId feat_id, EqSplit::ValueT category)
-        : SplitBase(feat_id)
-        , category(category) {}
+    //EqSplit::EqSplit() : EqSplit(-1, 0) {}
+    //EqSplit::EqSplit(FeatId feat_id, EqSplit::ValueT category)
+    //    : SplitBase(feat_id)
+    //    , category(category) {}
 
-    bool
-    EqSplit::test(EqSplit::ValueT value) const
-    {
-        return value == this->category;
-    }
+    //bool
+    //EqSplit::test(EqSplit::ValueT value) const
+    //{
+    //    return value == this->category;
+    //}
 
-    bool operator==(const EqSplit& a, const EqSplit& b)
-    {
-        return a.feat_id == b.feat_id && a.category == b.category;
-    }
+    //bool operator==(const EqSplit& a, const EqSplit& b)
+    //{
+    //    return a.feat_id == b.feat_id && a.category == b.category;
+    //}
 
     BoolSplit::BoolSplit() : SplitBase(-1) {}
     BoolSplit::BoolSplit(FeatId feat_id) : SplitBase(feat_id) {}
@@ -43,6 +49,25 @@ namespace treeck {
     BoolSplit::test(BoolSplit::ValueT value) const
     {
         return value; // true left, false right
+    }
+
+    std::tuple<BoolSplit::DomainT, BoolSplit::DomainT>
+    BoolSplit::get_domains() const
+    {
+        return BoolDomain().split();
+    }
+
+    void
+    refine_domains(DomainsT& domains, const Split& split, bool is_left_child)
+    {
+        visit_split(
+            [&domains, is_left_child](const LtSplit& s) {
+                refine_domains(domains, s, is_left_child);
+            },
+            [&domains, is_left_child](const BoolSplit& s) {
+                refine_domains(domains, s, is_left_child);
+            },
+            split);
     }
 
     bool operator==(const BoolSplit& a, const BoolSplit& b)
@@ -75,6 +100,21 @@ namespace treeck {
 
 
     TREECK_INSTANTIATE_TREE_TEMPLATE(Split, FloatT);
+
+
+    template <> // implement NodeRef::get_domains for AddTree nodes
+    template <>
+    void
+    NodeRef<inner::ConstRef<Split, FloatT>>::get_domains<Split>(DomainsT& domains)
+    {
+        auto node = *this;
+        while (!node.is_root())
+        {
+            auto child_node = node;
+            node = node.parent();
+            refine_domains(domains, node.get_split(), child_node.is_left_child());
+        }
+    }
 
 
     AddTree::AddTree()

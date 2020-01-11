@@ -40,6 +40,7 @@ namespace treeck {
         WhereFlag where_is_strict(FloatT value) const;
         bool contains(FloatT value) const;
         bool contains_strict(FloatT value) const;
+        RealDomain intersect(const RealDomain& o) const;
         bool overlaps(const RealDomain& other) const;
         bool covers(const RealDomain& other) const;
         bool covers_strict(const RealDomain& value) const;
@@ -62,6 +63,7 @@ namespace treeck {
         bool is_false() const;
 
         bool contains(bool value) const;
+        BoolDomain intersect(const BoolDomain& o) const;
 
         // consistent with Split::test, (left_dom, right_dom)
         std::tuple<BoolDomain, BoolDomain> split() const;

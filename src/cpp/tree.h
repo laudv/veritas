@@ -9,6 +9,7 @@
 #include <type_traits>
 #include <variant>
 #include <vector>
+#include <tuple>
 #include <unordered_map>
 
 #include <cereal/archives/json.hpp>
@@ -21,6 +22,7 @@ namespace treeck {
 
     using NodeId = int; /* Node Id type */
     using FeatId = int; /* Feat Id type */
+    using DomainsT = std::unordered_map<FeatId, Domain>;
 
     struct SplitBase {
         FeatId feat_id;
@@ -30,36 +32,45 @@ namespace treeck {
 
     struct LtSplit : public SplitBase {
         using ValueT = FloatT;
+        using DomainT = RealDomain;
+
         ValueT split_value;
 
         LtSplit();
         LtSplit(FeatId feat_id, ValueT split_value);
         bool test(ValueT value) const; // true goes left, false goes right
 
+        std::tuple<DomainT, DomainT> get_domains() const;
+
         template<typename Archive>
         void serialize(Archive& archive);
     };
     bool operator==(const LtSplit& a, const LtSplit& b);
 
-    struct EqSplit : public SplitBase {
-        using ValueT = int;
-        ValueT category;
+    //struct EqSplit : public SplitBase {
+    //    using ValueT = int;
+    //    ValueT category;
 
-        EqSplit();
-        EqSplit(FeatId feat_id, ValueT category);
-        bool test(ValueT value) const; // true goes left, false goes right
+    //    EqSplit();
+    //    EqSplit(FeatId feat_id, ValueT category);
+    //    bool test(ValueT value) const; // true goes left, false goes right
 
-        template<typename Archive>
-        void serialize(Archive& archive);
-    };
-    bool operator==(const EqSplit& a, const EqSplit& b);
+    //    std::tuple<RealDomain, RealDomain> get_domains();
+
+    //    template<typename Archive>
+    //    void serialize(Archive& archive);
+    //};
+    //bool operator==(const EqSplit& a, const EqSplit& b);
 
     struct BoolSplit : public SplitBase {
         using ValueT = bool;
+        using DomainT = BoolDomain;
 
         BoolSplit();
         BoolSplit(FeatId feat_id);
         bool test(ValueT value) const; // true goes left, false goes right
+
+        std::tuple<DomainT, DomainT> get_domains() const;
 
         template<typename Archive>
         void serialize(Archive& archive);
@@ -86,6 +97,16 @@ namespace treeck {
                 static_assert(util::always_false<T>::value, "non-exhaustive visit_split");
         }, split);
     }
+
+    template <typename SplitT>
+    typename SplitT::DomainT
+    refine_domain(const typename SplitT::DomainT& base_dom,
+                  const SplitT& split, bool is_left_child);
+
+    template <typename SplitT>
+    void refine_domains(DomainsT& domains, const SplitT& split, bool is_left_child);
+
+    void refine_domains(DomainsT& domains, const Split& split, bool is_left_child);
 
     std::ostream& operator<<(std::ostream& strm, const Split& s);
     bool operator==(const Split& a, const Split& b);
@@ -183,6 +204,9 @@ namespace treeck {
         int depth() const;
         const SplitT& get_split() const; /* internal only */
         LeafT leaf_value() const; /* leaf only */
+
+        template <typename SplitT = typename RefT::SplitT>
+        void get_domains(DomainsT& domains);
 
         template <typename T = RefT>
         std::enable_if_t<T::is_mut_type::value, void>

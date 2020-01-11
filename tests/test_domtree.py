@@ -290,13 +290,25 @@ class TestDomTree(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
         t.set_leaf_value(t.right(t.right(t.root())), 0.4)
 
-        dt = DomTree([(at, {0: RealDomain(0, 1)}), (at, {})])
+        dt = DomTree([(at, {0: RealDomain(0, 2)}), (at, {})])
         self.assertEqual(dt.num_instances(), 2)
         l0 = dt.get_leaf(0)
         l0.find_best_split()
         self.assertEqual(l0.get_best_split(), (1, LtSplit(0, 2.0)))
         self.assertEqual(l0.score, 4)
         self.assertEqual(l0.balance, 0)
+
+        dt.apply_leaf(l0)
+        l1 = dt.get_leaf(1)
+        l1.find_best_split()
+        self.assertEqual(l1.get_best_split(), (0, LtSplit(0, 1.0)))
+        dt.apply_leaf(l1)
+        l3, l4 = dt.get_leaf(3), dt.get_leaf(4)
+        self.assertEqual(l3.get_domains(0), {0: RealDomain(0, 1)})
+        self.assertEqual(l4.get_domains(0), {0: RealDomain(1, 2)})
+        self.assertEqual(l3.get_domains(1), {0: RealDomain(-math.inf, 2)})
+        self.assertEqual(l4.get_domains(1), {0: RealDomain(-math.inf, 2)})
+
 
     #def _test_calhouse(self): # Prune removed
     #    at = AddTree.read("tests/models/xgb-calhouse-hard.json")

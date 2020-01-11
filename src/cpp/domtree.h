@@ -53,7 +53,6 @@ namespace treeck {
         void serialize(Archive& archive);
     };
 
-    using DomainsT = std::unordered_map<FeatId, Domain>;
     using ReachableT = std::unordered_map<NodeId, IsReachable>; // domtree_node_id -> IsReachble
 
     class DomTree;
