@@ -487,16 +487,18 @@ class AddTreeInstance:
             return self._v._backend.encode_internal(split_enc, l, r)
 
     def _xs_family(self, xs):
-        if self._splits is None:
-            self._splits = self._addtree.get_splits()
+        leafs = [tree.predict_leaf(xs) for tree in self._addtree]
+        return self._addtree.get_domains(leafs)
+        #if self._splits is None:
+        #    self._splits = self._addtree.get_splits()
 
-        domains = {}
-        for feat_id, x, dom in self._find_sample_intervals(xs):
-            if dom.is_everything():
-                raise RuntimeError("Unconstrained feature!")
-            #print("[feat_id={:<3}] {} in {}".format(feat_id, x, dom))
-            domains[feat_id] = dom
-        return domains
+        #domains = {}
+        #for feat_id, x, dom in self._find_sample_intervals(xs):
+        #    if dom.is_everything():
+        #        raise RuntimeError("Unconstrained feature!")
+        #    #print("[feat_id={:<3}] {} in {}".format(feat_id, x, dom))
+        #    domains[feat_id] = dom
+        #return domains
 
     def _find_sample_intervals(self, xs):
         assert isinstance(xs, dict)
@@ -518,14 +520,6 @@ class AddTreeInstance:
             else:
                 raise RuntimeError("unknown ftype")
             yield feat_id, x, dom
-
-    def _xs_wide_family(self, xs):
-        # TODO complete
-        # scan all paths of tree to compute much less restricted family
-        # idea: as long as the features vary within their domains, the
-        #    prediction is going to remain unchanged
-        # _xs_family based on all splits is too strict
-        pass
 
 
 

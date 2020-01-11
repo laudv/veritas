@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 import unittest, json, math
 import numpy as np
 import z3
@@ -201,12 +202,7 @@ class TestVerifier(unittest.TestCase):
         self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
         #print(v.model_family(model))
         v.add_constraint(not_in_domain_constraint(v, v.model_family(model), 0))
-        self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.SAT)
-        model = v.model()
-        self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
-        v.add_constraint(not_in_domain_constraint(v, v.model_family(model), 0))
-        check = v.check(v.fvar() < 0.01) 
-        self.assertEqual(check, Verifier.Result.UNSAT)
+        self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.UNSAT)
 
     def test_multi_instance(self):
         at = AddTree()
@@ -255,7 +251,7 @@ class TestVerifier(unittest.TestCase):
             v.add_constraint(not_in_domain_constraint(v, fam[0], 0) |
                              not_in_domain_constraint(v, fam[1], 1))
 
-        self.assertEqual(len(models), 4)
+        self.assertEqual(len(models), 2)
 
     def test_img(self):
         with open("tests/models/xgb-img-easy-values.json") as f:
@@ -319,20 +315,32 @@ class TestVerifier(unittest.TestCase):
         models = []
         while v.check() == Verifier.Result.SAT:
             m = v.model()
-            x = int(np.floor(m["xs"][1]))
-            y = int(np.floor(m["xs"][0]))
+            x = int(m["xs"][1])
+            y = int(m["xs"][0])
             self.assertLess(m["f"], 0.0)
             self.assertAlmostEqual(img[y][x], m["f"], delta=1e-4)
-            models.append((x, y))
-            v.add_constraint(not_in_domain_constraint(v, v.model_family(m), 0))
+            fam = v.model_family(m)
 
-        self.assertEqual(len(models), 60)
+            # all predictions in the rectangle are the same
+            for xx in range(int(fam[1].lo), int(min(fam[1].hi, 100))):
+                for yy in range(int(fam[0].lo), int(min(fam[0].hi, 100))):
+                    self.assertAlmostEqual(m["f"], at.predict_single([yy, xx]))
+
+            models.append((x, y, fam))
+            v.add_constraint(not_in_domain_constraint(v, fam, 0))
 
         #fig, ax = plt.subplots()
         #ax.imshow(img)
-        #for (x, y) in models:
-        #    ax.scatter([x], [y], marker="s", c="b")
+        #for x, y, dom in models:
+        #    x0, y0, x1, y1 = max(0.0, dom[1].lo), max(0.0, dom[0].lo), min(100.0, dom[1].hi), min(100.0, dom[0].hi)
+        #    w, h = x1-x0, y1-y0
+        #    print((x0, y0), (x1, y1), w, h)
+        #    rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,linewidth=1,edgecolor='r',facecolor='none')
+        #    ax.add_patch(rect)
+        #    ax.scatter([x], [y], marker=".", c="b")
         #plt.show()
+
+        self.assertEqual(len(models), 11)
 
     def test_mnist_multi_instance(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
@@ -403,8 +411,8 @@ class TestVerifier(unittest.TestCase):
                 i = int(n[1:])
                 p = np.unravel_index(i, (28, 28))
                 print("different pixel (bvar):", i, p, model[0]["xs"][i], model[1]["xs"][i])
-                fam_diff0[i] = fam[0][i]
-                fam_diff1[i] = fam[1][i]
+                if i in fam[0]: fam_diff0[i] = fam[0][i]
+                if i in fam[1]: fam_diff1[i] = fam[1][i]
             v.add_constraint(not_in_domain_constraint(v, fam_diff0, 0) &
                              not_in_domain_constraint(v, fam_diff1, 1))
 
