@@ -5,7 +5,12 @@ from xgboost.core import Booster
 
 from . import AddTree
 
-def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:])):
+def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:]),
+        multiclass=(1, 1)):
+    """
+    mulclass=(offset, num_classes): only loads tree offset, offset+num_classes,
+    offset+2*num_classes...
+    """
     base_score = 0.5
     if isinstance(model, XGBModel):
         base_score = model.base_score
@@ -16,8 +21,10 @@ def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:])):
     at = AddTree()
     at.base_score = base_score
 
-    for tree_dump in dump:
-        _parse_tree(at, tree_dump, feat2id_map)
+    offset, num_classes = multiclass
+
+    for i in range(offset, len(dump), num_classes):
+        _parse_tree(at, dump[i], feat2id_map)
 
     return at
     
