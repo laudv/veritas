@@ -49,6 +49,7 @@ class DistributedVerifier:
             num_initial_tasks = 1,
             stop_when_num_sats = 1,
             add_domain_constraints = True,
+            global_timeout = 0,
             timeout_start = 30,
             timeout_max = 600,
             timeout_grow_rate = 1.5):
@@ -69,6 +70,7 @@ class DistributedVerifier:
         self._check_paths_opt = check_paths
         self._num_initial_tasks_opt = num_initial_tasks
         self._stop_when_num_sats_opt = stop_when_num_sats
+        self._global_timeout_opt = global_timeout
 
         self._stop_flag = False
         self._print_queue = []
@@ -120,8 +122,15 @@ class DistributedVerifier:
                 self._print("Stop flag: cancelling remaining tasks")
                 for f in self._fs:
                     f.cancel()
-                    self._stop_flag = False
+                self._stop_flag = False
                 break
+            if self._global_timeout_opt > 0:
+                t = timeit.default_timer() - self.start_time
+                if t > self._global_timeout_opt:
+                    self._print("Global timeout: cancelling remaining tasks")
+                    for f in self._fs:
+                        f.cancel()
+                    break
 
             wait(self._fs, return_when="FIRST_COMPLETED")
 
