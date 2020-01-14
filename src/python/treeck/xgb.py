@@ -6,7 +6,7 @@ from xgboost.core import Booster
 from . import AddTree
 
 def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:]),
-        multiclass=(1, 1)):
+        multiclass=(0, 1)):
     """
     mulclass=(offset, num_classes): only loads tree offset, offset+num_classes,
     offset+2*num_classes...
