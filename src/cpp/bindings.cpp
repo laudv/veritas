@@ -235,6 +235,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("left", [](const DomTreeT& t, NodeId n) { return t[n].left().id(); })
         .def("right", [](const DomTreeT& t, NodeId n) { return t[n].right().id(); })
         .def("parent", [](const DomTreeT& t, NodeId n) { return t[n].parent().id(); })
+        .def("depth", [](const DomTreeT& t, NodeId n) { return t[n].depth(); })
         .def("__str__", [](const DomTreeT& at) { return tostr(at); })
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
 
