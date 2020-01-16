@@ -417,6 +417,10 @@ class AddTreeInstance:
         tree = self._addtree[tree_index]
         enc = self._enc_tree(tree, tree.root())
         self._v._backend.add_constraint(enc)
+        lo, hi = self._v._lk.get_tree_bounds(self._instance_index, tree_index)
+        wvar = self._wvars[tree_index]
+        self._v._backend.add_constraint(wvar >= lo)
+        self._v._backend.add_constraint(wvar <= hi)
 
     def add_all_trees(self):
         """ Add all trees in the addtree. """
