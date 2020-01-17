@@ -19,7 +19,7 @@ class TestDistributedVerifier(unittest.TestCase):
 
     def test_img_generate_splits(self):
         class VFactory(VerifierFactory):
-            def __call__(self, lk):
+            def __call__(self, lk, check_paths):
                 v = Verifier(lk, Backend())
                 v.add_constraint(v.fvar() < 0.0)
                 v.add_constraint(v.xvar(0) > 50)
@@ -51,7 +51,7 @@ class TestDistributedVerifier(unittest.TestCase):
 
     def test_bin_mnist(self):
         class VFactory(VerifierFactory):
-            def __call__(self, lk):
+            def __call__(self, lk, check_paths):
                 v = Verifier(lk, Backend())
                 v.add_constraint(v.fvar() > 5.0)
                 v.add_constraint(z3.PbLe([(v.xvar(fid).get(), 1)
@@ -91,7 +91,7 @@ class TestDistributedVerifier(unittest.TestCase):
 
     def test_img_multi_instance(self):
         class VFactory(VerifierFactory):
-            def __call__(self, lk):
+            def __call__(self, lk, check_paths):
                 v = Verifier(lk, Backend())
                 v.add_constraint(v.fvar(instance=0) < 0.0)
                 v.add_constraint(v.xvar(0, instance=0) > 50)

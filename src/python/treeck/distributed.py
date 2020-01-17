@@ -10,8 +10,12 @@ from .verifier import in_domain_constraint
 class VerifierFactory:
     """ Must be pickleable """
 
-    def __call__(self, domtree_leaf):
-        """ Override this method for your verifier factory.  """
+    def __call__(self, domtree_leaf, path_checking):
+        """
+        Override this method for your verifier factory.
+
+        You can return a less constrained verifier for the path_checking part.
+        """
         raise RuntimeError("Override this method in your own verifier "
             + "factory defining your problem's constraints.")
 
@@ -26,8 +30,8 @@ class _VerifierFactoryWrap(VerifierFactory):
         self._vfactory = vfactory
         self.add_domain_constraints_opt = add_domain_constraints_opt
 
-    def __call__(self, lk):
-        v = self._vfactory(lk)
+    def __call__(self, lk, path_checking):
+        v = self._vfactory(lk, path_checking)
         if self.add_domain_constraints_opt:
             for instance_index in range(lk.num_instances()):
                 v.add_constraint(in_domain_constraint(v,
@@ -324,7 +328,7 @@ class DistributedVerifier:
 
         v = v_or_vfactory
         if not isinstance(v, Verifier):
-            v = v_or_vfactory(lk)
+            v = v_or_vfactory(lk, True)
 
         v.instance(instance_index).mark_unreachable_paths(tree_index, only_feat_id)
 
@@ -342,7 +346,7 @@ class DistributedVerifier:
 
     @staticmethod
     def _verify_fun(lk, timeout, vfactory, parent_split = None):
-        v = vfactory(lk)
+        v = vfactory(lk, False)
 
         # Re-checking reachabilities after split, only for splits involving feat_id
         if parent_split is not None and lk.num_instances() > 1:
