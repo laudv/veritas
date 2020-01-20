@@ -61,7 +61,7 @@ class DistributedVerifier:
         assert isinstance(verifier_factory, VerifierFactory), "invalid verifier factory"
 
         self._timeout_start = float(timeout_start)
-        self._timeout_max = float(timeout_max)
+        self._timeout_max = float(max(timeout_start, timeout_max))
         self._timeout_rate = float(timeout_grow_rate)
         self._nworkers = sum(client.nthreads().values())
 
