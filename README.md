@@ -18,9 +18,13 @@ The [MNIST](http://yann.lecun.com/exdb/mnist/) dataset contains 28×28 images of
 
 > Given a correctly classified instance `x` with label `l` from the dataset, can we find a modified instance `x'` such that `|x'_k - x_k| < delta` and `sum_k |x'_k - x_k| < Delta` for which the predicted label is `l' != l`?
 
-The answer is usually **yes**, which means that the model in question is not robust, i.e., it can easily be fooled (for that specific instance). Some examples for `delta = 75` and `Delta = 3000`:
+The answer is usually **yes**, which means that the model in question is not robust, i.e., it can easily be fooled (for that specific instance). Some examples for `delta = 75` and `Delta = 3000` are shown below. All digits except for digit eight in the bottom row are classified as *nine*. For the last *eight*, treeck proved that it is not possible to perturb the instance such that it is classifier as a *nine* given the `delta` and `Delta`.
 
-It is also possible to investigate *average robustness* by asking the above question for many instances in the dataset. We can then count how often we can fool the classifier.
+<img src="docs/img/mnist1.png" width="500" />
+
+In the above example,  It is also possible to investigate *average robustness* by asking the above question for many instances in the dataset. We can then count how often we can fool the classifier.
+
+<img src="docs/img/mnist2.png" width="500" />
 
 ### YouTube: predicting *log10(views)*
 
@@ -56,7 +60,9 @@ We use the [socceraction](https://github.com/ML-KULeuven/socceraction) package t
 
 > Can we find a two-sequence action involving a backward pass in the middle of the field that results in a >10% goal probability?
 
-The model proved that our model cannot output pass-pass sequences with such high probability. It was able to find pass-dribble sequences, however (plot using [matplotsoccer](https://github.com/TomDecroos/matplotsoccer)):
+The model proved that our model cannot output pass-pass sequences with such high probability. It was able to find pass-dribble sequences, however (plot using [matplotsoccer](https://github.com/TomDecroos/matplotsoccer)). The pass starts at the position indicated with a cross, and end in the position indicated with a circle. The dribble starts at the circle.
+
+<img src="docs/img/soccer.png" width="300" />
 
 
 ## Illustrative code example
@@ -87,7 +93,7 @@ with Client("locahost:8786") as dask_client:
 
 ### Formulating the question
 
-Treeck translates the model, the question, and any available background knowledge to SMT, a language for logical theories. The translation of the model is done automatically, but treeck needs help for the question and the optional background knowledge. Treeck needs a *recipe* for the question in the form of a `VerifierFactory`. The factory is used to instantiate `Verifier` objects with your question. An example:
+Treeck translates the model, the question, and any available background knowledge to SMT, a language for logical theories. The SMT is then passed to an SMT solver (we use [Z3](https://github.com/Z3Prover/z3)). The translation of the model is done automatically, but treeck needs help for the question and the optional background knowledge. Treeck needs a *recipe* for the question in the form of a `VerifierFactory`. The factory is used to instantiate `Verifier` objects with your question. An example:
 
 ```python
 from treeck.verifier import Verifier
@@ -139,8 +145,6 @@ pip install git+https://github.com/laudv/treeck.git
 
 Parts of treeck are writtin in C++, so you need CMake, a C++ compiler, and the Python headers.
 
-Ubuntu:
+Ubuntu: `apt install cmake gcc python3-dev`
 
-```
-apt install cmake gcc python3-dev
-```
+Fedora: `dnf install cmake gcc-c++ python3-devel`
