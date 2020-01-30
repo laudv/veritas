@@ -26,6 +26,8 @@ In the above example,  It is also possible to investigate *average robustness* b
 
 <img src="docs/img/mnist2.png" width="500" />
 
+The left side shows how difficult it is to change the label of each digit. The right side shows how difficult it is to perturb an instance such that the model predicts a specific target digit. We can see that it is hard to change an *eight* into another digit, but it is easy to change any other digit into an *eight*. The opposite is true for the *one* digit, which is easy to change into any other digit, but it is hard to turn another digit into a *one*.
+
 ### YouTube: predicting *log10(views)*
 
 We use a bag-of-words dataset constructed from [trending YouTube videos](https://www.kaggle.com/datasnaek/youtube-new), and predict the `log10` of the view count based on the words in the title and the description. The model has a mean absolute error of 0.38 on the test set, so it is able to predict order of magnitudes.
