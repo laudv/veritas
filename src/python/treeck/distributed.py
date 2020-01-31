@@ -1,3 +1,7 @@
+# Copyright 2019 DTAI Research Group - KU Leuven.
+# License: Apache License 2.0
+# Author: Laurens Devos
+
 import timeit, math, time
 
 from dask.distributed import wait

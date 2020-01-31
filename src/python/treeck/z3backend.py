@@ -1,3 +1,7 @@
+# Copyright 2019 DTAI Research Group - KU Leuven.
+# License: Apache License 2.0
+# Author: Laurens Devos
+
 import z3
 
 from . import LtSplit, BoolSplit

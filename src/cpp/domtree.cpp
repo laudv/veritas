@@ -1,3 +1,9 @@
+/*
+ * Copyright 2019 DTAI Research Group - KU Leuven.
+ * License: Apache License 2.0
+ * Author: Laurens Devos
+*/
+
 #include <cereal/archives/binary.hpp>
 #include <cereal/types/unordered_map.hpp>
 #include <cereal/types/unordered_set.hpp>
