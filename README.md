@@ -150,3 +150,9 @@ Parts of treeck are writtin in C++, so you need CMake, a C++ compiler, and the P
 Ubuntu: `apt install cmake gcc python3-dev`
 
 Fedora: `dnf install cmake gcc-c++ python3-devel`
+
+If you want to verify models constructed by XGBoost, then you should also install it:
+
+```
+pip install xgboost
+```

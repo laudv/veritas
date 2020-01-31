@@ -88,6 +88,11 @@ setup(
     description='Treeck: Reason about potential instances of additive tree ensembles',
     long_description='',
     packages=find_packages('src/python'),
+    install_requires=[
+      "z3-solver",
+      "dask",
+      "distributed"
+    ],
     #extra_objects=["libtreeck.so"],
     package_dir={'':'src/python'},
     ext_modules=[CMakeExtension('treeck/treeck')],
