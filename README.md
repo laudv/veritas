@@ -156,3 +156,18 @@ If you want to verify models constructed by XGBoost, then you should also instal
 ```
 pip install xgboost
 ```
+
+## Citing treeck
+
+Please cite [the following paper](https://arxiv.org/abs/2001.11905) when you use this work:
+
+```
+@misc{devos2020additive,
+    title={Additive Tree Ensembles: Reasoning About Potential Instances},
+    author={Laurens Devos and Wannes Meert and Jesse Davis},
+    year={2020},
+    eprint={2001.11905},
+    archivePrefix={arXiv},
+    primaryClass={cs.LG}
+}
+```
