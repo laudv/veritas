@@ -10,9 +10,11 @@ SET(SOURCES
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/domtree.cpp"
+    "${SOURCE_DIR}/graph.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 #option(USE_SHARED_LIB "Use a shared libtreeck.so lib" ON)
 #if (USE_SHARED_LIB)

@@ -17,6 +17,7 @@
 #include "domain.h"
 #include "tree.h"
 #include "domtree.h"
+#include "graph.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -244,5 +245,13 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("depth", [](const DomTreeT& t, NodeId n) { return t[n].depth(); })
         .def("__str__", [](const DomTreeT& at) { return tostr(at); })
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
+
+    py::class_<KPartiteGraph>(m, "Graph")
+        .def(py::init<>([](std::vector<std::shared_ptr<AddTree>> trees) {
+            KPartiteGraph graph;
+            for (auto tree : trees)
+                graph.add_instance(*tree);
+            return graph;
+        }));
 
 } /* PYBIND11_MODULE */
