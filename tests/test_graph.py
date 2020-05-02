@@ -17,6 +17,12 @@ class TestGraph(unittest.TestCase):
 
         graph = Graph([at])
 
+    def test_calhouse(self):
+        at = AddTree.read("tests/models/xgb-calhouse-easy.json")
+
+        graph = Graph(at)
+
+        print(graph)
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

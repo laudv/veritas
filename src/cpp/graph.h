@@ -11,6 +11,8 @@
  * https://github.com/chenhongge/treeVerification
  */
 
+#include <tuple>
+#include <vector>
 #include <unordered_map>
 
 #include "domain.h"
@@ -22,22 +24,25 @@
 namespace treeck {
 
     class DomainBox {
-        std::vector<Domain>& data_;
-        size_t begin;
-        size_t sz;
-
-    private:
-        void check_bounds(size_t i) const;
+        std::vector<std::pair<FeatId, Domain>> domains_;
 
     public:
-        DomainBox(std::vector<Domain>& data, size_t begin, size_t sz);
+        DomainBox();
 
-        const Domain& operator[](size_t i) const;
-        Domain& operator[](size_t i);
+        Domain& operator[](FeatId feat_id);
 
-        void intersect(const DomainBox& other);
+        std::vector<std::pair<FeatId, Domain>>::const_iterator begin() const;
+        std::vector<std::pair<FeatId, Domain>>::const_iterator end() const;
+        std::vector<std::pair<FeatId, Domain>>::const_iterator find(FeatId feat_id) const;
+        std::vector<std::pair<FeatId, Domain>>::iterator find(FeatId feat_id);
 
+        void refine(Split split, bool is_left_child);
+
+        void sort();
     };
+
+    std::ostream&
+    operator<<(std::ostream& s, const DomainBox& box);
 
     struct Vertex {
         DomainBox box;
@@ -45,26 +50,24 @@ namespace treeck {
     };
 
     struct IndependentSet {
-        std::vector<Vertex> vertices_;
+        std::vector<Vertex> vertices;
     };
 
     class KPartiteGraph {
-        size_t nfeatures_;
-        size_t ninstances_;
         std::vector<IndependentSet> sets_;
-        std::vector<Domain> domains_buffer_;
-        std::unordered_map<FeatId, size_t> feat_id_map_;
 
     private:
-        size_t map_feat_id(FeatId feat_id);
-        DomainBox create_box();
         void fill_independence_set(IndependentSet& set, AddTree::TreeT::CRef node);
 
     public:
-        KPartiteGraph();
+        KPartiteGraph(const AddTree& addtree);
 
-        void add_instance(const AddTree& addtree);
+        std::vector<IndependentSet>::const_iterator begin() const;
+        std::vector<IndependentSet>::const_iterator end() const;
     };
+
+    std::ostream&
+    operator<<(std::ostream& s, const KPartiteGraph& graph);
 
 } /* namespace treeck */
 

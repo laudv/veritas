@@ -84,7 +84,11 @@ namespace treeck {
     RealDomain::intersect(const RealDomain& o) const
     {
         if (!overlaps(o))
-            throw std::runtime_error("RealDomain::intersect: does not overlap");
+        {
+            std::stringstream ss;
+            ss << "RealDomain::intersect: no overlap " << *this << " and " << o;
+            throw std::runtime_error(ss.str());
+        }
 
         FloatT nlo = std::max(lo, o.lo);
         FloatT nhi = std::min(hi, o.hi);

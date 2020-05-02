@@ -4,88 +4,113 @@
  * Author: Laurens Devos
 */
 
+#include <algorithm>
 #include <iostream>
+#include <iomanip>
 #include <vector>
+
 #include "graph.h"
 
 namespace treeck {
 
-    DomainBox::DomainBox(std::vector<Domain>& data, size_t begin, size_t sz)
-        : data_(data)
-        , begin(begin)
-        , sz(sz) { }
+    DomainBox::DomainBox() : domains_() { }
+
+    std::vector<std::pair<FeatId, Domain>>::const_iterator
+    DomainBox::begin() const
+    {
+        return domains_.begin();
+    }
+
+    std::vector<std::pair<FeatId, Domain>>::const_iterator
+    DomainBox::end() const
+    {
+        return domains_.end();
+    }
+
+    std::vector<std::pair<FeatId, Domain>>::const_iterator
+    DomainBox::find(FeatId feat_id) const
+    {
+        return std::find_if(domains_.cbegin(), domains_.cend(), 
+                [feat_id](const std::pair<FeatId, Domain>& arg) {
+            return arg.first == feat_id;
+        });
+    }
+
+    std::vector<std::pair<FeatId, Domain>>::iterator
+    DomainBox::find(FeatId feat_id)
+    {
+        return std::find_if(domains_.begin(), domains_.end(), 
+                [feat_id](std::pair<FeatId, Domain>& arg) {
+            return arg.first == feat_id;
+        });
+    }
 
     void
-    DomainBox::check_bounds(size_t i) const
+    DomainBox::refine(Split split, bool is_left_child)
     {
-#ifndef DISABLE_BOUNDS_CHECKS
-        if (i >= sz)
-            throw std::out_of_range("DomainBox out of bounds");
-#endif
-    }
-
-    const Domain&
-    DomainBox::operator[](size_t i) const
-    {
-        check_bounds(i);
-        return data_[begin + i];
-    }
-
-    Domain&
-    DomainBox::operator[](size_t i)
-    {
-        check_bounds(i);
-        return data_[begin + i];
+        visit_split(
+                [this, is_left_child](const LtSplit& s) {
+                    auto p = find(s.feat_id);
+                    if (p == end()) {
+                        domains_.push_back({s.feat_id, refine_domain({}, s, is_left_child)});
+                    } else {
+                        RealDomain dom = util::get_or<RealDomain>(p->second);
+                        p->second = refine_domain(dom, s, is_left_child);
+                    }
+                },
+                [this, is_left_child](const BoolSplit& s) {
+                    auto p = find(s.feat_id);
+                    if (p == end()) {
+                        domains_.push_back({s.feat_id, refine_domain({}, s, is_left_child)});
+                    } else {
+                        BoolDomain dom = util::get_or<BoolDomain>(p->second);
+                        p->second = refine_domain(dom, s, is_left_child);
+                    }
+               },
+               split);
     }
 
     void
-    DomainBox::intersect(const DomainBox& other)
+    DomainBox::sort()
     {
-        check_bounds(other.sz - 1);
-        other.check_bounds(sz - 1);
-
-        auto it1 = data_.begin() + begin;
-        auto it2 = other.data_.cbegin() + other.begin;
-        auto stop1 = it1 + sz;
-
-        for(; it1 != stop1; ++it1, ++it2)
-        {
-
-        }
+        std::sort(domains_.begin(), domains_.end(), [](auto& p, auto& q) {
+            return p.first < q.first;
+        });
     }
 
+    std::ostream&
+    operator<<(std::ostream& s, const DomainBox& box)
+    {
+        s << "DomainBox { ";
+        for (auto&& [feat_id, dom] : box)
+            s << feat_id << "->" << dom << " ";
+        s << '}';
+        return s;
+    }
 
     // -------------------------------------------------------------------------
 
-    KPartiteGraph::KPartiteGraph()
+    KPartiteGraph::KPartiteGraph(const AddTree& addtree)
     {
-        std::cout << "hi from here" << std::endl;
-    }
+        for (const AddTree::TreeT& tree : addtree.trees())
+        {
+            IndependentSet set;
+            fill_independence_set(set, tree.root());
 
-    size_t
-    KPartiteGraph::map_feat_id(FeatId feat_id)
-    {
-        auto ptr = feat_id_map_.find(feat_id);
-        if (ptr != feat_id_map_.end())
-        {
-            return ptr->second;
-        }
-        else
-        {
-            size_t mapped_value = feat_id_map_.size();
-            feat_id_map_.insert({feat_id, mapped_value});
-            return mapped_value;
+            sets_.push_back(set);
         }
     }
 
-    DomainBox
-    KPartiteGraph::create_box()
+    std::vector<IndependentSet>::const_iterator
+    KPartiteGraph::begin() const
     {
-        size_t begin = domains_buffer_.size();
-        size_t sz = nfeatures_;
-        domains_buffer_.resize(begin + sz);
+        return sets_.cbegin();
+    }
 
-        return DomainBox(domains_buffer_, begin, sz);
+    std::vector<IndependentSet>::const_iterator
+    KPartiteGraph::end() const
+    {
+        return sets_.cend();
     }
 
     void
@@ -98,24 +123,41 @@ namespace treeck {
         }
         else
         {
-            std::cout << "add node " << node.id() << std::endl;
-            auto box = create_box(); // TODO probleem! we kennen nfeatures_ nog niet
+            FloatT leaf_value = node.leaf_value();
+            DomainBox box;
+
             while (!node.is_root())
             {
-
+                auto child_node = node;
+                bool is_left = child_node.is_left_child();
+                node = node.parent();
+                box.refine(node.get_split(), child_node.is_left_child());
             }
-            //set.vertices_.push_back({});
+            box.sort();
+            set.vertices.push_back({box, leaf_value});
         }
     }
 
-    void
-    KPartiteGraph::add_instance(const AddTree& addtree)
+    std::ostream&
+    operator<<(std::ostream& s, const KPartiteGraph& graph)
     {
-        for (const AddTree::TreeT& tree : addtree.trees())
+        s << "KPartiteGraph {" << std::endl;
+        for (auto& set : graph)
         {
-            std::cout << tree << std::endl;
-            IndependentSet set;
-            fill_independence_set(set, tree.root());
+            s << "  IndependentSet {" << std::endl;;
+            for (auto& vertex : set.vertices)
+            {
+                s
+                    << "    vertex("
+                    << std::fixed << std::setw(6)
+                    << std::setprecision(3)
+                    << vertex.output
+                    << ") "
+                    << vertex.box << std::endl;
+            }
+            s << "  }" << std::endl;
         }
+        s << "}";
+        return s;
     }
 }

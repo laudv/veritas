@@ -247,11 +247,9 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
 
     py::class_<KPartiteGraph>(m, "Graph")
-        .def(py::init<>([](std::vector<std::shared_ptr<AddTree>> trees) {
-            KPartiteGraph graph;
-            for (auto tree : trees)
-                graph.add_instance(*tree);
-            return graph;
-        }));
+        .def(py::init<>([](std::shared_ptr<AddTree> at) {
+            return KPartiteGraph(*at);
+        }))
+        .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
 
 } /* PYBIND11_MODULE */
