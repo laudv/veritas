@@ -5,7 +5,7 @@
  *
  * ----
  *
- * Reimplementation of concepts introduced by the following paper:
+ * Reimplementation of concepts introduced by the following paper Chen et al. 2019:
  *
  * https://papers.nips.cc/paper/9399-robustness-verification-of-tree-based-models
  * https://github.com/chenhongge/treeVerification
@@ -39,6 +39,9 @@ namespace treeck {
         void refine(Split split, bool is_left_child);
 
         void sort();
+
+        bool overlaps(const DomainBox& other) const;
+        DomainBox combine(const DomainBox& other) const;
     };
 
     std::ostream&
@@ -47,6 +50,10 @@ namespace treeck {
     struct Vertex {
         DomainBox box;
         FloatT output;
+        FloatT min_output;
+        FloatT max_output;
+
+        Vertex(DomainBox box, FloatT output);
     };
 
     struct IndependentSet {
@@ -64,6 +71,12 @@ namespace treeck {
 
         std::vector<IndependentSet>::const_iterator begin() const;
         std::vector<IndependentSet>::const_iterator end() const;
+
+        void propage_outputs();
+        void merge(int K);
+
+        size_t num_independent_sets() const;
+        size_t num_vertices() const;
     };
 
     std::ostream&
