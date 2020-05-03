@@ -54,13 +54,15 @@ class TestGraph(unittest.TestCase):
         print(graph)
 
         prev_len = len(graph)
+        prev_v = graph.num_vertices()
 
         graph.propage_outputs()
 
-        graph.merge(2);
+        graph.merge(5);
 
+        graph.propage_outputs()
         
-        print(prev_len, len(graph))
+        print(prev_len, len(graph), prev_v, graph.num_vertices())
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

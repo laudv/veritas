@@ -252,6 +252,7 @@ PYBIND11_MODULE(pytreeck, m) {
         }))
         .def("propage_outputs", &KPartiteGraph::propage_outputs)
         .def("merge", &KPartiteGraph::merge)
+        .def("num_vertices", &KPartiteGraph::num_vertices)
         .def("__len__", &KPartiteGraph::num_independent_sets)
         .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
 

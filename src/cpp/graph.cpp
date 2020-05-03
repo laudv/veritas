@@ -271,52 +271,6 @@ namespace treeck {
     {
         std::vector<IndependentSet> new_sets;
 
-        //auto it = sets_.cbegin();
-        //set0 = *(it++);
-        //int k = 0;
-
-        //for (; it != sets_.cend();)
-        //{
-        //    std::cout << "hier3" << std::endl;
-        //    
-        //    for (const auto& v0 : set0.vertices)
-        //    {
-        //        std::cout << "hier4 " << it->vertices.size() << std::endl;
-        //        for (const auto& v1 : it->vertices)
-        //        {
-        //            std::cout << "hier5" << std::endl;
-        //            if (v0.box.overlaps(v1.box))
-        //            {
-        //                std::cout << "hallo???" << v0.box << std::endl;
-        //                std::cout << "        " << v1.box << std::endl;
-        //                auto box = v0.box.combine(v1.box);
-        //                std::cout << " =====> " << box << std::endl;
-        //                FloatT output = v0.output + v1.output;
-        //                set1.vertices.push_back({box, output});
-        //            }
-        //            std::cout << "hier6" << std::endl;
-        //        }
-        //    }
-        //    
-        //    std::cout << " ============= " << std::endl;
-
-        //    set0.vertices.clear();
-        //    std::swap(set0, set1);
-
-        //    ++k;
-        //    ++it;
-
-        //    if (k == K || it == sets_.end())
-        //    {
-        //        std::cout << " ============= PUSHING " << std::endl;
-
-        //        new_sets.push_back(std::move(set0));
-        //        set0.vertices.clear();
-        //        set0 = *(it++);
-        //        k = 0;
-        //    }
-        //}
-
         for (auto it = sets_.cbegin(); it != sets_.cend(); )
         {
             IndependentSet set0(*it++);
@@ -330,10 +284,7 @@ namespace treeck {
                     {
                         if (v0.box.overlaps(v1.box))
                         {
-                            std::cout << "hallo???" << v0.box << std::endl;
-                            std::cout << "        " << v1.box << std::endl;
                             auto box = v0.box.combine(v1.box);
-                            std::cout << " =====> " << box << std::endl;
                             FloatT output = v0.output + v1.output;
                             set1.vertices.push_back({box, output});
                         }
@@ -350,11 +301,19 @@ namespace treeck {
         std::swap(new_sets, sets_);
     }
 
-
     size_t
     KPartiteGraph::num_independent_sets() const
     {
         return sets_.size();
+    }
+
+    size_t
+    KPartiteGraph::num_vertices() const
+    {
+        size_t result = 0;
+        for (const auto& set : sets_)
+            result += set.vertices.size();
+        return result;
     }
 
     std::ostream&
