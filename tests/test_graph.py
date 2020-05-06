@@ -40,12 +40,27 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.right(t.root()))), 0.5)
         t.set_leaf_value(t.right(t.right(t.right(t.root()))), 0.6)
 
+        print(at)
         graph = KPartiteGraph(at)
 
-        print(graph)
-        graph.merge(2);
-        print(graph)
+        #print(graph)
+        #print("outputs: ", graph.propagate_outputs())
+        #graph.merge(2);
+        #print("outputs: ", graph.propagate_outputs())
+        #print(graph)
+
+        print("\n== MAX ======================")
+        find = MaxKPartiteGraphFind(graph)
+        print("done?", not find.steps(100))
+        max_solutions = find.solutions()
+        print(len(max_solutions))
  
+        print("\n== MIN ======================")
+        find = MinKPartiteGraphFind(graph)
+        print("done?", not find.steps(100))
+        min_solutions = find.solutions()
+        print(len(min_solutions))
+
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")
 
@@ -53,16 +68,28 @@ class TestGraph(unittest.TestCase):
 
         print(graph)
 
-        prev_len = len(graph)
-        prev_v = graph.num_vertices()
+        print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        graph.merge(2);
+        print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        graph.merge(2);
+        print(graph)
+        print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        #graph.merge(2);
+        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        #graph.merge(2);
+        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
 
-        graph.propage_outputs()
-
-        graph.merge(5);
-
-        graph.propage_outputs()
-        
-        print(prev_len, len(graph), prev_v, graph.num_vertices())
+        print("\n== MAX ======================")
+        find = MaxKPartiteGraphFind(graph)
+        print("done?", not find.steps(100))
+        max_solutions = find.solutions()
+        print(len(max_solutions))
+ 
+        #print("\n== MIN ======================")
+        #find = MinKPartiteGraphFind(graph)
+        #print("done?", not find.steps(100))
+        #min_solutions = find.solutions()
+        #print(len(min_solutions))
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

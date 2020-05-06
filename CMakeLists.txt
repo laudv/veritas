@@ -32,6 +32,10 @@ option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
     #target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
 #endif (BUILD_PYTHON_BINDINGS)
 
+# Use Ubuntu's z3 (libz3-dev) install
+#find_package(Z3 REQUIRED)
+target_link_libraries("py${PROJECT_NAME}" PRIVATE -lz3)
+
 if(MSVC)
     add_compile_options(/W4 /WX)
 else()

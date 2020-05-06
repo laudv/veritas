@@ -38,11 +38,9 @@ encode_split(const DomTreeSplit& split)
     return py::make_tuple(i, split.split);
 }
 
-
 using TreeD = Tree<Split, FloatT>;
 using NodeRefD = TreeD::MRef;
 using DomTreeT = DomTree::DomTreeT;
-
 
 PYBIND11_MODULE(pytreeck, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
@@ -246,14 +244,44 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__str__", [](const DomTreeT& at) { return tostr(at); })
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
 
-    py::class_<KPartiteGraph>(m, "KPartiteGraph")
+    py::class_<KPartiteGraph, std::shared_ptr<KPartiteGraph>>(m, "KPartiteGraph")
         .def(py::init<>([](std::shared_ptr<AddTree> at) {
             return KPartiteGraph(*at);
         }))
-        .def("propage_outputs", &KPartiteGraph::propage_outputs)
+        .def("propagate_outputs", &KPartiteGraph::propagate_outputs)
         .def("merge", &KPartiteGraph::merge)
         .def("num_vertices", &KPartiteGraph::num_vertices)
         .def("__len__", &KPartiteGraph::num_independent_sets)
         .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
+
+    py::class_<MaxKPartiteGraphFind>(m, "MaxKPartiteGraphFind")
+        .def(py::init<>([](std::shared_ptr<KPartiteGraph> graph) {
+            return MaxKPartiteGraphFind(*graph);
+        }))
+        .def("step", &MaxKPartiteGraphFind::step)
+        .def("steps", &MaxKPartiteGraphFind::steps)
+        .def("nsteps", &MaxKPartiteGraphFind::nsteps)
+        .def("current_output_estimate", &MaxKPartiteGraphFind::current_output_estimate)
+        .def("solutions", [](const MaxKPartiteGraphFind& g) {
+            std::vector<std::pair<FloatT, std::vector<std::pair<int, Domain>>>> solutions;
+            for (const auto& s : g.solutions())
+                solutions.push_back({s.output, std::vector<std::pair<int, Domain>>(s.box.begin(), s.box.end())});
+            return solutions;
+        });
+
+    py::class_<MinKPartiteGraphFind>(m, "MinKPartiteGraphFind")
+        .def(py::init<>([](std::shared_ptr<KPartiteGraph> graph) {
+            return MinKPartiteGraphFind(*graph);
+        }))
+        .def("step", &MinKPartiteGraphFind::step)
+        .def("steps", &MinKPartiteGraphFind::steps)
+        .def("nsteps", &MinKPartiteGraphFind::nsteps)
+        .def("current_output_estimate", &MinKPartiteGraphFind::current_output_estimate)
+        .def("solutions", [](const MinKPartiteGraphFind& g) {
+            std::vector<std::pair<FloatT, std::vector<std::pair<int, Domain>>>> solutions;
+            for (const auto& s : g.solutions())
+                solutions.push_back({s.output, std::vector<std::pair<int, Domain>>(s.box.begin(), s.box.end())});
+            return solutions;
+        });
 
 } /* PYBIND11_MODULE */
