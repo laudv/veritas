@@ -14,6 +14,8 @@
 #include <pybind11/stl.h>
 #include <pybind11/cast.h>
 
+#include <z3++.h>
+
 #include "domain.h"
 #include "tree.h"
 #include "domtree.h"
@@ -274,5 +276,50 @@ PYBIND11_MODULE(pytreeck, m) {
 
     DeclareKPartiteGraphFind(MaxKPartiteGraphFind);
     DeclareKPartiteGraphFind(MinKPartiteGraphFind);
+
+    struct Test {};
+
+    py::class_<Test>(m, "Test")
+        .def(py::init<>())
+        .def_static("solver", []() {
+            z3::context ctx;
+            z3::solver sol(ctx);
+
+            py::object pyz3 = py::module::import("z3");
+            py::object pycontext = pyz3.attr("Context");
+            py::object pysolver = pyz3.attr("Solver");
+
+            py::object co = pyz3.attr("ContextObj")(static_cast<void *>(ctx));
+            py::object so = pyz3.attr("SolverObj")(static_cast<void *>(sol));
+
+            return pysolver(so, pycontext(co));
+        })
+        .def_static("a", [](py::object solver) {
+            std::cout << solver << std::endl;
+            size_t ctx_p = solver.attr("ctx").attr("ctx").attr("value").cast<size_t>();
+            size_t sol_p = solver.attr("solver").attr("value").cast<size_t>();
+            std::cout << "ctx " << ctx_p << std::endl;
+            std::cout << "sol " << sol_p << std::endl;
+
+            Z3_context ctx0 = reinterpret_cast<Z3_context>(ctx_p);
+            Z3_solver sol0 = reinterpret_cast<Z3_solver>(sol_p);
+
+            std::cout << "ctx " << ctx0 << std::endl;
+            std::cout << "sol " << sol0 << std::endl;
+
+            Z3_sort ty = Z3_mk_bool_sort(ctx0);
+            Z3_symbol s  = Z3_mk_string_symbol(ctx0, "x");
+            Z3_ast xvar = Z3_mk_const(ctx0, s, ty);
+
+            Z3_solver_assert(ctx0, sol0, xvar);
+
+            std::cout << solver << std::endl;
+
+            //std::cout << "assert: " << out << std::endl;
+            //Z3_string str = Z3_solver_to_string(ctx0, sol0);
+            //std::cout << "output: "<< str << std::endl;
+        })
+
+    ;
 
 } /* PYBIND11_MODULE */
