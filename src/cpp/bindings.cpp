@@ -281,45 +281,44 @@ PYBIND11_MODULE(pytreeck, m) {
 
     py::class_<Test>(m, "Test")
         .def(py::init<>())
-        .def_static("solver", []() {
-            z3::context ctx;
-            z3::solver sol(ctx);
+        .def_static("a", []() {
+            std::cout << "de-Morgan example\n";
+            
+            z3::context c;
 
-            py::object pyz3 = py::module::import("z3");
-            py::object pycontext = pyz3.attr("Context");
-            py::object pysolver = pyz3.attr("Solver");
+            z3::expr x = c.bool_const("x");
+            z3::expr y = c.bool_const("y");
+            z3::expr conjecture = (!(x && y)) == (!x || !y);
 
-            py::object co = pyz3.attr("ContextObj")(static_cast<void *>(ctx));
-            py::object so = pyz3.attr("SolverObj")(static_cast<void *>(sol));
+            std::cout << "conjecture: " << conjecture << std::endl;
+            
+            z3::solver s(c);
+            s.add(!conjecture);
 
-            return pysolver(so, pycontext(co));
+            std::stringstream ss;
+            ss << s;
+            const std::string sss = ss.str();
+
+            std::cout << "sss " << sss << std::endl;
+
+            z3::context c2;
+            std::cout << "context" << std::endl;
+            z3::solver s2(c2);
+            s2.from_string(sss.c_str());
+
+            std::cout << " =================== " << std::endl;
+            std::cout << "new s " << s2 << std::endl;
+
+            // adding the negation of the conjecture as a constraint.
+            std::cout << " =================== " << std::endl;
+            std::cout << s << "\n";
+            std::cout << s.to_smt2() << "\n";
+            switch (s.check()) {
+            case z3::unsat:   std::cout << "de-Morgan is valid\n"; break;
+            case z3::sat:     std::cout << "de-Morgan is not valid\n"; break;
+            case z3::unknown: std::cout << "unknown\n"; break;
+            }
         })
-        .def_static("a", [](py::object solver) {
-            std::cout << solver << std::endl;
-            size_t ctx_p = solver.attr("ctx").attr("ctx").attr("value").cast<size_t>();
-            size_t sol_p = solver.attr("solver").attr("value").cast<size_t>();
-            std::cout << "ctx " << ctx_p << std::endl;
-            std::cout << "sol " << sol_p << std::endl;
-
-            Z3_context ctx0 = reinterpret_cast<Z3_context>(ctx_p);
-            Z3_solver sol0 = reinterpret_cast<Z3_solver>(sol_p);
-
-            std::cout << "ctx " << ctx0 << std::endl;
-            std::cout << "sol " << sol0 << std::endl;
-
-            Z3_sort ty = Z3_mk_bool_sort(ctx0);
-            Z3_symbol s  = Z3_mk_string_symbol(ctx0, "x");
-            Z3_ast xvar = Z3_mk_const(ctx0, s, ty);
-
-            Z3_solver_assert(ctx0, sol0, xvar);
-
-            std::cout << solver << std::endl;
-
-            //std::cout << "assert: " << out << std::endl;
-            //Z3_string str = Z3_solver_to_string(ctx0, sol0);
-            //std::cout << "output: "<< str << std::endl;
-        })
-
     ;
 
 } /* PYBIND11_MODULE */
