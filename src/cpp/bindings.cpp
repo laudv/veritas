@@ -254,34 +254,25 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__len__", &KPartiteGraph::num_independent_sets)
         .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
 
-    py::class_<MaxKPartiteGraphFind>(m, "MaxKPartiteGraphFind")
-        .def(py::init<>([](std::shared_ptr<KPartiteGraph> graph) {
-            return MaxKPartiteGraphFind(*graph);
-        }))
-        .def("step", &MaxKPartiteGraphFind::step)
-        .def("steps", &MaxKPartiteGraphFind::steps)
-        .def("nsteps", &MaxKPartiteGraphFind::nsteps)
-        .def("current_output_estimate", &MaxKPartiteGraphFind::current_output_estimate)
-        .def("solutions", [](const MaxKPartiteGraphFind& g) {
-            std::vector<std::pair<FloatT, std::vector<std::pair<int, Domain>>>> solutions;
-            for (const auto& s : g.solutions())
-                solutions.push_back({s.output, std::vector<std::pair<int, Domain>>(s.box.begin(), s.box.end())});
-            return solutions;
-        });
+#define DeclareKPartiteGraphFind(TYPE) \
+    py::class_<TYPE>(m, #TYPE) \
+        .def(py::init<>([](std::shared_ptr<KPartiteGraph> graph) { \
+            return TYPE(*graph);\
+        }))\
+        .def("step", &TYPE::step)\
+        .def("steps", &TYPE::steps)\
+        .def_readonly("nsteps", &TYPE::nsteps)\
+        .def_readonly("nupdate_fails", &TYPE::nupdate_fails)\
+        .def_readonly("nrejected", &TYPE::nrejected)\
+        .def("current_output_estimate", &TYPE::current_output_estimate)\
+        .def("solutions", [](const TYPE& g) {\
+            std::vector<std::pair<FloatT, std::vector<std::pair<int, Domain>>>> solutions;\
+            for (const auto& s : g.solutions())\
+                solutions.push_back({s.output, std::vector<std::pair<int, Domain>>(s.box.begin(), s.box.end())});\
+            return solutions;\
+        })
 
-    py::class_<MinKPartiteGraphFind>(m, "MinKPartiteGraphFind")
-        .def(py::init<>([](std::shared_ptr<KPartiteGraph> graph) {
-            return MinKPartiteGraphFind(*graph);
-        }))
-        .def("step", &MinKPartiteGraphFind::step)
-        .def("steps", &MinKPartiteGraphFind::steps)
-        .def("nsteps", &MinKPartiteGraphFind::nsteps)
-        .def("current_output_estimate", &MinKPartiteGraphFind::current_output_estimate)
-        .def("solutions", [](const MinKPartiteGraphFind& g) {
-            std::vector<std::pair<FloatT, std::vector<std::pair<int, Domain>>>> solutions;
-            for (const auto& s : g.solutions())
-                solutions.push_back({s.output, std::vector<std::pair<int, Domain>>(s.box.begin(), s.box.end())});
-            return solutions;
-        });
+    DeclareKPartiteGraphFind(MaxKPartiteGraphFind);
+    DeclareKPartiteGraphFind(MinKPartiteGraphFind);
 
 } /* PYBIND11_MODULE */

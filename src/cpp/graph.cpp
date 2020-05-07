@@ -426,7 +426,7 @@ namespace treeck {
 
     template <typename Cmp>
     KPartiteGraphFind<Cmp>::KPartiteGraphFind(KPartiteGraph& graph)
-        : graph_(graph), nsteps_(0)
+        : graph_(graph), nsteps(0), nupdate_fails(0), nrejected(0)
     {
         if constexpr (std::is_same_v<MaxKPartiteGraphFind, KPartiteGraphFind<Cmp>>)
             graph.sort_desc(); // try vertices with greater output values first
@@ -498,7 +498,7 @@ namespace treeck {
 
     template <typename Cmp>
     bool
-    KPartiteGraphFind<Cmp>::update_clique(Clique& c) const
+    KPartiteGraphFind<Cmp>::update_clique(Clique& c)
     {
         // Things to do:
         // 1. find next vertex in `indep_set`
@@ -531,6 +531,7 @@ namespace treeck {
                 }
                 return true; // update successful!
             }
+            else ++nupdate_fails;
         }
         return false; // out of compatible vertices in `c.indep_set`
     }
@@ -582,12 +583,12 @@ namespace treeck {
             pq_push(std::move(new_c));
         }
 
-        std::cout << "STEP " << nsteps_ << " UPDATE " << old_est << " -> " << current_output_estimate()
+        std::cout << "STEP " << nsteps << " UPDATE " << old_est << " -> " << current_output_estimate()
             << " (#pq=" << pq_buf_.size()
             << ", #sol=" << solutions_.size() << ')'
             << std::endl;
 
-        ++nsteps_;
+        ++nsteps;
         return true;
     }
 
@@ -615,14 +616,6 @@ namespace treeck {
     {
         return solutions_;
     }
-
-    template <typename Cmp>
-    size_t
-    KPartiteGraphFind<Cmp>::nsteps() const
-    {
-        return nsteps_;
-    }
-
 
     // TODO remove
     //template <typename Cmp>

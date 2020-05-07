@@ -59,7 +59,7 @@ class TestGraph(unittest.TestCase):
         find = MinKPartiteGraphFind(graph)
         print("done?", not find.steps(100))
         min_solutions = find.solutions()
-        print(len(min_solutions))
+        print(len(min_solutions), graph.nsteps, graph.nupdate_fails)
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")
@@ -83,7 +83,9 @@ class TestGraph(unittest.TestCase):
         find = MaxKPartiteGraphFind(graph)
         print("done?", not find.steps(100))
         max_solutions = find.solutions()
-        print(len(max_solutions))
+        print("#sol", len(max_solutions),
+              "#steps", find.nsteps,
+              "#nfails", find.nupdate_fails)
  
         #print("\n== MIN ======================")
         #find = MinKPartiteGraphFind(graph)

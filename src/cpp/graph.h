@@ -116,14 +116,17 @@ namespace treeck {
         std::vector<Clique> solutions_;
         Cmp cmp_;
 
-        size_t nsteps_;
+    public:
+        size_t nsteps;
+        size_t nupdate_fails;
+        size_t nrejected;
 
     private:
         Clique pq_pop();
         void pq_push(Clique&& c);
 
         bool is_solution(const Clique& c) const;
-        bool update_clique(Clique& c) const;
+        bool update_clique(Clique& c);
 
     public:
         KPartiteGraphFind(KPartiteGraph& graph);
@@ -133,7 +136,6 @@ namespace treeck {
 
         FloatT current_output_estimate() const;
         const std::vector<Clique>& solutions() const;
-        size_t nsteps() const;
     };
 
     using MaxKPartiteGraphFind = KPartiteGraphFind<std::less<Clique>>;
