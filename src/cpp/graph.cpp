@@ -184,9 +184,9 @@ namespace treeck {
     std::ostream&
     operator<<(std::ostream& s, const DomainBox& box)
     {
-        s << "DomainBox { ";
+        s << "DBox { ";
         for (auto&& [id, dom] : box)
-            s << id << "->" << dom << " ";
+            s << id << ":" << dom << " ";
         s << '}';
         return s;
     }
@@ -397,6 +397,8 @@ namespace treeck {
     std::ostream&
     operator<<(std::ostream& s, const KPartiteGraph& graph)
     {
+        std::ios_base::fmtflags flgs(std::cout.flags());
+
         s << "KPartiteGraph {" << std::endl;
         for (auto& set : graph)
         {
@@ -404,18 +406,19 @@ namespace treeck {
             for (auto& vertex : set.vertices)
             {
                 s
-                    << "    vertex("
+                    << "    v("
                     << std::fixed
-                    << std::setprecision(2)
+                    << std::setprecision(3)
                     << vertex.output
-                    << ", " << vertex.min_output
-                    << ", " << vertex.max_output
-                    << ") "
-                    << vertex.box << std::endl;
+                    << "," << vertex.min_output
+                    << "," << vertex.max_output
+                    << ") ";
+                s << vertex.box << std::endl;
             }
             s << "  }" << std::endl;
         }
         s << "}";
+        std::cout.flags(flgs);
         return s;
     }
 

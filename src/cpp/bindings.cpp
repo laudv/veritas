@@ -250,6 +250,82 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
     */
 
+
+    struct Optimizer {
+        std::shared_ptr<Solver> solver;
+        std::shared_ptr<AddTree> at0;
+        std::shared_ptr<AddTree> at1;
+        KPartiteGraph g0;
+        KPartiteGraph g1;
+    };
+
+    py::class_<Optimizer>(m, "Optimizer")
+        .def(py::init<>([](std::shared_ptr<AddTree> at) -> Optimizer {
+            return {
+                std::make_shared<Solver>(*at),
+                at,
+                {},
+                {*at},
+                {},
+            };
+        }))
+        .def(py::init<>([](
+                        std::shared_ptr<AddTree> at0,
+                        std::shared_ptr<AddTree> at1,
+                        std::unordered_set<FeatId> matches,
+                        bool match_is_reuse
+                        ) -> Optimizer {
+            Optimizer opt {
+                std::make_shared<Solver>(*at0, *at1, std::move(matches), match_is_reuse),
+                at0,
+                at1,
+                {*at0},
+                {},
+            };
+            opt.g1 = {*at1, opt.solver->fmap()};
+            return opt;
+        }))
+        .def("__str__", [](const Optimizer& opt) {
+            std::stringstream ss;
+            ss << "==== Z3 state: " << std::endl << opt.solver->get_z3() << std::endl;
+            ss << std::endl << "==== KPartiteGraph 0:" << std::endl;
+            ss << opt.g0 << std::endl;
+            ss << std::endl << "==== KPartiteGraph 1:" << std::endl;
+            ss << opt.g1 << std::endl;
+            return ss.str();
+        })
+        .def("parse_smt", [](Optimizer& opt, const char *smt) {
+                opt.solver->parse_smt(smt);
+                std::cout << opt.solver->get_z3() << std::endl;
+        })
+        .def("merge", [](Optimizer& opt, int K, int instance) {
+            instance += 1;
+            if ((instance & 0b1) != 0)
+                opt.g0.merge(K);
+            if ((instance & 0b10) != 0)
+                opt.g1.merge(K);
+        }, py::arg("K")=2, py::arg("instance")=0b10)
+        .def("prune", [](Optimizer& opt, int instance) {
+            instance += 1;
+            auto f = [opt](const DomainBox& box) {
+                z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
+                bool res = opt.solver->get_z3().check(1, &e) == z3::unsat;
+                std::cout << "test: " << box << " -> " << e << "res? " << res << std::endl;
+                return res;
+            };
+
+            if ((instance & 0b1) != 0)
+                opt.g0.prune(f);
+            if ((instance & 0b10) != 0)
+                opt.g1.prune(f);
+
+        }, py::arg("instance") = 0b10)
+        .def("xvar_name", [](Optimizer& opt, int instance, FeatId feat_id) {
+            return opt.solver->xvar_name(instance, feat_id);
+        });
+
+
+    /*
     py::class_<KPartiteGraph, std::shared_ptr<KPartiteGraph>>(m, "KPartiteGraph")
         .def(py::init<>([](std::shared_ptr<AddTree> at) {
             ReuseIdMapper fmap(*at, {1}, false);
@@ -299,8 +375,6 @@ PYBIND11_MODULE(pytreeck, m) {
             std::cout << s.domain_to_z3(s.xvar_id(0, 1), d2) << std::endl;
         })
         .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
-
-    /*
 
 #define DeclareKPartiteGraphFind(TYPE) \
     py::class_<TYPE>(m, #TYPE) \

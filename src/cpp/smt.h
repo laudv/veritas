@@ -62,6 +62,9 @@ namespace treeck {
                 bool match_is_reuse);
 
         z3::solver& get_z3();
+        z3::context& get_z3_ctx();
+        void parse_smt(const char *smt);
+
         const ReuseIdMapper& fmap() const;
 
         z3::expr& float_to_z3(FloatT value);

@@ -21,7 +21,9 @@ namespace treeck {
     bool
     ReuseIdMapper::is_reused(FeatId feat_id) const
     {
-        return matches_.find(feat_id) != matches_.end();
+        bool in_matches = matches_.find(feat_id) != matches_.end();
+        std::cout << "is_reused? feat_id==" << feat_id << " => " << (in_matches == match_is_reuse_) << std::endl;
+        return in_matches == match_is_reuse_;
     }
 
     int
@@ -31,13 +33,11 @@ namespace treeck {
         //   id value also used for the first addtree (at0 from constructor)
         // -!match_is_reuse_: if feat_id occurs in matches_, then **don't**
         //   match them to the same id value also used for the first addtree
-        bool is_match = is_reused(feat_id);
-        if (match_is_reuse_ == is_match)
+        if (is_reused(feat_id))
             return static_cast<int>(feat_id);
         else
             return static_cast<int>(1 + max_feat_id_ + feat_id);
     }
-
 
 
 
@@ -148,6 +148,33 @@ namespace treeck {
         return solver_;
     }
 
+    z3::context&
+    Solver::get_z3_ctx()
+    {
+        return ctx_;
+    }
+
+    void
+    Solver::parse_smt(const char *smt)
+    {
+        std::stringstream ss;
+        for (auto &&[id, pair] : var_map_)
+        {
+            std::cout << "var_map_[" << id << "] = " << std::get<0>(pair) << ", " << std::get<1>(pair) << std::endl;
+            const std::string& xvar_name = std::get<0>(pair);
+            const z3::expr& xvar = std::get<1>(pair);
+
+            ss << "(declare-fun " << xvar_name << "() ";
+            if (xvar.is_real()) ss << "Real";
+            if (xvar.is_bool()) ss << "Bool";
+            ss << ')' << std::endl;
+        }
+        ss << smt;
+        std::cout << "SMT: " << std::endl << ss.str() << std::endl;
+        std::cout << "=====" << std::endl;
+        solver_.from_string(ss.str().c_str());
+    }
+
     const ReuseIdMapper&
     Solver::fmap() const
     {
@@ -158,17 +185,21 @@ namespace treeck {
     Solver::var_name(int instance, FeatId feat_id) const
     {
         if (instance != 0 && fmap_.is_reused(feat_id))
+        {
+            std::cout << "WARNING! reusing " << instance << ", " << feat_id << std::endl;
             instance = 0; // use same var as instance0
+        }
 
         std::stringstream s;
         s << "x" << instance << "_" << feat_id;
+        std::cout << "var_name " << instance << ", " << feat_id << " => " << s.str() << std::endl;
         return s.str();
     }
 
     int
     Solver::xvar_id(int instance, FeatId feat_id) const
     {
-        return instance != 0
+        return instance == 0
             ? static_cast<int>(feat_id)
             : fmap_(feat_id);
     }
@@ -235,7 +266,6 @@ namespace treeck {
     {
         return visit_domain(
             [this, id](const RealDomain& d) -> z3::expr {
-                std::cout << "hey real domain " << d << std::endl;
                 const z3::expr& xvar = xvar_by_id(id);
                 if (!xvar.is_real())
                     throw std::runtime_error("RealDomain for non-real variable");
@@ -284,7 +314,7 @@ namespace treeck {
     template
     z3::expr
     Solver::domains_to_z3(
-            std::vector<std::tuple<int, Domain>>::const_iterator begin,
-            std::vector<std::tuple<int, Domain>>::const_iterator end);
+            std::vector<std::pair<int, Domain>>::const_iterator begin,
+            std::vector<std::pair<int, Domain>>::const_iterator end);
 
 } /* namespace teeck */

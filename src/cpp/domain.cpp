@@ -131,7 +131,13 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d)
     {
-        return s << "RealDomain(" << d.lo << ", " << d.hi << ')';
+        if (d.lo_is_inf() && d.hi_is_inf())
+            return s << "Dom(R)";
+        if (d.hi_is_inf())
+            return s << "Dom(>=" << d.lo << ')';
+        if (d.lo_is_inf())
+            return s << "Dom(< " << d.hi << ')';
+        return s << "Dom(" << d.lo << ',' << d.hi << ')';
     }
 
 
@@ -187,10 +193,10 @@ namespace treeck {
     std::ostream& operator<<(std::ostream& s, const BoolDomain& d)
     {
         if (d.is_true())
-            return s << "BoolDomain(true)";
+            return s << "Dom(true)";
         if (d.is_false())
-            return s << "BoolDomain(false)";
-        return s << "BoolDomain()"; // is_everything == true
+            return s << "Dom(false)";
+        return s << "Dom(B)"; // is_everything == true
     }
 
 

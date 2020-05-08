@@ -40,14 +40,34 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.right(t.root()))), 0.5)
         t.set_leaf_value(t.right(t.right(t.right(t.root()))), 0.6)
 
-        print(at)
-        graph = KPartiteGraph(at)
-        graph.propagate_outputs()
-        graph.prune("""
-(declare-fun x () Real)
-(assert (> x  0.0))
-        """)
-        print(graph)
+        opt = Optimizer(at, at, {1}, True); # share feature 1 between two trees
+        print(opt)
+
+        opt.parse_smt(f"""
+(assert (< {opt.xvar_name(0, 0)} 0.0))
+(assert (> {opt.xvar_name(1, 0)} 1.0))""")
+        opt.prune()
+        print(opt)
+
+        opt.merge()
+
+        self.assertEqual(opt.xvar_name(0, 0), "x0_0")
+        self.assertEqual(opt.xvar_name(0, 1), "x0_1")
+        self.assertEqual(opt.xvar_name(1, 0), "x1_0")
+        self.assertEqual(opt.xvar_name(1, 1), "x0_1") # shared
+        self.assertEqual(opt.xvar_name(0, 2), "x0_2")
+        self.assertEqual(opt.xvar_name(1, 2), "x1_2")
+
+        #print(opt)
+
+        #print(at)
+        #graph = KPartiteGraph(at)
+        #graph.propagate_outputs()
+        #graph.prune("""
+#(declare-fun x () Real)
+#(assert (> x  0.0))
+#        """)
+#        print(graph)
 
         #print(graph)
         #print("outputs: ", graph.propagate_outputs())
