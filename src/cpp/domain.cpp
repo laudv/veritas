@@ -4,6 +4,7 @@
  * Author: Laurens Devos
 */
 
+#include <cmath>
 #include <algorithm>
 #include <exception>
 #include <limits>
@@ -108,6 +109,18 @@ namespace treeck {
     {
         return where_is_strict(other.lo) == WhereFlag::IN_DOMAIN
             && where_is_strict(other.hi) == WhereFlag::IN_DOMAIN;
+    }
+
+    bool
+    RealDomain::lo_is_inf() const
+    {
+        return std::isinf(lo);
+    }
+
+    bool
+    RealDomain::hi_is_inf() const
+    {
+        return std::isinf(hi);
     }
     
     std::tuple<RealDomain, RealDomain>

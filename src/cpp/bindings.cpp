@@ -20,6 +20,7 @@
 #include "tree.h"
 #include "domtree.h"
 #include "graph.h"
+#include "smt.h"
 
 namespace py = pybind11;
 using namespace treeck;
@@ -176,6 +177,8 @@ PYBIND11_MODULE(pytreeck, m) {
                 return AddTree::from_json(json);
             }));
 
+        /*
+
     py::class_<DomTree>(m, "DomTree")
         .def(py::init<>())
         .def(py::init<>([](std::shared_ptr<AddTree> v, DomainsT d) -> DomTree {
@@ -245,16 +248,59 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("depth", [](const DomTreeT& t, NodeId n) { return t[n].depth(); })
         .def("__str__", [](const DomTreeT& at) { return tostr(at); })
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
+    */
 
     py::class_<KPartiteGraph, std::shared_ptr<KPartiteGraph>>(m, "KPartiteGraph")
         .def(py::init<>([](std::shared_ptr<AddTree> at) {
-            return KPartiteGraph(*at);
+            ReuseIdMapper fmap(*at, {1}, false);
+            return KPartiteGraph(*at, fmap);
         }))
         .def("propagate_outputs", &KPartiteGraph::propagate_outputs)
         .def("merge", &KPartiteGraph::merge)
+        .def("prune", [](KPartiteGraph& graph, const char* smt) {
+            z3::context ctx;
+            z3::solver sol(ctx);
+            std::cout << "string " << smt << std::endl;
+            sol.from_string(smt);
+
+            std::cout << "solver: " << sol << std::endl;
+
+            auto f = [&ctx, &sol](const DomainBox& box) -> bool {
+                for (auto&& [feat_id, dom] : box)
+                {
+                    if (feat_id == 2)
+                        return true;
+                }
+                std::cout << "check() " << sol.check() << std::endl;
+                return sol.check() == z3::unsat;
+            };
+
+            graph.prune(f);
+        })
         .def("num_vertices", &KPartiteGraph::num_vertices)
-        .def("__len__", &KPartiteGraph::num_independent_sets)
+        .def("num_independent_sets", &KPartiteGraph::num_independent_sets)
+        .def_static("test", []() {
+            AddTree at;
+            AddTree::TreeT tree;
+            tree.root().split(LtSplit(0, 12.4));
+            tree.root().left().split(BoolSplit(1));
+            at.add_tree(std::move(tree));
+
+            std::cout << "test tree: " << at << std::endl;
+
+            Solver s{at, at, {1}, true};
+
+            Domain d = RealDomain(-1.0, FloatT(2.30));
+            std::cout << s.domain_to_z3(0, d) << std::endl;
+            Domain d1 = RealDomain(-2.0, FloatT(2.0));
+            std::cout << s.domain_to_z3(0, d1) << std::endl;
+            Domain d2 = BoolDomain(false);
+            std::cout << s.domain_to_z3(1, d2) << std::endl;
+            std::cout << s.domain_to_z3(s.xvar_id(0, 1), d2) << std::endl;
+        })
         .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
+
+    /*
 
 #define DeclareKPartiteGraphFind(TYPE) \
     py::class_<TYPE>(m, #TYPE) \
@@ -277,48 +323,6 @@ PYBIND11_MODULE(pytreeck, m) {
     DeclareKPartiteGraphFind(MaxKPartiteGraphFind);
     DeclareKPartiteGraphFind(MinKPartiteGraphFind);
 
-    struct Test {};
-
-    py::class_<Test>(m, "Test")
-        .def(py::init<>())
-        .def_static("a", []() {
-            std::cout << "de-Morgan example\n";
-            
-            z3::context c;
-
-            z3::expr x = c.bool_const("x");
-            z3::expr y = c.bool_const("y");
-            z3::expr conjecture = (!(x && y)) == (!x || !y);
-
-            std::cout << "conjecture: " << conjecture << std::endl;
-            
-            z3::solver s(c);
-            s.add(!conjecture);
-
-            std::stringstream ss;
-            ss << s;
-            const std::string sss = ss.str();
-
-            std::cout << "sss " << sss << std::endl;
-
-            z3::context c2;
-            std::cout << "context" << std::endl;
-            z3::solver s2(c2);
-            s2.from_string(sss.c_str());
-
-            std::cout << " =================== " << std::endl;
-            std::cout << "new s " << s2 << std::endl;
-
-            // adding the negation of the conjecture as a constraint.
-            std::cout << " =================== " << std::endl;
-            std::cout << s << "\n";
-            std::cout << s.to_smt2() << "\n";
-            switch (s.check()) {
-            case z3::unsat:   std::cout << "de-Morgan is valid\n"; break;
-            case z3::sat:     std::cout << "de-Morgan is not valid\n"; break;
-            case z3::unknown: std::cout << "unknown\n"; break;
-            }
-        })
-    ;
+    */
 
 } /* PYBIND11_MODULE */

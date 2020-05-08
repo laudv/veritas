@@ -51,6 +51,9 @@ namespace treeck {
         bool covers(const RealDomain& other) const;
         bool covers_strict(const RealDomain& value) const;
 
+        bool lo_is_inf() const;
+        bool hi_is_inf() const;
+
         // consistent with Split::test, (left_dom, right_dom)
         std::tuple<RealDomain, RealDomain> split(FloatT value) const;
     };

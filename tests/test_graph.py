@@ -42,6 +42,12 @@ class TestGraph(unittest.TestCase):
 
         print(at)
         graph = KPartiteGraph(at)
+        graph.propagate_outputs()
+        graph.prune("""
+(declare-fun x () Real)
+(assert (> x  0.0))
+        """)
+        print(graph)
 
         #print(graph)
         #print("outputs: ", graph.propagate_outputs())
@@ -49,17 +55,17 @@ class TestGraph(unittest.TestCase):
         #print("outputs: ", graph.propagate_outputs())
         #print(graph)
 
-        print("\n== MAX ======================")
-        find = MaxKPartiteGraphFind(graph)
-        print("done?", not find.steps(100))
-        max_solutions = find.solutions()
-        print(len(max_solutions))
+        #print("\n== MAX ======================")
+        #find = MaxKPartiteGraphFind(graph)
+        #print("done?", not find.steps(100))
+        #max_solutions = find.solutions()
+        #print(len(max_solutions))
  
-        print("\n== MIN ======================")
-        find = MinKPartiteGraphFind(graph)
-        print("done?", not find.steps(100))
-        min_solutions = find.solutions()
-        print(len(min_solutions), graph.nsteps, graph.nupdate_fails)
+        #print("\n== MIN ======================")
+        #find = MinKPartiteGraphFind(graph)
+        #print("done?", not find.steps(100))
+        #min_solutions = find.solutions()
+        #print(len(min_solutions), graph.nsteps, graph.nupdate_fails)
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")
@@ -69,11 +75,11 @@ class TestGraph(unittest.TestCase):
         print(graph)
 
         print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
-        graph.merge(2);
-        print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
-        graph.merge(2);
-        print(graph)
-        print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        #graph.merge(2);
+        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        #graph.merge(2);
+        #print(graph)
+        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
         #graph.merge(2);
         #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
         #graph.merge(2);
@@ -81,7 +87,7 @@ class TestGraph(unittest.TestCase):
 
         print("\n== MAX ======================")
         find = MaxKPartiteGraphFind(graph)
-        print("done?", not find.steps(100))
+        print("done?", not find.steps(1000))
         max_solutions = find.solutions()
         print("#sol", len(max_solutions),
               "#steps", find.nsteps,

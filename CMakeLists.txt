@@ -11,6 +11,7 @@ SET(SOURCES
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/domtree.cpp"
     "${SOURCE_DIR}/graph.cpp"
+    "${SOURCE_DIR}/smt.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)

@@ -14,7 +14,9 @@
 
 #include <tuple>
 #include <vector>
+#include <unordered_set>
 #include <unordered_map>
+#include <functional>
 
 #include "domain.h"
 #include "tree.h"
@@ -24,20 +26,25 @@
 
 namespace treeck {
 
+    class DomainBox;
+
+    using FeatIdMapper = const std::function<int(FeatId)>&;
+    using BoxFilter = const std::function<bool(const DomainBox&)>&;
+
+
+
     class DomainBox {
-        std::vector<std::pair<FeatId, Domain>> domains_;
+        std::vector<std::pair<int, Domain>> domains_;
 
     public:
         DomainBox();
 
-        Domain& operator[](FeatId feat_id);
+        std::vector<std::pair<int, Domain>>::const_iterator begin() const;
+        std::vector<std::pair<int, Domain>>::const_iterator end() const;
+        std::vector<std::pair<int, Domain>>::const_iterator find(int id) const;
+        std::vector<std::pair<int, Domain>>::iterator find(int id);
 
-        std::vector<std::pair<FeatId, Domain>>::const_iterator begin() const;
-        std::vector<std::pair<FeatId, Domain>>::const_iterator end() const;
-        std::vector<std::pair<FeatId, Domain>>::const_iterator find(FeatId feat_id) const;
-        std::vector<std::pair<FeatId, Domain>>::iterator find(FeatId feat_id);
-
-        void refine(Split split, bool is_left_child);
+        void refine(Split split, bool is_left_child, FeatIdMapper fmap);
 
         void sort();
 
@@ -47,6 +54,9 @@ namespace treeck {
 
     std::ostream&
     operator<<(std::ostream& s, const DomainBox& box);
+
+
+
 
     struct Vertex {
         DomainBox box;
@@ -60,26 +70,38 @@ namespace treeck {
         //bool operator>(const Vertex& other) const;
     };
 
+
+
+
     struct IndependentSet {
         std::vector<Vertex> vertices;
     };
+
+
+
 
     template <typename Cmp>
     class KPartiteGraphFind;
 
     class KPartiteGraph {
         std::vector<IndependentSet> sets_;
-
         template <typename Cmp> friend class KPartiteGraphFind;
 
     private:
-        void fill_independence_set(IndependentSet& set, AddTree::TreeT::CRef node);
+        void fill_independence_set(IndependentSet& set,
+                AddTree::TreeT::CRef node,
+                FeatIdMapper fmap);
 
     public:
+        KPartiteGraph();
         KPartiteGraph(const AddTree& addtree);
+        KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap);
 
         std::vector<IndependentSet>::const_iterator begin() const;
         std::vector<IndependentSet>::const_iterator end() const;
+
+        /** remove all vertices for which the given function returns true. */
+        void prune(BoxFilter filter);
 
         std::tuple<FloatT, FloatT> propagate_outputs();
         void merge(int K);
@@ -91,6 +113,10 @@ namespace treeck {
     };
 
     std::ostream& operator<<(std::ostream& s, const KPartiteGraph& graph);
+
+
+
+
 
     struct Clique {
         DomainBox box;
@@ -107,6 +133,8 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream&s, const Clique& c);
 
+
+    /*
     template <typename Cmp>
     class KPartiteGraphFind {
         const KPartiteGraph& graph_;
@@ -140,6 +168,7 @@ namespace treeck {
 
     using MaxKPartiteGraphFind = KPartiteGraphFind<std::less<Clique>>;
     using MinKPartiteGraphFind = KPartiteGraphFind<std::greater<Clique>>;
+    */
 
 } /* namespace treeck */
 

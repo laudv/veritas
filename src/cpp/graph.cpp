@@ -24,53 +24,55 @@ namespace treeck {
 
     DomainBox::DomainBox() : domains_() { }
 
-    std::vector<std::pair<FeatId, Domain>>::const_iterator
+    std::vector<std::pair<int, Domain>>::const_iterator
     DomainBox::begin() const
     {
         return domains_.begin();
     }
 
-    std::vector<std::pair<FeatId, Domain>>::const_iterator
+    std::vector<std::pair<int, Domain>>::const_iterator
     DomainBox::end() const
     {
         return domains_.end();
     }
 
-    std::vector<std::pair<FeatId, Domain>>::const_iterator
-    DomainBox::find(FeatId feat_id) const
+    std::vector<std::pair<int, Domain>>::const_iterator
+    DomainBox::find(int id) const
     {
         return std::find_if(domains_.cbegin(), domains_.cend(), 
-                [feat_id](const std::pair<FeatId, Domain>& arg) {
-            return arg.first == feat_id;
+                [id](const std::pair<int, Domain>& arg) {
+            return arg.first == id;
         });
     }
 
-    std::vector<std::pair<FeatId, Domain>>::iterator
-    DomainBox::find(FeatId feat_id)
+    std::vector<std::pair<int, Domain>>::iterator
+    DomainBox::find(int id)
     {
         return std::find_if(domains_.begin(), domains_.end(), 
-                [feat_id](std::pair<FeatId, Domain>& arg) {
-            return arg.first == feat_id;
+                [id](std::pair<int, Domain>& arg) {
+            return arg.first == id;
         });
     }
 
     void
-    DomainBox::refine(Split split, bool is_left_child)
+    DomainBox::refine(Split split, bool is_left_child, FeatIdMapper fmap)
     {
         visit_split(
-                [this, is_left_child](const LtSplit& s) {
-                    auto p = find(s.feat_id);
+                [this, &fmap, is_left_child](const LtSplit& s) {
+                    int id = fmap(s.feat_id);
+                    auto p = find(id);
                     if (p == end()) {
-                        domains_.push_back({s.feat_id, refine_domain({}, s, is_left_child)});
+                        domains_.push_back({id, refine_domain({}, s, is_left_child)});
                     } else {
                         RealDomain dom = util::get_or<RealDomain>(p->second);
                         p->second = refine_domain(dom, s, is_left_child);
                     }
                 },
-                [this, is_left_child](const BoolSplit& s) {
-                    auto p = find(s.feat_id);
+                [this, &fmap, is_left_child](const BoolSplit& s) {
+                    int id = fmap(s.feat_id);
+                    auto p = find(id);
                     if (p == end()) {
-                        domains_.push_back({s.feat_id, refine_domain({}, s, is_left_child)});
+                        domains_.push_back({id, refine_domain({}, s, is_left_child)});
                     } else {
                         BoolDomain dom = util::get_or<BoolDomain>(p->second);
                         p->second = refine_domain(dom, s, is_left_child);
@@ -183,8 +185,8 @@ namespace treeck {
     operator<<(std::ostream& s, const DomainBox& box)
     {
         s << "DomainBox { ";
-        for (auto&& [feat_id, dom] : box)
-            s << feat_id << "->" << dom << " ";
+        for (auto&& [id, dom] : box)
+            s << id << "->" << dom << " ";
         s << '}';
         return s;
     }
@@ -209,16 +211,28 @@ namespace treeck {
 
     // - KPartiteGraph ---------------------------------------------------------
 
+    KPartiteGraph::KPartiteGraph()
+    {
+        sets_.push_back({
+            std::vector<Vertex>{{{}, 0.0}} // one dummy vertex
+        });
+    }
+
     KPartiteGraph::KPartiteGraph(const AddTree& addtree)
+        : KPartiteGraph(addtree, [](FeatId fid) { return fid; })
+    { }
+
+    KPartiteGraph::KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap)
     {
         for (const AddTree::TreeT& tree : addtree.trees())
         {
             IndependentSet set;
-            fill_independence_set(set, tree.root());
+            fill_independence_set(set, tree.root(), fmap);
 
             sets_.push_back(set);
         }
     }
+
 
     std::vector<IndependentSet>::const_iterator
     KPartiteGraph::begin() const
@@ -233,12 +247,13 @@ namespace treeck {
     }
 
     void
-    KPartiteGraph::fill_independence_set(IndependentSet& set, AddTree::TreeT::CRef node)
+    KPartiteGraph::fill_independence_set(IndependentSet& set, AddTree::TreeT::CRef node,
+            FeatIdMapper fmap)
     {
         if (node.is_internal())
         {
-            fill_independence_set(set, node.left());
-            fill_independence_set(set, node.right());
+            fill_independence_set(set, node.left(), fmap);
+            fill_independence_set(set, node.right(), fmap);
         }
         else
         {
@@ -250,10 +265,22 @@ namespace treeck {
                 auto child_node = node;
                 bool is_left = child_node.is_left_child();
                 node = node.parent();
-                box.refine(node.get_split(), child_node.is_left_child());
+                box.refine(node.get_split(), child_node.is_left_child(), fmap);
             }
             box.sort();
             set.vertices.push_back({box, leaf_value});
+        }
+    }
+
+    void
+    KPartiteGraph::prune(BoxFilter filter)
+    {
+        auto f = [filter](const Vertex& v) { return filter(v.box); };
+
+        for (auto it = sets_.begin(); it != sets_.end(); ++it)
+        {
+            auto& v = it->vertices;
+            v.erase(std::remove_if(v.begin(), v.end(), f), v.end());
         }
     }
 
@@ -261,7 +288,6 @@ namespace treeck {
     KPartiteGraph::propagate_outputs()
     {
         // dynamic programming algorithm from paper Chen et al. 2019
-        // we do it from the back to the front
         for (auto it1 = sets_.rbegin() + 1; it1 != sets_.rend(); ++it1)
         {
             auto it0 = it1 - 1;
@@ -277,15 +303,12 @@ namespace treeck {
                         max0 = std::max(max0, v0.max_output);
                     }
                 }
-
-                //std::cout << "MIN: " << v1.min_output << " -> " << min0 + v1.output << std::endl;
-                //std::cout << "MAX: " << v1.max_output << " -> " << max0 + v1.output << std::endl;
-
                 v1.min_output = min0 + v1.output;
                 v1.max_output = max0 + v1.output;
             }
         }
 
+        // output the min and max
         FloatT min0 = +std::numeric_limits<FloatT>::infinity();
         FloatT max0 = -std::numeric_limits<FloatT>::infinity();
         for (const auto& v0 : sets_.front().vertices)
@@ -423,6 +446,8 @@ namespace treeck {
             << " }";
         return s;
     }
+
+    /*
 
     template <typename Cmp>
     KPartiteGraphFind<Cmp>::KPartiteGraphFind(KPartiteGraph& graph)
@@ -617,105 +642,13 @@ namespace treeck {
         return solutions_;
     }
 
-    // TODO remove
-    //template <typename Cmp>
-    //template <typename Iter>
-    //bool
-    //KPartiteGraphFind<Cmp>::is_expandable_(const AnnotatedVertex& v, Iter begin, Iter end) const
-    //{
-
-    //    return true;
-    //}
-
-    //template <typename Cmp>
-    //bool
-    //KPartiteGraphFind<Cmp>::is_expandable(const AnnotatedVertex& v) const
-    //{
-    //    int merge_set = v.merge_set - 1;
-    //    if (merge_set <= 0)
-    //        throw std::runtime_error("assertion error: v's in pq should be expandable");
-    //    const auto& set = graph_.sets_[merge_set].vertices;
-
-    //    if constexpr (std::is_same_v<std::less<AnnotatedVertex>, Cmp>)
-    //        return is_expandable_(v, set.rbegin(), set.rend());
-    //    else if constexpr (std::is_same_v<std::greater<AnnotatedVertex>, Cmp>)
-    //        return is_expandable_(v, set.begin(), set.end());
-    //    else
-    //        static_assert(util::always_false<Cmp>::value, "invalid Cmp type"); 
-    //}
-
-    /*
-    template <typename Cmp>
-    bool
-    KPartiteGraphFind<Cmp>::is_expandable(AnnotatedVertex& v) const
-    {
-        int merge_set = v.merge_set - 1;
-        if (merge_set < 0)
-            throw std::runtime_error("assertion error: v's in pq should be expandable");
-        const auto& set = graph_.sets_[merge_set].vertices;
-
-        for (int i = v.merge_set_item; i < set.size(); ++i)
-        {
-            const Vertex& v0 = set[i];
-            //std::cout << "possible expansion: "
-            //    << v0.output
-            //    << " overlap? "
-            //    << v.vertex.box.overlaps(v0.box)
-            //    << std::endl;
-            if (v.vertex.box.overlaps(v0.box))
-            {
-                v.merge_set_item = i;
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    template <typename Cmp>
-    bool
-    KPartiteGraphFind<Cmp>::is_solution(const AnnotatedVertex& v) const
-    {
-        // We have merged one vertex from each independent set
-        //  => one leaf of each tree is active
-        return v.merge_set == graph_.sets_.size() - 1;
-    }
-
-    template <typename Cmp>
-    AnnotatedVertex
-    KPartiteGraphFind<Cmp>::expand(const AnnotatedVertex& av) const
-    {
-        // OVERVIEW:
-        // 1. construct new annotatd vertex
-        // 1.1. find new output_est
-        // 1.2. determine `index`
-        // 2. update `index` of av (the "parent")
-
-        int merge_set = av.merge_set + 1;
-        if (merge_set < graph_.sets_.size())
-            throw std::runtime_error("assertion error: av's in pq should be expandable");
-        const auto& set = graph_.sets_[merge_set].vertices;
-
-        // invariant: merge_set is valid
-        // invariant: merge_set_item is valid -- if invalid, it is not added to pq_
-
-        // construct the expanded annotated vertex
-        //Vertex new_v {
-        //    av.vertex.box.combine(set[av.merge_set_item].box)
-        //};
-
-        //AnnotatedVertex new_v {
-        //    { v.vertex.box.combine(set[v.merge_set_item].box),
-        //    merge_set,
-        //    0
-        //};
-        return { {{}, 0.0}, -1, -1 };
-    }
-
-    */
-
     // manual template instantiations
     template class KPartiteGraphFind<std::greater<Clique>>;
     template class KPartiteGraphFind<std::less<Clique>>;
+
+    */
+
+
+
 
 } /* namespace treeck */
