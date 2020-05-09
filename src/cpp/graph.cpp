@@ -422,8 +422,14 @@ namespace treeck {
         return s;
     }
 
-    // - KPartiteGraphFind ----------------------------------------------------
+    // - KPartiteGraphOptimize ------------------------------------------------
     
+    template <typename T> static T& get0(two_of<T>& t) { return std::get<0>(t); }
+    template <typename T> static const T& get0(const two_of<T>& t) { return std::get<0>(t); }
+    template <typename T> static T& get1(two_of<T>& t) { return std::get<1>(t); }
+    template <typename T> static const T& get1(const two_of<T>& t) { return std::get<1>(t); }
+
+    /*
     bool
     Clique::operator<(const Clique& other) const
     {
@@ -435,19 +441,243 @@ namespace treeck {
     {
         return output_estimate > other.output_estimate;
     }
+    */
+
+    bool
+    CliqueMinPqCmp::operator()(const Clique& a, const Clique& b) const
+    {
+        return get0(a.output_bound) > get0(b.output_bound);
+    }
+
+    bool
+    CliqueMaxPqCmp::operator()(const Clique& a, const Clique& b) const
+    {
+        return get1(a.output_bound) < get1(b.output_bound);
+    }
+
+    bool
+    CliqueMaxDiffPqCmp::operator()(const Clique& a, const Clique& b) const
+    {
+        FloatT diff_a = get1(a.output_bound) - get0(a.output_bound);
+        FloatT diff_b = get1(b.output_bound) - get0(b.output_bound);
+        return diff_a < diff_b;
+    }
+    template <typename T>
+    std::ostream& operator<<(std::ostream& s, const two_of<T>& t)
+    {
+        return s << '[' << get0(t) << ", " << get1(t) << ']';
+    }
+
 
     std::ostream&
     operator<<(std::ostream&s, const Clique& c)
     {
-        std::cout
+        FloatT diff = get1(c.output_bound) - get0(c.output_bound);
+        return s 
             << "Clique { " << std::endl
             << "    box=" << c.box << std::endl
             << "    output=" << c.output << std::endl
-            << "    output_estimate=" << c.output_estimate << std::endl
+            << "    output_bound=" << c.output_bound
+            << " (diff=" << diff << ')' << std::endl
             << "    indep_set=" << c.indep_set << std::endl
             << "    vertex=" << c.vertex << std::endl
             << " }";
-        return s;
+    }
+
+    static KPartiteGraph DUMMY_GRAPH;
+
+    KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0)
+        : KPartiteGraphOptimize(g0, DUMMY_GRAPH) { }
+
+    KPartiteGraphOptimize::KPartiteGraphOptimize(bool, KPartiteGraph& g1)
+        : KPartiteGraphOptimize(DUMMY_GRAPH, g1) { }
+
+    KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1)
+        : graph_{g0, g1}
+        , cliques_()
+        , cmp_()
+        //, solutions_()
+        , nsteps{0, 0}
+        , nupdate_fails(0)
+        , nrejected(0)
+    {
+        // minimize g0, maximize g1
+        g0.sort_asc(); // choose vertex with smaller `output` first
+        g1.sort_desc(); // choose vertex with larger `output` first
+
+        auto&& [output_estimate0, max0] = g0.propagate_outputs(); // min output estimate of first clique
+        auto&& [min1, output_estimate1] = g1.propagate_outputs(); // max output estimate of first clique
+
+        if (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0)
+        {
+            cliques_.push_back({
+                {}, // empty domain, ie no restrictions
+                {0.0, 0.0}, // no outputs
+                {output_estimate0, output_estimate1},
+                {0, 0}, // indep sets, start with first tree
+                {0, 0}, // start with first vertex, always compatible because unrestricted domain
+            });
+        }
+    }
+
+    Clique 
+    KPartiteGraphOptimize::pq_pop()
+    {
+        std::pop_heap(cliques_.begin(), cliques_.end(), cmp_);
+        Clique c = std::move(cliques_.back());
+        cliques_.pop_back();
+        return c;
+    }
+
+    void
+    KPartiteGraphOptimize::pq_push(Clique&& c)
+    {
+        cliques_.push_back(std::move(c));
+        std::push_heap(cliques_.begin(), cliques_.end(), cmp_);
+    }
+
+    bool
+    KPartiteGraphOptimize::is_solution(const Clique& c) const
+    {
+        return get0(c.indep_set) == get0(graph_).sets_.size()
+            && get1(c.indep_set) == get0(graph_).sets_.size();
+    }
+
+
+    template <size_t instance>
+    bool KPartiteGraphOptimize::update_clique(Clique& c)
+    {
+        // Things to do:
+        // 1. find next vertex in `indep_set`
+        // 2. update max_output (assume vertices in indep_set sorted)
+        
+        const KPartiteGraph& graph = std::get<instance>(graph_);
+        short indep_set = std::get<instance>(c.indep_set);
+        int& vertex = std::get<instance>(c.vertex);
+
+        const auto& set = graph.sets_[indep_set].vertices;
+        for (int i = vertex + 1; i < set.size(); ++i)
+        {
+            const Vertex& v = set[i];
+            if (c.box.overlaps(v.box))
+            {
+                // this is the next vertex to merge with in `indep_set`
+                vertex = i;
+
+                // reuse dynamic programming value (propagate_outputs) to update bound
+                FloatT prev_bound;
+                if constexpr (instance==0)
+                    prev_bound = v.min_output;  // minimize instance 0
+                else prev_bound = v.max_output; // maximize instance 1
+
+                // update bound
+                std::get<instance>(c.output_bound) = prev_bound + std::get<instance>(c.output);
+
+                return true; // update successful!
+            }
+            else ++nupdate_fails;
+        }
+        return false; // out of compatible vertices in `indep_set`
+    }
+
+    template <size_t instance>
+    void
+    KPartiteGraphOptimize::step_instance(Clique c)
+    {
+        // Things to do:
+        // 2. construct new clique
+        // 2.1. find new output_bound
+        // 2.2. determine index of next vertex in next indep_set
+        // 3. update the parent "clique"
+        // 3.1. if no more expansions possible, remove from pq
+        // 3.2. otherwise: update next vertex index
+        // 3.3. and update output_bound
+
+        short indep_set = std::get<instance>(c.indep_set);
+        int vertex = std::get<instance>(c.vertex);
+        const Vertex& v = std::get<instance>(graph_).sets_[indep_set].vertices[vertex];
+        FloatT output = std::get<instance>(c.output);
+        FloatT output_bound = std::get<instance>(c.output_bound);
+
+        // 1. construct new clique
+        two_of<FloatT> new_output = c.output;
+        std::get<instance>(new_output) += v.output;
+
+        two_of<short> new_indep_set = c.indep_set;
+        std::get<instance>(new_indep_set) += 1;
+
+        two_of<int> new_vertex = c.vertex;
+        std::get<instance>(new_vertex) = -1;
+
+        Clique new_c = {
+            c.box.combine(v.box), // the new box
+            new_output, // output of clique
+            c.output_bound, // to be updated by `update_clique`
+            new_indep_set, // we move one tree/indep.set further
+            new_vertex // next vertex to merge, to be updated by `update_clique` (must be a valid index)
+        };
+
+        // 3.1 update the "parent" clique, if no more update, don't add to cliques_ again
+        if (update_clique<instance>(c))
+        {
+            std::cout << "previous " << c << std::endl;
+            pq_push(std::move(c));
+        }
+
+        // 2.1 check if new clique is a solution, if not, set `vertex` and `output_bound` values
+        if (is_solution(new_c))
+        {
+            std::cout << "solution " << new_c << std::endl;
+            //solutions_.push_back(std::move(new_c));
+        }
+        else if (update_clique<instance>(new_c))
+        {
+            std::cout << "update " << new_c << std::endl;
+            pq_push(std::move(new_c));
+        }
+
+        //std::cout << "STEP " << nsteps << " UPDATE " << old_est << " -> " << current_output_estimate()
+        //    << " (#pq=" << pq_buf_.size()
+        //    << ", #sol=" << solutions_.size() << ')'
+        //    << std::endl;
+
+        std::get<instance>(nsteps)++;
+    }
+
+    bool
+    KPartiteGraphOptimize::step()
+    {
+        if (cliques_.empty())
+            return false;
+
+        // Things to do:
+        // 1. determine which graph to use to extend the best clique
+        // --> goto step_instance
+        
+        //FloatT old_est = cliques_.begin();
+
+        Clique c = pq_pop();
+
+        std::cout << "best clique " << c << std::endl;
+
+        // 1. extend each graph step-by-step; graph0 first
+        if (get0(c.indep_set) != get0(graph_).sets_.size()
+                && get0(c.indep_set) <= get1(c.indep_set))
+        {
+            std::cout << "step(): extend graph0" << std::endl;
+            step_instance<0>(std::move(c));
+        }
+        else if (get1(c.indep_set) != get1(graph_).sets_.size())
+        {
+            std::cout << "step(): extend graph1" << std::endl;
+            step_instance<1>(std::move(c));
+        }
+        else
+        {
+            throw std::runtime_error("invalid clique in cliques_: cannot be extended");
+        }
+
+        return true;
     }
 
     /*

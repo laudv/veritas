@@ -80,12 +80,11 @@ namespace treeck {
 
 
 
-    template <typename Cmp>
-    class KPartiteGraphFind;
+    class KPartiteGraphOptimize;
 
     class KPartiteGraph {
         std::vector<IndependentSet> sets_;
-        template <typename Cmp> friend class KPartiteGraphFind;
+        friend class KPartiteGraphOptimize;
 
     private:
         void fill_independence_set(IndependentSet& set,
@@ -117,21 +116,72 @@ namespace treeck {
 
 
 
+    template <typename T>
+    using two_of = std::tuple<T, T>;
+
+    template <typename T>
+    std::ostream& operator<<(std::ostream& s, const two_of<T>& t);
 
     struct Clique {
         DomainBox box;
 
-        FloatT output;
-        FloatT output_estimate;
+        two_of<FloatT> output;
+        two_of<FloatT> output_bound;
 
-        int indep_set; // the index of the independent set containing the next vertex to merge.
-        int vertex;    // the index of the next vertex to merge from the `indep_set`
+        two_of<short> indep_set; // index of tree (= independent set in graph) to merge with
+        two_of<int> vertex;      // index of next vertex to merge from `indep_set` (must be a compatible one!)
 
-        bool operator<(const Clique& other) const;
-        bool operator>(const Clique& other) const;
+        //bool operator<(const Clique& other) const;
+        //bool operator>(const Clique& other) const;
     };
 
-    std::ostream& operator<<(std::ostream&s, const Clique& c);
+    struct CliqueMinPqCmp {
+        bool operator()(const Clique&, const Clique&) const;
+    };
+
+    struct CliqueMaxPqCmp {
+        bool operator()(const Clique&, const Clique&) const;
+    };
+
+    struct CliqueMaxDiffPqCmp {
+        bool operator()(const Clique&, const Clique&) const;
+    };
+
+
+    std::ostream& operator<<(std::ostream& s, const Clique& c);
+
+
+    class KPartiteGraphOptimize {
+        two_of<const KPartiteGraph&> graph_; // minimize <0>, maximize<1>
+
+        // a vector ordered as a pq containing "partial" cliques (no max-cliques)
+        std::vector<Clique> cliques_;
+        CliqueMaxDiffPqCmp cmp_;
+
+    private:
+        Clique pq_pop();
+        void pq_push(Clique&& c);
+
+        bool is_solution(const Clique& c) const;
+
+        template <size_t instance>
+        bool update_clique(Clique& c);
+
+        template <size_t instance>
+        void step_instance(Clique c);
+
+    public:
+        two_of<size_t> nsteps;
+        size_t nupdate_fails;
+        size_t nrejected;
+
+    public:
+        KPartiteGraphOptimize(KPartiteGraph& g0); // minimize g0
+        KPartiteGraphOptimize(bool maximize, KPartiteGraph& g1); // maximize g1
+        KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1); // minimize g0, maximize g1
+
+        bool step();
+    };
 
 
     /*

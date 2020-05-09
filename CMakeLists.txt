@@ -16,10 +16,11 @@ SET(SOURCES
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 #option(USE_SHARED_LIB "Use a shared libtreeck.so lib" ON)
 #if (USE_SHARED_LIB)
-#    add_library(${PROJECT_NAME} SHARED ${SOURCES})
+    add_library(${PROJECT_NAME} STATIC ${SOURCES})
 #endif()
 
 # systems usually have old version of cereal, so we use a git submodule
@@ -29,8 +30,9 @@ option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
 #if (BUILD_PYTHON_BINDINGS)
     #find_package(pybind11 REQUIRED)
     add_subdirectory(lib/pybind11)
-    pybind11_add_module("py${PROJECT_NAME}" ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
-    #target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
+    #pybind11_add_module("py${PROJECT_NAME}" ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
+    pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
+    target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
 #endif (BUILD_PYTHON_BINDINGS)
 
 # Use Ubuntu's z3 (libz3-dev) install
@@ -52,5 +54,6 @@ if (BUILD_TESTS)
     # Generate a test executable
     #include_directories(lib/catch/include)
     add_executable("test${PROJECT_NAME}" ${TESTS})
-    target_link_libraries("test${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
+    target_link_libraries("test${PROJECT_NAME}" PRIVATE "${PROJECT_NAME}")
+    target_link_libraries("test${PROJECT_NAME}" PRIVATE -lz3)
 endif (BUILD_TESTS)
