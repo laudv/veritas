@@ -78,6 +78,8 @@ namespace treeck {
 
         template <typename I>
         z3::expr domains_to_z3(I begin, I end);
+
+        bool check(z3::expr& e);
     };
 
 } /* namespace treeck */

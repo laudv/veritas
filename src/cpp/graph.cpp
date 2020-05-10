@@ -444,44 +444,32 @@ namespace treeck {
     */
 
     bool
-    CliqueMinPqCmp::operator()(const Clique& a, const Clique& b) const
-    {
-        return get0(a.output_bound) > get0(b.output_bound);
-    }
-
-    bool
-    CliqueMaxPqCmp::operator()(const Clique& a, const Clique& b) const
-    {
-        return get1(a.output_bound) < get1(b.output_bound);
-    }
-
-    bool
     CliqueMaxDiffPqCmp::operator()(const Clique& a, const Clique& b) const
-    {
-        FloatT diff_a = get1(a.output_bound) - get0(a.output_bound);
-        FloatT diff_b = get1(b.output_bound) - get0(b.output_bound);
+   {
+        FloatT diff_a = get1(a.instance).output_bound - get0(a.instance).output_bound;
+        FloatT diff_b = get1(b.instance).output_bound - get0(b.instance).output_bound;
         return diff_a < diff_b;
     }
-    template <typename T>
-    std::ostream& operator<<(std::ostream& s, const two_of<T>& t)
-    {
-        return s << '[' << get0(t) << ", " << get1(t) << ']';
-    }
-
 
     std::ostream&
-    operator<<(std::ostream&s, const Clique& c)
+    operator<<(std::ostream& s, const CliqueInstance& ci)
     {
-        FloatT diff = get1(c.output_bound) - get0(c.output_bound);
+        return s
+            << "    output=" << ci.output << ", bound=" << ci.output_bound << ", " << std::endl
+            << "    indep_set=" << ci.indep_set << ", vertex=" << ci.vertex;
+    }
+
+    std::ostream&
+    operator<<(std::ostream& s, const Clique& c)
+    {
+        FloatT diff = get1(c.instance).output_bound - get0(c.instance).output_bound;
         return s 
             << "Clique { " << std::endl
-            << "    box=" << c.box << std::endl
-            << "    output=" << c.output << std::endl
-            << "    output_bound=" << c.output_bound
-            << " (diff=" << diff << ')' << std::endl
-            << "    indep_set=" << c.indep_set << std::endl
-            << "    vertex=" << c.vertex << std::endl
-            << " }";
+            << "  box=" << c.box << std::endl
+            << "  instance0:" << std::endl << get0(c.instance) << std::endl
+            << "  instance1:" << std::endl << get1(c.instance) << std::endl
+            << "  bound_diff=" << diff << std::endl
+            << '}';
     }
 
     static KPartiteGraph DUMMY_GRAPH;
@@ -498,24 +486,24 @@ namespace treeck {
         , cmp_()
         //, solutions_()
         , nsteps{0, 0}
-        , nupdate_fails(0)
-        , nrejected(0)
+        , nupdate_fails{0}
+        , nrejected{0}
     {
         // minimize g0, maximize g1
         g0.sort_asc(); // choose vertex with smaller `output` first
         g1.sort_desc(); // choose vertex with larger `output` first
 
-        auto&& [output_estimate0, max0] = g0.propagate_outputs(); // min output estimate of first clique
-        auto&& [min1, output_estimate1] = g1.propagate_outputs(); // max output estimate of first clique
+        auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
+        auto&& [min1, output_bound1] = g1.propagate_outputs(); // max output bound of first clique
 
         if (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0)
         {
             cliques_.push_back({
                 {}, // empty domain, ie no restrictions
-                {0.0, 0.0}, // no outputs
-                {output_estimate0, output_estimate1},
-                {0, 0}, // indep sets, start with first tree
-                {0, 0}, // start with first vertex, always compatible because unrestricted domain
+                {
+                    {0.0, output_bound0, 0, 0}, // output, bound, indep_set, vertex
+                    {0.0, output_bound1, 0, 0}
+                }
             });
         }
     }
@@ -539,30 +527,39 @@ namespace treeck {
     bool
     KPartiteGraphOptimize::is_solution(const Clique& c) const
     {
-        return get0(c.indep_set) == get0(graph_).sets_.size()
-            && get1(c.indep_set) == get0(graph_).sets_.size();
+        return is_instance_solution<0>(c) && is_instance_solution<1>(c);
     }
 
+    template <size_t instance>
+    bool
+    KPartiteGraphOptimize::is_instance_solution(const Clique& c) const
+    {
+        return std::get<instance>(c.instance).indep_set ==
+            std::get<instance>(graph_).sets_.size();
+    }
 
     template <size_t instance>
-    bool KPartiteGraphOptimize::update_clique(Clique& c)
+    bool
+    KPartiteGraphOptimize::update_clique(Clique& c)
     {
         // Things to do:
         // 1. find next vertex in `indep_set`
         // 2. update max_output (assume vertices in indep_set sorted)
-        
+        CliqueInstance& ci = std::get<instance>(c.instance);
         const KPartiteGraph& graph = std::get<instance>(graph_);
-        short indep_set = std::get<instance>(c.indep_set);
-        int& vertex = std::get<instance>(c.vertex);
 
-        const auto& set = graph.sets_[indep_set].vertices;
-        for (int i = vertex + 1; i < set.size(); ++i)
+        const auto& set = graph.sets_[ci.indep_set].vertices;
+        //std::cout << "UPDATE " << instance << ": " << ci.vertex << " -> " << set.size() << std::endl;
+        for (int i = ci.vertex; i < set.size(); ++i) // (!) including ci.vertex!
         {
             const Vertex& v = set[i];
+            //std::cout << "CHECK BOXES OVERLAP " << instance << " i=" << i << std::endl;
+            //std::cout << "  " << c.box << std::endl;
+            //std::cout << "  " << v.box << " -> " << c.box.overlaps(v.box) << std::endl << std::endl;
             if (c.box.overlaps(v.box))
             {
                 // this is the next vertex to merge with in `indep_set`
-                vertex = i;
+                ci.vertex = i;
 
                 // reuse dynamic programming value (propagate_outputs) to update bound
                 FloatT prev_bound;
@@ -571,7 +568,7 @@ namespace treeck {
                 else prev_bound = v.max_output; // maximize instance 1
 
                 // update bound
-                std::get<instance>(c.output_bound) = prev_bound + std::get<instance>(c.output);
+                ci.output_bound = prev_bound + ci.output;
 
                 return true; // update successful!
             }
@@ -584,64 +581,171 @@ namespace treeck {
     void
     KPartiteGraphOptimize::step_instance(Clique c)
     {
-        // Things to do:
-        // 2. construct new clique
-        // 2.1. find new output_bound
-        // 2.2. determine index of next vertex in next indep_set
-        // 3. update the parent "clique"
-        // 3.1. if no more expansions possible, remove from pq
-        // 3.2. otherwise: update next vertex index
-        // 3.3. and update output_bound
+        // invariant: Clique `c` can be extended
+        //
+        // Things to do (contd.):
+        // 2. construct the new clique by merging another vertex from the selected graph
+        // 3. [update new] check whether we can extend further later (all cliques in
+        //    `cliques_` must be extendible)
+        //    possible states are (solution=all trees contributed a value
+        //                         extendible=valid `indep_set` & `vertex` values exist
+        //      - extendible    extendible
+        //      - solution      extendible
+        //      - extendible    solution
+        //    if the clique is not in any of the above states, do not add to `cliques_`
+        // 4. [update old] update active instance of given clique `c`, add again if still extendible
 
-        short indep_set = std::get<instance>(c.indep_set);
-        int vertex = std::get<instance>(c.vertex);
-        const Vertex& v = std::get<instance>(graph_).sets_[indep_set].vertices[vertex];
-        FloatT output = std::get<instance>(c.output);
-        FloatT output_bound = std::get<instance>(c.output_bound);
+        const KPartiteGraph& graph = std::get<instance>(graph_);
+        CliqueInstance& ci = std::get<instance>(c.instance);
 
-        // 1. construct new clique
-        two_of<FloatT> new_output = c.output;
-        std::get<instance>(new_output) += v.output;
-
-        two_of<short> new_indep_set = c.indep_set;
-        std::get<instance>(new_indep_set) += 1;
-
-        two_of<int> new_vertex = c.vertex;
-        std::get<instance>(new_vertex) = -1;
-
+        const Vertex& v = graph.sets_[ci.indep_set].vertices[ci.vertex];
         Clique new_c = {
-            c.box.combine(v.box), // the new box
-            new_output, // output of clique
-            c.output_bound, // to be updated by `update_clique`
-            new_indep_set, // we move one tree/indep.set further
-            new_vertex // next vertex to merge, to be updated by `update_clique` (must be a valid index)
+            c.box.combine(v.box), // box of the new clique
+            c.instance // copy
         };
+        CliqueInstance& new_ci = std::get<instance>(new_c.instance);
+        new_ci.output += v.output; // output of clique is previous output + output of newly merged vertex
+        new_ci.indep_set += 1;
+        new_ci.vertex = 0; // start from beginning in new `indep_set` (= tree)
+        ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
-        // 3.1 update the "parent" clique, if no more update, don't add to cliques_ again
+        // check: we need to update these values before pushing to `cliques_`!
+        get0(new_c.instance).output_bound += std::numeric_limits<FloatT>::quiet_NaN(); // set by update!
+        get1(new_c.instance).output_bound += std::numeric_limits<FloatT>::quiet_NaN(); // set by update!
+
+        bool is_solution0 = is_instance_solution<0>(new_c);
+        bool is_solution1 = is_instance_solution<1>(new_c);
+
+        // check if this newly created clique is a solution
+        if (is_solution0 && is_solution1)
+        {
+            std::cout << "solution! " << new_c << std::endl;
+        }
+        else
+        {
+            // update both instances of `new_c`, the new box can change
+            // `output_bound`s and `vertex`s values for both instances!
+            // (update_clique updates `output_bound` and `vertex`)
+            bool update0 = is_solution0 || update_clique<0>(new_c);
+            bool update1 = is_solution1 || update_clique<1>(new_c);
+
+            // there is a valid extension of this clique and it is not yet a solution -> push to `cliques_`
+            if (update0 && update1)
+            {
+                std::cout << "push new: " << new_c << std::endl;
+                pq_push(std::move(new_c));
+            }
+            else
+            {
+                std::cout << "reject: " << update0 << update1 << new_c << std::endl;
+            }
+        }
+
+        // push old clique if it still has a valid extension
+        // we only need to update the current instance: box did not chane so
+        // other instance cannot be affected
         if (update_clique<instance>(c))
         {
-            std::cout << "previous " << c << std::endl;
+            std::cout << "push old again: " << c << std::endl;
             pq_push(std::move(c));
         }
-
-        // 2.1 check if new clique is a solution, if not, set `vertex` and `output_bound` values
-        if (is_solution(new_c))
+        else
         {
-            std::cout << "solution " << new_c << std::endl;
-            //solutions_.push_back(std::move(new_c));
-        }
-        else if (update_clique<instance>(new_c))
-        {
-            std::cout << "update " << new_c << std::endl;
-            pq_push(std::move(new_c));
+            std::cout << "done with old: " << c << std::endl;
         }
 
-        //std::cout << "STEP " << nsteps << " UPDATE " << old_est << " -> " << current_output_estimate()
-        //    << " (#pq=" << pq_buf_.size()
-        //    << ", #sol=" << solutions_.size() << ')'
-        //    << std::endl;
 
-        std::get<instance>(nsteps)++;
+        //// Things to do (contd.):
+        //// 2. find how we can update the given clique (update_clique)
+        //// 2.1. if no update possible, then return false
+        //// 2.2. if update possible, push self to pq, and goto 3
+        //// 3. extend clique, and push to pq
+
+        //// can we extend the given clique?
+        //if (!update_clique<instance>(c))
+        //    return false;
+
+
+        //const KPartiteGraph& graph = std::get<instance>(graph_);
+        //const CliqueInstance& ci = std::get<instance>(c.instance);
+
+        //const Vertex& v = graph.sets_[ci.indep_set].vertices[ci.vertex];
+        //Clique new_c = {
+        //    c.box.combine(v.box), // box of the new clique
+        //    c.instance // copy 
+        //};
+
+        //// update graph vertex info of the updated instance
+        //CliqueInstance& new_ci = std::get<instance>(new_c.instance);
+        //new_ci.output += v.output;
+        //new_ci.output_bound = 
+
+        //// push new clique
+        //pq_push(std::move(new_c));
+
+        //// push `old` clique again, maybe there is another interesting extension
+        //pq_push(std::move(c));
+
+        //return true;
+
+        //// Things to do:
+        //// 2. construct new clique
+        //// 2.1. find new output_bound
+        //// 2.2. determine index of next vertex in next indep_set
+        //// 3. update the parent "clique"
+        //// 3.1. if no more expansions possible, remove from pq
+        //// 3.2. otherwise: update next vertex index
+        //// 3.3. and update output_bound
+
+        //short indep_set = std::get<instance>(c.indep_set);
+        //int vertex = std::get<instance>(c.vertex);
+        //const Vertex& v = std::get<instance>(graph_).sets_[indep_set].vertices[vertex];
+        //FloatT output = std::get<instance>(c.output);
+        //FloatT output_bound = std::get<instance>(c.output_bound);
+
+        //// 1. construct new clique
+        //two_of<FloatT> new_output = c.output;
+        //std::get<instance>(new_output) += v.output;
+
+        //two_of<short> new_indep_set = c.indep_set;
+        //std::get<instance>(new_indep_set) += 1;
+
+        //two_of<int> new_vertex = c.vertex;
+        //std::get<instance>(new_vertex) = -1;
+
+        //Clique new_c = {
+        //    c.box.combine(v.box), // the new box
+        //    new_output, // output of clique
+        //    c.output_bound, // to be updated by `update_clique`
+        //    new_indep_set, // we move one tree/indep.set further
+        //    new_vertex // next vertex to merge, to be updated by `update_clique` (must be a valid index)
+        //};
+
+        //// 3.1 update the "parent" clique, if no more update, don't add to cliques_ again
+        //if (update_clique<instance>(c))
+        //{
+        //    std::cout << "previous " << c << std::endl;
+        //    pq_push(std::move(c));
+        //}
+
+        //// 2.1 check if new clique is a solution, if not, set `vertex` and `output_bound` values
+        //if (is_solution(new_c))
+        //{
+        //    std::cout << "solution " << new_c << std::endl;
+        //    //solutions_.push_back(std::move(new_c));
+        //}
+        //else if (update_clique<instance>(new_c))
+        //{
+        //    std::cout << "update " << new_c << std::endl;
+        //    pq_push(std::move(new_c));
+        //}
+
+        ////std::cout << "STEP " << nsteps << " UPDATE " << old_est << " -> " << current_output_estimate()
+        ////    << " (#pq=" << pq_buf_.size()
+        ////    << ", #sol=" << solutions_.size() << ')'
+        ////    << std::endl;
+
+        //std::get<instance>(nsteps)++;
     }
 
     bool
@@ -661,18 +765,17 @@ namespace treeck {
         std::cout << "best clique " << c << std::endl;
 
         // 1. extend each graph step-by-step; graph0 first
-        if (get0(c.indep_set) != get0(graph_).sets_.size()
-                && get0(c.indep_set) <= get1(c.indep_set))
+        if (!is_instance_solution<0>(c) && get0(c.instance).indep_set <= get1(c.instance).indep_set)
         {
             std::cout << "step(): extend graph0" << std::endl;
             step_instance<0>(std::move(c));
         }
-        else if (get1(c.indep_set) != get1(graph_).sets_.size())
+        else if (!is_instance_solution<1>(c))
         {
             std::cout << "step(): extend graph1" << std::endl;
             step_instance<1>(std::move(c));
         }
-        else
+        else // there's a solution in `cliques_` -> shouldn't happen
         {
             throw std::runtime_error("invalid clique in cliques_: cannot be extended");
         }

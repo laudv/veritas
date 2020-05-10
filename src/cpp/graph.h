@@ -119,28 +119,21 @@ namespace treeck {
     template <typename T>
     using two_of = std::tuple<T, T>;
 
-    template <typename T>
-    std::ostream& operator<<(std::ostream& s, const two_of<T>& t);
+    struct CliqueInstance {
+        FloatT output;
+        FloatT output_bound;
+
+        short indep_set; // index of tree (= independent set in graph) to merge with
+        int vertex;      // index of next vertex to merge from `indep_set` (must be a compatible one!)
+    };
 
     struct Clique {
         DomainBox box;
 
-        two_of<FloatT> output;
-        two_of<FloatT> output_bound;
-
-        two_of<short> indep_set; // index of tree (= independent set in graph) to merge with
-        two_of<int> vertex;      // index of next vertex to merge from `indep_set` (must be a compatible one!)
+        two_of<CliqueInstance> instance;
 
         //bool operator<(const Clique& other) const;
         //bool operator>(const Clique& other) const;
-    };
-
-    struct CliqueMinPqCmp {
-        bool operator()(const Clique&, const Clique&) const;
-    };
-
-    struct CliqueMaxPqCmp {
-        bool operator()(const Clique&, const Clique&) const;
     };
 
     struct CliqueMaxDiffPqCmp {
@@ -148,11 +141,12 @@ namespace treeck {
     };
 
 
+    std::ostream& operator<<(std::ostream& s, const CliqueInstance& ci);
     std::ostream& operator<<(std::ostream& s, const Clique& c);
 
 
     class KPartiteGraphOptimize {
-        two_of<const KPartiteGraph&> graph_; // minimize <0>, maximize<1>
+        two_of<const KPartiteGraph&> graph_; // <0> minimize, <1> maximize
 
         // a vector ordered as a pq containing "partial" cliques (no max-cliques)
         std::vector<Clique> cliques_;
@@ -163,6 +157,9 @@ namespace treeck {
         void pq_push(Clique&& c);
 
         bool is_solution(const Clique& c) const;
+
+        template <size_t instance>
+        bool is_instance_solution(const Clique& c) const;
 
         template <size_t instance>
         bool update_clique(Clique& c);

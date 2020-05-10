@@ -309,7 +309,7 @@ PYBIND11_MODULE(pytreeck, m) {
             instance += 1;
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
-                bool res = opt.solver->get_z3().check(1, &e) == z3::unsat;
+                bool res = opt.solver->check(e);
                 std::cout << "test: " << box << " -> " << e << "res? " << res << std::endl;
                 return res;
             };

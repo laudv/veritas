@@ -317,4 +317,10 @@ namespace treeck {
             std::vector<std::pair<int, Domain>>::const_iterator begin,
             std::vector<std::pair<int, Domain>>::const_iterator end);
 
+    bool
+    Solver::check(z3::expr& e)
+    {
+        return solver_.check(1, &e) == z3::sat;
+    }
+
 } /* namespace teeck */
