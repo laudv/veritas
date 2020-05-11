@@ -610,8 +610,8 @@ namespace treeck {
         ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
         // check: we need to update these values before pushing to `cliques_`!
-        get0(new_c.instance).output_bound += std::numeric_limits<FloatT>::quiet_NaN(); // set by update!
-        get1(new_c.instance).output_bound += std::numeric_limits<FloatT>::quiet_NaN(); // set by update!
+        //get0(new_c.instance).output_bound += std::numeric_limits<FloatT>::quiet_NaN(); // set by update!
+        //get1(new_c.instance).output_bound += std::numeric_limits<FloatT>::quiet_NaN(); // set by update!
 
         bool is_solution0 = is_instance_solution<0>(new_c);
         bool is_solution1 = is_instance_solution<1>(new_c);
@@ -619,25 +619,25 @@ namespace treeck {
         // check if this newly created clique is a solution
         if (is_solution0 && is_solution1)
         {
-            std::cout << "solution! " << new_c << std::endl;
+            std::cout << "SOLUTION! " << new_c << std::endl;
         }
         else
         {
             // update both instances of `new_c`, the new box can change
             // `output_bound`s and `vertex`s values for both instances!
             // (update_clique updates `output_bound` and `vertex`)
-            bool update0 = is_solution0 || update_clique<0>(new_c);
-            bool update1 = is_solution1 || update_clique<1>(new_c);
+            bool is_valid0 = is_solution0 || update_clique<0>(new_c);
+            bool is_valid1 = is_solution1 || update_clique<1>(new_c);
 
             // there is a valid extension of this clique and it is not yet a solution -> push to `cliques_`
-            if (update0 && update1)
+            if (is_valid0 && is_valid1)
             {
                 std::cout << "push new: " << new_c << std::endl;
                 pq_push(std::move(new_c));
             }
             else
             {
-                std::cout << "reject: " << update0 << update1 << new_c << std::endl;
+                std::cout << "reject: " << is_valid0 << is_valid1 << new_c << std::endl;
             }
         }
 
