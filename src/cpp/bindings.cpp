@@ -9,6 +9,7 @@
 #include <sstream>
 #include <memory>
 #include <iostream>
+#include <cstring>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
@@ -250,78 +251,133 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
     */
 
-
     struct Optimizer {
         std::shared_ptr<Solver> solver;
         std::shared_ptr<AddTree> at0;
         std::shared_ptr<AddTree> at1;
-        KPartiteGraph g0;
-        KPartiteGraph g1;
+        std::shared_ptr<KPartiteGraph> g0;
+        std::shared_ptr<KPartiteGraph> g1;
+        std::shared_ptr<KPartiteGraphOptimize> opt;
     };
 
     py::class_<Optimizer>(m, "Optimizer")
-        .def(py::init<>([](std::shared_ptr<AddTree> at) -> Optimizer {
-            return {
+        .def(py::init<>([](std::shared_ptr<AddTree> at, bool minimize) -> Optimizer {
+            Optimizer opt{
                 std::make_shared<Solver>(*at),
                 at,
                 {},
-                {*at},
+                std::make_shared<KPartiteGraph>(*at),
                 {},
+                {}
             };
+            if (minimize)
+                opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0);
+            else
+                opt.opt = std::make_shared<KPartiteGraphOptimize>(true, *opt.g0);
+            return opt;
         }))
         .def(py::init<>([](
                         std::shared_ptr<AddTree> at0,
                         std::shared_ptr<AddTree> at1,
-                        std::unordered_set<FeatId> matches,
+                        const std::unordered_set<FeatId>& matches,
                         bool match_is_reuse
                         ) -> Optimizer {
             Optimizer opt {
-                std::make_shared<Solver>(*at0, *at1, std::move(matches), match_is_reuse),
+                std::make_shared<Solver>(*at0, *at1, matches, match_is_reuse),
                 at0,
                 at1,
-                {*at0},
+                std::make_shared<KPartiteGraph>(*at0),
                 {},
+                {}
             };
-            opt.g1 = {*at1, opt.solver->fmap()};
+            opt.g1 = std::make_shared<KPartiteGraph>(*at1, opt.solver->fmap());
+            opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0, *opt.g1);
             return opt;
         }))
         .def("__str__", [](const Optimizer& opt) {
             std::stringstream ss;
             ss << "==== Z3 state: " << std::endl << opt.solver->get_z3() << std::endl;
             ss << std::endl << "==== KPartiteGraph 0:" << std::endl;
-            ss << opt.g0 << std::endl;
+            ss << *opt.g0 << std::endl;
             ss << std::endl << "==== KPartiteGraph 1:" << std::endl;
-            ss << opt.g1 << std::endl;
+            ss << *opt.g1 << std::endl;
             return ss.str();
         })
-        .def("parse_smt", [](Optimizer& opt, const char *smt) {
+        .def("set_smt_program", [](Optimizer& opt, const char *smt) {
             opt.solver->parse_smt(smt);
             std::cout << opt.solver->get_z3() << std::endl;
         })
         .def("merge", [](Optimizer& opt, int K, int instance) {
             instance += 1;
             if ((instance & 0b1) != 0)
-                opt.g0.merge(K);
+                opt.g0->merge(K);
             if ((instance & 0b10) != 0)
-                opt.g1.merge(K);
+                opt.g1->merge(K);
         }, py::arg("K")=2, py::arg("instance")=0b10)
         .def("prune", [](Optimizer& opt, int instance) {
             instance += 1;
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
                 bool res = opt.solver->check(e);
-                std::cout << "test: " << box << " -> " << e << "res? " << res << std::endl;
+                std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
                 return res;
             };
 
             if ((instance & 0b1) != 0)
-                opt.g0.prune(f);
+                opt.g0->prune(f);
             if ((instance & 0b10) != 0)
-                opt.g1.prune(f);
+                opt.g1->prune(f);
 
         }, py::arg("instance") = 0b10)
+        .def("num_independent_sets", [](const Optimizer& opt, int instance) {
+            if (instance == 0)
+                return opt.g0->num_independent_sets();
+            return opt.g1->num_independent_sets();
+        })
+        .def("num_vertices", [](const Optimizer& opt, int instance) {
+            if (instance == 0)
+                return opt.g0->num_vertices();
+            return opt.g1->num_vertices();
+        })
+        .def("num_vertices", [](const Optimizer& opt, int instance, int indep_set) {
+            if (instance == 0)
+                return opt.g0->num_vertices_in_set(indep_set);
+            return opt.g1->num_vertices_in_set(indep_set);
+        })
+        .def("get_used_feat_ids", [](Optimizer& opt) {
+            return py::make_tuple(opt.solver->fmap().get_used_feat_ids(0),
+                    opt.solver->fmap().get_used_feat_ids(1));
+        })
+        .def("is_feat_id_used", [](Optimizer& opt, int instance, FeatId feat_id) {
+            return opt.solver->fmap().is_feat_id_used(instance, feat_id);
+        })
         .def("xvar_name", [](Optimizer& opt, int instance, FeatId feat_id) {
             return opt.solver->xvar_name(instance, feat_id);
+        })
+        .def("optimize", [](Optimizer& opt, int nsteps, FloatT arg0, py::object arg1) {
+            auto f = [opt](const DomainBox& box) {
+                z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
+                bool res = opt.solver->check(e);
+                std::cout << "test: " << box << " -> " << e << "res? " << res << std::endl;
+                return res;
+            };
+            if (arg1.is_none())
+            {
+                py::print("option 1");
+                FloatT min_output_difference = arg0;
+                return opt.opt->steps(nsteps, f, min_output_difference);
+            }
+            else
+            {
+                py::print("option 2");
+                FloatT max_output0 = arg0;
+                FloatT min_output1 = arg1.cast<FloatT>();
+                return opt.opt->steps(nsteps, f, max_output0, min_output1);
+            }
+        }, py::arg("nsteps")=1, py::arg("arg0")=0.0, py::arg("arg1")=py::none())
+        .def("solutions", [](Optimizer& opt) {
+            for (auto& sol : opt.opt->solutions)
+                std::cout << sol << std::endl;
         });
 
 

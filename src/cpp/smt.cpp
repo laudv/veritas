@@ -4,45 +4,90 @@
 
 namespace treeck {
 
-    ReuseIdMapper::ReuseIdMapper(
+    ReuseFeatIdMapper::ReuseFeatIdMapper() {}
+
+    ReuseFeatIdMapper::ReuseFeatIdMapper(
             const AddTree& at0,
-            std::unordered_set<FeatId> matches,
+            const AddTree& at1,
+            const std::unordered_set<FeatId>& matches,
             bool match_is_reuse)
-        : matches_{matches}
-        , max_feat_id_{0}
-        , match_is_reuse_{match_is_reuse}
+        : id_map0_{}
+        , id_map1_{}
     {
         // quick and dirty way to get all the used feat_ids in at0
-        // not at all the fastest, but that does not matter
-        for (auto&& [feat_id, _] : at0.get_splits())
-            max_feat_id_ = std::max(max_feat_id_, feat_id);
+        // not at all the fastest, but that does not matter, we only do it once
+        auto at0_splits = at0.get_splits();
+        auto at1_splits = at1.get_splits();
+
+        int max_feat_id0 = 0;
+        for (auto&& [feat_id, _] : at0_splits)
+            max_feat_id0 = std::max(max_feat_id0, feat_id);
+        id_map0_.resize(max_feat_id0+1, -1);
+        for (auto&& [feat_id, _] : at0_splits)
+            id_map0_[feat_id] = feat_id;
+
+        int max_feat_id1 = 0;
+        for (auto&& [feat_id, _] : at1_splits)
+            max_feat_id1 = std::max(max_feat_id1, feat_id);
+        id_map1_.resize(max_feat_id1+1, -1);
+        for (auto&& [feat_id, _] : at1_splits)
+        {
+            bool in_matches = matches.find(feat_id) != matches.end();
+            if (in_matches == match_is_reuse)
+                id_map1_[feat_id] = feat_id; // same id as at0!
+            else
+                id_map1_[feat_id] = id_map1_.size() + feat_id;
+        }
+
+        std::cout << "MAPPING:" << std::endl;
+        for (int i = 0; i < id_map0_.size(); ++i)
+            std::cout << "  0: " << i << ", " << id_map0_[i] << " is_reused: " << is_reused(i) << std::endl;
+        for (int i = 0; i < id_map1_.size(); ++i)
+            std::cout << "  1: " << i << ", " << id_map1_[i] << " is_reused: " << is_reused(i) << std::endl;
     }
 
     bool
-    ReuseIdMapper::is_reused(FeatId feat_id) const
+    ReuseFeatIdMapper::is_feat_id_used(int instance, FeatId feat_id) const
     {
-        bool in_matches = matches_.find(feat_id) != matches_.end();
-        std::cout << "is_reused? feat_id==" << feat_id << " => " << (in_matches == match_is_reuse_) << std::endl;
-        return in_matches == match_is_reuse_;
+        const auto& id_map = instance==0 ? id_map0_ : id_map1_;
+        if (feat_id < id_map.size())
+            return id_map[feat_id] != -1;
+        return false;
+    }
+
+    bool
+    ReuseFeatIdMapper::is_reused(FeatId feat_id) const
+    {
+        if (feat_id >= id_map0_.size() || feat_id >= id_map1_.size())
+            return false;
+
+        int id0 = id_map0_[feat_id];
+        return id0 != -1 && id0 == id_map1_[feat_id];
     }
 
     int
-    ReuseIdMapper::operator()(FeatId feat_id) const
+    ReuseFeatIdMapper::operator()(FeatId feat_id) const
     {
-        // - match_is_reuse_: if feat_id occurs in matches_, then map them to the
-        //   id value also used for the first addtree (at0 from constructor)
-        // -!match_is_reuse_: if feat_id occurs in matches_, then **don't**
-        //   match them to the same id value also used for the first addtree
-        if (is_reused(feat_id))
-            return static_cast<int>(feat_id);
-        else
-            return static_cast<int>(1 + max_feat_id_ + feat_id);
+        if (feat_id < id_map1_.size())
+            return id_map1_[feat_id];
+        else return -1;
+    }
+
+    std::vector<FeatId>
+    ReuseFeatIdMapper::get_used_feat_ids(int instance) const
+    {
+        const auto& id_map = instance==0 ? id_map0_ : id_map1_;
+        std::vector<FeatId> output;
+        for (FeatId id : id_map)
+            if (id != -1)
+                output.push_back(id);
+        return output;
     }
 
 
 
     Solver::Solver(const AddTree& at)
-        : fmap_{at, {}, false} // we won't be using this
+        : fmap_{} // we won't be using this
         , ctx_{}
         , solver_{ctx_}
     {
@@ -57,7 +102,7 @@ namespace treeck {
             const AddTree& at1,
             std::unordered_set<FeatId> matches,
             bool match_is_reuse)
-        : fmap_{at0, matches, match_is_reuse}
+        : fmap_{at0, at1, matches, match_is_reuse}
         , ctx_{}
         , solver_{ctx_}
     {
@@ -157,6 +202,7 @@ namespace treeck {
     void
     Solver::parse_smt(const char *smt)
     {
+        solver_.reset();
         std::stringstream ss;
         for (auto &&[id, pair] : var_map_)
         {
@@ -175,7 +221,7 @@ namespace treeck {
         solver_.from_string(ss.str().c_str());
     }
 
-    const ReuseIdMapper&
+    const ReuseFeatIdMapper&
     Solver::fmap() const
     {
         return fmap_;

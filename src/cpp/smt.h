@@ -15,15 +15,18 @@
 
 namespace treeck {
 
-    class ReuseIdMapper {
-        std::unordered_set<FeatId> matches_;
-        bool match_is_reuse_;
-        FeatId max_feat_id_; // max feat_id in the "first" tree (at0)
+    class ReuseFeatIdMapper {
+        std::vector<int> id_map0_;
+        std::vector<int> id_map1_;
 
     public:
-        ReuseIdMapper(const AddTree& at0, std::unordered_set<FeatId> matches,
+        ReuseFeatIdMapper();
+        ReuseFeatIdMapper(const AddTree& at0, const AddTree& at1,
+                const std::unordered_set<FeatId>& matches,
                 bool match_is_reuse);
 
+        std::vector<FeatId> get_used_feat_ids(int instance) const;
+        bool is_feat_id_used(int instance, FeatId feat_id) const;
         bool is_reused(FeatId feat_id) const;
 
         /**
@@ -35,7 +38,7 @@ namespace treeck {
 
 
     class Solver  {
-        ReuseIdMapper fmap_;
+        ReuseFeatIdMapper fmap_;
         z3::context ctx_;
         z3::solver solver_;
 
@@ -65,7 +68,7 @@ namespace treeck {
         z3::context& get_z3_ctx();
         void parse_smt(const char *smt);
 
-        const ReuseIdMapper& fmap() const;
+        const ReuseFeatIdMapper& fmap() const;
 
         z3::expr& float_to_z3(FloatT value);
 

@@ -41,15 +41,6 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.right(t.root()))), 0.6)
 
         opt = Optimizer(at, at, {1}, True); # share feature 1 between two trees
-        print(opt)
-
-        opt.parse_smt(f"""
-(assert (< {opt.xvar_name(0, 0)} 0.0))
-(assert (> {opt.xvar_name(1, 0)} 1.0))""")
-        opt.prune()
-        print(opt)
-
-        opt.merge()
 
         self.assertEqual(opt.xvar_name(0, 0), "x0_0")
         self.assertEqual(opt.xvar_name(0, 1), "x0_1")
@@ -58,34 +49,37 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(opt.xvar_name(0, 2), "x0_2")
         self.assertEqual(opt.xvar_name(1, 2), "x1_2")
 
-        #print(opt)
+        self.assertEqual(opt.num_vertices(0, 0), 4)
+        self.assertEqual(opt.num_vertices(0, 1), 5)
+        self.assertEqual(opt.num_vertices(1, 0), 4)
+        self.assertEqual(opt.num_vertices(1, 1), 5)
 
-        #print(at)
-        #graph = KPartiteGraph(at)
-        #graph.propagate_outputs()
-        #graph.prune("""
-#(declare-fun x () Real)
-#(assert (> x  0.0))
-#        """)
-#        print(graph)
+        opt.set_smt_program(f"""
+(assert (< {opt.xvar_name(0, 0)} 0.0))
+(assert (> {opt.xvar_name(0, 1)} 1.2))
+(assert (> {opt.xvar_name(1, 0)} 1.0))""")
+        opt.prune()
 
-        #print(graph)
-        #print("outputs: ", graph.propagate_outputs())
-        #graph.merge(2);
-        #print("outputs: ", graph.propagate_outputs())
-        #print(graph)
+        self.assertEqual(opt.num_vertices(0, 0), 1)
+        self.assertEqual(opt.num_vertices(0, 1), 1)
+        self.assertEqual(opt.num_vertices(1, 0), 3)
+        self.assertEqual(opt.num_vertices(1, 1), 4)
 
-        #print("\n== MAX ======================")
-        #find = MaxKPartiteGraphFind(graph)
-        #print("done?", not find.steps(100))
-        #max_solutions = find.solutions()
-        #print(len(max_solutions))
- 
-        #print("\n== MIN ======================")
-        #find = MinKPartiteGraphFind(graph)
-        #print("done?", not find.steps(100))
-        #min_solutions = find.solutions()
-        #print(len(min_solutions), graph.nsteps, graph.nupdate_fails)
+        self.assertEqual(opt.num_independent_sets(0), 2)
+        self.assertEqual(opt.num_independent_sets(1), 2)
+
+        opt.merge(2)
+
+        self.assertEqual(opt.num_independent_sets(0), 1)
+        self.assertEqual(opt.num_independent_sets(1), 1)
+
+        print(opt)
+
+        #opt.step(1.1);
+        #opt.step(1.1, 1.2);
+
+        print(opt.optimize(100, 0.0))
+        opt.solutions()
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")

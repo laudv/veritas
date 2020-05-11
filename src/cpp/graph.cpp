@@ -213,9 +213,9 @@ namespace treeck {
 
     KPartiteGraph::KPartiteGraph()
     {
-        sets_.push_back({
-            std::vector<Vertex>{{{}, 0.0}} // one dummy vertex
-        });
+        //sets_.push_back({
+        //    std::vector<Vertex>{{{}, 0.0}} // one dummy vertex
+        //});
     }
 
     KPartiteGraph::KPartiteGraph(const AddTree& addtree)
@@ -275,7 +275,7 @@ namespace treeck {
     void
     KPartiteGraph::prune(BoxFilter filter)
     {
-        auto f = [filter](const Vertex& v) { return filter(v.box); };
+        auto f = [filter](const Vertex& v) { return !filter(v.box); }; // keep if true, remove if false
 
         for (auto it = sets_.begin(); it != sets_.end(); ++it)
         {
@@ -392,6 +392,13 @@ namespace treeck {
         for (const auto& set : sets_)
             result += set.vertices.size();
         return result;
+    }
+
+    size_t
+    KPartiteGraph::num_vertices_in_set(int indep_set) const
+    {
+        const auto &set = sets_.at(indep_set);
+        return set.vertices.size();
     }
 
     std::ostream&
@@ -517,6 +524,8 @@ namespace treeck {
                 }
             });
         }
+
+        std::cout << "I AM INITIALIZED!!!!!!!!"<< std::endl;
     }
 
     Clique 
@@ -853,6 +862,38 @@ namespace treeck {
                 [min_output_difference](FloatT output0, FloatT output1) {
                     return (output1 - output0) > min_output_difference;
                 });
+    }
+
+    bool
+    KPartiteGraphOptimize::steps(int K)
+    {
+        for (int i=0; i<K; ++i)
+            if (!step()) return false;
+        return true;
+    }
+
+    bool
+    KPartiteGraphOptimize::steps(int K, BoxFilter bf)
+    {
+        for (int i=0; i<K; ++i)
+            if (!step(bf)) return false;
+        return true;
+    }
+
+    bool
+    KPartiteGraphOptimize::steps(int K, BoxFilter bf, FloatT max_output0, FloatT min_output1)
+    {
+        for (int i=0; i<K; ++i)
+            if (!step(bf, max_output0, min_output1)) return false;
+        return true;
+    }
+
+    bool
+    KPartiteGraphOptimize::steps(int K, BoxFilter bf, FloatT min_output_difference)
+    {
+        for (int i=0; i<K; ++i)
+            if (!step(bf, min_output_difference)) return false;
+        return true;
     }
     
     /*

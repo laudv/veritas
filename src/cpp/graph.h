@@ -109,6 +109,7 @@ namespace treeck {
 
         size_t num_independent_sets() const;
         size_t num_vertices() const;
+        size_t num_vertices_in_set(int indep_set) const;
     };
 
     std::ostream& operator<<(std::ostream& s, const KPartiteGraph& graph);
@@ -194,6 +195,10 @@ namespace treeck {
         bool step(BoxFilter bf);
         bool step(BoxFilter bf, FloatT max_output0, FloatT min_output1);
         bool step(BoxFilter bf, FloatT min_output_difference);
+        bool steps(int howmany);
+        bool steps(int howmany, BoxFilter bf);
+        bool steps(int howmany, BoxFilter bf, FloatT max_output0, FloatT min_output1);
+        bool steps(int howmany, BoxFilter bf, FloatT min_output_difference);
     };
 
 

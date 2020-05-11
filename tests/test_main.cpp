@@ -23,7 +23,7 @@ int main()
     t.root().right().set_leaf_value(1.0);
     at.add_tree(std::move(t));
 
-    ReuseIdMapper fmap(at, {0}, true);
+    ReuseFeatIdMapper fmap(at, at, {0}, true);
 
     std::cout << at << std::endl;
     KPartiteGraph g0(at);

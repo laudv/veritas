@@ -27,13 +27,13 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 include_directories(lib/cereal/include)
 
 option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
-#if (BUILD_PYTHON_BINDINGS)
+if (BUILD_PYTHON_BINDINGS)
     #find_package(pybind11 REQUIRED)
     add_subdirectory(lib/pybind11)
     #pybind11_add_module("py${PROJECT_NAME}" ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
     pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
     target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
-#endif (BUILD_PYTHON_BINDINGS)
+endif (BUILD_PYTHON_BINDINGS)
 
 # Use Ubuntu's z3 (libz3-dev) install
 #find_package(Z3 REQUIRED)
