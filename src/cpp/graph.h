@@ -140,9 +140,17 @@ namespace treeck {
         bool operator()(const Clique&, const Clique&) const;
     };
 
-
     std::ostream& operator<<(std::ostream& s, const CliqueInstance& ci);
     std::ostream& operator<<(std::ostream& s, const Clique& c);
+
+
+
+    struct Solution {
+        DomainBox box;
+        FloatT output0, output1;
+    };
+
+    std::ostream& operator<<(std::ostream& s, const Solution& sol);
 
 
     class KPartiteGraphOptimize {
@@ -164,13 +172,18 @@ namespace treeck {
         template <size_t instance>
         bool update_clique(Clique& c);
 
-        template <size_t instance>
-        void step_instance(Clique c);
+        template <size_t instance, typename BF, typename OF>
+        void step_instance(Clique c, BF box_filter, OF output_filter);
+
+        template <typename BF, typename OF>
+        bool step_aux(BF bf, OF of);
 
     public:
         two_of<size_t> nsteps;
         size_t nupdate_fails;
         size_t nrejected;
+
+        std::vector<Solution> solutions;
 
     public:
         KPartiteGraphOptimize(KPartiteGraph& g0); // minimize g0
@@ -178,6 +191,9 @@ namespace treeck {
         KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1); // minimize g0, maximize g1
 
         bool step();
+        bool step(BoxFilter bf);
+        bool step(BoxFilter bf, FloatT max_output0, FloatT min_output1);
+        bool step(BoxFilter bf, FloatT min_output_difference);
     };
 
 

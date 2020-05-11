@@ -295,8 +295,8 @@ PYBIND11_MODULE(pytreeck, m) {
             return ss.str();
         })
         .def("parse_smt", [](Optimizer& opt, const char *smt) {
-                opt.solver->parse_smt(smt);
-                std::cout << opt.solver->get_z3() << std::endl;
+            opt.solver->parse_smt(smt);
+            std::cout << opt.solver->get_z3() << std::endl;
         })
         .def("merge", [](Optimizer& opt, int K, int instance) {
             instance += 1;
