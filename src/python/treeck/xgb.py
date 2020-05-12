@@ -17,12 +17,13 @@ def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:]),
     """
     base_score = 0.5
     if isinstance(model, XGBModel):
-        base_score = model.base_score
+        base_score = model.base_score if model.base_score is not None else base_score
         model = model.get_booster()
     assert isinstance(model, Booster), f"not xgb.Booster but {type(model)}"
 
     dump = model.get_dump("", dump_format="json")
     at = AddTree()
+
     at.base_score = base_score
 
     offset, num_classes = multiclass
@@ -49,8 +50,9 @@ def _parse_tree(at, tree_dump, feat2id_map):
             # let's hope the ordering of "children" is [left,right]
             left_id = node_json["yes"]
             right_id = node_json["no"]
-            if "missing" in node_json:
-                assert node_json["missing"] == left_id, "XGB sparse not supported, set missing=None"
+            # xgboost 1.0.2 changed behavior
+            #if "missing" in node_json:
+            #    assert node_json["missing"] == left_id, "XGB sparse not supported, set missing=None"
 
             children = { child["nodeid"]: child for child in node_json["children"] }
 

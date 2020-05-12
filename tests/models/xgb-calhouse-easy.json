@@ -779,7 +779,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 7,
-                            "split_value": -121.9000015258789
+                            "split_value": -121.91000366210938
                         }
                     }
                 },
@@ -972,7 +972,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 6,
-                            "split_value": 37.63999938964844
+                            "split_value": 37.630001068115237
                         }
                     }
                 },
@@ -1182,7 +1182,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 3.1194000244140627
+                            "split_value": 3.0625
                         }
                     }
                 },
@@ -1245,7 +1245,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 5,
-                            "split_value": 2.138221263885498
+                            "split_value": 2.125
                         }
                     }
                 },
@@ -1258,7 +1258,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 0,
-                            "split_value": 4.55679988861084
+                            "split_value": 4.48859977722168
                         }
                     }
                 },

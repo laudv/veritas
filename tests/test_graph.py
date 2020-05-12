@@ -1,4 +1,7 @@
-import unittest
+import unittest, json
+import numpy as np
+import imageio
+import matplotlib.pyplot as plt
 
 from treeck import *
 
@@ -80,6 +83,28 @@ class TestGraph(unittest.TestCase):
 
         print(opt.optimize(100, 0.0))
         opt.solutions()
+
+    def test_img(self):
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        imghat = np.array(ys).reshape((100, 100))
+        img = imageio.imread("tests/data/img.png")
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+        
+        print(at)
+
+        fig, (ax0, ax1) = plt.subplots(1, 2)
+        im0 = ax0.imshow(img)
+        im1 = ax1.imshow(imghat)
+        fig.colorbar(im0, ax=ax0)
+        fig.colorbar(im1, ax=ax1)
+        plt.show()
+
+        #m, M = min(ys), max(ys)
+        #img = np.array(ys).reshape((100, 100))
+
+        #opt = Optimizer(at)
+        #print(opt)
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")

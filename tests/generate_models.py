@@ -58,9 +58,9 @@ def generate_california_housing():
     print(f"easy calhouse: mae model difference {mae}")
 
     # edge case test
-    _, feat_id, split_value = at[0].get_split(0)
-    Xt = [X[12]]
-    Xt[0][feat_id] = split_value
+    split = at[0].get_split(0)
+    Xt = np.array([X[12]])
+    Xt[0][split.feat_id] = split.split_value
     print("edge case diff: ", model.predict(Xt) - at.predict(Xt))
 
     at.write("tests/models/xgb-calhouse-easy.json")
@@ -126,9 +126,9 @@ def generate_covertype():
     print(f"easy covtype: mae model difference {mae}")
 
     # edge case test
-    _, feat_id, split_value = at[0].get_split(0)
-    Xt = [X[12]]
-    Xt[0][feat_id] = split_value
+    split = at[0].get_split(0)
+    Xt = np.array([X[12]])
+    Xt[0][split.feat_id] = split.split_value
     print("edge case diff: ", model.predict(Xt, output_margin=True) - at.predict(Xt))
 
     at.write("tests/models/xgb-covtype-easy.json")
@@ -152,8 +152,8 @@ def generate_img():
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     mae = mean_absolute_error(model.predict(X[:1000]), at.predict(X[:1000]))
-    print(f"easy img: rmse train {np.sqrt(sqerr)/len(X)}")
-    print(f"easy img: mae model difference {mae}")
+    print(f"very easy img: rmse train {np.sqrt(sqerr)/len(X)}")
+    print(f"very easy img: mae model difference {mae}")
 
     fig, ax = plt.subplots(1, 2)
     im0 = ax[0].imshow(img)
@@ -192,6 +192,34 @@ def generate_img():
 
     at.write("tests/models/xgb-img-easy.json")
     with open("tests/models/xgb-img-easy-values.json", "w") as f:
+        json.dump(list(map(float, yhat)), f)
+
+    regr = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            nthread=4,
+            tree_method="hist",
+            max_depth=6,
+            learning_rate=0.4,
+            n_estimators=50)
+    model = regr.fit(X, y)
+    at = addtree_from_xgb_model(model)
+    yhat = model.predict(X)
+    sqerr = sum((y - yhat)**2)
+    mae = sum((model.predict(X[:1000]) - at.predict(X[:1000]))**2)
+    print(f"hard img: rmse train {np.sqrt(sqerr)/len(X)}")
+    print(f"hard img: mae model difference {mae}")
+
+    #print(model.predict(X[10:20]) - at.predict(X[10:20]))
+
+    fig, ax = plt.subplots(1, 2)
+    im0 = ax[0].imshow(img)
+    fig.colorbar(im0, ax=ax[0])
+    im1 = ax[1].imshow(yhat.reshape((100,100)))
+    fig.colorbar(im1, ax=ax[1])
+    plt.show()
+
+    at.write("tests/models/xgb-img-hard.json")
+    with open("tests/models/xgb-img-hard-values.json", "w") as f:
         json.dump(list(map(float, yhat)), f)
 
 def generate_mnist():
@@ -262,19 +290,21 @@ def generate_bin_mnist():
     mat = scipy.io.loadmat("tests/data/mnist.mat") # much faster
     X = mat["X"] > 50.0
     pdX = pd.DataFrame(X, columns=[f"f{i}" for i in range(X.shape[1])]) # xgboost produces binary splits
+    print(pdX.dtypes)
     y = mat["y"].reshape((70000,))
 
     print("Training MNIST y==1")
     y1 = y==1
+    print(type(y1), y1.dtype)
     clf = xgb.XGBClassifier(
             nthread=4,
             tree_method="hist",
-            max_depth=5,
+            max_depth=3,
             learning_rate=0.4,
-            n_estimators=20)
+            n_estimators=1)
     model = clf.fit(pdX, y1)
     pred = model.predict(pdX, output_margin=True)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(model) # broken: https://github.com/dmlc/xgboost/issues/5655
     at.base_score = 0.0
     acc = accuracy_score(pred > 0.0, y1)
     print(f"mnist y==1: accuracy y==1: {acc}")
@@ -282,9 +312,10 @@ def generate_bin_mnist():
     print(f"mnist y==1: mae model difference {mae}")
     at.write("tests/models/xgb-mnist-bin-yis1-intermediate.json")
 
+
 if __name__ == "__main__":
     #generate_california_housing()
     #generate_covertype()
     #generate_img()
     #generate_mnist()
-    generate_bin_mnist()
+    #generate_bin_mnist()

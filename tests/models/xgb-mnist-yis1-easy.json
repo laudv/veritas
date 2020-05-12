@@ -247,7 +247,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 69,
-                            "split_value": 238.0
+                            "split_value": 230.0
                         }
                     }
                 },
@@ -366,7 +366,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 209,
-                            "split_value": 2.0
+                            "split_value": 1.0
                         }
                     }
                 },
@@ -386,7 +386,7 @@
                     "id": 9,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.25984835624694826
+                    "leaf_value": -0.25984832644462588
                 },
                 {
                     "id": 10,
@@ -403,7 +403,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 576,
-                            "split_value": 2.0
+                            "split_value": 1.0
                         }
                     }
                 },
@@ -731,7 +731,7 @@
                     "id": 15,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.11041053384542465
+                    "leaf_value": -0.11041052639484406
                 },
                 {
                     "id": 16,
@@ -813,7 +813,7 @@
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.09417476505041123
+                    "leaf_value": -0.09417475759983063
                 },
                 {
                     "id": 25,
@@ -993,7 +993,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 69,
-                            "split_value": 201.0
+                            "split_value": 199.0
                         }
                     }
                 },
@@ -1032,7 +1032,7 @@
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.041622404009103778
+                    "leaf_value": -0.04162241145968437
                 },
                 {
                     "id": 17,
@@ -1108,7 +1108,7 @@
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.034716371446847919
+                    "leaf_value": -0.03471636399626732
                 },
                 {
                     "id": 25,
@@ -1146,7 +1146,7 @@
                     "id": 28,
                     "parent": 25,
                     "tree_size": 1,
-                    "leaf_value": -0.21759749948978425
+                    "leaf_value": -0.21759748458862306
                 },
                 {
                     "id": 29,
@@ -1265,7 +1265,7 @@
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.3528778851032257
+                    "leaf_value": -0.3528778553009033
                 },
                 {
                     "id": 9,
@@ -1370,7 +1370,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 158,
-                            "split_value": 144.0
+                            "split_value": 129.0
                         }
                     }
                 },
@@ -1378,7 +1378,7 @@
                     "id": 21,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.018139058724045755
+                    "leaf_value": -0.018139049410820009
                 },
                 {
                     "id": 22,
@@ -1408,7 +1408,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 439,
-                            "split_value": 9.0
+                            "split_value": 8.0
                         }
                     }
                 },
@@ -1422,7 +1422,7 @@
                     "id": 26,
                     "parent": 23,
                     "tree_size": 1,
-                    "leaf_value": -0.0193075742572546
+                    "leaf_value": -0.019307570531964303
                 },
                 {
                     "id": 27,
@@ -1541,7 +1541,7 @@
                     "id": 8,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": 0.0018519015284255148
+                    "leaf_value": 0.001851903391070664
                 },
                 {
                     "id": 9,
@@ -1591,7 +1591,7 @@
                     "id": 14,
                     "parent": 11,
                     "tree_size": 1,
-                    "leaf_value": -0.02852874994277954
+                    "leaf_value": -0.028528748080134393
                 },
                 {
                     "id": 15,
@@ -1653,7 +1653,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 297,
-                            "split_value": 2.0
+                            "split_value": 1.0
                         }
                     }
                 },
@@ -1679,7 +1679,7 @@
                     "id": 24,
                     "parent": 20,
                     "tree_size": 1,
-                    "leaf_value": -0.520348846912384
+                    "leaf_value": -0.5203489065170288
                 },
                 {
                     "id": 25,
@@ -1690,7 +1690,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 149,
-                            "split_value": 2.0
+                            "split_value": 1.0
                         }
                     }
                 },
@@ -1822,7 +1822,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 649,
-                            "split_value": 176.0
+                            "split_value": 175.0
                         }
                     }
                 },
@@ -1898,7 +1898,7 @@
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": 0.3620598316192627
+                    "leaf_value": 0.3620598614215851
                 },
                 {
                     "id": 17,
@@ -1936,7 +1936,7 @@
                     "id": 20,
                     "parent": 17,
                     "tree_size": 1,
-                    "leaf_value": -0.12464389204978943
+                    "leaf_value": -0.12464388459920883
                 },
                 {
                     "id": 21,
@@ -1947,7 +1947,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 144,
-                            "split_value": 22.0
+                            "split_value": 20.0
                         }
                     }
                 },
@@ -1960,7 +1960,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 125,
-                            "split_value": 186.0
+                            "split_value": 169.0
                         }
                     }
                 },
@@ -2205,7 +2205,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 514,
-                            "split_value": 250.0
+                            "split_value": 246.0
                         }
                     }
                 },
@@ -2242,7 +2242,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 584,
-                            "split_value": 247.0
+                            "split_value": 246.0
                         }
                     }
                 },
@@ -2255,7 +2255,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 575,
-                            "split_value": 106.0
+                            "split_value": 103.0
                         }
                     }
                 },
@@ -2275,7 +2275,7 @@
                     "id": 29,
                     "parent": 26,
                     "tree_size": 1,
-                    "leaf_value": 0.4638192057609558
+                    "leaf_value": 0.4638192355632782
                 },
                 {
                     "id": 30,
@@ -2382,7 +2382,7 @@
                     "id": 7,
                     "parent": 5,
                     "tree_size": 1,
-                    "leaf_value": -0.07533177733421326
+                    "leaf_value": -0.07533176988363266
                 },
                 {
                     "id": 8,
@@ -2400,7 +2400,7 @@
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": 0.01581970602273941
+                    "leaf_value": 0.015819719061255456
                 },
                 {
                     "id": 11,
@@ -2507,7 +2507,7 @@
                     "id": 22,
                     "parent": 19,
                     "tree_size": 1,
-                    "leaf_value": -0.13994665443897248
+                    "leaf_value": -0.13994663953781129
                 },
                 {
                     "id": 23,
@@ -2518,7 +2518,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 637,
-                            "split_value": 98.0
+                            "split_value": 97.0
                         }
                     }
                 },
@@ -2676,7 +2676,7 @@
                     "id": 10,
                     "parent": 6,
                     "tree_size": 1,
-                    "leaf_value": -0.01574855111539364
+                    "leaf_value": -0.01574854552745819
                 },
                 {
                     "id": 11,
@@ -2726,7 +2726,7 @@
                     "id": 16,
                     "parent": 12,
                     "tree_size": 1,
-                    "leaf_value": -0.23742426931858064
+                    "leaf_value": -0.23742425441741944
                 },
                 {
                     "id": 17,
@@ -2750,7 +2750,7 @@
                         "index": 0,
                         "data": {
                             "feat_id": 242,
-                            "split_value": 242.0
+                            "split_value": 239.0
                         }
                     }
                 },
