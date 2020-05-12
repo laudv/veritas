@@ -6,6 +6,19 @@ import matplotlib.patches as patches
 
 from treeck import *
 
+def plot_img_solutions(imghat, solutions):
+    fig, ax = plt.subplots()
+    im = ax.imshow(imghat)
+    fig.colorbar(im, ax=ax)
+    for out0, out1, dom in solutions:
+        x0, y0 = max(0.0, dom[1].lo), max(0.0, dom[0].lo)
+        x1, y1 = min(100.0, dom[1].hi), min(100.0, dom[0].hi)
+        w, h = x1-x0, y1-y0
+        print((x0, y0), (x1, y1), w, h, out0, out1)
+        rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,linewidth=1,edgecolor='r',facecolor='none')
+        ax.add_patch(rect)
+    plt.show()
+
 class TestGraph(unittest.TestCase):
     def test_single_tree(self):
         at = AddTree()
@@ -91,22 +104,13 @@ class TestGraph(unittest.TestCase):
         imghat = np.array(ys).reshape((100, 100))
         img = imageio.imread("tests/data/img.png")
         at = AddTree.read("tests/models/xgb-img-very-easy.json")
-        
-        #print(at)
-
-        #fig, (ax0, ax1) = plt.subplots(1, 2)
-        #im0 = ax0.imshow(img)
-        #im1 = ax1.imshow(imghat)
-        #fig.colorbar(im0, ax=ax0)
-        #fig.colorbar(im1, ax=ax1)
-        #plt.show()
 
         m, M = min(ys), max(ys)
         #img = np.array(ys).reshape((100, 100))
 
         opt = Optimizer(at, minimize=True)
         print(opt)
-        not_done = opt.optimize(100, 250, -250)
+        not_done = opt.step(100, 250, -250)
         self.assertFalse(not_done)
         self.assertEqual(opt.num_solutions(), 32);
         solutions_min = opt.solutions()
@@ -117,7 +121,7 @@ class TestGraph(unittest.TestCase):
 
         opt = Optimizer(at, maximize=True)
         print(opt)
-        not_done = opt.optimize(100, 250, -250)
+        not_done = opt.step(100, 250, -250)
         self.assertFalse(not_done)
         self.assertEqual(opt.num_solutions(), 32);
         solutions_max = opt.solutions()
@@ -137,22 +141,55 @@ class TestGraph(unittest.TestCase):
             x, y = int(max(0.0, dom[1].lo)), int(max(0.0, dom[0].lo)) # right on the edge
             self.assertEqual(v, imghat[y, x])
 
-        def plot_solutions(imghat, solutions):
-            fig, ax = plt.subplots()
-            im = ax.imshow(imghat)
-            fig.colorbar(im, ax=ax)
-            for out0, out1, dom in solutions:
-                x0, y0 = max(0.0, dom[1].lo), max(0.0, dom[0].lo)
-                x1, y1 = min(100.0, dom[1].hi), min(100.0, dom[0].hi)
-                w, h = x1-x0, y1-y0
-                print((x0, y0), (x1, y1), w, h, out0, out1)
-                rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,linewidth=1,edgecolor='r',facecolor='none')
-                ax.add_patch(rect)
-            plt.show()
-
         #plot_solutions(imghat, solutions_min[:3])
         #plot_solutions(imghat, solutions_max[:3])
 
+    def test_img2(self): # with constraints
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        imghat = np.array(ys).reshape((100, 100))
+        img = imageio.imread("tests/data/img.png")
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+        
+        #fig, (ax0, ax1) = plt.subplots(1, 2)
+        #im0 = ax0.imshow(img)
+        #im1 = ax1.imshow(imghat)
+        #fig.colorbar(im0, ax=ax0)
+        #fig.colorbar(im1, ax=ax1)
+        #plt.show()
+
+        m, M = min(ys), max(ys)
+        #img = np.array(ys).reshape((100, 100))
+
+        opt = Optimizer(at, minimize=False)
+        opt.prune()
+        opt.set_smt_program(f"""
+(assert (>= {opt.xvar_name(0, 0)} 50))
+(assert (< {opt.xvar_name(0, 0)} 60))
+(assert (>= {opt.xvar_name(0, 1)} 50))
+        """)
+        
+        while opt.num_solutions() < 50:
+            opt.step(100, 250, -250)
+
+        solutions = opt.solutions();
+
+        #print(solutions)
+        #plot_img_solutions(imghat, solutions);
+
+        # all solutions must overlap with the region defined in smt
+        dom0 = RealDomain(50, 60)
+        dom1 = RealDomain(50, 101)
+        for _, v, dom in solutions:
+            self.assertTrue(dom0.overlaps(dom[0]))
+            self.assertTrue(dom1.overlaps(dom[1]))
+
+        # the values found must correspond to the values predicted by the model
+        for _, v, dom in solutions:
+            x, y = int(max(0.0, dom[1].lo)), int(max(0.0, dom[0].lo)) # right on the edge
+            self.assertEqual(v, imghat[y, x])
+
+        self.assertEqual(solutions[0][1], imghat[48, 80])
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")

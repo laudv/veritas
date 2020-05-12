@@ -671,9 +671,21 @@ namespace treeck {
         // check if this newly created clique is a solution
         if (is_solution0 && is_solution1)
         {
-            std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
-            // push back to queue so it is 'extracted' when it actually is the optimal solution
-            pq_push(std::move(new_c));
+            bool is_valid_box = box_filter(new_c.box);
+            bool is_valid_output = output_filter(
+                    get0(new_c.instance).output,
+                    get1(new_c.instance).output);
+
+            if (is_valid_box && is_valid_output)
+            {
+                std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
+                // push back to queue so it is 'extracted' when it actually is the optimal solution
+                pq_push(std::move(new_c));
+            }
+            else
+            {
+                std::cout << "discarding invalid solution" << std::endl;
+            }
         }
         else
         {

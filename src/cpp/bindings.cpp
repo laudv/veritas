@@ -377,11 +377,12 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("xvar_name", [](Optimizer& opt, int instance, FeatId feat_id) {
             return opt.solver->xvar_name(instance, feat_id);
         })
-        .def("optimize", [](Optimizer& opt, int nsteps, FloatT arg0, py::object arg1) {
+        .def("step", [](Optimizer& opt, int nsteps, FloatT arg0, py::object arg1) {
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
                 bool res = opt.solver->check(e);
-                std::cout << "test: " << box << " -> " << e << "res? " << res << std::endl;
+                std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
+                std::cout << opt.solver->get_z3() << std::endl;
                 return res;
             };
             if (arg1.is_none())
