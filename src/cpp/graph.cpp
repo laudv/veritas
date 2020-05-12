@@ -195,8 +195,8 @@ namespace treeck {
     Vertex::Vertex(DomainBox box, FloatT output)
         : box(box)
         , output(output)
-        , min_output(output)
-        , max_output(output) { }
+        , min_bound(output)
+        , max_bound(output) { }
 
     //bool
     //Vertex::operator<(const Vertex& other) const
@@ -303,12 +303,12 @@ namespace treeck {
                 {
                     if (v0.box.overlaps(v1.box))
                     {
-                        min0 = std::min(min0, v0.min_output);
-                        max0 = std::max(max0, v0.max_output);
+                        min0 = std::min(min0, v0.min_bound);
+                        max0 = std::max(max0, v0.max_bound);
                     }
                 }
-                v1.min_output = min0 + v1.output;
-                v1.max_output = max0 + v1.output;
+                v1.min_bound = min0 + v1.output;
+                v1.max_bound = max0 + v1.output;
             }
         }
 
@@ -317,8 +317,8 @@ namespace treeck {
         FloatT max0 = -std::numeric_limits<FloatT>::infinity();
         for (const auto& v0 : sets_.front().vertices)
         {
-            min0 = std::min(min0, v0.min_output);
-            max0 = std::max(max0, v0.max_output);
+            min0 = std::min(min0, v0.min_bound);
+            max0 = std::max(max0, v0.max_bound);
         }
 
         return {min0, max0};
@@ -383,6 +383,30 @@ namespace treeck {
         }
     }
 
+    void
+    KPartiteGraph::sort_bound_asc()
+    {
+        for (auto& set : sets_)
+        {
+            std::sort(set.vertices.begin(), set.vertices.end(),
+                [](const Vertex& a, const Vertex& b){
+                    return a.min_bound < b.min_bound;
+            });
+        }
+    }
+
+    void
+    KPartiteGraph::sort_bound_desc()
+    {
+        for (auto& set : sets_)
+        {
+            std::sort(set.vertices.begin(), set.vertices.end(),
+                [](const Vertex& a, const Vertex& b){
+                    return a.max_bound > b.max_bound;
+            });
+        }
+    }
+
     size_t
     KPartiteGraph::num_independent_sets() const
     {
@@ -424,8 +448,8 @@ namespace treeck {
                     << std::fixed
                     << std::setprecision(3)
                     << vertex.output
-                    << "," << vertex.min_output
-                    << "," << vertex.max_output
+                    << "," << vertex.min_bound
+                    << "," << vertex.max_bound
                     << ") ";
                 s << vertex.box << std::endl;
             }
@@ -506,7 +530,7 @@ namespace treeck {
         : KPartiteGraphOptimize(DUMMY_GRAPH, g1) { }
 
     KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1)
-        : graph_{g0, g1}
+        : graph_{g0, g1} // minimize g0, maximize g1
         , cliques_()
         , cmp_()
         , solutions()
@@ -514,12 +538,11 @@ namespace treeck {
         , nupdate_fails{0}
         , nrejected{0}
     {
-        // minimize g0, maximize g1
-        g0.sort_asc(); // choose vertex with smaller `output` first
-        g1.sort_desc(); // choose vertex with larger `output` first
-
         auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
         auto&& [min1, output_bound1] = g1.propagate_outputs(); // max output bound of first clique
+
+        g0.sort_bound_asc(); // choose vertex with smaller `output` first
+        g1.sort_bound_desc(); // choose vertex with larger `output` first
 
         if (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0)
         {
@@ -531,8 +554,6 @@ namespace treeck {
                 }
             });
         }
-
-        std::cout << "I AM INITIALIZED!!!!!!!!"<< std::endl;
     }
 
     Clique 
@@ -571,7 +592,7 @@ namespace treeck {
     {
         // Things to do:
         // 1. find next vertex in `indep_set`
-        // 2. update max_output (assume vertices in indep_set sorted)
+        // 2. update max_bound (assume vertices in indep_set sorted)
         CliqueInstance& ci = std::get<instance>(c.instance);
         const KPartiteGraph& graph = std::get<instance>(graph_);
 
@@ -591,8 +612,8 @@ namespace treeck {
                 // reuse dynamic programming value (propagate_outputs) to update bound
                 FloatT prev_bound;
                 if constexpr (instance==0)
-                    prev_bound = v.min_output;  // minimize instance 0
-                else prev_bound = v.max_output; // maximize instance 1
+                    prev_bound = v.min_bound;  // minimize instance 0
+                else prev_bound = v.max_bound; // maximize instance 1
 
                 // update bound
                 ci.output_bound = prev_bound + ci.output;
@@ -642,7 +663,7 @@ namespace treeck {
         // check if this newly created clique is a solution
         if (is_solution0 && is_solution1)
         {
-            std::cout << "SOLUTION (" << solutions.size()+1 << "): " << new_c << std::endl;
+            std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
             // push back to queue so it is 'extracted' when it actually is the optimal solution
             pq_push(std::move(new_c));
         }
@@ -819,6 +840,9 @@ namespace treeck {
         // move result to solutions if this is a solution
         if (is_solution0 && is_solution1)
         {
+            std::cout << "SOLUTION added "
+                << get0(c.instance).output << ", "
+                << get1(c.instance).output << std::endl;
             solutions.push_back({
                 std::move(c.box),
                 get0(c.instance).output,

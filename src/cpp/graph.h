@@ -61,8 +61,8 @@ namespace treeck {
     struct Vertex {
         DomainBox box;
         FloatT output;
-        FloatT min_output;
-        FloatT max_output;
+        FloatT min_bound;
+        FloatT max_bound;
 
         Vertex(DomainBox box, FloatT output);
 
@@ -106,6 +106,8 @@ namespace treeck {
         void merge(int K);
         void sort_asc();
         void sort_desc();
+        void sort_bound_asc();
+        void sort_bound_desc();
 
         size_t num_independent_sets() const;
         size_t num_vertices() const;

@@ -104,9 +104,10 @@ class TestGraph(unittest.TestCase):
         #img = np.array(ys).reshape((100, 100))
 
         opt = Optimizer(at, minimize=True)
-        not_done = opt.optimize(10, 250, -250)
-        #self.assertFalse(not_done)
-        #self.assertEqual(opt.num_solutions(), 43);
+        print(opt)
+        not_done = opt.optimize(100, 250, -250)
+        self.assertFalse(not_done)
+        self.assertEqual(opt.num_solutions(), 32);
         solutions_min = opt.solutions()
         print(solutions_min)
         self.assertTrue(all(x[0] <= y[0] for x, y in zip(solutions_min, solutions_min[1:])))
@@ -114,11 +115,13 @@ class TestGraph(unittest.TestCase):
         print(min_solution, m)
 
         opt = Optimizer(at, maximize=True)
-        not_done = opt.optimize(10, 250, -250)
-        #self.assertFalse(not_done)
-        #self.assertEqual(opt.num_solutions(), 43);
+        print(opt)
+        not_done = opt.optimize(100, 250, -250)
+        self.assertFalse(not_done)
+        self.assertEqual(opt.num_solutions(), 32);
         solutions_max = opt.solutions()
         print(solutions_max)
+        print(list(x[1] for x in solutions_max))
         self.assertTrue(all(x[1] >= y[1] for x, y in zip(solutions_max, solutions_max[1:])))
         max_solution = solutions_max[0]
         print(max_solution, M)
