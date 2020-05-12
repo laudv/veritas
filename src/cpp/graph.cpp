@@ -287,6 +287,9 @@ namespace treeck {
     std::tuple<FloatT, FloatT>
     KPartiteGraph::propagate_outputs()
     {
+        if (sets_.empty())
+            return {0.0, 0.0};
+
         // dynamic programming algorithm from paper Chen et al. 2019
         for (auto it1 = sets_.rbegin() + 1; it1 != sets_.rend(); ++it1)
         {
@@ -406,6 +409,9 @@ namespace treeck {
     {
         std::ios_base::fmtflags flgs(std::cout.flags());
 
+        if (graph.num_independent_sets() == 0)
+            return s << "KPartiteGraph { }";
+
         s << "KPartiteGraph {" << std::endl;
         for (auto& set : graph)
         {
@@ -490,7 +496,7 @@ namespace treeck {
 
     }
 
-    static KPartiteGraph DUMMY_GRAPH;
+    static KPartiteGraph DUMMY_GRAPH{};
 
     KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0)
         : KPartiteGraphOptimize(g0, DUMMY_GRAPH) { }
@@ -806,15 +812,19 @@ namespace treeck {
 
         Clique c = pq_pop();
 
+        bool is_solution0 = is_instance_solution<0>(c);
+        bool is_solution1 = is_instance_solution<1>(c);
+
         std::cout << "best clique " << c << std::endl;
 
         // 1. extend from graph0 first, then graph1, then graph0 again...
-        if (!is_instance_solution<0>(c) && get0(c.instance).indep_set <= get1(c.instance).indep_set)
+        if (!is_solution0 && (get0(c.instance).indep_set <= get1(c.instance).indep_set
+                    || is_solution1))
         {
             std::cout << "step(): extend graph0" << std::endl;
             step_instance<0>(std::move(c), box_filter, output_filter);
         }
-        else if (!is_instance_solution<1>(c))
+        else if (!is_solution1)
         {
             std::cout << "step(): extend graph1" << std::endl;
             step_instance<1>(std::move(c), box_filter, output_filter);

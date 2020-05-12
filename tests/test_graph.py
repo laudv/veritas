@@ -85,26 +85,44 @@ class TestGraph(unittest.TestCase):
         opt.solutions()
 
     def test_img(self):
-        with open("tests/models/xgb-img-easy-values.json") as f:
+        with open("tests/models/xgb-img-very-easy-values.json") as f:
             ys = json.load(f)
         imghat = np.array(ys).reshape((100, 100))
         img = imageio.imread("tests/data/img.png")
-        at = AddTree.read("tests/models/xgb-img-easy.json")
+        at = AddTree.read("tests/models/xgb-img-very-easy.json")
         
-        print(at)
+        #print(at)
 
-        fig, (ax0, ax1) = plt.subplots(1, 2)
-        im0 = ax0.imshow(img)
-        im1 = ax1.imshow(imghat)
-        fig.colorbar(im0, ax=ax0)
-        fig.colorbar(im1, ax=ax1)
-        plt.show()
+        #fig, (ax0, ax1) = plt.subplots(1, 2)
+        #im0 = ax0.imshow(img)
+        #im1 = ax1.imshow(imghat)
+        #fig.colorbar(im0, ax=ax0)
+        #fig.colorbar(im1, ax=ax1)
+        #plt.show()
 
-        #m, M = min(ys), max(ys)
+        m, M = min(ys), max(ys)
         #img = np.array(ys).reshape((100, 100))
 
-        #opt = Optimizer(at)
-        #print(opt)
+        opt = Optimizer(at, minimize=True)
+        not_done = opt.optimize(10, 250, -250)
+        #self.assertFalse(not_done)
+        #self.assertEqual(opt.num_solutions(), 43);
+        solutions_min = opt.solutions()
+        print(solutions_min)
+        self.assertTrue(all(x[0] <= y[0] for x, y in zip(solutions_min, solutions_min[1:])))
+        min_solution = solutions_min[0]
+        print(min_solution, m)
+
+        opt = Optimizer(at, maximize=True)
+        not_done = opt.optimize(10, 250, -250)
+        #self.assertFalse(not_done)
+        #self.assertEqual(opt.num_solutions(), 43);
+        solutions_max = opt.solutions()
+        print(solutions_max)
+        self.assertTrue(all(x[1] >= y[1] for x, y in zip(solutions_max, solutions_max[1:])))
+        max_solution = solutions_max[0]
+        print(max_solution, M)
+
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")

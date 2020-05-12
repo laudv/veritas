@@ -261,20 +261,41 @@ PYBIND11_MODULE(pytreeck, m) {
     };
 
     py::class_<Optimizer>(m, "Optimizer")
-        .def(py::init<>([](std::shared_ptr<AddTree> at, bool minimize) -> Optimizer {
-            Optimizer opt{
-                std::make_shared<Solver>(*at),
-                at,
-                {},
-                std::make_shared<KPartiteGraph>(*at),
-                {},
-                {}
-            };
+        .def(py::init<>([](std::shared_ptr<AddTree> at, py::kwargs kwargs) -> Optimizer {
+            bool minimize = true;
+            if (kwargs.contains("minimize"))
+                minimize = kwargs["minimize"].cast<bool>();
+            if (kwargs.contains("maximize"))
+                minimize = !kwargs["maximize"].cast<bool>();
+
+            std::cout << "minimize " << minimize << std::endl;
+
             if (minimize)
+            {
+                Optimizer opt{
+                    std::make_shared<Solver>(*at),
+                    at,
+                    std::make_shared<AddTree>(),
+                    std::make_shared<KPartiteGraph>(*at),
+                    std::make_shared<KPartiteGraph>(),
+                    {}
+                };
                 opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0);
+                return opt;
+            }
             else
-                opt.opt = std::make_shared<KPartiteGraphOptimize>(true, *opt.g0);
-            return opt;
+            {
+                Optimizer opt{
+                    std::make_shared<Solver>(*at),
+                    std::make_shared<AddTree>(),
+                    at,
+                    std::make_shared<KPartiteGraph>(),
+                    std::make_shared<KPartiteGraph>(*at),
+                    {}
+                };
+                opt.opt = std::make_shared<KPartiteGraphOptimize>(true, *opt.g1);
+                return opt;
+            }
         }))
         .def(py::init<>([](
                         std::shared_ptr<AddTree> at0,
@@ -297,10 +318,12 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__str__", [](const Optimizer& opt) {
             std::stringstream ss;
             ss << "==== Z3 state: " << std::endl << opt.solver->get_z3() << std::endl;
-            ss << std::endl << "==== KPartiteGraph 0:" << std::endl;
-            ss << *opt.g0 << std::endl;
-            ss << std::endl << "==== KPartiteGraph 1:" << std::endl;
-            ss << *opt.g1 << std::endl;
+            if (opt.g0)
+                ss << std::endl << "==== KPartiteGraph 0 (minimized):" << std::endl
+                   << *opt.g0 << std::endl;
+            if (opt.g1)
+                ss << std::endl << "==== KPartiteGraph 1 (maximized):" << std::endl
+                   << *opt.g1 << std::endl;
             return ss.str();
         })
         .def("set_smt_program", [](Optimizer& opt, const char *smt) {
@@ -375,9 +398,19 @@ PYBIND11_MODULE(pytreeck, m) {
                 return opt.opt->steps(nsteps, f, max_output0, min_output1);
             }
         }, py::arg("nsteps")=1, py::arg("arg0")=0.0, py::arg("arg1")=py::none())
+        .def("num_solutions", [](Optimizer& opt) {
+            return opt.opt->solutions.size();
+        })
         .def("solutions", [](Optimizer& opt) {
+            py::list l;
             for (auto& sol : opt.opt->solutions)
-                std::cout << sol << std::endl;
+            {
+                py::dict b;
+                for (auto &d : sol.box)
+                    b[py::int_(d.first)] = d.second;
+                l.append(py::make_tuple(sol.output0, sol.output1, b));
+            }
+            return l;
         });
 
 
