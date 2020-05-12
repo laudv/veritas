@@ -545,6 +545,7 @@ namespace treeck {
         , nsteps{0, 0}
         , nupdate_fails{0}
         , nrejected{0}
+        , nbox_filter_calls{0}
     {
         auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
         auto&& [min1, output_bound1] = g1.propagate_outputs(); // max output bound of first clique
@@ -676,6 +677,8 @@ namespace treeck {
                     get0(new_c.instance).output,
                     get1(new_c.instance).output);
 
+            ++nbox_filter_calls;
+
             if (is_valid_box && is_valid_output)
             {
                 std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
@@ -698,6 +701,8 @@ namespace treeck {
             bool is_valid_output = output_filter(
                     get0(new_c.instance).output_bound,
                     get1(new_c.instance).output_bound);
+
+            ++nbox_filter_calls;
 
             // there is a valid extension of this clique and it is not yet a solution -> push to `cliques_`
             if (is_valid0 && is_valid1 && is_valid_box && is_valid_output)
@@ -848,6 +853,7 @@ namespace treeck {
         std::cout << "ncliques=" << cliques_.size()
             << ", nsteps=" << get0(nsteps) << ":" << get1(nsteps)
             << ", nupdate_fails=" << nupdate_fails
+            << ", nbox_filter_calls=" << nbox_filter_calls
             << std::endl;
 
         Clique c = pq_pop();
@@ -956,6 +962,23 @@ namespace treeck {
         for (int i=0; i<K; ++i)
             if (!step(bf, min_output_difference)) return false;
         return true;
+    }
+
+    two_of<FloatT>
+    KPartiteGraphOptimize::current_bounds() const
+    {
+        if (cliques_.empty())
+        {
+            return {
+                std::numeric_limits<FloatT>::infinity(),
+                -std::numeric_limits<FloatT>::infinity()
+            };
+        }
+        const Clique& c = cliques_.front();
+        return {
+            get0(c.instance).output_bound,
+            get1(c.instance).output_bound
+        };
     }
     
     /*

@@ -10,13 +10,19 @@ def plot_img_solutions(imghat, solutions):
     fig, ax = plt.subplots()
     im = ax.imshow(imghat)
     fig.colorbar(im, ax=ax)
-    for out0, out1, dom in solutions:
-        x0, y0 = max(0.0, dom[1].lo), max(0.0, dom[0].lo)
-        x1, y1 = min(100.0, dom[1].hi), min(100.0, dom[0].hi)
-        w, h = x1-x0, y1-y0
-        print((x0, y0), (x1, y1), w, h, out0, out1)
-        rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,linewidth=1,edgecolor='r',facecolor='none')
-        ax.add_patch(rect)
+    for i, j, c in [(1,0,'r'), (3,2,"#ffb700"), (3,0,'m'), (1,2,'#ffb700')]:
+        hi = False;
+        for out0, out1, dom in solutions:
+            if i not in dom or j not in dom: continue
+            hi = True
+            x0, y0 = max(0.0, dom[i].lo), max(0.0, dom[j].lo)
+            x1, y1 = min(100.0, dom[i].hi), min(100.0, dom[j].hi)
+            w, h = x1-x0, y1-y0
+            print((x0, y0), (x1, y1), w, h, out0, out1)
+            rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,linewidth=1,edgecolor=c,facecolor='none')
+            ax.add_patch(rect)
+
+        if hi and i==3 and j==2: break # no shared variables
     plt.show()
 
 class TestGraph(unittest.TestCase):
@@ -59,12 +65,12 @@ class TestGraph(unittest.TestCase):
 
         opt = Optimizer(at, at, {1}, True); # share feature 1 between two trees
 
-        self.assertEqual(opt.xvar_name(0, 0), "x0_0")
-        self.assertEqual(opt.xvar_name(0, 1), "x0_1")
-        self.assertEqual(opt.xvar_name(1, 0), "x1_0")
-        self.assertEqual(opt.xvar_name(1, 1), "x0_1") # shared
-        self.assertEqual(opt.xvar_name(0, 2), "x0_2")
-        self.assertEqual(opt.xvar_name(1, 2), "x1_2")
+        self.assertEqual(opt.xvar(0, 0), "x0_0")
+        self.assertEqual(opt.xvar(0, 1), "x0_1")
+        self.assertEqual(opt.xvar(1, 0), "x1_0")
+        self.assertEqual(opt.xvar(1, 1), "x0_1") # shared
+        self.assertEqual(opt.xvar(0, 2), "x0_2")
+        self.assertEqual(opt.xvar(1, 2), "x1_2")
 
         self.assertEqual(opt.num_vertices(0, 0), 4)
         self.assertEqual(opt.num_vertices(0, 1), 5)
@@ -72,9 +78,9 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(opt.num_vertices(1, 1), 5)
 
         opt.set_smt_program(f"""
-(assert (< {opt.xvar_name(0, 0)} 0.0))
-(assert (> {opt.xvar_name(0, 1)} 1.2))
-(assert (> {opt.xvar_name(1, 0)} 1.0))""")
+(assert (< {opt.xvar(0, 0)} 0.0))
+(assert (> {opt.xvar(0, 1)} 1.2))
+(assert (> {opt.xvar(1, 0)} 1.0))""")
         opt.prune()
 
         self.assertEqual(opt.num_vertices(0, 0), 1)
@@ -164,9 +170,9 @@ class TestGraph(unittest.TestCase):
         opt = Optimizer(at, minimize=False)
         opt.prune()
         opt.set_smt_program(f"""
-(assert (>= {opt.xvar_name(0, 0)} 50))
-(assert (< {opt.xvar_name(0, 0)} 60))
-(assert (>= {opt.xvar_name(0, 1)} 50))
+(assert (>= {opt.xvar(0, 0)} 50))
+(assert (< {opt.xvar(0, 0)} 60))
+(assert (>= {opt.xvar(0, 1)} 50))
         """)
         
         while opt.num_solutions() < 50:
@@ -190,6 +196,47 @@ class TestGraph(unittest.TestCase):
             self.assertEqual(v, imghat[y, x])
 
         self.assertEqual(solutions[0][1], imghat[48, 80])
+
+    def test_img3(self): # with two instances
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        imghat = np.array(ys).reshape((100, 100))
+        img = imageio.imread("tests/data/img.png")
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+
+        #opt = Optimizer(at, minimize=False)
+        opt = Optimizer(at, at, set(), True) # share no attributes
+        opt.set_smt_program(f"""
+(assert (= {opt.xvar(0, 0)} {opt.xvar(1, 0)}))
+(declare-const h Real)
+(assert (= h (- {opt.xvar(0, 1)} {opt.xvar(1, 1)})))
+(assert (ite (< h 0) (> h -10) (< h 10)))
+""")
+#        opt.set_smt_program(f"""
+#(assert (> {opt.xvar(0, 0)} 80))
+#(assert (> {opt.xvar(0, 1)} 20))
+#(assert (< {opt.xvar(0, 1)} 50))
+#""")
+
+        current_bounds = [opt.current_bounds()]
+
+        while opt.num_solutions() == 0:
+            if not opt.step(25, 250, -250):
+                print("no solution")
+                break
+            current_bounds.append(opt.current_bounds())
+
+        print("previous bounds:", current_bounds)
+        fig, ax = plt.subplots()
+        ax.plot([x[0] for x in current_bounds], label="lower")
+        ax.plot([x[1] for x in current_bounds], label="upper")
+        ax.plot([x[1] - x[0] for x in current_bounds], label="diff")
+        ax.legend()
+        plt.show()
+
+        solutions = opt.solutions();
+        print(solutions)
+        plot_img_solutions(imghat, solutions[0:1]);
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")

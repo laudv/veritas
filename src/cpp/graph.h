@@ -185,6 +185,7 @@ namespace treeck {
         two_of<size_t> nsteps;
         size_t nupdate_fails;
         size_t nrejected;
+        size_t nbox_filter_calls;
 
         std::vector<Solution> solutions;
 
@@ -201,6 +202,8 @@ namespace treeck {
         bool steps(int howmany, BoxFilter bf);
         bool steps(int howmany, BoxFilter bf, FloatT max_output0, FloatT min_output1);
         bool steps(int howmany, BoxFilter bf, FloatT min_output_difference);
+
+        two_of<FloatT> current_bounds() const;
     };
 
 

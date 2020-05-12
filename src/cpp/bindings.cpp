@@ -374,8 +374,14 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("is_feat_id_used", [](Optimizer& opt, int instance, FeatId feat_id) {
             return opt.solver->fmap().is_feat_id_used(instance, feat_id);
         })
-        .def("xvar_name", [](Optimizer& opt, int instance, FeatId feat_id) {
+        .def("xvar", [](Optimizer& opt, int instance, FeatId feat_id) {
             return opt.solver->xvar_name(instance, feat_id);
+        })
+        .def("xvar_id", [](Optimizer& opt, int instance, FeatId feat_id) {
+            return opt.solver->xvar_id(instance, feat_id);
+        })
+        .def("used_feat_ids", [](Optimizer& opt, int instance) {
+            return opt.solver->fmap().get_used_feat_ids(instance);
         })
         .def("step", [](Optimizer& opt, int nsteps, FloatT arg0, py::object arg1) {
             auto f = [opt](const DomainBox& box) {
@@ -412,7 +418,12 @@ PYBIND11_MODULE(pytreeck, m) {
                 l.append(py::make_tuple(sol.output0, sol.output1, b));
             }
             return l;
-        });
+        })
+        .def("nsteps", [](Optimizer& opt) { return opt.opt->nsteps; })
+        .def("nupdate_fails", [](Optimizer& opt) { return opt.opt->nupdate_fails; })
+        .def("nrejected", [](Optimizer& opt) { return opt.opt->nrejected; })
+        .def("nbox_filter_calls", [](Optimizer& opt) { return opt.opt->nbox_filter_calls; })
+        .def("current_bounds", [](Optimizer& opt) { return opt.opt->current_bounds(); });
 
 
     /*
