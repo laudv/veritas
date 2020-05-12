@@ -342,6 +342,9 @@ namespace treeck {
     z3::expr
     Solver::domains_to_z3(I begin, I end)
     {
+        if (begin == end)
+            return ctx_.bool_val(true);
+
         int id;
         Domain dom;
 

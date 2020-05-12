@@ -225,6 +225,14 @@ namespace treeck {
 
     KPartiteGraph::KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap)
     {
+        if (addtree.base_score != 0.0)
+        {
+            std::cout << "adding base_score set" << std::endl;
+            IndependentSet set;
+            set.vertices.push_back({{}, addtree.base_score});
+            sets_.push_back(set);
+        }
+
         for (const AddTree::TreeT& tree : addtree.trees())
         {
             IndependentSet set;
