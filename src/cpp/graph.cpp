@@ -166,8 +166,9 @@ namespace treeck {
             }
         }
 
+        // we're here because one (or both) of the iterators reached their end, but which one?
         auto end = domains_.end();
-        if (it1 != domains_.end()) // it0 must be end
+        if (it1 != other.domains_.end()) // it0 must be at its end
         {
             it0 = it1;
             end = other.domains_.end();
