@@ -610,8 +610,8 @@ namespace treeck {
         // invariant: Clique `c` can be extended
         //
         // Things to do (contd.):
-        // 2. construct the new clique by merging another vertex from the selected graph
-        // 3. [update new] check whether we can extend further later (all cliques in
+        // 3. construct the new clique by merging another vertex from the selected graph
+        // 4. [update new] check whether we can extend further later (all cliques in
         //    `cliques_` must be extendible)
         //    possible states are (solution=all trees contributed a value
         //                         extendible=valid `indep_set` & `vertex` values exist
@@ -619,7 +619,7 @@ namespace treeck {
         //      - solution      extendible
         //      - extendible    solution
         //    if the clique is not in any of the above states, do not add to `cliques_`
-        // 4. [update old] update active instance of given clique `c`, add again if still extendible
+        // 5. [update old] update active instance of given clique `c`, add again if still extendible
 
         const KPartiteGraph& graph = std::get<instance>(graph_);
         CliqueInstance& ci = std::get<instance>(c.instance);
@@ -641,12 +641,9 @@ namespace treeck {
         // check if this newly created clique is a solution
         if (is_solution0 && is_solution1)
         {
-            solutions.push_back({
-                std::move(new_c.box),
-                get0(new_c.instance).output,
-                get1(new_c.instance).output
-            });
-            std::cout << "SOLUTION (" << solutions.size() << "): " << solutions.back() << std::endl;
+            std::cout << "SOLUTION (" << solutions.size()+1 << "): " << new_c << std::endl;
+            // push back to queue so it is 'extracted' when it actually is the optimal solution
+            pq_push(std::move(new_c));
         }
         else
         {
@@ -800,7 +797,8 @@ namespace treeck {
             return false;
 
         // Things to do:
-        // 1. determine which graph to use to extend the best clique
+        // 1. check whether the top of the pq is a solution
+        // 2. determine which graph to use to extend the best clique
         // --> goto step_instance
         
         //FloatT old_est = cliques_.begin();
@@ -817,8 +815,17 @@ namespace treeck {
 
         std::cout << "best clique " << c << std::endl;
 
-        // 1. extend from graph0 first, then graph1, then graph0 again...
-        if (!is_solution0 && (get0(c.instance).indep_set <= get1(c.instance).indep_set
+        // move result to solutions if this is a solution
+        if (is_solution0 && is_solution1)
+        {
+            solutions.push_back({
+                std::move(c.box),
+                get0(c.instance).output,
+                get1(c.instance).output
+            });
+        }
+        // if not a solution, extend from graph0 first, then graph1, then graph0 again...
+        else if (!is_solution0 && (get0(c.instance).indep_set <= get1(c.instance).indep_set
                     || is_solution1))
         {
             std::cout << "step(): extend graph0" << std::endl;
