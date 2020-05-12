@@ -681,13 +681,14 @@ namespace treeck {
 
             if (is_valid_box && is_valid_output)
             {
-                std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
+                //std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
                 // push back to queue so it is 'extracted' when it actually is the optimal solution
                 pq_push(std::move(new_c));
             }
             else
             {
-                std::cout << "discarding invalid solution" << std::endl;
+                //std::cout << "discarding invalid solution" << std::endl;
+                ++nrejected;
             }
         }
         else
@@ -707,13 +708,13 @@ namespace treeck {
             // there is a valid extension of this clique and it is not yet a solution -> push to `cliques_`
             if (is_valid0 && is_valid1 && is_valid_box && is_valid_output)
             {
-                std::cout << "push new: " << new_c << std::endl;
+                //std::cout << "push new: " << new_c << std::endl;
                 pq_push(std::move(new_c));
             }
             else
             {
-                std::cout << "reject: " << is_valid0 << is_valid1
-                    << is_valid_box << is_valid_output << std::endl;
+                //std::cout << "reject: " << is_valid0 << is_valid1
+                //    << is_valid_box << is_valid_output << std::endl;
                 ++nrejected;
             }
         }
@@ -726,18 +727,18 @@ namespace treeck {
             // box did not change, so we don't have to check again (calling Z3 is expensive)
             if (output_filter(get0(c.instance).output_bound, get1(c.instance).output_bound))
             {
-                std::cout << "push old again: " << c << std::endl;
+                //std::cout << "push old again: " << c << std::endl;
                 pq_push(std::move(c));
             }
             else
             {
-                std::cout << "rejected old because of output " << c << std::endl;
+                //std::cout << "rejected old because of output " << c << std::endl;
                 ++nrejected;
             }
         }
         else
         {
-            std::cout << "done with old: " << c << std::endl;
+            //std::cout << "done with old: " << c << std::endl;
         }
 
         std::get<instance>(nsteps)++;
@@ -847,28 +848,26 @@ namespace treeck {
         // 1. check whether the top of the pq is a solution
         // 2. determine which graph to use to extend the best clique
         // --> goto step_instance
-        
-        //FloatT old_est = cliques_.begin();
 
-        std::cout << "ncliques=" << cliques_.size()
-            << ", nsteps=" << get0(nsteps) << ":" << get1(nsteps)
-            << ", nupdate_fails=" << nupdate_fails
-            << ", nbox_filter_calls=" << nbox_filter_calls
-            << std::endl;
+        //std::cout << "ncliques=" << cliques_.size()
+        //    << ", nsteps=" << get0(nsteps) << ":" << get1(nsteps)
+        //    << ", nupdate_fails=" << nupdate_fails
+        //    << ", nbox_filter_calls=" << nbox_filter_calls
+        //    << std::endl;
 
         Clique c = pq_pop();
 
         bool is_solution0 = is_instance_solution<0>(c);
         bool is_solution1 = is_instance_solution<1>(c);
 
-        std::cout << "best clique " << c << std::endl;
+        //std::cout << "best clique " << c << std::endl;
 
         // move result to solutions if this is a solution
         if (is_solution0 && is_solution1)
         {
-            std::cout << "SOLUTION added "
-                << get0(c.instance).output << ", "
-                << get1(c.instance).output << std::endl;
+            //std::cout << "SOLUTION added "
+            //    << get0(c.instance).output << ", "
+            //    << get1(c.instance).output << std::endl;
             solutions.push_back({
                 std::move(c.box),
                 get0(c.instance).output,
@@ -879,12 +878,12 @@ namespace treeck {
         else if (!is_solution0 && (get0(c.instance).indep_set <= get1(c.instance).indep_set
                     || is_solution1))
         {
-            std::cout << "step(): extend graph0" << std::endl;
+            //std::cout << "step(): extend graph0" << std::endl;
             step_instance<0>(std::move(c), box_filter, output_filter);
         }
         else if (!is_solution1)
         {
-            std::cout << "step(): extend graph1" << std::endl;
+            //std::cout << "step(): extend graph1" << std::endl;
             step_instance<1>(std::move(c), box_filter, output_filter);
         }
         else // there's a solution in `cliques_` -> shouldn't happen

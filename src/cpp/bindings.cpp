@@ -342,7 +342,7 @@ PYBIND11_MODULE(pytreeck, m) {
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
                 bool res = opt.solver->check(e);
-                std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
+                //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
                 return res;
             };
 
@@ -387,19 +387,17 @@ PYBIND11_MODULE(pytreeck, m) {
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
                 bool res = opt.solver->check(e);
-                std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
-                std::cout << opt.solver->get_z3() << std::endl;
+                //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
+                //std::cout << opt.solver->get_z3() << std::endl;
                 return res;
             };
             if (arg1.is_none())
             {
-                py::print("option 1");
                 FloatT min_output_difference = arg0;
                 return opt.opt->steps(nsteps, f, min_output_difference);
             }
             else
             {
-                py::print("option 2");
                 FloatT max_output0 = arg0;
                 FloatT min_output1 = arg1.cast<FloatT>();
                 return opt.opt->steps(nsteps, f, max_output0, min_output1);

@@ -46,6 +46,14 @@ namespace treeck {
             return base_dom.intersect(std::get<1>(split.get_domains()));
     }
 
+    template
+    LtSplit::DomainT
+    refine_domain(const LtSplit::DomainT&, const LtSplit&, bool);
+
+    template
+    BoolSplit::DomainT
+    refine_domain(const BoolSplit::DomainT&, const BoolSplit&, bool);
+
     template <typename SplitT>
     void
     refine_domains(DomainsT& domains, const SplitT& s, bool is_left_child)
