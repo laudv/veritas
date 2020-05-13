@@ -254,8 +254,8 @@ class TestGraph(unittest.TestCase):
         with open("tests/models/mnist-instances.json") as f:
             instance_key = 0
             instance = np.array(json.load(f)[str(instance_key)])
-            v = at.predict_single(instance)
-            print("predicted value:", v)
+            vreal = at.predict_single(instance)
+            print("predicted value:", vreal)
             #plt.imshow(instance.reshape((28, 28)), cmap="binary")
             #plt.show()
 
@@ -271,7 +271,6 @@ class TestGraph(unittest.TestCase):
             print(f"(assert (<= {x} {v+d}))", file=smt)
             print(f"(assert (> {x} {v-d}))", file=smt)
         opt.set_smt_program(smt.getvalue())
-
 
         bounds_before = opt.propagate_outputs(0)
         num_vertices_before_prune = opt.num_vertices(0)
@@ -291,7 +290,15 @@ class TestGraph(unittest.TestCase):
         solutions = opt.solutions()
         print([x[0] for x in current_bounds])
         print(solutions)
+        instance1 = get_closest_instance(instance, solutions[0][2])
+        vfake = at.predict_single(instance1)
 
+        print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
+
+        fig, (ax0, ax1) = plt.subplots(1, 2)
+        ax0.imshow(instance.reshape((28, 28)), cmap="binary")
+        ax1.imshow(instance1.reshape((28, 28)), cmap="binary")
+        plt.show()
 
 
 if __name__ == "__main__":

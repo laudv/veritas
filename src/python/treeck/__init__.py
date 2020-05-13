@@ -139,3 +139,20 @@ class AddTreeFeatureTypes:
         if feat_id not in self._types:
             raise KeyError(f"unknown feat_id {feat_id}")
         return self._types[feat_id]
+
+
+def get_closest_instance(base_instance, doms):
+    instance = base_instance.copy()
+    for key, dom in doms.items():
+        assert isinstance(dom, RealDomain)
+        v = instance[key]
+        if dom.contains(v):
+            continue # keep the value
+
+        dist_lo = abs(dom.lo - v)
+        dist_hi = abs(v - dom.hi)
+        if dist_lo < dist_hi:
+            instance[key] = dom.hi - ((dom.hi-dom.lo) / 1000) # hi is not included
+        else:
+            instance[key] = dom.lo
+    return instance
