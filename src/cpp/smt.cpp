@@ -17,14 +17,14 @@ namespace treeck {
         auto at0_splits = at0.get_splits();
         auto at1_splits = at1.get_splits();
 
-        int max_feat_id0 = 0;
+        int max_feat_id0 = -1;
         for (auto&& [feat_id, _] : at0_splits)
             max_feat_id0 = std::max(max_feat_id0, feat_id);
         id_map0_.resize(max_feat_id0+1, -1);
         for (auto&& [feat_id, _] : at0_splits)
             id_map0_[feat_id] = feat_id;
 
-        int max_feat_id1 = 0;
+        int max_feat_id1 = -1;
         for (auto&& [feat_id, _] : at1_splits)
             max_feat_id1 = std::max(max_feat_id1, feat_id);
         id_map1_.resize(max_feat_id1+1, -1);
@@ -34,7 +34,7 @@ namespace treeck {
             if (in_matches == match_is_reuse)
                 id_map1_[feat_id] = feat_id; // same id as at0!
             else
-                id_map1_[feat_id] = id_map1_.size() + feat_id;
+                id_map1_[feat_id] = id_map0_.size() + feat_id;
         }
 
         std::cout << "MAPPING:" << std::endl;

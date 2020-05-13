@@ -205,33 +205,33 @@ class TestGraph(unittest.TestCase):
         img = imageio.imread("tests/data/img.png")
         at = AddTree.read("tests/models/xgb-img-easy.json")
 
-        #opt = Optimizer(at, minimize=False)
-        opt = Optimizer(at, at, set(), True) # share no attributes
-        opt.set_smt_program(f"""
-(assert (= {opt.xvar(0, 0)} {opt.xvar(1, 0)}))
-(declare-const h Real)
-(assert (= h (- {opt.xvar(0, 1)} {opt.xvar(1, 1)})))
-(assert (ite (< h 0) (> h -10) (< h 10)))
-""")
+        opt = Optimizer(at, minimize=False)
+        #opt = Optimizer(at, at, set(), True) # share no attributes
 #        opt.set_smt_program(f"""
-#(assert (> {opt.xvar(0, 0)} 80))
-#(assert (> {opt.xvar(0, 1)} 20))
-#(assert (< {opt.xvar(0, 1)} 50))
+#(assert (= {opt.xvar(0, 0)} {opt.xvar(1, 0)}))
+#(declare-const h Real)
+#(assert (= h (- {opt.xvar(0, 1)} {opt.xvar(1, 1)})))
+#(assert (ite (< h 0) (> h -10) (< h 10)))
 #""")
+        opt.set_smt_program(f"""
+(assert (> {opt.xvar(1, 0)} 80))
+(assert (> {opt.xvar(1, 1)} 20))
+(assert (< {opt.xvar(1, 1)} 50))
+""")
 
         current_bounds = [opt.current_bounds()]
 
         while opt.num_solutions() == 0:
-            if not opt.step(25, 250, -250):
+            if not opt.step(1, 250, -250):
                 print("no solution")
                 break
             current_bounds.append(opt.current_bounds())
 
         print("previous bounds:", current_bounds)
         fig, ax = plt.subplots()
-        ax.plot([x[0] for x in current_bounds], label="lower")
+        #ax.plot([x[0] for x in current_bounds], label="lower")
         ax.plot([x[1] for x in current_bounds], label="upper")
-        ax.plot([x[1] - x[0] for x in current_bounds], label="diff")
+        #ax.plot([x[1] - x[0] for x in current_bounds], label="diff")
         ax.legend()
         plt.show()
 
@@ -262,7 +262,7 @@ class TestGraph(unittest.TestCase):
         
         opt = Optimizer(at, minimize=True)
 
-        d = 10
+        d = 1
         feat_ids = opt.get_used_feat_ids()[0];
         smt = StringIO()
         for feat_id in feat_ids:
@@ -287,17 +287,25 @@ class TestGraph(unittest.TestCase):
                 break
             current_bounds.append(opt.current_bounds())
 
+        self.assertTrue(opt.num_solutions() > 0)
+
         solutions = opt.solutions()
         print([x[0] for x in current_bounds])
         print(solutions)
         instance1 = get_closest_instance(instance, solutions[0][2])
         vfake = at.predict_single(instance1)
+        diff = min(instance1 - instance), max(instance1 - instance)
+        print("diff", diff)
 
         print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
 
-        fig, (ax0, ax1) = plt.subplots(1, 2)
+        fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
         ax0.imshow(instance.reshape((28, 28)), cmap="binary")
+        ax0.set_title(f"{vreal:.4f}")
         ax1.imshow(instance1.reshape((28, 28)), cmap="binary")
+        ax1.set_title(f"{vfake:.4f}")
+        im = ax2.imshow((instance1-instance).reshape((28, 28)), cmap="binary")
+        fig.colorbar(im, ax=ax2)
         plt.show()
 
 

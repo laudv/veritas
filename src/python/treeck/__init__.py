@@ -141,7 +141,7 @@ class AddTreeFeatureTypes:
         return self._types[feat_id]
 
 
-def get_closest_instance(base_instance, doms):
+def get_closest_instance(base_instance, doms, delta=1e-5):
     instance = base_instance.copy()
     for key, dom in doms.items():
         assert isinstance(dom, RealDomain)
@@ -151,8 +151,9 @@ def get_closest_instance(base_instance, doms):
 
         dist_lo = abs(dom.lo - v)
         dist_hi = abs(v - dom.hi)
-        if dist_lo < dist_hi:
-            instance[key] = dom.hi - ((dom.hi-dom.lo) / 1000) # hi is not included
+        if dist_lo > dist_hi:
+            instance[key] = dom.hi - delta # hi is not included
         else:
             instance[key] = dom.lo
+
     return instance

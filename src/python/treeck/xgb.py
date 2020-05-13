@@ -9,6 +9,12 @@ from xgboost.core import Booster
 
 from . import AddTree
 
+def addtrees_from_multiclass_xgb_model(model, nclasses, feat2id_map=lambda x: int(x[1:])):
+    return [
+        addtree_from_xgb_model(model, multiclass=(clazz, nclasses))
+        for clazz in range(nclasses)
+    ]
+
 def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:]),
         multiclass=(0, 1)):
     """

@@ -56,6 +56,8 @@ PYBIND11_MODULE(pytreeck, m) {
         .def(py::init<FloatT, FloatT>())
         .def_readwrite("lo", &RealDomain::lo)
         .def_readwrite("hi", &RealDomain::hi)
+        .def("lo_is_inf", &RealDomain::lo_is_inf)
+        .def("hi_is_inf", &RealDomain::hi_is_inf)
         .def("contains", &RealDomain::contains)
         .def("overlaps", &RealDomain::overlaps)
         .def("is_everything", &RealDomain::is_everything)
