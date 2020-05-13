@@ -342,6 +342,13 @@ PYBIND11_MODULE(pytreeck, m) {
             opt.solver->get_z3().reset();
             opt.is_smt_enabled = false;
         })
+        .def("propagate_outputs", [](Optimizer& opt, int instance) {
+            // TODO: problem: bounds in optimizer are not updated!
+            if (instance == 0)
+                return opt.g0->propagate_outputs();
+            else
+                return opt.g1->propagate_outputs();
+        })
         .def("merge", [](Optimizer& opt, int K, int instance) {
             instance += 1;
             if ((instance & 0b1) != 0)

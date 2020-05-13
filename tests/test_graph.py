@@ -3,6 +3,7 @@ import numpy as np
 import imageio
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
+from io import StringIO
 
 from treeck import *
 
@@ -261,12 +262,35 @@ class TestGraph(unittest.TestCase):
         
         opt = Optimizer(at, minimize=True)
 
-        print("===")
-        print(opt.get_used_feat_ids())
-        for feat_id in opt.get_used_feat_ids()[0]:
-            print(feat_id)
-        print("===")
-        
+        d = 10
+        feat_ids = opt.get_used_feat_ids()[0];
+        smt = StringIO()
+        for feat_id in feat_ids:
+            x = opt.xvar(0, feat_id)
+            v = instance[feat_id]
+            print(f"(assert (<= {x} {v+d}))", file=smt)
+            print(f"(assert (> {x} {v-d}))", file=smt)
+        opt.set_smt_program(smt.getvalue())
+
+
+        bounds_before = opt.propagate_outputs(0)
+        num_vertices_before_prune = opt.num_vertices(0)
+        opt.prune()
+        bounds_after = opt.propagate_outputs(0)
+        num_vertices_after_prune = opt.num_vertices(0)
+        print(f"prune: num_vertices {num_vertices_before_prune} -> {num_vertices_after_prune}")
+        print(f"       bounds {bounds_before} -> {bounds_after}")
+
+        current_bounds = [opt.current_bounds()]
+        while opt.num_solutions() == 0:
+            if not opt.step(25, 0.0):
+                print("no solution")
+                break
+            current_bounds.append(opt.current_bounds())
+
+        solutions = opt.solutions()
+        print([x[0] for x in current_bounds])
+        print(solutions)
 
 
 
