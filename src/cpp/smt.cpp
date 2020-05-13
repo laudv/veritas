@@ -4,8 +4,6 @@
 
 namespace treeck {
 
-    ReuseFeatIdMapper::ReuseFeatIdMapper() {}
-
     ReuseFeatIdMapper::ReuseFeatIdMapper(
             const AddTree& at0,
             const AddTree& at1,
@@ -78,24 +76,31 @@ namespace treeck {
     {
         const auto& id_map = instance==0 ? id_map0_ : id_map1_;
         std::vector<FeatId> output;
-        for (FeatId id : id_map)
+        for (int i = 0; i < id_map.size(); ++i)
+        {
+            int id = id_map[i];
             if (id != -1)
-                output.push_back(id);
+                output.push_back(i);
+        }
         return output;
     }
 
 
+    //Solver::Solver(const AddTree& at)
+    //    : fmap_{} // we won't be using this
+    //    , ctx_{}
+    //    , solver_{ctx_}
+    //{
+    //    // preprocess split values so we don't have to do the stupid float ->
+    //    // str -> z3::expr repeatedly
+    //    fill_const_cache(at);
+    //    fill_var_map(0, at);
 
-    Solver::Solver(const AddTree& at)
-        : fmap_{} // we won't be using this
-        , ctx_{}
-        , solver_{ctx_}
-    {
-        // preprocess split values so we don't have to do the stupid float ->
-        // str -> z3::expr repeatedly
-        fill_const_cache(at);
-        fill_var_map(0, at);
-    }
+    //    std::cout << "single tree solver" << std::endl;
+    //    std::cout << "size of const_cache_ " << const_cache_.size() << std::endl;
+    //    for (auto&& [i, v] : const_cache_)
+    //        std::cout << "const_cache_[" << i << "] " << v << std::endl;
+    //}
 
     Solver::Solver(
             const AddTree& at0,
@@ -110,6 +115,11 @@ namespace treeck {
         fill_const_cache(at1);
         fill_var_map(0, at0);
         fill_var_map(1, at1);
+
+        std::cout << "two tree solver" << std::endl;
+        std::cout << "size of const_cache_ " << const_cache_.size() << std::endl;
+        for (auto&& [i, v] : const_cache_)
+            std::cout << "const_cache_[" << i << "] " << v << std::endl;
     }
 
     void
@@ -117,12 +127,6 @@ namespace treeck {
     {
         for (const auto& tree : at.trees())
             fill_const_cache(tree.root());
-
-        std::cout << "size of const_cache_ " << const_cache_.size() << std::endl;
-        for (auto&& [i, v] : const_cache_)
-        {
-            std::cout << "const_cache_[" << i << "] " << v << std::endl;
-        }
     }
 
     void

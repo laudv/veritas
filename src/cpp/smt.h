@@ -20,7 +20,6 @@ namespace treeck {
         std::vector<int> id_map1_;
 
     public:
-        ReuseFeatIdMapper();
         ReuseFeatIdMapper(const AddTree& at0, const AddTree& at1,
                 const std::unordered_set<FeatId>& matches,
                 bool match_is_reuse);
@@ -59,7 +58,7 @@ namespace treeck {
         std::tuple<std::string, z3::expr>& xvar_tuple(int instance, FeatId feat_id);
 
     public:
-        Solver(const AddTree& at);
+        //Solver(const AddTree& at);
         Solver(const AddTree& at0, const AddTree& at1,
                 std::unordered_set<FeatId> matches,
                 bool match_is_reuse);

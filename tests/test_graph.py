@@ -28,7 +28,6 @@ def plot_img_solutions(imghat, solutions):
 class TestGraph(unittest.TestCase):
     def test_single_tree(self):
         at = AddTree()
-        at.base_score = 10
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -38,11 +37,16 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
 
-        graph = KPartiteGraph(at)
+        opt = Optimizer(at, maximize=True)
+        notdone = opt.step(100, 3.5)
+        self.assertFalse(notdone)
+        self.assertEqual(opt.num_solutions(), 2)
+        solutions = opt.solutions()
+        self.assertEqual(solutions[0][1], 8.0)
+        self.assertEqual(solutions[1][1], 4.0)
 
     def test_two_trees(self):
         at = AddTree()
-        at.base_score = 10
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
@@ -96,13 +100,9 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(opt.num_independent_sets(0), 1)
         self.assertEqual(opt.num_independent_sets(1), 1)
 
-        print(opt)
-
-        #opt.step(1.1);
-        #opt.step(1.1, 1.2);
-
-        print(opt.optimize(100, 0.0))
-        opt.solutions()
+        notdone = opt.step(100, 0.0)
+        self.assertFalse(notdone)
+        self.assertEqual(opt.num_solutions(), 5)
 
     def test_img(self):
         with open("tests/models/xgb-img-very-easy-values.json") as f:
@@ -240,35 +240,35 @@ class TestGraph(unittest.TestCase):
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")
+        opt = Optimizer(at, at, {2}, False) # feature two not shared
+        
+        while opt.num_solutions() == 0:
+            if not opt.step(100, 0.0):
+                break
 
-        graph = KPartiteGraph(at)
+        print(opt.solutions())
 
-        print(graph)
+    def test_mnist(self):
+        at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
+        with open("tests/models/mnist-instances.json") as f:
+            instance_key = 0
+            instance = np.array(json.load(f)[str(instance_key)])
+            v = at.predict_single(instance)
+            print("predicted value:", v)
+            #plt.imshow(instance.reshape((28, 28)), cmap="binary")
+            #plt.show()
 
-        print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
-        #graph.merge(2);
-        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
-        #graph.merge(2);
-        #print(graph)
-        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
-        #graph.merge(2);
-        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
-        #graph.merge(2);
-        #print("outputs: ", graph.propagate_outputs(), ", size", len(graph), ", #vertex", graph.num_vertices())
+        
+        opt = Optimizer(at, minimize=True)
 
-        print("\n== MAX ======================")
-        find = MaxKPartiteGraphFind(graph)
-        print("done?", not find.steps(1000))
-        max_solutions = find.solutions()
-        print("#sol", len(max_solutions),
-              "#steps", find.nsteps,
-              "#nfails", find.nupdate_fails)
- 
-        #print("\n== MIN ======================")
-        #find = MinKPartiteGraphFind(graph)
-        #print("done?", not find.steps(100))
-        #min_solutions = find.solutions()
-        #print(len(min_solutions))
+        print("===")
+        print(opt.get_used_feat_ids())
+        for feat_id in opt.get_used_feat_ids()[0]:
+            print(feat_id)
+        print("===")
+        
+
+
 
 if __name__ == "__main__":
     #z3.set_pp_option("rational_to_decimal", True)

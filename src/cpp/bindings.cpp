@@ -42,6 +42,8 @@ encode_split(const DomTreeSplit& split)
     return py::make_tuple(i, split.split);
 }
 
+static AddTree DUMMY_ADDTREE{};
+
 using TreeD = Tree<Split, FloatT>;
 using NodeRefD = TreeD::MRef;
 using DomTreeT = DomTree::DomTreeT;
@@ -258,6 +260,7 @@ PYBIND11_MODULE(pytreeck, m) {
         std::shared_ptr<KPartiteGraph> g0;
         std::shared_ptr<KPartiteGraph> g1;
         std::shared_ptr<KPartiteGraphOptimize> opt;
+        bool is_smt_enabled;
     };
 
     py::class_<Optimizer>(m, "Optimizer")
@@ -269,16 +272,18 @@ PYBIND11_MODULE(pytreeck, m) {
                 minimize = !kwargs["maximize"].cast<bool>();
 
             std::cout << "minimize " << minimize << std::endl;
+            std::unordered_set<int> matches;
 
             if (minimize)
             {
                 Optimizer opt{
-                    std::make_shared<Solver>(*at),
+                    std::make_shared<Solver>(*at, DUMMY_ADDTREE, matches, true),
                     at,
                     std::make_shared<AddTree>(),
                     std::make_shared<KPartiteGraph>(*at),
                     std::make_shared<KPartiteGraph>(),
-                    {}
+                    {},
+                    false,
                 };
                 opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0);
                 return opt;
@@ -286,12 +291,13 @@ PYBIND11_MODULE(pytreeck, m) {
             else
             {
                 Optimizer opt{
-                    std::make_shared<Solver>(*at),
+                    std::make_shared<Solver>(DUMMY_ADDTREE, *at, matches, true),
                     std::make_shared<AddTree>(),
                     at,
                     std::make_shared<KPartiteGraph>(),
                     std::make_shared<KPartiteGraph>(*at),
-                    {}
+                    {},
+                    false,
                 };
                 opt.opt = std::make_shared<KPartiteGraphOptimize>(true, *opt.g1);
                 return opt;
@@ -309,7 +315,8 @@ PYBIND11_MODULE(pytreeck, m) {
                 at1,
                 std::make_shared<KPartiteGraph>(*at0),
                 {},
-                {}
+                {},
+                false,
             };
             opt.g1 = std::make_shared<KPartiteGraph>(*at1, opt.solver->fmap());
             opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0, *opt.g1);
@@ -328,7 +335,12 @@ PYBIND11_MODULE(pytreeck, m) {
         })
         .def("set_smt_program", [](Optimizer& opt, const char *smt) {
             opt.solver->parse_smt(smt);
+            opt.is_smt_enabled = true;
             std::cout << opt.solver->get_z3() << std::endl;
+        })
+        .def("reset_smt_program", [](Optimizer& opt) {
+            opt.solver->get_z3().reset();
+            opt.is_smt_enabled = false;
         })
         .def("merge", [](Optimizer& opt, int K, int instance) {
             instance += 1;
@@ -380,9 +392,6 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("xvar_id", [](Optimizer& opt, int instance, FeatId feat_id) {
             return opt.solver->xvar_id(instance, feat_id);
         })
-        .def("used_feat_ids", [](Optimizer& opt, int instance) {
-            return opt.solver->fmap().get_used_feat_ids(instance);
-        })
         .def("step", [](Optimizer& opt, int nsteps, FloatT arg0, py::object arg1) {
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
@@ -391,16 +400,23 @@ PYBIND11_MODULE(pytreeck, m) {
                 //std::cout << opt.solver->get_z3() << std::endl;
                 return res;
             };
+            auto f_noz3 = [](const DomainBox& box) { return true; };
             if (arg1.is_none())
             {
                 FloatT min_output_difference = arg0;
-                return opt.opt->steps(nsteps, f, min_output_difference);
+                if (opt.is_smt_enabled)
+                    return opt.opt->steps(nsteps, f, min_output_difference);
+                else
+                    return opt.opt->steps(nsteps, f_noz3, min_output_difference);
             }
             else
             {
                 FloatT max_output0 = arg0;
                 FloatT min_output1 = arg1.cast<FloatT>();
-                return opt.opt->steps(nsteps, f, max_output0, min_output1);
+                if (opt.is_smt_enabled)
+                    return opt.opt->steps(nsteps, f, max_output0, min_output1);
+                else
+                    return opt.opt->steps(nsteps, f_noz3, max_output0, min_output1);
             }
         }, py::arg("nsteps")=1, py::arg("arg0")=0.0, py::arg("arg1")=py::none())
         .def("num_solutions", [](Optimizer& opt) {
