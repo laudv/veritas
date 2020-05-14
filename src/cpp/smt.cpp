@@ -37,11 +37,11 @@ namespace treeck {
                 id_map1_[feat_id] = id_map0_.size() + feat_id;
         }
 
-        std::cout << "MAPPING:" << std::endl;
-        for (int i = 0; i < id_map0_.size(); ++i)
-            std::cout << "  0: " << i << ", " << id_map0_[i] << " is_reused: " << is_reused(i) << std::endl;
-        for (int i = 0; i < id_map1_.size(); ++i)
-            std::cout << "  1: " << i << ", " << id_map1_[i] << " is_reused: " << is_reused(i) << std::endl;
+        //std::cout << "MAPPING:" << std::endl;
+        //for (int i = 0; i < id_map0_.size(); ++i)
+        //    std::cout << "  0: " << i << ", " << id_map0_[i] << " is_reused: " << is_reused(i) << std::endl;
+        //for (int i = 0; i < id_map1_.size(); ++i)
+        //    std::cout << "  1: " << i << ", " << id_map1_[i] << " is_reused: " << is_reused(i) << std::endl;
     }
 
     bool
@@ -116,10 +116,9 @@ namespace treeck {
         fill_var_map(0, at0);
         fill_var_map(1, at1);
 
-        std::cout << "two tree solver" << std::endl;
-        std::cout << "size of const_cache_ " << const_cache_.size() << std::endl;
-        for (auto&& [i, v] : const_cache_)
-            std::cout << "const_cache_[" << i << "] " << v << std::endl;
+        //std::cout << "size of const_cache_ " << const_cache_.size() << std::endl;
+        //for (auto&& [i, v] : const_cache_)
+        //    std::cout << "const_cache_[" << i << "] " << v << std::endl;
     }
 
     void
@@ -210,7 +209,7 @@ namespace treeck {
         std::stringstream ss;
         for (auto &&[id, pair] : var_map_)
         {
-            std::cout << "var_map_[" << id << "] = " << std::get<0>(pair) << ", " << std::get<1>(pair) << std::endl;
+            //std::cout << "var_map_[" << id << "] = " << std::get<0>(pair) << ", " << std::get<1>(pair) << std::endl;
             const std::string& xvar_name = std::get<0>(pair);
             const z3::expr& xvar = std::get<1>(pair);
 
@@ -220,8 +219,8 @@ namespace treeck {
             ss << ')' << std::endl;
         }
         ss << smt;
-        std::cout << "SMT: " << std::endl << ss.str() << std::endl;
-        std::cout << "=====" << std::endl;
+        //std::cout << "SMT: " << std::endl << ss.str() << std::endl;
+        //std::cout << "=====" << std::endl;
         solver_.from_string(ss.str().c_str());
     }
 
@@ -242,7 +241,7 @@ namespace treeck {
 
         std::stringstream s;
         s << "x" << instance << "_" << feat_id;
-        std::cout << "var_name " << instance << ", " << feat_id << " => " << s.str() << std::endl;
+        //std::cout << "var_name " << instance << ", " << feat_id << " => " << s.str() << std::endl;
         return s.str();
     }
 

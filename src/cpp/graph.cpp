@@ -491,10 +491,38 @@ namespace treeck {
 
     bool
     CliqueMaxDiffPqCmp::operator()(const Clique& a, const Clique& b) const
-   {
+    {
+        int depth_a = get0(a.instance).indep_set + get1(a.instance).indep_set;
+        int depth_b = get0(b.instance).indep_set + get1(b.instance).indep_set;
+        
         FloatT diff_a = get1(a.instance).output_bound - get0(a.instance).output_bound;
         FloatT diff_b = get1(b.instance).output_bound - get0(b.instance).output_bound;
-        return diff_a < diff_b;
+
+        // -- depth first with heuristic per indep.set
+        //if (depth_a != depth_b)
+        //    return depth_a < depth_b;
+
+        //return diff_a < diff_b;
+
+        // -- favor deeper stuff more, but keep 'error' within precision
+        //FloatT precision = 0.0;
+
+        //FloatT advantage_a = static_cast<FloatT>(depth_a > depth_b) * precision;
+        //FloatT advantage_b = static_cast<FloatT>(depth_a < depth_b) * precision;
+
+        //FloatT weight_a = diff_a + advantage_a;
+        //FloatT weight_b = diff_b + advantage_b;
+
+        // -- favor deeper stuff at most X%, step by step
+        FloatT percentage = 0.0;
+        
+        FloatT advantage_a = 1.0 + depth_a * percentage;
+        FloatT advantage_b = 1.0 + depth_b * percentage;
+
+        FloatT weight_a = diff_a * advantage_a;
+        FloatT weight_b = diff_b * advantage_b;
+
+        return weight_a < weight_b;
     }
 
     std::ostream&
@@ -952,6 +980,7 @@ namespace treeck {
     {
         for (int i=0; i<K; ++i)
             if (!step(bf, max_output0, min_output1)) return false;
+        //std::cout << "front: " << cliques_.front() << std::endl;
         return true;
     }
 
@@ -978,6 +1007,12 @@ namespace treeck {
             get0(c.instance).output_bound,
             get1(c.instance).output_bound
         };
+    }
+
+    size_t
+    KPartiteGraphOptimize::num_candidate_cliques() const
+    {
+        return cliques_.size();
     }
     
     /*

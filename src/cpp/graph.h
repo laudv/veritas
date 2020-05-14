@@ -204,6 +204,7 @@ namespace treeck {
         bool steps(int howmany, BoxFilter bf, FloatT min_output_difference);
 
         two_of<FloatT> current_bounds() const;
+        size_t num_candidate_cliques() const;
     };
 
 

@@ -256,13 +256,31 @@ PYBIND11_MODULE(pytreeck, m) {
     */
 
     struct Optimizer {
+        enum { MINIMIZE, MAXIMIZE, MINMAX } setting;
+
         std::shared_ptr<Solver> solver;
         std::shared_ptr<AddTree> at0;
         std::shared_ptr<AddTree> at1;
         std::shared_ptr<KPartiteGraph> g0;
         std::shared_ptr<KPartiteGraph> g1;
         std::shared_ptr<KPartiteGraphOptimize> opt;
+
         bool is_smt_enabled;
+
+        void reset_opt() {
+            if (setting == MINIMIZE)
+            {
+                opt = std::make_shared<KPartiteGraphOptimize>(*g0);
+            }
+            else if (setting == MAXIMIZE)
+            {
+                opt = std::make_shared<KPartiteGraphOptimize>(true, *g1);
+            }
+            else if (setting == MINMAX)
+            {
+                opt = std::make_shared<KPartiteGraphOptimize>(*g0, *g1);
+            }
+        }
     };
 
     py::class_<Optimizer>(m, "Optimizer")
@@ -279,6 +297,7 @@ PYBIND11_MODULE(pytreeck, m) {
             if (minimize)
             {
                 Optimizer opt{
+                    Optimizer::MINIMIZE,
                     std::make_shared<Solver>(*at, DUMMY_ADDTREE, matches, true),
                     at,
                     std::make_shared<AddTree>(),
@@ -287,12 +306,13 @@ PYBIND11_MODULE(pytreeck, m) {
                     {},
                     false,
                 };
-                opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0);
+                opt.reset_opt();
                 return opt;
             }
             else
             {
                 Optimizer opt{
+                    Optimizer::MAXIMIZE,
                     std::make_shared<Solver>(DUMMY_ADDTREE, *at, matches, true),
                     std::make_shared<AddTree>(),
                     at,
@@ -301,7 +321,7 @@ PYBIND11_MODULE(pytreeck, m) {
                     {},
                     false,
                 };
-                opt.opt = std::make_shared<KPartiteGraphOptimize>(true, *opt.g1);
+                opt.reset_opt();
                 return opt;
             }
         }))
@@ -312,6 +332,7 @@ PYBIND11_MODULE(pytreeck, m) {
                         bool match_is_reuse
                         ) -> Optimizer {
             Optimizer opt {
+                Optimizer::MINMAX,
                 std::make_shared<Solver>(*at0, *at1, matches, match_is_reuse),
                 at0,
                 at1,
@@ -321,7 +342,7 @@ PYBIND11_MODULE(pytreeck, m) {
                 false,
             };
             opt.g1 = std::make_shared<KPartiteGraph>(*at1, opt.solver->fmap());
-            opt.opt = std::make_shared<KPartiteGraphOptimize>(*opt.g0, *opt.g1);
+            opt.reset_opt();
             return opt;
         }))
         .def("__str__", [](const Optimizer& opt) {
@@ -338,14 +359,13 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("set_smt_program", [](Optimizer& opt, const char *smt) {
             opt.solver->parse_smt(smt);
             opt.is_smt_enabled = true;
-            std::cout << opt.solver->get_z3() << std::endl;
+            //std::cout << opt.solver->get_z3() << std::endl;
         })
         .def("reset_smt_program", [](Optimizer& opt) {
             opt.solver->get_z3().reset();
             opt.is_smt_enabled = false;
         })
         .def("propagate_outputs", [](Optimizer& opt, int instance) {
-            // TODO: problem: bounds in optimizer are not updated!
             if (instance == 0)
                 return opt.g0->propagate_outputs();
             else
@@ -357,6 +377,7 @@ PYBIND11_MODULE(pytreeck, m) {
                 opt.g0->merge(K);
             if ((instance & 0b10) != 0)
                 opt.g1->merge(K);
+            opt.reset_opt();
         }, py::arg("K")=2, py::arg("instance")=0b10)
         .def("prune", [](Optimizer& opt, int instance) {
             instance += 1;
@@ -372,6 +393,7 @@ PYBIND11_MODULE(pytreeck, m) {
             if ((instance & 0b10) != 0)
                 opt.g1->prune(f);
 
+            opt.reset_opt();
         }, py::arg("instance") = 0b10)
         .def("num_independent_sets", [](const Optimizer& opt, int instance) {
             if (instance == 0)
@@ -446,7 +468,8 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("nupdate_fails", [](Optimizer& opt) { return opt.opt->nupdate_fails; })
         .def("nrejected", [](Optimizer& opt) { return opt.opt->nrejected; })
         .def("nbox_filter_calls", [](Optimizer& opt) { return opt.opt->nbox_filter_calls; })
-        .def("current_bounds", [](Optimizer& opt) { return opt.opt->current_bounds(); });
+        .def("current_bounds", [](Optimizer& opt) { return opt.opt->current_bounds(); })
+        .def("num_candidate_cliques", [](Optimizer& opt) { return opt.opt->num_candidate_cliques(); });
 
 
     /*
