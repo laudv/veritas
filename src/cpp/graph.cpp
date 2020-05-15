@@ -515,7 +515,7 @@ namespace treeck {
         //FloatT weight_b = diff_b + advantage_b;
 
         // -- favor deeper stuff at most X%, step by step
-        FloatT percentage = 0.0;
+        FloatT percentage = 0.01;
         
         FloatT advantage_a = 1.0 + depth_a * percentage;
         FloatT advantage_b = 1.0 + depth_b * percentage;

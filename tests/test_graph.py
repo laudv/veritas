@@ -105,6 +105,14 @@ class TestGraph(unittest.TestCase):
         self.assertFalse(notdone)
         self.assertEqual(opt.num_solutions(), 5)
 
+        opt = Optimizer(at, minimize=True)
+        self.assertEqual(opt.num_vertices(0, 0), 4)
+        self.assertEqual(opt.num_vertices(0, 1), 5)
+        opt.prune(0, [1.2, 10.0], 0.5)
+        self.assertEqual(opt.num_vertices(0, 0), 2)
+        self.assertEqual(opt.num_vertices(0, 1), 1)
+        
+
     def test_img(self):
         with open("tests/models/xgb-img-very-easy-values.json") as f:
             ys = json.load(f)

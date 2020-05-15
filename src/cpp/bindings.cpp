@@ -395,6 +395,32 @@ PYBIND11_MODULE(pytreeck, m) {
 
             opt.reset_opt();
         }, py::arg("instance") = 0b10)
+        .def("prune", [](Optimizer& opt, int instance, const py::list& example, FloatT eps) {
+            instance += 1;
+            DomainBox b;
+            FeatId feat_id = 0;
+            for (const py::handle& o : example) // inf norm at most eps around given example
+            {
+                if (py::isinstance<py::float_>(o))
+                {
+                    FloatT value = o.cast<FloatT>();
+                    b.refine(LtSplit(feat_id, value-eps), false, [](FeatId i) { return i; });
+                    b.refine(LtSplit(feat_id, value+eps), true, [](FeatId i) { return i; });
+                }
+                else throw std::runtime_error("not supported");
+                feat_id += 1;
+            }
+            auto f = [opt, &b](const DomainBox& box) {
+                return box.overlaps(b);
+            };
+
+            if ((instance & 0b1) != 0)
+                opt.g0->prune(f);
+            if ((instance & 0b10) != 0)
+                opt.g1->prune(f);
+
+            opt.reset_opt();
+        })
         .def("num_independent_sets", [](const Optimizer& opt, int instance) {
             if (instance == 0)
                 return opt.g0->num_independent_sets();
