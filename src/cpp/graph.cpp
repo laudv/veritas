@@ -12,6 +12,7 @@
  * https://github.com/chenhongge/treeVerification
 */
 
+#include <cmath>
 #include <algorithm>
 #include <iostream>
 #include <iomanip>
@@ -227,7 +228,7 @@ namespace treeck {
     {
         if (addtree.base_score != 0.0)
         {
-            std::cout << "adding base_score set" << std::endl;
+            //std::cout << "adding base_score set" << std::endl;
             IndependentSet set;
             set.vertices.push_back({{}, addtree.base_score});
             sets_.push_back(set);
@@ -581,7 +582,8 @@ namespace treeck {
         g0.sort_bound_asc(); // choose vertex with smaller `output` first
         g1.sort_bound_desc(); // choose vertex with larger `output` first
 
-        if (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0)
+        bool unsat = std::isinf(output_bound0) || std::isinf(output_bound1); // some empty indep set
+        if (!unsat && (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0))
         {
             cliques_.push_back({
                 {}, // empty domain, ie no restrictions
@@ -683,11 +685,12 @@ namespace treeck {
         const KPartiteGraph& graph = std::get<instance>(graph_);
         CliqueInstance& ci = std::get<instance>(c.instance);
 
-        const Vertex& v = graph.sets_[ci.indep_set].vertices[ci.vertex];
+        const Vertex& v = graph.sets_[ci.indep_set].vertices.at(ci.vertex);
         Clique new_c = {
             c.box.combine(v.box), // box of the new clique
             c.instance // copy
         };
+
         CliqueInstance& new_ci = std::get<instance>(new_c.instance);
         new_ci.output += v.output; // output of clique is previous output + output of newly merged vertex
         new_ci.indep_set += 1;
@@ -988,7 +991,9 @@ namespace treeck {
     KPartiteGraphOptimize::steps(int K, BoxFilter bf, FloatT min_output_difference)
     {
         for (int i=0; i<K; ++i)
+        {
             if (!step(bf, min_output_difference)) return false;
+        }
         return true;
     }
 

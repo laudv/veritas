@@ -291,7 +291,7 @@ PYBIND11_MODULE(pytreeck, m) {
             if (kwargs.contains("maximize"))
                 minimize = !kwargs["maximize"].cast<bool>();
 
-            std::cout << "minimize " << minimize << std::endl;
+            //std::cout << "minimize " << minimize << std::endl;
             std::unordered_set<int> matches;
 
             if (minimize)
