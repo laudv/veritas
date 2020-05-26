@@ -26,7 +26,6 @@
 
 namespace treeck {
 
-
     class DomainBox;
 
     using FeatIdMapper = const std::function<int(FeatId)>&;
@@ -34,37 +33,23 @@ namespace treeck {
 
 
 
-
-    class DomainStore {
-        using Block = std::vector<Domain>;
-
-        std::vector<Block> store_;
-        size_t box_size_; // number of used features
-
-    public:
-        DomainStore(size_t box_size);
-        DomainBox push();
-        DomainBox push_copy(const DomainBox& box);
-    };
-
-
-
     class DomainBox {
-        using iterator = Domain *;
-        using const_iterator = const Domain *;
-        Domain *begin_;
-        Domain *end_;
+        std::vector<std::pair<int, Domain>> domains_;
 
     public:
-        DomainBox(Domain *begin, Domain *end);
+        DomainBox();
 
-        const_iterator begin() const;
-        const_iterator end() const;
+        std::vector<std::pair<int, Domain>>::const_iterator begin() const;
+        std::vector<std::pair<int, Domain>>::const_iterator end() const;
+        std::vector<std::pair<int, Domain>>::const_iterator find(int id) const;
+        std::vector<std::pair<int, Domain>>::iterator find(int id);
 
         void refine(Split split, bool is_left_child, FeatIdMapper fmap);
 
+        void sort();
+
         bool overlaps(const DomainBox& other) const;
-        void combine(const DomainBox& other) const;
+        DomainBox combine(const DomainBox& other) const;
     };
 
     std::ostream&
@@ -98,7 +83,6 @@ namespace treeck {
     class KPartiteGraphOptimize;
 
     class KPartiteGraph {
-        DomainStore store_;
         std::vector<IndependentSet> sets_;
         friend class KPartiteGraphOptimize;
 
