@@ -23,72 +23,117 @@
 
 namespace treeck {
 
-    DomainBox::DomainBox() : domains_() { }
 
-    std::vector<std::pair<int, Domain>>::const_iterator
+    DomainStore::DomainStore(size_t box_size)
+        : store_{}
+        , box_size_(box_size)
+    {
+        const size_t DEFAULT_SIZE = 1024*128;
+        Block block;
+        block.reserve(DEFAULT_SIZE);
+        store_.push_back(std::move(block));
+    }
+
+    DomainBox
+    DomainStore::push()
+    {
+        Block& block = store_.back();
+        if (block.capacity() - block.size() < box_size_)
+        {
+            Block new_block;
+            new_block.reserve(block.size() * 2);
+            store_.push_back(std::move(new_block));
+            block = store_.back();
+        }
+
+        size_t start_index = block.size();
+        for (size_t i = 0; i < box_size_; ++i)
+            block.push_back(RealDomain{});
+
+        Domain *ptr = &block[start_index];
+        return { ptr, ptr + box_size_ };
+    }
+
+
+
+
+    DomainBox::DomainBox(Domain *b, Domain *e) : begin_(b), end_(e) { }
+
+    DomainBox::const_iterator
     DomainBox::begin() const
     {
-        return domains_.begin();
+        return begin_;
     }
 
-    std::vector<std::pair<int, Domain>>::const_iterator
+    DomainBox::const_iterator
     DomainBox::end() const
     {
-        return domains_.end();
+        return end_;
     }
 
-    std::vector<std::pair<int, Domain>>::const_iterator
-    DomainBox::find(int id) const
-    {
-        return std::find_if(domains_.cbegin(), domains_.cend(), 
-                [id](const std::pair<int, Domain>& arg) {
-            return arg.first == id;
-        });
-    }
+    //std::vector<std::pair<int, Domain>>::const_iterator
+    //DomainBox::find(int id) const
+    //{
+    //    return std::find_if(domains_.cbegin(), domains_.cend(), 
+    //            [id](const std::pair<int, Domain>& arg) {
+    //        return arg.first == id;
+    //    });
+    //}
 
-    std::vector<std::pair<int, Domain>>::iterator
-    DomainBox::find(int id)
-    {
-        return std::find_if(domains_.begin(), domains_.end(), 
-                [id](std::pair<int, Domain>& arg) {
-            return arg.first == id;
-        });
-    }
+    //std::vector<std::pair<int, Domain>>::iterator
+    //DomainBox::find(int id)
+    //{
+    //    return std::find_if(domains_.begin(), domains_.end(), 
+    //            [id](std::pair<int, Domain>& arg) {
+    //        return arg.first == id;
+    //    });
+    //}
 
     void
     DomainBox::refine(Split split, bool is_left_child, FeatIdMapper fmap)
     {
+        //visit_split(
+        //        [this, &fmap, is_left_child](const LtSplit& s) {
+        //            int id = fmap(s.feat_id);
+        //            auto p = find(id);
+        //            if (p == end()) {
+        //                domains_.push_back({id, refine_domain({}, s, is_left_child)});
+        //            } else {
+        //                RealDomain dom = util::get_or<RealDomain>(p->second);
+        //                p->second = refine_domain(dom, s, is_left_child);
+        //            }
+        //        },
+        //        [this, &fmap, is_left_child](const BoolSplit& s) {
+        //            int id = fmap(s.feat_id);
+        //            auto p = find(id);
+        //            if (p == end()) {
+        //                domains_.push_back({id, refine_domain({}, s, is_left_child)});
+        //            } else {
+        //                BoolDomain dom = util::get_or<BoolDomain>(p->second);
+        //                p->second = refine_domain(dom, s, is_left_child);
+        //            }
+        //       },
+        //       split);
         visit_split(
                 [this, &fmap, is_left_child](const LtSplit& s) {
                     int id = fmap(s.feat_id);
-                    auto p = find(id);
-                    if (p == end()) {
-                        domains_.push_back({id, refine_domain({}, s, is_left_child)});
-                    } else {
-                        RealDomain dom = util::get_or<RealDomain>(p->second);
-                        p->second = refine_domain(dom, s, is_left_child);
-                    }
+                    Domain *ptr = begin_ + id;
+                    RealDomain dom = util::get_or<RealDomain>(*ptr);
+                    *ptr = refine_domain(dom, s, is_left_child);
                 },
-                [this, &fmap, is_left_child](const BoolSplit& s) {
-                    int id = fmap(s.feat_id);
-                    auto p = find(id);
-                    if (p == end()) {
-                        domains_.push_back({id, refine_domain({}, s, is_left_child)});
-                    } else {
-                        BoolDomain dom = util::get_or<BoolDomain>(p->second);
-                        p->second = refine_domain(dom, s, is_left_child);
-                    }
-               },
-               split);
+                [](const BoolSplit& s) {
+                    throw std::runtime_error("not supported");
+                },
+                split);
     }
 
-    void
-    DomainBox::sort()
-    {
-        std::sort(domains_.begin(), domains_.end(), [](auto& p, auto& q) {
-            return p.first < q.first;
-        });
-    }
+    //void
+    //DomainBox::sort()
+    //{
+    //    std::sort(domains_.begin(), domains_.end(), [](auto& p, auto& q) {
+    //        return p.first < q.first;
+    //    });
+    //}
 
     bool
     DomainBox::overlaps(const DomainBox& other) const
@@ -97,98 +142,58 @@ namespace treeck {
         //std::cout << "  " << *this << std::endl;
         //std::cout << "  " << other << std::endl;
 
-        auto it0 = domains_.begin();
-        auto it1 = other.domains_.begin();
+        auto it0 = begin_;
+        auto it1 = other.begin_;
         
         // assume sorted
-        while (it0 != domains_.end() && it1 != other.domains_.end())
+        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
         {
-            //std::cout << "checking " << it0->first << ", " << it1->first << std::endl;
-            if (it0->first == it1->first)
-            {
-                bool overlaps = visit_domain(
-                    [it1](const RealDomain& dom0) {
-                        auto dom1 = util::get_or<RealDomain>(it1->second);
-                        return dom0.overlaps(dom1);
-                    },
-                    [it1](const BoolDomain& dom0) {
-                        auto dom1 = util::get_or<BoolDomain>(it1->second);
-                        return (dom0.value_ & dom1.value_) != 0;
-                    },
-                    it0->second);
+            bool overlaps = visit_domain(
+                [it1](const RealDomain& dom0) {
+                    auto dom1 = util::get_or<RealDomain>(*it1);
+                    return dom0.overlaps(dom1);
+                },
+                [it1](const BoolDomain& dom0) {
+                    auto dom1 = util::get_or<BoolDomain>(*it1);
+                    return (dom0.value_ & dom1.value_) != 0;
+                },
+                *it0);
 
-                ++it0; ++it1;
-
-                if (!overlaps)
-                    return false;
-            }
-            else if (it0->first < it1->first) ++it0;
-            else ++it1;
+            if (!overlaps)
+                return false;
         }
 
         return true;
     }
 
-    DomainBox
+    void
     DomainBox::combine(const DomainBox& other) const
     {
-        DomainBox box;
-
-        auto it0 = domains_.begin();
-        auto it1 = other.domains_.begin();
+        Domain *it0 = begin_;
+        Domain *it1 = other.begin_;
 
         // assume sorted
-        while (it0 != domains_.end() && it1 != other.domains_.end())
+        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
         {
-            if (it0->first == it1->first)
-            {
-                visit_domain(
-                    [&box, it1](const RealDomain& dom0) {
-                        auto dom1 = util::get_or<RealDomain>(it1->second);
-                        box.domains_.push_back({it1->first, dom0.intersect(dom1)});
-                    },
-                    [&box, it1](const BoolDomain& dom0) {
-                        auto dom1 = util::get_or<BoolDomain>(it1->second);
-                        box.domains_.push_back({it1->first, dom0.intersect(dom1)});
-                    },
-                    it0->second);
-
-                ++it0; ++it1;
-            }
-            else if (it0->first < it1->first)
-            {
-                box.domains_.push_back(*it0); // copy
-                ++it0;
-            }
-            else
-            {
-                box.domains_.push_back(*it1); // copy
-                ++it1;
-            }
+            visit_domain(
+                [it0](const RealDomain& dom1) {
+                    auto dom0 = util::get_or<RealDomain>(*it0);
+                    *it0 = dom0.intersect(dom1);
+                },
+                [it0](const BoolDomain& dom1) {
+                    auto dom0 = util::get_or<BoolDomain>(*it0);
+                    *it0 = dom0.intersect(dom1);
+                },
+                *it1);
         }
-
-        // we're here because one (or both) of the iterators reached their end, but which one?
-        auto end = domains_.end();
-        if (it1 != other.domains_.end()) // it0 must be at its end
-        {
-            it0 = it1;
-            end = other.domains_.end();
-        }
-
-        for (; it0 != end; ++it0)
-        {
-            box.domains_.push_back(*it0); // copy
-        }
-
-        return box;
     }
 
     std::ostream&
     operator<<(std::ostream& s, const DomainBox& box)
     {
         s << "DBox { ";
-        for (auto&& [id, dom] : box)
-            s << id << ":" << dom << " ";
+        //for (auto&& [id, dom] : box)
+        //    s << id << ":" << dom << " ";
         s << '}';
         return s;
     }
@@ -230,7 +235,7 @@ namespace treeck {
         {
             //std::cout << "adding base_score set" << std::endl;
             IndependentSet set;
-            set.vertices.push_back({{}, addtree.base_score});
+            set.vertices.push_back({store_.push(), addtree.base_score});
             sets_.push_back(set);
         }
 
