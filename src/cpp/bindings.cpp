@@ -421,6 +421,9 @@ PYBIND11_MODULE(pytreeck, m) {
 
             opt.reset_opt();
         })
+        .def("reset_opt", [](Optimizer& opt) {
+            opt.reset_opt();
+        })
         .def("num_independent_sets", [](const Optimizer& opt, int instance) {
             if (instance == 0)
                 return opt.g0->num_independent_sets();

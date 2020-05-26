@@ -80,12 +80,12 @@ def set_smt(opt, instance, eps): # for minimization specifically
     for feat_id in opt.get_used_feat_ids()[0]:
         x = opt.xvar(0, feat_id)
         v = instance[feat_id]
-        print(f"(assert (<= {x} {v+eps}))", file=smt)
+        print(f"(assert (< {x} {v+eps}))", file=smt)
         print(f"(assert (>= {x} {v-eps}))", file=smt)
     for feat_id in opt.get_used_feat_ids()[1]:
         x = opt.xvar(1, feat_id)
         v = instance[feat_id]
-        print(f"(assert (<= {x} {v+eps}))", file=smt)
+        print(f"(assert (< {x} {v+eps}))", file=smt)
         print(f"(assert (>= {x} {v-eps}))", file=smt)
     opt.set_smt_program(smt.getvalue())
 
@@ -94,23 +94,25 @@ def adv_example_for_eps(instance, label, at0, at1, eps,
         opt_stepsize,
         max_opt_time,
         max_opt_cliques):
+
     opt = Optimizer(at0, at1, set(), False) # share all variables
-    set_smt(opt, instance, eps=eps)
+    #set_smt(opt, instance, eps=eps)
 
     # pruning
     bound_before = opt.current_bounds()
     num_vertices_before = opt.num_vertices(0), opt.num_vertices(1)
     start = timeit.default_timer()
-    opt.prune()
+    opt.prune(2, list(instance), eps) # fast "box" prune
+    #opt.prune() # prune w/ smt
     stop = timeit.default_timer()
     num_vertices_after = opt.num_vertices(0), opt.num_vertices(1)
     bound_after = opt.current_bounds()
-    opt.reset_smt_program()
+    #opt.reset_smt_program()
     prune_time = stop - start
-    #print(f"prune: num_vertices    {num_vertices_before[0]:8} -> {num_vertices_after[0]},",
-    #                             f"{num_vertices_before[1]:8} -> {num_vertices_after[1]}")
-    #print(f"       bound           {bound_before[0]:8.3f} -> {bound_after[0]:.3f},",
-    #                             f"{bound_before[1]:8.3f} -> {bound_after[1]:.3f}")
+    #print(f"prune: num_vertices    {num_vertices_before[0]}/{num_vertices_after[0]},",
+    #                             f"{num_vertices_before[1]}/{num_vertices_after[1]}")
+    #print(f"       bound           {bound_before[0]:.3f} -> {bound_after[0]:.3f},",
+    #                             f"{bound_before[1]:.3f} -> {bound_after[1]:.3f}")
     #print(f"prune: time            {prune_time:.3f}")
 
     # merging
@@ -149,7 +151,7 @@ def adv_example_for_eps(instance, label, at0, at1, eps,
     stop = timeit.default_timer()
     solutions = opt.solutions()
     opt_time = stop - start
-    print(f"opt:  step/clique/sol  {sum(opt.nsteps())}/{opt.num_candidate_cliques()}/{len(solutions)}")
+    print(f"opt:   step/clique/sol  {sum(opt.nsteps())}/{opt.num_candidate_cliques()}/{len(solutions)}")
     if len(solutions) > 0:
         print(f"       bound           {bound_before[0]:.3f}/{bounds[0][0]:.3f}/{solutions[0][0]:.3f},",
                                      f"{bound_before[1]:.3f}/{bounds[0][1]:.3f}/{solutions[0][1]:.3f}")
@@ -161,18 +163,19 @@ def adv_example_for_eps(instance, label, at0, at1, eps,
     # return new lower bound for epsilon if we found one
     if len(solutions) > 0:
         instance1 = get_closest_instance(instance, solutions[0][2])
-        print("values:", [x for x in abs(instance1-instance) if x > 0.0])
+        #print("values:", [x for x in abs(instance1-instance) if x > 0.0])
         print("xgb:", model.predict(xgb.DMatrix(np.array([instance, instance1])), output_margin="margin"))
         eps1 = max(abs(instance1 - instance))
-        print(f"       eps             {eps:} -> {eps1}")
-        return False, eps1
+        print(f"       sample eps      {eps:.4f} -> {eps1:.4f}")
+        return False, eps1, opt
     else:
-        return bounds[-1][1] < bounds[-1][0], eps # it is not possible for at1 to be more certain than at0
+        unsat = bounds[-1][1] < bounds[-1][0] # it is not possible for at1 to be more certain than at0
+        return unsat, eps, opt
 
 def binary_search(nsteps, instance, label, at0, at1, eps,
         merges=[2, 2],
         opt_stepsize=1000,
-        max_opt_time=0.5,
+        max_opt_time=0.1,
         max_opt_cliques=200000):
 
     verified_eps = 0
@@ -181,9 +184,9 @@ def binary_search(nsteps, instance, label, at0, at1, eps,
 
     for step in range(nsteps):
         #print(">> eps =", eps, "step=", step)
-        is_unsat, eps1 = adv_example_for_eps(instance, label, at0, at1, eps,
-                merges,
-                opt_stepsize, max_opt_time, max_opt_cliques)
+        is_unsat, eps1, opt = adv_example_for_eps(instance, label, at0, at1, eps,
+                merges, opt_stepsize, max_opt_time, max_opt_cliques) # can only reuse opt for lower eps (higher eps is less restrictive)
+
         print(f" =>  {step:2}: eps = {eps:.3f},", "unsat" if is_unsat else "sat" if eps1!=eps else "maybe")
 
         old_eps = eps
@@ -202,7 +205,7 @@ def binary_search(nsteps, instance, label, at0, at1, eps,
             upper = eps1
             eps = eps - 0.5 * (eps1 - lower)
 
-        print(f" => eps update {old_eps} -> {eps} ({lower}, {upper})")
+        print(f" => eps update {old_eps:.4f} -> {eps:.4f} ({lower:.4f}, {upper:.4f})")
 
     return verified_eps
 
@@ -214,18 +217,23 @@ n_adv = 10
 instances = X[Itest[0:n_adv]]
 labels = y[Itest[0:n_adv]]
 
+start = timeit.default_timer()
 for i, (instance, label) in enumerate(zip(instances, labels)):
     at = ats[label]
     print("===================")
     print()
 
-    min_eps = eps
+    min_eps = np.inf
     for j in range(len(ats)):
         if j == label: continue
         print(f"MNIST digit {label} vs. {j} (instance {i})")
-        eps0 = binary_search(10, instance, label, at, ats[j], eps, opt_stepsize=0)
+        eps0 = binary_search(10, instance, label, at, ats[j], eps, opt_stepsize=1000)
         min_eps = min(eps0, min_eps)
-        print(f"=> result: {label} vs. {j}: {eps0} [min_eps={min_eps}]")
+        print(f"=> result {label} vs. {j}: {eps0:.3f} [min_eps={min_eps:.3f}]")
+    print(f"==> final result for {label}: {min_eps:.4f}")
+
+stop = timeit.default_timer()
+print("total time", stop-start)
     
     ##opt = Optimizer(at, ats[0], set(), False)
     #opt = Optimizer(at, minimize=True)
