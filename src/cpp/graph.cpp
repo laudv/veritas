@@ -23,10 +23,104 @@
 
 namespace treeck {
 
+    FeatInfo::FeatInfo() : max_id_(-1), instance_boundary_(0) {}
 
-    DomainStore::DomainStore(size_t box_size)
-        : store_{}
-        , box_size_(box_size)
+    FeatInfo::FeatInfo(const AddTree& at) : FeatInfo(at, AddTree(), {}, false)
+    {
+        //auto at_splits = at.get_splits();
+        //int max_feat_id = -1;
+        //for (auto&& [feat_id, _] : at_splits)
+        //{
+        //    feat_ids_.push_back(feat_id);
+        //    max_feat_id = std::max(max_feat_id, feat_id);
+        //}
+
+        //std::sort(feat_ids_.begin(), feat_ids_.end());
+
+        //id_map_.resize(max_feat_id+1, UNUSED_ID);
+        //is_real_.resize(max_feat_id+1, false);
+        //for (auto feat_id : feat_ids_)
+        //{
+        //    id_map_[feat_id] = ++max_id_;
+        //    auto split_values = at_splits.find(feat_id);
+        //    if (split_values == at_splits.end())
+        //        throw std::runtime_error("invalid state");
+        //    if (split_values->second.size() != 0) // split values => real split
+        //        is_real_[feat_id] = true;
+        //}
+    }
+
+    FeatInfo::FeatInfo(
+            const AddTree& at0,
+            const AddTree& at1,
+            const std::unordered_set<FeatId>& matches,
+            bool match_is_reuse)
+        : FeatInfo()
+    {
+        //for (int i = 0; i < feat_ids_.size(); ++i)
+        //{
+        //    int feat_id = feat_ids_[i];
+        //    bool in_matches = matches.find(feat_id) != matches.end();
+        //    if (in_matches == match_is_reuse)
+        //        id_map_[feat_id] = instance0.id_map_[feat_id]; // same id as at0!
+        //    else
+        //        id_map_[feat_id] = ++max_id_;
+        //}
+    }
+
+    void
+    FeatInfo::initialize(
+            const AddTree& at,
+            const std::unordered_set<FeatId>& matches,
+            bool match_is_reuse)
+    {
+        for (auto&& [feat_id, split_values] : at.get_splits())
+        {
+            int id = max_id_++;
+            if (split_values.size() != 0) // split values => real split
+                is_real_[instance_boundary_ + feat_id] = true;
+        }
+    }
+
+    int
+    FeatInfo::get_max_id() const
+    {
+        return max_id_;
+    }
+
+    int
+    FeatInfo::get_id(int instance, FeatId feat_id) const
+    {
+        int key = instance * instance_boundary_ + feat_id;
+        auto f = id_map_.find(key);
+        if (f != id_map_.end())
+            return f->second;
+        return UNUSED_ID;
+    }
+
+    bool 
+    FeatInfo::is_id_reused(int id) const
+    {
+        //int id0 = instance0.get_id(feat_id);
+        //int id1 = get_id(feat_id);
+
+        //return id0 != UNUSED_ID && id0 != id1;
+        throw std::runtime_error("not implemented");
+    }
+
+    bool
+    FeatInfo::is_real(int id) const
+    {
+        return is_real_[id];
+    }
+
+
+
+
+
+
+    DomainStore::DomainStore()
+        : store_{}, box_size_(0)
     {
         const size_t DEFAULT_SIZE = 1024*128;
         Block block;
@@ -34,8 +128,8 @@ namespace treeck {
         store_.push_back(std::move(block));
     }
 
-    DomainBox
-    DomainStore::push()
+    DomainStore::Block&
+    DomainStore::get_last_block()
     {
         Block& block = store_.back();
         if (block.capacity() - block.size() < box_size_)
@@ -45,10 +139,74 @@ namespace treeck {
             store_.push_back(std::move(new_block));
             block = store_.back();
         }
+        return block;
+    }
 
+    void
+    DomainStore::push_prototype_box(const FeatInfo& finfo0, const FeatInfo& finfo1)
+    {
+        if (box_size_ > 0)
+            throw std::runtime_error("prototype already pushed");
+        box_size_ = finfo1.get_max_id() + 1;
+
+        Block& block = get_last_block();
+
+        // push domains for instance0
+        for (FeatId feat_id : finfo0.feat_ids())
+        {
+            int id = finfo0.get_id(feat_id);
+            if (id != block.size()) throw std::runtime_error("invalid state");
+
+            if (finfo0.is_real(feat_id)) block.push_back(RealDomain{});
+            else                         block.push_back(BoolDomain{});
+        }
+
+        // push domains for instance1
+        for (FeatId feat_id : finfo1.feat_ids())
+        {
+            int id = finfo1.get_id(feat_id);
+            if (id != block.size()) throw std::runtime_error("invalid state");
+
+            if (finfo1.is_id_reused(finfo0, feat_id)) continue;
+            if (finfo1.is_real(feat_id)) block.push_back(RealDomain{});
+            else                         block.push_back(BoolDomain{});
+        }
+    }
+
+    DomainBox
+    DomainStore::push_box()
+    {
+        //const auto& feat_ids = finfo.feat_ids();
+        //if (block_size_ == 0)
+        //    block_size_ = feat_ids.size();
+
+        //size_t start_index = block.size();
+        //for (FeatId feat_id : feat_ids)
+        //{
+        //    block.push_back(RealDomain{});
+        //}
+
+        //Domain *ptr = &block[start_index];
+        //return { ptr, ptr + feat_ids.size() };
+        
+        // copy the prototype domain
+        Domain *ptr = &store_[0][0];
+        return push_copy({ptr, ptr + box_size_});
+    }
+
+    DomainBox
+    DomainStore::push_copy(const DomainBox& other)
+    {
+        if (box_size_ == 0) throw std::runtime_error("zero-sized prototype box");
+        if (other.size() != box_size_) throw std::runtime_error("incompatible boxes");
+
+        Block& block = get_last_block();
         size_t start_index = block.size();
-        for (size_t i = 0; i < box_size_; ++i)
-            block.push_back(RealDomain{});
+
+        for (const Domain& d : other)
+            block.push_back(d);
+
+        if (block.size() != start_index+box_size_) throw std::runtime_error("invalid state");
 
         Domain *ptr = &block[start_index];
         return { ptr, ptr + box_size_ };
@@ -71,6 +229,12 @@ namespace treeck {
         return end_;
     }
 
+    size_t
+    DomainBox::size() const
+    {
+        return end_ - begin_;
+    }
+
     //std::vector<std::pair<int, Domain>>::const_iterator
     //DomainBox::find(int id) const
     //{
@@ -90,7 +254,7 @@ namespace treeck {
     //}
 
     void
-    DomainBox::refine(Split split, bool is_left_child, FeatIdMapper fmap)
+    DomainBox::refine(Split split, bool is_left_child, const FeatInfo& finfo)
     {
         //visit_split(
         //        [this, &fmap, is_left_child](const LtSplit& s) {
@@ -115,8 +279,8 @@ namespace treeck {
         //       },
         //       split);
         visit_split(
-                [this, &fmap, is_left_child](const LtSplit& s) {
-                    int id = fmap(s.feat_id);
+                [this, finfo, is_left_child](const LtSplit& s) {
+                    int id = finfo.get_id(s.feat_id);
                     Domain *ptr = begin_ + id;
                     RealDomain dom = util::get_or<RealDomain>(*ptr);
                     *ptr = refine_domain(dom, s, is_left_child);
@@ -226,10 +390,11 @@ namespace treeck {
     }
 
     KPartiteGraph::KPartiteGraph(const AddTree& addtree)
-        : KPartiteGraph(addtree, [](FeatId fid) { return fid; })
+        : KPartiteGraph{addtree, {addtree}}
     { }
 
-    KPartiteGraph::KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap)
+    KPartiteGraph::KPartiteGraph(const AddTree& addtree, FeatInfo finfo)
+        : finfo_(finfo)
     {
         if (addtree.base_score != 0.0)
         {
@@ -242,7 +407,7 @@ namespace treeck {
         for (const AddTree::TreeT& tree : addtree.trees())
         {
             IndependentSet set;
-            fill_independence_set(set, tree.root(), fmap);
+            fill_independence_set(set, tree.root());
 
             sets_.push_back(set);
         }
@@ -262,13 +427,12 @@ namespace treeck {
     }
 
     void
-    KPartiteGraph::fill_independence_set(IndependentSet& set, AddTree::TreeT::CRef node,
-            FeatIdMapper fmap)
+    KPartiteGraph::fill_independence_set(IndependentSet& set, AddTree::TreeT::CRef node)
     {
         if (node.is_internal())
         {
-            fill_independence_set(set, node.left(), fmap);
-            fill_independence_set(set, node.right(), fmap);
+            fill_independence_set(set, node.left());
+            fill_independence_set(set, node.right());
         }
         else
         {
@@ -280,7 +444,7 @@ namespace treeck {
                 auto child_node = node;
                 bool is_left = child_node.is_left_child();
                 node = node.parent();
-                box.refine(node.get_split(), child_node.is_left_child(), fmap);
+                box.refine(node.get_split(), child_node.is_left_child(), finfo_);
             }
             box.sort();
             set.vertices.push_back({box, leaf_value});

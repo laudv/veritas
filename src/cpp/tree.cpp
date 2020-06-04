@@ -239,7 +239,7 @@ namespace treeck {
         insert_split_value(AddTree::SplitMapT& splits, const BoolSplit& split)
         {
             auto search = splits.find(split.feat_id);
-            if (search == splits.end()) // found it!
+            if (search == splits.end()) // not in it yet, insert, otherwise, just reuse
                 splits.emplace(split.feat_id, std::vector<FloatT>()); // empty vector
         }
 

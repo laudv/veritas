@@ -26,24 +26,53 @@
 
 namespace treeck {
 
+    class FeatInfo {
+    public:
+        const int UNUSED_ID = -1;
+
+    private:
+        std::unordered_map<int, int> id_map_;
+        std::vector<bool> is_real_;
+        int max_id_;
+        int instance_boundary_; // unique ids of instance1 start from this index
+
+        void initialize(const AddTree& at, 
+                 const std::unordered_set<FeatId>& matches,
+                 bool match_is_reuse);
+
+    public:
+        FeatInfo();
+        FeatInfo(const AddTree& at);
+        FeatInfo(const AddTree& at0,
+                 const AddTree& at1,
+                 const std::unordered_set<FeatId>& matches,
+                 bool match_is_reuse);
+
+        int get_max_id() const;
+        int get_id(int instance, FeatId feat_id) const;
+        bool is_id_reused(int id) const;
+
+        bool is_real(int id) const;
+    };
+
 
     class DomainBox;
 
-    using FeatIdMapper = const std::function<int(FeatId)>&;
     using BoxFilter = const std::function<bool(const DomainBox&)>&;
-
-
 
 
     class DomainStore {
         using Block = std::vector<Domain>;
 
         std::vector<Block> store_;
-        size_t box_size_; // number of used features
+        size_t box_size_;
+
+        Block& get_last_block();
 
     public:
-        DomainStore(size_t box_size);
-        DomainBox push();
+        DomainStore();
+        void push_prototype_box(const FeatInfo& finfo0, const FeatInfo& finfo1);
+        DomainBox push_box();
         DomainBox push_copy(const DomainBox& box);
     };
 
@@ -61,10 +90,11 @@ namespace treeck {
         const_iterator begin() const;
         const_iterator end() const;
 
-        void refine(Split split, bool is_left_child, FeatIdMapper fmap);
+        void refine(Split split, bool is_left_child, const FeatInfo& fmap);
 
         bool overlaps(const DomainBox& other) const;
         void combine(const DomainBox& other) const;
+        size_t size() const;
     };
 
     std::ostream&
@@ -95,22 +125,20 @@ namespace treeck {
 
 
 
-    class KPartiteGraphOptimize;
-
     class KPartiteGraph {
         DomainStore store_;
+        FeatInfo finfo_;
         std::vector<IndependentSet> sets_;
         friend class KPartiteGraphOptimize;
 
     private:
         void fill_independence_set(IndependentSet& set,
-                AddTree::TreeT::CRef node,
-                FeatIdMapper fmap);
+                AddTree::TreeT::CRef node);
 
     public:
         KPartiteGraph();
         KPartiteGraph(const AddTree& addtree);
-        KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap);
+        KPartiteGraph(const AddTree& addtree, FeatInfo fmap);
 
         std::vector<IndependentSet>::const_iterator begin() const;
         std::vector<IndependentSet>::const_iterator end() const;
