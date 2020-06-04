@@ -76,9 +76,19 @@ namespace treeck {
     {
         for (auto&& [feat_id, split_values] : at.get_splits())
         {
-            int id = max_id_++;
+            bool in_matches = matches.find(feat_id) != matches.end();
+            int id = -1;
+            if (in_matches == match_is_reuse)
+            {
+
+            }
+            else
+            {
+                id = max_id_++;
+            }
+            id_map_.insert(instance_boundary_ + feat_id, id);
             if (split_values.size() != 0) // split values => real split
-                is_real_[instance_boundary_ + feat_id] = true;
+                is_real_[id] = true;
         }
     }
 
