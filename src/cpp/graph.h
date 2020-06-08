@@ -31,26 +31,26 @@ namespace treeck {
         const int UNUSED_ID = -1;
 
     private:
-        std::unordered_map<int, int> id_map_;
+        std::vector<FeatId> feat_ids0_; // feat ids used in at0
+        std::vector<FeatId> feat_ids1_; // feat ids used in at1
+
+        std::unordered_map<int, int> key2id_;
         std::vector<bool> is_real_;
         int max_id_;
-        int instance_boundary_; // unique ids of instance1 start from this index
-
-        void initialize(const AddTree& at, 
-                 const std::unordered_set<FeatId>& matches,
-                 bool match_is_reuse);
+        int id_boundary_;
 
     public:
         FeatInfo();
-        FeatInfo(const AddTree& at);
+        //FeatInfo(const AddTree& at0);
         FeatInfo(const AddTree& at0,
                  const AddTree& at1,
                  const std::unordered_set<FeatId>& matches,
                  bool match_is_reuse);
 
         int get_max_id() const;
+        size_t num_ids() const;
         int get_id(int instance, FeatId feat_id) const;
-        bool is_id_reused(int id) const;
+        bool is_instance0_id(int id) const;
 
         bool is_real(int id) const;
     };

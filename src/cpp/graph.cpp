@@ -23,32 +23,32 @@
 
 namespace treeck {
 
-    FeatInfo::FeatInfo() : max_id_(-1), instance_boundary_(0) {}
+    FeatInfo::FeatInfo() : max_id_(-1), id_boundary_(0) {}
 
-    FeatInfo::FeatInfo(const AddTree& at) : FeatInfo(at, AddTree(), {}, false)
-    {
-        //auto at_splits = at.get_splits();
-        //int max_feat_id = -1;
-        //for (auto&& [feat_id, _] : at_splits)
-        //{
-        //    feat_ids_.push_back(feat_id);
-        //    max_feat_id = std::max(max_feat_id, feat_id);
-        //}
+    //FeatInfo::FeatInfo(const AddTree& at) : FeatInfo()
+    //{
+    //    auto at_splits = at.get_splits();
+    //    int max_feat_id = -1;
+    //    for (auto&& [feat_id, _] : at_splits)
+    //    {
+    //        feat_ids_.push_back(feat_id);
+    //        max_feat_id = std::max(max_feat_id, feat_id);
+    //    }
 
-        //std::sort(feat_ids_.begin(), feat_ids_.end());
+    //    std::sort(feat_ids_.begin(), feat_ids_.end());
 
-        //id_map_.resize(max_feat_id+1, UNUSED_ID);
-        //is_real_.resize(max_feat_id+1, false);
-        //for (auto feat_id : feat_ids_)
-        //{
-        //    id_map_[feat_id] = ++max_id_;
-        //    auto split_values = at_splits.find(feat_id);
-        //    if (split_values == at_splits.end())
-        //        throw std::runtime_error("invalid state");
-        //    if (split_values->second.size() != 0) // split values => real split
-        //        is_real_[feat_id] = true;
-        //}
-    }
+    //    id_map_.resize(max_feat_id+1, UNUSED_ID);
+    //    is_real_.resize(max_feat_id+1, false);
+    //    for (auto feat_id : feat_ids_)
+    //    {
+    //        id_map_[feat_id] = ++max_id_;
+    //        auto split_values = at_splits.find(feat_id);
+    //        if (split_values == at_splits.end())
+    //            throw std::runtime_error("invalid state");
+    //        if (split_values->second.size() != 0) // split values => real split
+    //            is_real_[feat_id] = true;
+    //    }
+    //}
 
     FeatInfo::FeatInfo(
             const AddTree& at0,
@@ -57,38 +57,58 @@ namespace treeck {
             bool match_is_reuse)
         : FeatInfo()
     {
-        //for (int i = 0; i < feat_ids_.size(); ++i)
-        //{
-        //    int feat_id = feat_ids_[i];
-        //    bool in_matches = matches.find(feat_id) != matches.end();
-        //    if (in_matches == match_is_reuse)
-        //        id_map_[feat_id] = instance0.id_map_[feat_id]; // same id as at0!
-        //    else
-        //        id_map_[feat_id] = ++max_id_;
-        //}
-    }
+        auto splits0 = at0.get_splits();
+        auto splits1 = at1.get_splits();
 
-    void
-    FeatInfo::initialize(
-            const AddTree& at,
-            const std::unordered_set<FeatId>& matches,
-            bool match_is_reuse)
-    {
-        for (auto&& [feat_id, split_values] : at.get_splits())
+        for (auto&& [feat_id, split_values] : splits0)
+            feat_ids0_.push_back(feat_id);
+        for (auto&& [feat_id, split_values] : splits1)
+            feat_ids1_.push_back(feat_id);
+
+        std::sort(feat_ids0_.begin(), feat_ids0_.end());
+        std::sort(feat_ids1_.begin(), feat_ids1_.end());
+
+        for (FeatId feat_id : feat_ids0_)
         {
-            bool in_matches = matches.find(feat_id) != matches.end();
-            int id = -1;
+            key2id_.insert(feat_id, max_id_++);
+        }
+
+        id_boundary_ = max_id_;
+
+        for (FeatId feat_id : feat_ids1_)
+        {
+            int key = ~static_cast<int>(feat_id);
+            auto in_matches = matches.find(feat_id) != matches.end();
             if (in_matches == match_is_reuse)
             {
-
+                auto lookup = key2id_.find(feat_id);
+                if (lookup == key2id_.end()) throw std::runtime_error("invalid state");
+                key2id_.insert(key, lookup->second);
             }
             else
             {
-                id = max_id_++;
+                key2id_.insert(key, max_id_++);
             }
-            id_map_.insert(instance_boundary_ + feat_id, id);
-            if (split_values.size() != 0) // split values => real split
-                is_real_[id] = true;
+        }
+
+        // check types
+        for (FeatId feat_id : feat_ids0_)
+        {
+            int key = feat_id;
+            auto split_values = splits0.find(feat_id);
+            if (split_values == splits0.end())
+                throw std::runtime_error("invalid state");
+            if (split_values->second.size() != 0) // at least one split value => real split
+                is_real_[key] = true;
+        }
+        for (FeatId feat_id : feat_ids1_)
+        {
+            int key = ~static_cast<int>(feat_id);
+            auto split_values = splits1.find(feat_id);
+            if (split_values == splits1.end())
+                throw std::runtime_error("invalid state");
+            if (split_values->second.size() != 0) // at least one split value => real split
+                is_real_[key] = true;
         }
     }
 
@@ -98,24 +118,28 @@ namespace treeck {
         return max_id_;
     }
 
+    size_t
+    FeatInfo::num_ids() const
+    {
+        return static_cast<size_t>(get_max_id() + 1);
+    }
+
     int
     FeatInfo::get_id(int instance, FeatId feat_id) const
     {
-        int key = instance * instance_boundary_ + feat_id;
-        auto f = id_map_.find(key);
-        if (f != id_map_.end())
-            return f->second;
+        int key = feat_id;
+        if (instance != 0) key = ~key;
+
+        auto lookup = key2id_.find(key);
+        if (lookup != key2id_.end())
+            return lookup->second;
         return UNUSED_ID;
     }
 
     bool 
-    FeatInfo::is_id_reused(int id) const
+    FeatInfo::is_instance0_id(int id) const
     {
-        //int id0 = instance0.get_id(feat_id);
-        //int id1 = get_id(feat_id);
-
-        //return id0 != UNUSED_ID && id0 != id1;
-        throw std::runtime_error("not implemented");
+        return id < id_boundary_;
     }
 
     bool
