@@ -12,6 +12,9 @@
  * https://github.com/chenhongge/treeVerification
  */
 
+#ifndef TREECK_GRAPH_H
+#define TREECK_GRAPH_H
+
 #include <tuple>
 #include <vector>
 #include <unordered_set>
@@ -20,9 +23,6 @@
 
 #include "domain.h"
 #include "tree.h"
-
-#ifndef TREECK_GRAPH_H
-#define TREECK_GRAPH_H
 
 namespace treeck {
 

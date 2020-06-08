@@ -4,111 +4,12 @@
 
 namespace treeck {
 
-    //ReuseFeatIdMapper::ReuseFeatIdMapper(
-    //        const AddTree& at0,
-    //        const AddTree& at1,
-    //        const std::unordered_set<FeatId>& matches,
-    //        bool match_is_reuse)
-    //    : id_map0_{}
-    //    , id_map1_{}
-    //{
-    //    // quick and dirty way to get all the used feat_ids in at0
-    //    // not at all the fastest, but that does not matter, we only do it once
-    //    auto at0_splits = at0.get_splits();
-    //    auto at1_splits = at1.get_splits();
-
-    //    int max_feat_id0 = -1;
-    //    for (auto&& [feat_id, _] : at0_splits)
-    //        max_feat_id0 = std::max(max_feat_id0, feat_id);
-    //    id_map0_.resize(max_feat_id0+1, -1);
-    //    for (auto&& [feat_id, _] : at0_splits)
-    //        id_map0_[feat_id] = feat_id;
-
-    //    int max_feat_id1 = -1;
-    //    for (auto&& [feat_id, _] : at1_splits)
-    //        max_feat_id1 = std::max(max_feat_id1, feat_id);
-    //    id_map1_.resize(max_feat_id1+1, -1);
-    //    for (auto&& [feat_id, _] : at1_splits)
-    //    {
-    //        bool in_matches = matches.find(feat_id) != matches.end();
-    //        if (in_matches == match_is_reuse)
-    //            id_map1_[feat_id] = feat_id; // same id as at0!
-    //        else
-    //            id_map1_[feat_id] = id_map0_.size() + feat_id;
-    //    }
-
-    //    //std::cout << "MAPPING:" << std::endl;
-    //    //for (int i = 0; i < id_map0_.size(); ++i)
-    //    //    std::cout << "  0: " << i << ", " << id_map0_[i] << " is_reused: " << is_reused(i) << std::endl;
-    //    //for (int i = 0; i < id_map1_.size(); ++i)
-    //    //    std::cout << "  1: " << i << ", " << id_map1_[i] << " is_reused: " << is_reused(i) << std::endl;
-    //}
-
-    //bool
-    //ReuseFeatIdMapper::is_feat_id_used(int instance, FeatId feat_id) const
-    //{
-    //    const auto& id_map = instance==0 ? id_map0_ : id_map1_;
-    //    if (feat_id < id_map.size())
-    //        return id_map[feat_id] != -1;
-    //    return false;
-    //}
-
-    //bool
-    //ReuseFeatIdMapper::is_reused(FeatId feat_id) const
-    //{
-    //    if (feat_id >= id_map0_.size() || feat_id >= id_map1_.size())
-    //        return false;
-
-    //    int id0 = id_map0_[feat_id];
-    //    return id0 != -1 && id0 == id_map1_[feat_id];
-    //}
-
-    //int
-    //ReuseFeatIdMapper::operator()(FeatId feat_id) const
-    //{
-    //    if (feat_id < id_map1_.size())
-    //        return id_map1_[feat_id];
-    //    else return -1;
-    //}
-
-    //std::vector<FeatId>
-    //ReuseFeatIdMapper::get_used_feat_ids(int instance) const
-    //{
-    //    const auto& id_map = instance==0 ? id_map0_ : id_map1_;
-    //    std::vector<FeatId> output;
-    //    for (int i = 0; i < id_map.size(); ++i)
-    //    {
-    //        int id = id_map[i];
-    //        if (id != -1)
-    //            output.push_back(i);
-    //    }
-    //    return output;
-    //}
-
-
-    //Solver::Solver(const AddTree& at)
-    //    : fmap_{} // we won't be using this
-    //    , ctx_{}
-    //    , solver_{ctx_}
-    //{
-    //    // preprocess split values so we don't have to do the stupid float ->
-    //    // str -> z3::expr repeatedly
-    //    fill_const_cache(at);
-    //    fill_var_map(0, at);
-
-    //    std::cout << "single tree solver" << std::endl;
-    //    std::cout << "size of const_cache_ " << const_cache_.size() << std::endl;
-    //    for (auto&& [i, v] : const_cache_)
-    //        std::cout << "const_cache_[" << i << "] " << v << std::endl;
-    //}
-
     Solver::Solver(
             const AddTree& at0,
             const AddTree& at1,
             std::unordered_set<FeatId> matches,
             bool match_is_reuse)
-        : finfo0_{at0}
-        , finfo1_{finfo0_, at1, matches, match_is_reuse}
+        : finfo_{at0, at1, matches, match_is_reuse}
         , ctx_{}
         , solver_{ctx_}
     {
@@ -226,23 +127,19 @@ namespace treeck {
     }
 
     const FeatInfo&
-    Solver::finfo0() const
+    Solver::finfo() const
     {
-        return finfo0_;
-    }
-
-    const FeatInfo&
-    Solver::finfo1() const
-    {
-        return finfo1_;
+        return finfo_;
     }
 
     std::string
     Solver::var_name(int instance, FeatId feat_id) const
     {
-        if (instance != 0 && finfo1_.is_id_reused(finfo0_, feat_id))
+        int id = finfo_.get_id(instance, feat_id);
+        if (instance != 0 && finfo_.is_instance0_id(id))
         {
-            std::cout << "WARNING! reusing " << instance << ", " << feat_id << std::endl;
+            std::cout << "WARNING! reusing " << instance << ", " << feat_id
+                << '(' << id << ')' << std::endl;
             instance = 0; // use same var as instance0
         }
 
@@ -255,9 +152,7 @@ namespace treeck {
     int
     Solver::xvar_id(int instance, FeatId feat_id) const
     {
-        return instance == 0
-            ? finfo0_.get_id(feat_id)
-            : finfo1_.get_id(feat_id);
+        return finfo_.get_id(instance, feat_id);
     }
 
     void

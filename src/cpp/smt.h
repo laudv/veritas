@@ -4,41 +4,20 @@
  * Author: Laurens Devos
 */
 
+#ifndef TREECK_SMT_H
+#define TREECK_SMT_H
+
 #include <unordered_map>
 #include <z3++.h>
 
 #include "domain.h"
 #include "tree.h"
-
-#ifndef TREECK_SMT_H
-#define TREECK_SMT_H
+#include "graph.h"
 
 namespace treeck {
 
-    //class ReuseFeatIdMapper {
-    //    std::vector<int> id_map0_;
-    //    std::vector<int> id_map1_;
-
-    //public:
-    //    ReuseFeatIdMapper(const AddTree& at0, const AddTree& at1,
-    //            const std::unordered_set<FeatId>& matches,
-    //            bool match_is_reuse);
-
-    //    std::vector<FeatId> get_used_feat_ids(int instance) const;
-    //    bool is_feat_id_used(int instance, FeatId feat_id) const;
-    //    bool is_reused(FeatId feat_id) const;
-
-    //    /**
-    //     * map feat_ids of the second tree: map to values of at0 if match,
-    //     * else, match to unique value.
-    //     */
-    //    int operator()(FeatId feat_id) const;
-    //};
-
-
     class Solver  {
-        FeatInfo finfo0_;
-        FeatInfo finfo1_;
+        FeatInfo finfo_;
         z3::context ctx_;
         z3::solver solver_;
 
@@ -68,8 +47,7 @@ namespace treeck {
         z3::context& get_z3_ctx();
         void parse_smt(const char *smt);
 
-        const FeatInfo& finfo0() const;
-        const FeatInfo& finfo1() const;
+        const FeatInfo& finfo() const;
 
         z3::expr& float_to_z3(FloatT value);
 

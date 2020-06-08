@@ -25,31 +25,6 @@ namespace treeck {
 
     FeatInfo::FeatInfo() : max_id_(-1), id_boundary_(0) {}
 
-    //FeatInfo::FeatInfo(const AddTree& at) : FeatInfo()
-    //{
-    //    auto at_splits = at.get_splits();
-    //    int max_feat_id = -1;
-    //    for (auto&& [feat_id, _] : at_splits)
-    //    {
-    //        feat_ids_.push_back(feat_id);
-    //        max_feat_id = std::max(max_feat_id, feat_id);
-    //    }
-
-    //    std::sort(feat_ids_.begin(), feat_ids_.end());
-
-    //    id_map_.resize(max_feat_id+1, UNUSED_ID);
-    //    is_real_.resize(max_feat_id+1, false);
-    //    for (auto feat_id : feat_ids_)
-    //    {
-    //        id_map_[feat_id] = ++max_id_;
-    //        auto split_values = at_splits.find(feat_id);
-    //        if (split_values == at_splits.end())
-    //            throw std::runtime_error("invalid state");
-    //        if (split_values->second.size() != 0) // split values => real split
-    //            is_real_[feat_id] = true;
-    //    }
-    //}
-
     FeatInfo::FeatInfo(
             const AddTree& at0,
             const AddTree& at1,
