@@ -26,6 +26,11 @@
 
 namespace treeck {
 
+    class DomainBox;
+    using BoxFilter = const std::function<bool(const DomainBox&)>&;
+    using FeatIdMapper = const std::function<int(FeatId)>&;
+
+
     class FeatInfo {
     public:
         const int UNUSED_ID = -1;
@@ -53,13 +58,10 @@ namespace treeck {
         bool is_instance0_id(int id) const;
 
         bool is_real(int id) const;
+
+        const std::vector<FeatId>& feat_ids0() const;
+        const std::vector<FeatId>& feat_ids1() const;
     };
-
-
-    class DomainBox;
-
-    using BoxFilter = const std::function<bool(const DomainBox&)>&;
-
 
     class DomainStore {
         using Block = std::vector<Domain>;
@@ -68,10 +70,10 @@ namespace treeck {
         size_t box_size_;
 
         Block& get_last_block();
+        void push_prototype_box(const FeatInfo& finfo);
 
     public:
-        DomainStore();
-        void push_prototype_box(const FeatInfo& finfo0, const FeatInfo& finfo1);
+        DomainStore(const FeatInfo& finfo);
         DomainBox push_box();
         DomainBox push_copy(const DomainBox& box);
     };
@@ -90,7 +92,7 @@ namespace treeck {
         const_iterator begin() const;
         const_iterator end() const;
 
-        void refine(Split split, bool is_left_child, const FeatInfo& fmap);
+        void refine(Split split, bool is_left_child, FeatIdMapper fmap);
 
         bool overlaps(const DomainBox& other) const;
         void combine(const DomainBox& other) const;
@@ -126,19 +128,20 @@ namespace treeck {
 
 
     class KPartiteGraph {
-        DomainStore store_;
-        FeatInfo finfo_;
+        DomainStore *store_;
         std::vector<IndependentSet> sets_;
         friend class KPartiteGraphOptimize;
 
     private:
         void fill_independence_set(IndependentSet& set,
-                AddTree::TreeT::CRef node);
+                AddTree::TreeT::CRef node,
+                FeatIdMapper fmap);
 
     public:
-        KPartiteGraph();
-        KPartiteGraph(const AddTree& addtree);
-        KPartiteGraph(const AddTree& addtree, FeatInfo fmap);
+        KPartiteGraph(DomainStore *store_);
+        //KPartiteGraph(DomainStore *store_, const AddTree& addtree);
+        KPartiteGraph(DomainStore *store_, const AddTree& addtree, FeatIdMapper fmap);
+        KPartiteGraph(DomainStore *store_, const AddTree& addtree, const FeatInfo& finfo, int instance);
 
         std::vector<IndependentSet>::const_iterator begin() const;
         std::vector<IndependentSet>::const_iterator end() const;
@@ -201,6 +204,7 @@ namespace treeck {
 
 
     class KPartiteGraphOptimize {
+        DomainStore *store_;
         two_of<const KPartiteGraph&> graph_; // <0> minimize, <1> maximize
 
         // a vector ordered as a pq containing "partial" cliques (no max-cliques)
@@ -234,9 +238,10 @@ namespace treeck {
         std::vector<Solution> solutions;
 
     public:
-        KPartiteGraphOptimize(KPartiteGraph& g0); // minimize g0
-        KPartiteGraphOptimize(bool maximize, KPartiteGraph& g1); // maximize g1
+        //KPartiteGraphOptimize(KPartiteGraph& g0); // minimize g0
+        //KPartiteGraphOptimize(bool maximize, KPartiteGraph& g1); // maximize g1
         KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1); // minimize g0, maximize g1
+        KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1);
 
         bool step();
         bool step(BoxFilter bf);

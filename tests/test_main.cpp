@@ -1,3 +1,4 @@
+#include <functional>
 #include <iostream>
 #include "tree.h"
 #include "graph.h"
@@ -5,10 +6,8 @@
 
 using namespace treeck;
 
-int main()
+void test_simple()
 {
-    //auto file = "tests/models/xgb-calhouse-very-easy.json";
-    //std::shared_ptr<AddTree> at = std::make_shared<AddTree>(AddTree::from_json_file(file));
     AddTree at;
     AddTree::TreeT t;
     t.root().split(LtSplit(0, 1.24));
@@ -23,21 +22,34 @@ int main()
     t.root().right().set_leaf_value(1.0);
     at.add_tree(std::move(t));
 
-    ReuseFeatIdMapper fmap(at, at, {0}, true);
+    FeatInfo finfo(at, at, {}, true);
 
     std::cout << at << std::endl;
-    KPartiteGraph g0(at);
-    KPartiteGraph g1(at, fmap);
+    DomainStore store(finfo);
+    KPartiteGraph g0(&store, at, finfo, 0);
+    KPartiteGraph g1(&store, at, finfo, 1);
+    KPartiteGraphOptimize opt(g0, g1);
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
-    KPartiteGraphOptimize opt(g0, g1);
 
     auto box_filter = [](const DomainBox&) {
         return true;
     };
 
-    while (opt.step(box_filter, 0.0))
+    //while (opt.step(box_filter, 0.0))
+    while (opt.step())
     {
         std::cout << "================================ " << std::endl;
     }
+}
+
+void test_calhouse()
+{
+    //auto file = "tests/models/xgb-calhouse-very-easy.json";
+    //std::shared_ptr<AddTree> at = std::make_shared<AddTree>(AddTree::from_json_file(file));
+}
+
+int main()
+{
+    test_simple();
 }

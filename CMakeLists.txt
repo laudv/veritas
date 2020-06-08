@@ -33,11 +33,11 @@ if (BUILD_PYTHON_BINDINGS)
     #pybind11_add_module("py${PROJECT_NAME}" ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
     pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
     target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
-endif (BUILD_PYTHON_BINDINGS)
 
-# Use Ubuntu's z3 (libz3-dev) install
-#find_package(Z3 REQUIRED)
-target_link_libraries("py${PROJECT_NAME}" PRIVATE -lz3)
+    # Use Ubuntu's z3 (libz3-dev) install
+    #find_package(Z3 REQUIRED)
+    target_link_libraries("py${PROJECT_NAME}" PRIVATE -lz3)
+endif (BUILD_PYTHON_BINDINGS)
 
 if(MSVC)
     add_compile_options(/W4 /WX)
