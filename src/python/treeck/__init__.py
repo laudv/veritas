@@ -140,20 +140,25 @@ class AddTreeFeatureTypes:
             raise KeyError(f"unknown feat_id {feat_id}")
         return self._types[feat_id]
 
+def get_xvar_id_map(opt, instance):
+    feat_ids = opt.get_used_feat_ids()[instance]
+    return { opt.xvar_id(instance, fid) : fid for fid in feat_ids }
 
-def get_closest_instance(base_instance, doms, delta=1e-5):
+def get_closest_instance(xvar_id_map, base_instance, doms, delta=1e-5):
     instance = base_instance.copy()
-    for key, dom in doms.items():
+
+    for i, dom in enumerate(doms):
         assert isinstance(dom, RealDomain)
-        v = instance[key]
+        feat_id = xvar_id_map[i]
+        v = instance[feat_id]
         if dom.contains(v):
             continue # keep the value
 
         dist_lo = abs(dom.lo - v)
         dist_hi = abs(v - dom.hi)
         if dist_lo > dist_hi:
-            instance[key] = dom.hi - delta # hi is not included
+            instance[feat_id] = dom.hi - delta # hi is not included
         else:
-            instance[key] = dom.lo
+            instance[feat_id] = dom.lo
 
     return instance

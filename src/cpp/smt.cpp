@@ -5,11 +5,10 @@
 namespace treeck {
 
     Solver::Solver(
+            const FeatInfo* finfo,
             const AddTree& at0,
-            const AddTree& at1,
-            std::unordered_set<FeatId> matches,
-            bool match_is_reuse)
-        : finfo_{at0, at1, matches, match_is_reuse}
+            const AddTree& at1)
+        : finfo_{finfo}
         , ctx_{}
         , solver_{ctx_}
     {
@@ -126,17 +125,11 @@ namespace treeck {
         solver_.from_string(ss.str().c_str());
     }
 
-    const FeatInfo&
-    Solver::finfo() const
-    {
-        return finfo_;
-    }
-
     std::string
     Solver::var_name(int instance, FeatId feat_id) const
     {
-        int id = finfo_.get_id(instance, feat_id);
-        if (instance != 0 && finfo_.is_instance0_id(id))
+        int id = finfo_->get_id(instance, feat_id);
+        if (instance != 0 && finfo_->is_instance0_id(id))
         {
             std::cout << "WARNING! reusing " << instance << ", " << feat_id
                 << '(' << id << ')' << std::endl;
@@ -152,7 +145,7 @@ namespace treeck {
     int
     Solver::xvar_id(int instance, FeatId feat_id) const
     {
-        return finfo_.get_id(instance, feat_id);
+        return finfo_->get_id(instance, feat_id);
     }
 
     void
@@ -213,34 +206,33 @@ namespace treeck {
     }
 
     z3::expr
-    Solver::domain_to_z3(int id, const Domain& dom)
+    Solver::domain_to_z3(int id, const RealDomain& d)
     {
-        return visit_domain(
-            [this, id](const RealDomain& d) -> z3::expr {
-                const z3::expr& xvar = xvar_by_id(id);
-                if (!xvar.is_real())
-                    throw std::runtime_error("RealDomain for non-real variable");
-                if (!d.lo_is_inf() && !d.hi_is_inf())
-                    return (float_to_z3(d.lo) <= xvar) && (xvar < float_to_z3(d.hi));
-                if (!d.lo_is_inf())
-                    return float_to_z3(d.lo) <= xvar;
-                if (!d.hi_is_inf())
-                    return xvar < float_to_z3(d.hi);
-                else
-                    throw std::runtime_error("unconstrained real domain");
-            },
-            [this, id](const BoolDomain& d) -> z3::expr {
-                const z3::expr& xvar = xvar_by_id(id);
-                if (!xvar.is_bool())
-                    throw std::runtime_error("BoolDomain for non-bool variable");
-                if (d.is_true())
-                    return xvar;
-                else if (d.is_false())
-                    return !xvar;
-                else
-                    throw std::runtime_error("unconstrained bool domain");
-            },
-            dom);
+        const z3::expr& xvar = xvar_by_id(id);
+        if (!xvar.is_real())
+            throw std::runtime_error("RealDomain for non-real variable");
+        if (!d.lo_is_inf() && !d.hi_is_inf())
+            return (float_to_z3(d.lo) <= xvar) && (xvar < float_to_z3(d.hi));
+        if (!d.lo_is_inf())
+            return float_to_z3(d.lo) <= xvar;
+        if (!d.hi_is_inf())
+            return xvar < float_to_z3(d.hi);
+        else
+            throw std::runtime_error("unconstrained real domain");
+    }
+
+    z3::expr
+    Solver::domain_to_z3(int id, const BoolDomain& d)
+    {
+        const z3::expr& xvar = xvar_by_id(id);
+        if (!xvar.is_bool())
+            throw std::runtime_error("BoolDomain for non-bool variable");
+        if (d.is_true())
+            return xvar;
+        else if (d.is_false())
+            return !xvar;
+        else
+            throw std::runtime_error("unconstrained bool domain");
     }
 
     template <typename I>
@@ -253,23 +245,31 @@ namespace treeck {
         int id;
         Domain dom;
 
-        std::tie(id, dom) = *(begin++);
-        z3::expr e = domain_to_z3(id, dom);
+        //std::tie(id, dom) = *(begin++);
+        //z3::expr e = domain_to_z3(id, dom);
 
-        for (; begin != end; ++begin)
+        //for (; begin != end; ++begin)
+        //{
+        //    std::tie(id, dom) = *begin;
+        //    e = e && domain_to_z3(id, dom);
+        //}
+        //
+        z3::expr e = ctx_.bool_val(true);
+        for (int id = 0; begin != end; ++begin, ++id)
         {
-            std::tie(id, dom) = *begin;
-            e = e && domain_to_z3(id, dom);
+            visit_domain(
+                [this, &e, id](const RealDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
+                [this, &e, id](const BoolDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
+                *begin);
         }
-
         return e;
     }
 
     template
     z3::expr
     Solver::domains_to_z3(
-            std::vector<std::pair<int, Domain>>::const_iterator begin,
-            std::vector<std::pair<int, Domain>>::const_iterator end);
+            DomainBox::const_iterator begin,
+            DomainBox::const_iterator end);
 
     bool
     Solver::check(z3::expr& e)

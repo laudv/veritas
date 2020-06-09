@@ -256,8 +256,8 @@ PYBIND11_MODULE(pytreeck, m) {
     */
 
     struct Optimizer {
-        enum { MINIMIZE, MAXIMIZE, MINMAX } setting;
-
+        std::shared_ptr<FeatInfo> finfo;
+        std::shared_ptr<DomainStore> store;
         std::shared_ptr<Solver> solver;
         std::shared_ptr<AddTree> at0;
         std::shared_ptr<AddTree> at1;
@@ -265,89 +265,65 @@ PYBIND11_MODULE(pytreeck, m) {
         std::shared_ptr<KPartiteGraph> g1;
         std::shared_ptr<KPartiteGraphOptimize> opt;
 
-        bool is_smt_enabled;
+        Optimizer()
+            : finfo{}, solver{}, at0{}, at1{}, g0{}, g1{}, opt{}
+        {
+            at0 = std::make_shared<AddTree>(); // dummy addtree
+            at1 = std::make_shared<AddTree>(); // dummy addtree
+        }
+
+        void initialize_opt(std::unordered_set<FeatId> matches, bool match_is_reuse) {
+            finfo = std::make_shared<FeatInfo>(*at0, *at1, matches, match_is_reuse);
+            store = std::make_shared<DomainStore>(*finfo);
+            g0 = std::make_shared<KPartiteGraph>(&*store, *at0, *finfo, 0);
+            g1 = std::make_shared<KPartiteGraph>(&*store, *at1, *finfo, 1);
+            reset_opt();
+        }
 
         void reset_opt() {
-            if (setting == MINIMIZE)
-            {
-                opt = std::make_shared<KPartiteGraphOptimize>(*g0);
-            }
-            else if (setting == MAXIMIZE)
-            {
-                opt = std::make_shared<KPartiteGraphOptimize>(true, *g1);
-            }
-            else if (setting == MINMAX)
-            {
-                opt = std::make_shared<KPartiteGraphOptimize>(*g0, *g1);
-            }
+            opt = std::make_shared<KPartiteGraphOptimize>(&*store, *g0, *g1);
         }
     };
 
     py::class_<Optimizer>(m, "Optimizer")
-        .def(py::init<>([](std::shared_ptr<AddTree> at, py::kwargs kwargs) -> Optimizer {
-            bool minimize = true;
+        .def(py::init<>([](py::kwargs kwargs) -> Optimizer {
+            Optimizer opt;
+
             if (kwargs.contains("minimize"))
-                minimize = kwargs["minimize"].cast<bool>();
+                opt.at0 = std::make_shared<AddTree>(kwargs["minimize"].cast<AddTree>());
             if (kwargs.contains("maximize"))
-                minimize = !kwargs["maximize"].cast<bool>();
+                opt.at1 = std::make_shared<AddTree>(kwargs["maximize"].cast<AddTree>());
 
-            //std::cout << "minimize " << minimize << std::endl;
-            std::unordered_set<int> matches;
+            std::unordered_set<FeatId> matches;
+            bool match_is_reuse = true;
+            if (kwargs.contains("matches"))
+                matches = kwargs["matches"].cast<std::unordered_set<FeatId>>();
+            if (kwargs.contains("match_is_reuse"))
+                match_is_reuse = kwargs["match_is_reuse"].cast<bool>();
 
-            if (minimize)
-            {
-                Optimizer opt{
-                    Optimizer::MINIMIZE,
-                    std::make_shared<Solver>(*at, DUMMY_ADDTREE, matches, true),
-                    at,
-                    std::make_shared<AddTree>(),
-                    std::make_shared<KPartiteGraph>(*at),
-                    std::make_shared<KPartiteGraph>(),
-                    {},
-                    false,
-                };
-                opt.reset_opt();
-                return opt;
-            }
-            else
-            {
-                Optimizer opt{
-                    Optimizer::MAXIMIZE,
-                    std::make_shared<Solver>(DUMMY_ADDTREE, *at, matches, true),
-                    std::make_shared<AddTree>(),
-                    at,
-                    std::make_shared<KPartiteGraph>(),
-                    std::make_shared<KPartiteGraph>(*at),
-                    {},
-                    false,
-                };
-                opt.reset_opt();
-                return opt;
-            }
-        }))
-        .def(py::init<>([](
-                        std::shared_ptr<AddTree> at0,
-                        std::shared_ptr<AddTree> at1,
-                        const std::unordered_set<FeatId>& matches,
-                        bool match_is_reuse
-                        ) -> Optimizer {
-            Optimizer opt {
-                Optimizer::MINMAX,
-                std::make_shared<Solver>(*at0, *at1, matches, match_is_reuse),
-                at0,
-                at1,
-                std::make_shared<KPartiteGraph>(*at0),
-                {},
-                {},
-                false,
-            };
-            opt.g1 = std::make_shared<KPartiteGraph>(*at1, opt.solver->fmap());
-            opt.reset_opt();
+            opt.initialize_opt(matches, match_is_reuse);
             return opt;
         }))
+        .def("enable_smt", [](Optimizer& opt) {
+            opt.solver = std::make_shared<Solver>(&*opt.finfo, *opt.at0, *opt.at1);
+        })
+        .def("set_smt_program", [](Optimizer& opt, const char *smt) {
+            if (!opt.solver)
+                throw std::runtime_error("smt not enabled");
+            opt.solver->parse_smt(smt);
+            std::cout << opt.solver->get_z3() << std::endl;
+        })
+        .def("disable_smt", [](Optimizer& opt) {
+            if (opt.solver)
+            {
+                //opt.solver->get_z3().reset();
+                opt.solver.reset();
+            }
+        })
         .def("__str__", [](const Optimizer& opt) {
             std::stringstream ss;
-            ss << "==== Z3 state: " << std::endl << opt.solver->get_z3() << std::endl;
+            if (opt.solver)
+                ss << "==== Z3 state: " << std::endl << opt.solver->get_z3() << std::endl;
             if (opt.g0)
                 ss << std::endl << "==== KPartiteGraph 0 (minimized):" << std::endl
                    << *opt.g0 << std::endl;
@@ -356,31 +332,15 @@ PYBIND11_MODULE(pytreeck, m) {
                    << *opt.g1 << std::endl;
             return ss.str();
         })
-        .def("set_smt_program", [](Optimizer& opt, const char *smt) {
-            opt.solver->parse_smt(smt);
-            opt.is_smt_enabled = true;
-            //std::cout << opt.solver->get_z3() << std::endl;
-        })
-        .def("reset_smt_program", [](Optimizer& opt) {
-            opt.solver->get_z3().reset();
-            opt.is_smt_enabled = false;
-        })
-        .def("propagate_outputs", [](Optimizer& opt, int instance) {
-            if (instance == 0)
-                return opt.g0->propagate_outputs();
-            else
-                return opt.g1->propagate_outputs();
-        })
-        .def("merge", [](Optimizer& opt, int K, int instance) {
-            instance += 1;
-            if ((instance & 0b1) != 0)
-                opt.g0->merge(K);
-            if ((instance & 0b10) != 0)
-                opt.g1->merge(K);
+        .def("merge", [](Optimizer& opt, int K) {
+            opt.g0->merge(K);
+            opt.g1->merge(K);
             opt.reset_opt();
-        }, py::arg("K")=2, py::arg("instance")=0b10)
-        .def("prune", [](Optimizer& opt, int instance) {
-            instance += 1;
+        })
+        .def("prune", [](Optimizer& opt) {
+            if (!opt.solver)
+                throw std::runtime_error("smt not enabled");
+
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
                 bool res = opt.solver->check(e);
@@ -388,16 +348,13 @@ PYBIND11_MODULE(pytreeck, m) {
                 return res;
             };
 
-            if ((instance & 0b1) != 0)
-                opt.g0->prune(f);
-            if ((instance & 0b10) != 0)
-                opt.g1->prune(f);
-
+            opt.g0->prune(f);
+            opt.g1->prune(f);
             opt.reset_opt();
-        }, py::arg("instance") = 0b10)
+        })
         .def("prune", [](Optimizer& opt, int instance, const py::list& example, FloatT eps) {
             instance += 1;
-            DomainBox b;
+            DomainBox b = opt.store->push_box();
             FeatId feat_id = 0;
             for (const py::handle& o : example) // inf norm at most eps around given example
             {
@@ -414,14 +371,8 @@ PYBIND11_MODULE(pytreeck, m) {
                 return box.overlaps(b);
             };
 
-            if ((instance & 0b1) != 0)
-                opt.g0->prune(f);
-            if ((instance & 0b10) != 0)
-                opt.g1->prune(f);
-
-            opt.reset_opt();
-        })
-        .def("reset_opt", [](Optimizer& opt) {
+            opt.g0->prune(f);
+            opt.g1->prune(f);
             opt.reset_opt();
         })
         .def("num_independent_sets", [](const Optimizer& opt, int instance) {
@@ -440,55 +391,26 @@ PYBIND11_MODULE(pytreeck, m) {
             return opt.g1->num_vertices_in_set(indep_set);
         })
         .def("get_used_feat_ids", [](Optimizer& opt) {
-            return py::make_tuple(opt.solver->fmap().get_used_feat_ids(0),
-                    opt.solver->fmap().get_used_feat_ids(1));
-        })
-        .def("is_feat_id_used", [](Optimizer& opt, int instance, FeatId feat_id) {
-            return opt.solver->fmap().is_feat_id_used(instance, feat_id);
+            return py::make_tuple(opt.finfo->feat_ids0(), opt.finfo->feat_ids1());
         })
         .def("xvar", [](Optimizer& opt, int instance, FeatId feat_id) {
+            if (!opt.solver)
+                throw std::runtime_error("smt not enabled");
             return opt.solver->xvar_name(instance, feat_id);
         })
-        .def("xvar_id", [](Optimizer& opt, int instance, FeatId feat_id) {
-            return opt.solver->xvar_id(instance, feat_id);
+        .def("xvar_id", [](const Optimizer& opt, int instance, FeatId feat_id) {
+            return opt.finfo->get_id(instance, feat_id);
         })
-        .def("step", [](Optimizer& opt, int nsteps, FloatT arg0, py::object arg1) {
-            auto f = [opt](const DomainBox& box) {
-                z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
-                bool res = opt.solver->check(e);
-                //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
-                //std::cout << opt.solver->get_z3() << std::endl;
-                return res;
-            };
-            auto f_noz3 = [](const DomainBox& box) { return true; };
-            if (arg1.is_none())
-            {
-                FloatT min_output_difference = arg0;
-                if (opt.is_smt_enabled)
-                    return opt.opt->steps(nsteps, f, min_output_difference);
-                else
-                    return opt.opt->steps(nsteps, f_noz3, min_output_difference);
-            }
-            else
-            {
-                FloatT max_output0 = arg0;
-                FloatT min_output1 = arg1.cast<FloatT>();
-                if (opt.is_smt_enabled)
-                    return opt.opt->steps(nsteps, f, max_output0, min_output1);
-                else
-                    return opt.opt->steps(nsteps, f_noz3, max_output0, min_output1);
-            }
-        }, py::arg("nsteps")=1, py::arg("arg0")=0.0, py::arg("arg1")=py::none())
-        .def("num_solutions", [](Optimizer& opt) {
+        .def("num_solutions", [](const Optimizer& opt) {
             return opt.opt->solutions.size();
         })
-        .def("solutions", [](Optimizer& opt) {
+        .def("solutions", [](const Optimizer& opt) {
             py::list l;
             for (auto& sol : opt.opt->solutions)
             {
-                py::dict b;
-                for (auto &d : sol.box)
-                    b[py::int_(d.first)] = d.second;
+                py::list b;
+                for (const auto &d : sol.box)
+                    b.append(d);
                 l.append(py::make_tuple(sol.output0, sol.output1, b));
             }
             return l;
@@ -498,81 +420,42 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("nrejected", [](Optimizer& opt) { return opt.opt->nrejected; })
         .def("nbox_filter_calls", [](Optimizer& opt) { return opt.opt->nbox_filter_calls; })
         .def("current_bounds", [](Optimizer& opt) { return opt.opt->current_bounds(); })
-        .def("num_candidate_cliques", [](Optimizer& opt) { return opt.opt->num_candidate_cliques(); });
-
-
-    /*
-    py::class_<KPartiteGraph, std::shared_ptr<KPartiteGraph>>(m, "KPartiteGraph")
-        .def(py::init<>([](std::shared_ptr<AddTree> at) {
-            ReuseIdMapper fmap(*at, {1}, false);
-            return KPartiteGraph(*at, fmap);
-        }))
-        .def("propagate_outputs", &KPartiteGraph::propagate_outputs)
-        .def("merge", &KPartiteGraph::merge)
-        .def("prune", [](KPartiteGraph& graph, const char* smt) {
-            z3::context ctx;
-            z3::solver sol(ctx);
-            std::cout << "string " << smt << std::endl;
-            sol.from_string(smt);
-
-            std::cout << "solver: " << sol << std::endl;
-
-            auto f = [&ctx, &sol](const DomainBox& box) -> bool {
-                for (auto&& [feat_id, dom] : box)
-                {
-                    if (feat_id == 2)
-                        return true;
-                }
-                std::cout << "check() " << sol.check() << std::endl;
-                return sol.check() == z3::unsat;
+        .def("num_candidate_cliques", [](Optimizer& opt) { return opt.opt->num_candidate_cliques(); })
+        .def("step", [](Optimizer& opt, int nsteps, py::kwargs kwargs) {
+            auto f = [opt](const DomainBox& box) {
+                z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
+                bool res = opt.solver->check(e);
+                //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
+                //std::cout << opt.solver->get_z3() << std::endl;
+                return res;
             };
-
-            graph.prune(f);
+            auto f_noz3 = [](const DomainBox& box) { return true; };
+            if (kwargs.contains("min_output_difference"))
+            {
+                FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
+                std::cout << "step " << nsteps << " with min_output_difference " << min_output_difference << std::endl;
+                if (opt.solver)
+                    return opt.opt->steps(nsteps, f, min_output_difference);
+                else
+                    return opt.opt->steps(nsteps, f_noz3, min_output_difference);
+            }
+            else
+            {
+                FloatT max_output0 = std::numeric_limits<FloatT>::infinity();
+                FloatT min_output1 = -std::numeric_limits<FloatT>::infinity();
+                if (kwargs.contains("max_output"))
+                    max_output0 = kwargs["max_output"].cast<FloatT>();
+                if (kwargs.contains("min_output"))
+                    min_output1 = kwargs["min_output"].cast<FloatT>();
+                std::cout << "step " << nsteps << " with max "
+                    << max_output0 << " and min "
+                    << min_output1 << std::endl;
+                if (opt.solver)
+                    return opt.opt->steps(nsteps, f, max_output0, min_output1);
+                else
+                    return opt.opt->steps(nsteps, f_noz3, max_output0, min_output1);
+            }
         })
-        .def("num_vertices", &KPartiteGraph::num_vertices)
-        .def("num_independent_sets", &KPartiteGraph::num_independent_sets)
-        .def_static("test", []() {
-            AddTree at;
-            AddTree::TreeT tree;
-            tree.root().split(LtSplit(0, 12.4));
-            tree.root().left().split(BoolSplit(1));
-            at.add_tree(std::move(tree));
-
-            std::cout << "test tree: " << at << std::endl;
-
-            Solver s{at, at, {1}, true};
-
-            Domain d = RealDomain(-1.0, FloatT(2.30));
-            std::cout << s.domain_to_z3(0, d) << std::endl;
-            Domain d1 = RealDomain(-2.0, FloatT(2.0));
-            std::cout << s.domain_to_z3(0, d1) << std::endl;
-            Domain d2 = BoolDomain(false);
-            std::cout << s.domain_to_z3(1, d2) << std::endl;
-            std::cout << s.domain_to_z3(s.xvar_id(0, 1), d2) << std::endl;
-        })
-        .def("__repr__", [](KPartiteGraph& g) { return tostr(g); });
-
-#define DeclareKPartiteGraphFind(TYPE) \
-    py::class_<TYPE>(m, #TYPE) \
-        .def(py::init<>([](std::shared_ptr<KPartiteGraph> graph) { \
-            return TYPE(*graph);\
-        }))\
-        .def("step", &TYPE::step)\
-        .def("steps", &TYPE::steps)\
-        .def_readonly("nsteps", &TYPE::nsteps)\
-        .def_readonly("nupdate_fails", &TYPE::nupdate_fails)\
-        .def_readonly("nrejected", &TYPE::nrejected)\
-        .def("current_output_estimate", &TYPE::current_output_estimate)\
-        .def("solutions", [](const TYPE& g) {\
-            std::vector<std::pair<FloatT, std::vector<std::pair<int, Domain>>>> solutions;\
-            for (const auto& s : g.solutions())\
-                solutions.push_back({s.output, std::vector<std::pair<int, Domain>>(s.box.begin(), s.box.end())});\
-            return solutions;\
-        })
-
-    DeclareKPartiteGraphFind(MaxKPartiteGraphFind);
-    DeclareKPartiteGraphFind(MinKPartiteGraphFind);
-
-    */
+        ;
 
 } /* PYBIND11_MODULE */

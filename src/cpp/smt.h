@@ -17,7 +17,7 @@
 namespace treeck {
 
     class Solver  {
-        FeatInfo finfo_;
+        const FeatInfo *finfo_;
         z3::context ctx_;
         z3::solver solver_;
 
@@ -39,15 +39,11 @@ namespace treeck {
 
     public:
         //Solver(const AddTree& at);
-        Solver(const AddTree& at0, const AddTree& at1,
-                std::unordered_set<FeatId> matches,
-                bool match_is_reuse);
+        Solver(const FeatInfo *finfo, const AddTree& at0, const AddTree& at1);
 
         z3::solver& get_z3();
         z3::context& get_z3_ctx();
         void parse_smt(const char *smt);
-
-        const FeatInfo& finfo() const;
 
         z3::expr& float_to_z3(FloatT value);
 
@@ -56,7 +52,8 @@ namespace treeck {
         z3::expr& xvar_by_id(int id);
         z3::expr& xvar(int instance, FeatId feat_id);
 
-        z3::expr domain_to_z3(int id, const Domain& dom);
+        z3::expr domain_to_z3(int id, const RealDomain& dom);
+        z3::expr domain_to_z3(int id, const BoolDomain& dom);
 
         template <typename I>
         z3::expr domains_to_z3(I begin, I end);

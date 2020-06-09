@@ -134,7 +134,7 @@ namespace treeck {
     bool
     FeatInfo::is_real(int id) const
     {
-        return is_real_[id];
+        return is_real_.at(id);
     }
 
     const std::vector<FeatId>&
@@ -151,7 +151,7 @@ namespace treeck {
 
 
 
-
+    const size_t DOMAIN_STORE_MAX_MEM = 4294967296; // 4GB
 
     DomainStore::DomainStore(const FeatInfo& finfo)
         : store_{}, box_size_(0)
@@ -170,12 +170,22 @@ namespace treeck {
         Block& block = store_.back();
         if (block.capacity() - block.size() < box_size_)
         {
+            size_t mem = block.size() * 2 * sizeof(Domain);
+            for (const Block& b : store_)
+                mem += b.size() * sizeof(Domain);
+
+            if (mem > DOMAIN_STORE_MAX_MEM)
+                throw std::runtime_error("DomainStore: out of memory");
+
             Block new_block;
             new_block.reserve(block.size() * 2);
             store_.push_back(std::move(new_block));
-            block = store_.back();
+
+            std::cout << "DomainStore memory: " << mem << " bytes, "
+                << (static_cast<double>(mem) / (1024.0 * 1024.0)) << " mb ("
+                << store_.size() << " blocks)" << std::endl;
         }
-        return block;
+        return store_.back();
     }
 
     void
@@ -193,8 +203,8 @@ namespace treeck {
             int id = finfo.get_id(0, feat_id);
             if (id != block.size()) throw std::runtime_error("invalid state");
 
-            if (finfo.is_real(feat_id)) block.push_back(RealDomain{});
-            else                        block.push_back(BoolDomain{});
+            if (finfo.is_real(id)) block.push_back(RealDomain{});
+            else                   block.push_back(BoolDomain{});
         }
 
         // push domains for instance1
@@ -204,8 +214,8 @@ namespace treeck {
             if (finfo.is_instance0_id(id)) continue;
             if (id != block.size()) throw std::runtime_error("invalid state");
 
-            if (finfo.is_real(feat_id)) block.push_back(RealDomain{});
-            else                        block.push_back(BoolDomain{});
+            if (finfo.is_real(id)) block.push_back(RealDomain{});
+            else                   block.push_back(BoolDomain{});
         }
     }
 
@@ -258,49 +268,9 @@ namespace treeck {
         return end_ - begin_;
     }
 
-    //std::vector<std::pair<int, Domain>>::const_iterator
-    //DomainBox::find(int id) const
-    //{
-    //    return std::find_if(domains_.cbegin(), domains_.cend(), 
-    //            [id](const std::pair<int, Domain>& arg) {
-    //        return arg.first == id;
-    //    });
-    //}
-
-    //std::vector<std::pair<int, Domain>>::iterator
-    //DomainBox::find(int id)
-    //{
-    //    return std::find_if(domains_.begin(), domains_.end(), 
-    //            [id](std::pair<int, Domain>& arg) {
-    //        return arg.first == id;
-    //    });
-    //}
-
     void
     DomainBox::refine(Split split, bool is_left_child, FeatIdMapper fmap)
     {
-        //visit_split(
-        //        [this, &fmap, is_left_child](const LtSplit& s) {
-        //            int id = fmap(s.feat_id);
-        //            auto p = find(id);
-        //            if (p == end()) {
-        //                domains_.push_back({id, refine_domain({}, s, is_left_child)});
-        //            } else {
-        //                RealDomain dom = util::get_or<RealDomain>(p->second);
-        //                p->second = refine_domain(dom, s, is_left_child);
-        //            }
-        //        },
-        //        [this, &fmap, is_left_child](const BoolSplit& s) {
-        //            int id = fmap(s.feat_id);
-        //            auto p = find(id);
-        //            if (p == end()) {
-        //                domains_.push_back({id, refine_domain({}, s, is_left_child)});
-        //            } else {
-        //                BoolDomain dom = util::get_or<BoolDomain>(p->second);
-        //                p->second = refine_domain(dom, s, is_left_child);
-        //            }
-        //       },
-        //       split);
         visit_split(
                 [this, &fmap, is_left_child](const LtSplit& s) {
                     int id = fmap(s.feat_id);
@@ -316,14 +286,6 @@ namespace treeck {
                 },
                 split);
     }
-
-    //void
-    //DomainBox::sort()
-    //{
-    //    std::sort(domains_.begin(), domains_.end(), [](auto& p, auto& q) {
-    //        return p.first < q.first;
-    //    });
-    //}
 
     bool
     DomainBox::overlaps(const DomainBox& other) const
@@ -721,7 +683,7 @@ namespace treeck {
         //FloatT weight_b = diff_b + advantage_b;
 
         // -- favor deeper stuff at most X%, step by step
-        FloatT percentage = 0.01;
+        FloatT percentage = 0.0; //0.01;
         
         FloatT advantage_a = 1.0 + depth_a * percentage;
         FloatT advantage_b = 1.0 + depth_b * percentage;
@@ -965,7 +927,7 @@ namespace treeck {
         }
 
         // push old clique if it still has a valid extension
-        // we only need to update the current instance: box did not chane so
+        // we only need to update the current instance: box did not change so
         // other instance cannot be affected
         if (update_clique<instance>(c))
         {
@@ -987,99 +949,6 @@ namespace treeck {
         }
 
         std::get<instance>(nsteps)++;
-
-
-        //// Things to do (contd.):
-        //// 2. find how we can update the given clique (update_clique)
-        //// 2.1. if no update possible, then return false
-        //// 2.2. if update possible, push self to pq, and goto 3
-        //// 3. extend clique, and push to pq
-
-        //// can we extend the given clique?
-        //if (!update_clique<instance>(c))
-        //    return false;
-
-
-        //const KPartiteGraph& graph = std::get<instance>(graph_);
-        //const CliqueInstance& ci = std::get<instance>(c.instance);
-
-        //const Vertex& v = graph.sets_[ci.indep_set].vertices[ci.vertex];
-        //Clique new_c = {
-        //    c.box.combine(v.box), // box of the new clique
-        //    c.instance // copy 
-        //};
-
-        //// update graph vertex info of the updated instance
-        //CliqueInstance& new_ci = std::get<instance>(new_c.instance);
-        //new_ci.output += v.output;
-        //new_ci.output_bound = 
-
-        //// push new clique
-        //pq_push(std::move(new_c));
-
-        //// push `old` clique again, maybe there is another interesting extension
-        //pq_push(std::move(c));
-
-        //return true;
-
-        //// Things to do:
-        //// 2. construct new clique
-        //// 2.1. find new output_bound
-        //// 2.2. determine index of next vertex in next indep_set
-        //// 3. update the parent "clique"
-        //// 3.1. if no more expansions possible, remove from pq
-        //// 3.2. otherwise: update next vertex index
-        //// 3.3. and update output_bound
-
-        //short indep_set = std::get<instance>(c.indep_set);
-        //int vertex = std::get<instance>(c.vertex);
-        //const Vertex& v = std::get<instance>(graph_).sets_[indep_set].vertices[vertex];
-        //FloatT output = std::get<instance>(c.output);
-        //FloatT output_bound = std::get<instance>(c.output_bound);
-
-        //// 1. construct new clique
-        //two_of<FloatT> new_output = c.output;
-        //std::get<instance>(new_output) += v.output;
-
-        //two_of<short> new_indep_set = c.indep_set;
-        //std::get<instance>(new_indep_set) += 1;
-
-        //two_of<int> new_vertex = c.vertex;
-        //std::get<instance>(new_vertex) = -1;
-
-        //Clique new_c = {
-        //    c.box.combine(v.box), // the new box
-        //    new_output, // output of clique
-        //    c.output_bound, // to be updated by `update_clique`
-        //    new_indep_set, // we move one tree/indep.set further
-        //    new_vertex // next vertex to merge, to be updated by `update_clique` (must be a valid index)
-        //};
-
-        //// 3.1 update the "parent" clique, if no more update, don't add to cliques_ again
-        //if (update_clique<instance>(c))
-        //{
-        //    std::cout << "previous " << c << std::endl;
-        //    pq_push(std::move(c));
-        //}
-
-        //// 2.1 check if new clique is a solution, if not, set `vertex` and `output_bound` values
-        //if (is_solution(new_c))
-        //{
-        //    std::cout << "solution " << new_c << std::endl;
-        //    //solutions_.push_back(std::move(new_c));
-        //}
-        //else if (update_clique<instance>(new_c))
-        //{
-        //    std::cout << "update " << new_c << std::endl;
-        //    pq_push(std::move(new_c));
-        //}
-
-        ////std::cout << "STEP " << nsteps << " UPDATE " << old_est << " -> " << current_output_estimate()
-        ////    << " (#pq=" << pq_buf_.size()
-        ////    << ", #sol=" << solutions_.size() << ')'
-        ////    << std::endl;
-
-        //std::get<instance>(nsteps)++;
     }
 
     template <typename BF, typename OF>
@@ -1105,14 +974,14 @@ namespace treeck {
         bool is_solution0 = is_instance_solution<0>(c);
         bool is_solution1 = is_instance_solution<1>(c);
 
-        std::cout << "best clique " << c << std::endl;
+        //std::cout << '[' << cliques_.size() << "] " << "best clique " << c << std::endl;
 
         // move result to solutions if this is a solution
         if (is_solution0 && is_solution1)
         {
-            std::cout << "SOLUTION added "
-                << get0(c.instance).output << ", "
-                << get1(c.instance).output << std::endl;
+            //std::cout << "SOLUTION added "
+            //    << get0(c.instance).output << ", "
+            //    << get1(c.instance).output << std::endl;
             solutions.push_back({
                 std::move(c.box),
                 get0(c.instance).output,
@@ -1197,7 +1066,7 @@ namespace treeck {
     {
         for (int i=0; i<K; ++i)
             if (!step(bf, max_output0, min_output1)) return false;
-        //std::cout << "front: " << cliques_.front() << std::endl;
+        std::cout << "front: " << cliques_.front() << std::endl;
         return true;
     }
 
@@ -1233,209 +1102,4 @@ namespace treeck {
     {
         return cliques_.size();
     }
-    
-    /*
-
-    template <typename Cmp>
-    KPartiteGraphFind<Cmp>::KPartiteGraphFind(KPartiteGraph& graph)
-        : graph_(graph), nsteps(0), nupdate_fails(0), nrejected(0)
-    {
-        if constexpr (std::is_same_v<MaxKPartiteGraphFind, KPartiteGraphFind<Cmp>>)
-            graph.sort_desc(); // try vertices with greater output values first
-        else if constexpr (std::is_same_v<MinKPartiteGraphFind, KPartiteGraphFind<Cmp>>)
-            graph.sort_asc(); // try vertices with smaller output values first
-        else
-            static_assert(util::always_false<Cmp>::value, "invalid Cmp type"); 
-
-        auto&& [min, max] = graph.propagate_outputs();
-
-        FloatT output_estimate = 0.0;
-        if constexpr (std::is_same_v<MaxKPartiteGraphFind, KPartiteGraphFind<Cmp>>)
-            output_estimate = max;
-        else
-            output_estimate = min;
-
-        //if (graph.num_independent_sets() > 0)
-        //{
-        //    for (const auto& v0 : graph.sets_.back().vertices)
-        //    {
-        //        AnnotatedVertex v = {v0, merge_set, 0};
-        //        if (is_expandable(v))
-        //            pq_.push(std::move(v));
-        //    }
-        //}
-
-        if (graph.num_independent_sets() > 0)
-        {
-            int indep_set = 0; // join into the first tree
-            int vertex = 0; // the first vertex of the first indep.set
-
-            // push a dummy AnnotatedVertex
-            pq_push({
-                {}, // empty domain
-                0.0, // output
-                output_estimate,
-                indep_set,
-                vertex
-            });
-        }
-
-        std::cout << "THE GRAPH " << graph << std::endl;
-    }
-
-    template <typename Cmp>
-    Clique
-    KPartiteGraphFind<Cmp>::pq_pop()
-    {
-        std::pop_heap(pq_buf_.begin(), pq_buf_.end(), cmp_);
-        Clique c = std::move(pq_buf_.back());
-        pq_buf_.pop_back();
-        return c;
-    }
-
-    template <typename Cmp>
-    void
-    KPartiteGraphFind<Cmp>::pq_push(Clique&& c)
-    {
-        pq_buf_.push_back(std::move(c));
-        std::push_heap(pq_buf_.begin(), pq_buf_.end(), cmp_);
-    }
-
-    template <typename Cmp>
-    bool
-    KPartiteGraphFind<Cmp>::is_solution(const Clique& c) const
-    {
-        return c.indep_set == graph_.sets_.size();
-    }
-
-    template <typename Cmp>
-    bool
-    KPartiteGraphFind<Cmp>::update_clique(Clique& c)
-    {
-        // Things to do:
-        // 1. find next vertex in `indep_set`
-        // 2. update max_output (assume vertices in indep_set sorted)
-
-        const auto& set = graph_.sets_[c.indep_set].vertices;
-        for (int i = c.vertex + 1; i < set.size(); ++i)
-        {
-            const Vertex& v = set[i];
-            if (c.box.overlaps(v.box))
-            {
-                c.vertex = i;
-                if constexpr (std::is_same_v<MaxKPartiteGraphFind, KPartiteGraphFind<Cmp>>)
-                {
-                    //std::cout << "output update MAX: "
-                    //    << c.output_estimate
-                    //    << " -> "
-                    //    << v.max_output + c.output
-                    //    << std::endl;
-                    c.output_estimate = v.max_output + c.output;
-                }
-                else
-                {
-                    //std::cout << "output update MIN: "
-                    //    << c.output_estimate
-                    //    << " -> "
-                    //    << v.min_output + c.output
-                    //    << std::endl;
-                    c.output_estimate = v.min_output + c.output;
-                }
-                return true; // update successful!
-            }
-            else ++nupdate_fails;
-        }
-        return false; // out of compatible vertices in `c.indep_set`
-    }
-
-    template <typename Cmp>
-    bool
-    KPartiteGraphFind<Cmp>::step()
-    {
-        if (pq_buf_.empty())
-            return false;
-
-        // Things to do:
-        // 1. construct new clique
-        // 1.1. find new output_estimate
-        // 1.2. determine index of next vertex in next indep_set
-        // 2. update the parent "clique"
-        // 2.1. if no more expansions possible, remove from pq
-        // 2.2. otherwise: update next vertex index
-        // 2.3. and update output_estimate
-        
-        FloatT old_est = current_output_estimate();
-
-        Clique c = pq_pop();
-        const Vertex& v = graph_.sets_[c.indep_set].vertices[c.vertex];
-
-        // 1. construct new clique
-        Clique new_c = {
-            c.box.combine(v.box), // the new box
-            c.output + v.output, // output of clique
-            c.output_estimate, // to be updated by `update_clique`
-            c.indep_set + 1, // we move one tree/indep.set further
-            -1 // next vertex to merge, to be updated by `update_clique` (must be a valid index)
-        };
-
-        if (update_clique(c))
-        {
-            //std::cout << "previous " << c << std::endl;
-            pq_push(std::move(c));
-        }
-
-        if (is_solution(new_c))
-        {
-            //std::cout << "solution " << new_c << std::endl;
-            solutions_.push_back(std::move(new_c));
-        }
-        else if (update_clique(new_c))
-        {
-            //std::cout << "update " << new_c << std::endl;
-            pq_push(std::move(new_c));
-        }
-
-        std::cout << "STEP " << nsteps << " UPDATE " << old_est << " -> " << current_output_estimate()
-            << " (#pq=" << pq_buf_.size()
-            << ", #sol=" << solutions_.size() << ')'
-            << std::endl;
-
-        ++nsteps;
-        return true;
-    }
-
-    template <typename Cmp>
-    bool
-    KPartiteGraphFind<Cmp>::steps(int nsteps)
-    {
-        for (int i =0; i < nsteps; ++i)
-            if (!step()) return false;
-        return true;
-    }
-
-    template <typename Cmp>
-    FloatT
-    KPartiteGraphFind<Cmp>::current_output_estimate() const
-    {
-        if (pq_buf_.empty())
-            return std::numeric_limits<FloatT>::quiet_NaN();
-        return pq_buf_.front().output_estimate;
-    }
-
-    template <typename Cmp>
-    const std::vector<Clique>&
-    KPartiteGraphFind<Cmp>::solutions() const
-    {
-        return solutions_;
-    }
-
-    // manual template instantiations
-    template class KPartiteGraphFind<std::greater<Clique>>;
-    template class KPartiteGraphFind<std::less<Clique>>;
-
-    */
-
-
-
-
 } /* namespace treeck */
