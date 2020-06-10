@@ -129,7 +129,7 @@ class TestGraph(unittest.TestCase):
         self.assertFalse(not_done)
         self.assertEqual(opt.num_solutions(), 32);
         solutions_min = opt.solutions()
-        print(list(x[1] for x in solutions_min))
+        print("solutions_min", list(x[0] for x in solutions_min))
         self.assertTrue(all(x[0] <= y[0] for x, y in zip(solutions_min, solutions_min[1:]))) #sorted?
         min_solution = solutions_min[0]
         print(min_solution, m)
@@ -140,7 +140,7 @@ class TestGraph(unittest.TestCase):
         self.assertFalse(not_done)
         self.assertEqual(opt.num_solutions(), 32);
         solutions_max = opt.solutions()
-        print(list(x[1] for x in solutions_max))
+        print("solutions_max", list(x[1] for x in solutions_max))
         self.assertTrue(all(x[1] >= y[1] for x, y in zip(solutions_max, solutions_max[1:]))) #sorted?
         max_solution = solutions_max[0]
         print("max_solution:", max_solution, M)
@@ -224,9 +224,9 @@ class TestGraph(unittest.TestCase):
 #(assert (ite (< h 0) (> h -10) (< h 10)))
 #""")
         opt.set_smt_program(f"""
-(assert (> {opt.xvar(1, 0)} 80))
-(assert (> {opt.xvar(1, 1)} 20))
-(assert (< {opt.xvar(1, 1)} 50))
+(assert (> {opt.xvar(1, 0)} 90))
+(assert (> {opt.xvar(1, 1)} 50))
+(assert (< {opt.xvar(1, 1)} 70))
 """)
 
         current_bounds = [opt.current_bounds()]

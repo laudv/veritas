@@ -171,8 +171,10 @@ namespace treeck {
     using two_of = std::tuple<T, T>;
 
     struct CliqueInstance {
-        FloatT output;
-        FloatT output_bound;
+        FloatT output;              // A*'s g(clique_instance)
+        FloatT prev_bound;          // A*'s h(clique_instance)
+
+        FloatT output_bound(FloatT eps = 1.0) const; // g(clique_instance) + eps * h(clique_instance)
 
         short indep_set; // index of tree (= independent set in graph) to merge with
         int vertex;      // index of next vertex to merge from `indep_set` (must be a compatible one!)
@@ -182,12 +184,10 @@ namespace treeck {
         DomainBox box;
 
         two_of<CliqueInstance> instance;
-
-        //bool operator<(const Clique& other) const;
-        //bool operator>(const Clique& other) const;
     };
 
     struct CliqueMaxDiffPqCmp {
+        FloatT eps;
         bool operator()(const Clique&, const Clique&) const;
     };
 
@@ -243,6 +243,8 @@ namespace treeck {
         //KPartiteGraphOptimize(bool maximize, KPartiteGraph& g1); // maximize g1
         KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1); // minimize g0, maximize g1
         KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1);
+
+        void set_eps(FloatT eps);
 
         bool step();
         bool step(BoxFilter bf);

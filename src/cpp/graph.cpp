@@ -649,19 +649,11 @@ namespace treeck {
     template <typename T> static T& get1(two_of<T>& t) { return std::get<1>(t); }
     template <typename T> static const T& get1(const two_of<T>& t) { return std::get<1>(t); }
 
-    /*
-    bool
-    Clique::operator<(const Clique& other) const
+    FloatT
+    CliqueInstance::output_bound(FloatT eps) const
     {
-        return output_estimate < other.output_estimate;
+        return output + eps * prev_bound;
     }
-
-    bool
-    Clique::operator>(const Clique& other) const
-    {
-        return output_estimate > other.output_estimate;
-    }
-    */
 
     bool
     CliqueMaxDiffPqCmp::operator()(const Clique& a, const Clique& b) const
@@ -669,48 +661,24 @@ namespace treeck {
         int depth_a = get0(a.instance).indep_set + get1(a.instance).indep_set;
         int depth_b = get0(b.instance).indep_set + get1(b.instance).indep_set;
         
-        FloatT diff_a = get1(a.instance).output_bound - get0(a.instance).output_bound;
-        FloatT diff_b = get1(b.instance).output_bound - get0(b.instance).output_bound;
+        FloatT diff_a = get1(a.instance).output_bound(eps) - get0(a.instance).output_bound(eps);
+        FloatT diff_b = get1(b.instance).output_bound(eps) - get0(b.instance).output_bound(eps);
 
-        // -- depth first with heuristic per indep.set
-        //if (depth_a != depth_b)
-        //    return depth_a < depth_b;
-
-        //return diff_a < diff_b;
-
-        // -- favor deeper stuff more, but keep 'error' within precision
-        //FloatT precision = 0.0;
-
-        //FloatT advantage_a = static_cast<FloatT>(depth_a > depth_b) * precision;
-        //FloatT advantage_b = static_cast<FloatT>(depth_a < depth_b) * precision;
-
-        //FloatT weight_a = diff_a + advantage_a;
-        //FloatT weight_b = diff_b + advantage_b;
-
-        // -- favor deeper stuff at most X%, step by step
-        FloatT percentage = 0.0; //0.01;
-        
-        FloatT advantage_a = 1.0 + depth_a * percentage;
-        FloatT advantage_b = 1.0 + depth_b * percentage;
-
-        FloatT weight_a = diff_a * advantage_a;
-        FloatT weight_b = diff_b * advantage_b;
-
-        return weight_a < weight_b;
+        return diff_a < diff_b;
     }
 
     std::ostream&
     operator<<(std::ostream& s, const CliqueInstance& ci)
     {
         return s
-            << "    output=" << ci.output << ", bound=" << ci.output_bound << ", " << std::endl
+            << "    output=" << ci.output << ", bound=" << ci.output_bound() << ", " << std::endl
             << "    indep_set=" << ci.indep_set << ", vertex=" << ci.vertex;
     }
 
     std::ostream&
     operator<<(std::ostream& s, const Clique& c)
     {
-        FloatT diff = get1(c.instance).output_bound - get0(c.instance).output_bound;
+        FloatT diff = get1(c.instance).output_bound() - get0(c.instance).output_bound();
         return s 
             << "Clique { " << std::endl
             << "  box=" << c.box << std::endl
@@ -744,7 +712,7 @@ namespace treeck {
         : store_(store)
         , graph_{g0, g1} // minimize g0, maximize g1
         , cliques_()
-        , cmp_()
+        , cmp_{1.0}
         , solutions()
         , nsteps{0, 0}
         , nupdate_fails{0}
@@ -828,13 +796,14 @@ namespace treeck {
                 ci.vertex = i;
 
                 // reuse dynamic programming value (propagate_outputs) to update bound
-                FloatT prev_bound;
+                // the bound for the current clique instance is ci.output + ci.prev_bound
+                // we store the components separately so we can relax A*'s heuristic:
+                //      f(c) = g(c) + eps * h(c)
+                //      with g(c) = ci.output
+                //           h(c) = ci.prev_bound
                 if constexpr (instance==0)
-                    prev_bound = v.min_bound;  // minimize instance 0
-                else prev_bound = v.max_bound; // maximize instance 1
-
-                // update bound
-                ci.output_bound = prev_bound + ci.output;
+                    ci.prev_bound = v.min_bound;  // minimize instance 0
+                else ci.prev_bound = v.max_bound; // maximize instance 1
 
                 return true; // update successful!
             }
@@ -878,6 +847,7 @@ namespace treeck {
         new_ci.output += v.output; // output of clique is previous output + output of newly merged vertex
         new_ci.indep_set += 1;
         new_ci.vertex = 0; // start from beginning in new `indep_set` (= tree)
+        new_ci.prev_bound = 0.0; // if not a solution, will be set by update_clique
 
         // UPDATE OLD
         // push old clique if it still has a valid extension
@@ -887,7 +857,10 @@ namespace treeck {
         {
             // if the output filter rejects this, then no more valid expansions
             // of `c` exist (outputs will only get worse)
-            if (output_filter(get0(c.instance).output_bound, get1(c.instance).output_bound))
+            bool is_valid_output = output_filter(
+                    get0(c.instance).output_bound(),
+                    get1(c.instance).output_bound());
+            if (is_valid_output)
             {
                 //std::cout << "push old again: " << c << std::endl;
                 pq_push(std::move(c));
@@ -950,8 +923,8 @@ namespace treeck {
             bool is_valid1 = is_solution1 || update_clique<1>(new_c);
             bool is_valid_box = box_filter(new_c.box);
             bool is_valid_output = output_filter(
-                    get0(new_c.instance).output_bound,
-                    get1(new_c.instance).output_bound);
+                    get0(new_c.instance).output_bound(),
+                    get1(new_c.instance).output_bound());
 
             ++nbox_filter_calls;
 
@@ -1029,6 +1002,12 @@ namespace treeck {
         return true;
     }
 
+    void
+    KPartiteGraphOptimize::set_eps(FloatT eps)
+    {
+        cmp_.eps = eps;
+    }
+
     bool
     KPartiteGraphOptimize::step()
     {
@@ -1062,7 +1041,7 @@ namespace treeck {
         return step_aux(
                 [&bf](const DomainBox& box) { return bf(box); },
                 [min_output_difference](FloatT output0, FloatT output1) {
-                    return (output1 - output0) > min_output_difference;
+                    return (output1 - output0) >= min_output_difference;
                 });
     }
 
@@ -1113,8 +1092,8 @@ namespace treeck {
         }
         const Clique& c = cliques_.front();
         return {
-            get0(c.instance).output_bound,
-            get1(c.instance).output_bound
+            get0(c.instance).output_bound(),
+            get1(c.instance).output_bound()
         };
     }
 
