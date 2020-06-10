@@ -88,6 +88,7 @@ namespace treeck {
 
     public:
         DomainBox(Domain *begin, Domain *end);
+        static DomainBox null_box();
 
         const_iterator begin() const;
         const_iterator end() const;

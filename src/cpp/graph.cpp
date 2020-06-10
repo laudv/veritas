@@ -250,6 +250,11 @@ namespace treeck {
 
     DomainBox::DomainBox(Domain *b, Domain *e) : begin_(b), end_(e) { }
 
+    DomainBox
+    DomainBox::null_box() {
+        return DomainBox(nullptr, nullptr);
+    }
+
     DomainBox::const_iterator
     DomainBox::begin() const
     {
@@ -846,7 +851,8 @@ namespace treeck {
         //
         // Things to do (contd.):
         // 3. construct the new clique by merging another vertex from the selected graph
-        // 4. [update new] check whether we can extend further later (all cliques in
+        // 4. [update old] update active instance of given clique `c`, add again if still extendible
+        // 5. [update new] check whether we can extend further later (all cliques in
         //    `cliques_` must be extendible)
         //    possible states are (solution=all trees contributed a value
         //                         extendible=valid `indep_set` & `vertex` values exist
@@ -854,25 +860,62 @@ namespace treeck {
         //      - solution      extendible
         //      - extendible    solution
         //    if the clique is not in any of the above states, do not add to `cliques_`
-        // 5. [update old] update active instance of given clique `c`, add again if still extendible
 
         const KPartiteGraph& graph = std::get<instance>(graph_);
-        CliqueInstance& ci = std::get<instance>(c.instance);
 
-        const Vertex& v = graph.sets_[ci.indep_set].vertices.at(ci.vertex);
-        DomainBox new_box = store_->push_copy(c.box);
-        new_box.combine(v.box);
+        // prepare `new_c`
         Clique new_c = {
-            new_box, // box of the new clique
+            DomainBox::null_box(), // null box for now, we'll first check if we can reuse `c`'s box
             c.instance // copy
         };
+
+        // v is vertex to merge with: new_c = c + v
+        CliqueInstance& ci = std::get<instance>(c.instance);
+        const Vertex& v = graph.sets_[ci.indep_set].vertices.at(ci.vertex);
+        ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
         CliqueInstance& new_ci = std::get<instance>(new_c.instance);
         new_ci.output += v.output; // output of clique is previous output + output of newly merged vertex
         new_ci.indep_set += 1;
         new_ci.vertex = 0; // start from beginning in new `indep_set` (= tree)
-        ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
+        // UPDATE OLD
+        // push old clique if it still has a valid extension
+        // we only need to update the current instance: box did not change so
+        // other instance cannot be affected
+        if (update_clique<instance>(c))
+        {
+            // if the output filter rejects this, then no more valid expansions
+            // of `c` exist (outputs will only get worse)
+            if (output_filter(get0(c.instance).output_bound, get1(c.instance).output_bound))
+            {
+                //std::cout << "push old again: " << c << std::endl;
+                pq_push(std::move(c));
+
+                // `new_c` needs a new box
+                new_c.box = store_->push_copy(c.box);
+                new_c.box.combine(v.box);
+            }
+            else
+            {
+                //std::cout << "rejected old because of output " << c << std::endl;
+                ++nrejected;
+
+                // `new_c` can reuse `c`'s box
+                new_c.box = c.box;
+                new_c.box.combine(v.box);
+            }
+        }
+        else
+        {
+            //std::cout << "done with old: " << c << std::endl;
+
+            // `new_c` can reuse `c`'s box
+            new_c.box = c.box;
+            new_c.box.combine(v.box);
+        }
+
+        // UPDATE NEW
         bool is_solution0 = is_instance_solution<0>(new_c);
         bool is_solution1 = is_instance_solution<1>(new_c);
 
@@ -924,28 +967,6 @@ namespace treeck {
                 //    << is_valid_box << is_valid_output << std::endl;
                 ++nrejected;
             }
-        }
-
-        // push old clique if it still has a valid extension
-        // we only need to update the current instance: box did not change so
-        // other instance cannot be affected
-        if (update_clique<instance>(c))
-        {
-            // box did not change, so we don't have to check again (calling Z3 is expensive)
-            if (output_filter(get0(c.instance).output_bound, get1(c.instance).output_bound))
-            {
-                //std::cout << "push old again: " << c << std::endl;
-                pq_push(std::move(c));
-            }
-            else
-            {
-                //std::cout << "rejected old because of output " << c << std::endl;
-                ++nrejected;
-            }
-        }
-        else
-        {
-            //std::cout << "done with old: " << c << std::endl;
         }
 
         std::get<instance>(nsteps)++;
