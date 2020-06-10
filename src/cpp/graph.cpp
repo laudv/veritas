@@ -758,6 +758,13 @@ namespace treeck {
         std::push_heap(cliques_.begin(), cliques_.end(), cmp_);
     }
 
+    void
+    KPartiteGraphOptimize::set_eps(FloatT eps)
+    {
+        cmp_.eps = eps;
+        std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
+    }
+
     bool
     KPartiteGraphOptimize::is_solution(const Clique& c) const
     {
@@ -1000,12 +1007,6 @@ namespace treeck {
         }
 
         return true;
-    }
-
-    void
-    KPartiteGraphOptimize::set_eps(FloatT eps)
-    {
-        cmp_.eps = eps;
     }
 
     bool
