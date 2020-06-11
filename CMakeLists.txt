@@ -9,7 +9,7 @@ include_directories(${SOURCE_DIR})
 SET(SOURCES
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
-    "${SOURCE_DIR}/domtree.cpp"
+    #"${SOURCE_DIR}/domtree.cpp"
     "${SOURCE_DIR}/graph.cpp"
     "${SOURCE_DIR}/smt.cpp"
     )
