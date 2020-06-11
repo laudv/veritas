@@ -211,6 +211,7 @@ namespace treeck {
         // a vector ordered as a pq containing "partial" cliques (no max-cliques)
         std::vector<Clique> cliques_;
         CliqueMaxDiffPqCmp cmp_;
+        FloatT eps_incr_;
 
     private:
         Clique pq_pop();
@@ -244,7 +245,8 @@ namespace treeck {
         KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1); // minimize g0, maximize g1
         KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1);
 
-        void set_eps(FloatT eps);
+        FloatT get_eps() const;
+        void set_eps(FloatT eps, FloatT eps_incr);
 
         bool step();
         bool step(BoxFilter bf);

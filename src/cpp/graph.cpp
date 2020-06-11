@@ -713,6 +713,7 @@ namespace treeck {
         , graph_{g0, g1} // minimize g0, maximize g1
         , cliques_()
         , cmp_{1.0}
+        , eps_incr_{0.0}
         , solutions()
         , nsteps{0, 0}
         , nupdate_fails{0}
@@ -758,11 +759,24 @@ namespace treeck {
         std::push_heap(cliques_.begin(), cliques_.end(), cmp_);
     }
 
-    void
-    KPartiteGraphOptimize::set_eps(FloatT eps)
+    FloatT
+    KPartiteGraphOptimize::get_eps() const
     {
+        return cmp_.eps;
+    }
+
+    void
+    KPartiteGraphOptimize::set_eps(FloatT eps, FloatT eps_incr)
+    {
+        // we maximize diff, so h(x) must be underestimated to make the search prefer deeper solutions
+        if (eps > 1.0) throw std::runtime_error("nonsense eps");
+        if (eps_incr < 0.0) throw std::runtime_error("nonsense eps_incr");
+
+        eps_incr_ = eps_incr;
         cmp_.eps = eps;
         std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
+
+        std::cout << "EPS set to " << cmp_.eps << std::endl;
     }
 
     bool
@@ -988,6 +1002,14 @@ namespace treeck {
                 get0(c.instance).output,
                 get1(c.instance).output
             });
+
+            // ARA*: decrease eps
+            if (eps_incr_ > 0.0 && cmp_.eps < 1.0)
+            {
+                FloatT new_eps = cmp_.eps + eps_incr_;
+                new_eps = new_eps > 1.0 ? 1.0 : new_eps;
+                set_eps(new_eps, eps_incr_);
+            }
         }
         // if not a solution, extend from graph0 first, then graph1, then graph0 again...
         else if (!is_solution0 && (get0(c.instance).indep_set <= get1(c.instance).indep_set
@@ -1067,7 +1089,6 @@ namespace treeck {
     {
         for (int i=0; i<K; ++i)
             if (!step(bf, max_output0, min_output1)) return false;
-        std::cout << "front: " << cliques_.front() << std::endl;
         return true;
     }
 
@@ -1075,9 +1096,7 @@ namespace treeck {
     KPartiteGraphOptimize::steps(int K, BoxFilter bf, FloatT min_output_difference)
     {
         for (int i=0; i<K; ++i)
-        {
             if (!step(bf, min_output_difference)) return false;
-        }
         return true;
     }
 
