@@ -320,6 +320,12 @@ PYBIND11_MODULE(pytreeck, m) {
                 opt.solver.reset();
             }
         })
+        .def("set_ara_eps", [](Optimizer& opt, FloatT eps, FloatT eps_incr) {
+            opt.opt->set_eps(eps, eps_incr);
+        })
+        .def("get_ara_eps", [](const Optimizer& opt) {
+            return opt.opt->get_eps();
+        })
         .def("__str__", [](const Optimizer& opt) {
             std::stringstream ss;
             if (opt.solver)
@@ -352,21 +358,32 @@ PYBIND11_MODULE(pytreeck, m) {
             opt.g1->prune(f);
             opt.reset_opt();
         })
-        .def("prune", [](Optimizer& opt, int instance, const py::list& example, FloatT eps) {
-            instance += 1;
+        .def("prune", [](Optimizer& opt, const py::list& example, FloatT eps) {
             DomainBox b = opt.store->push_box();
-            FeatId feat_id = 0;
-            for (const py::handle& o : example) // inf norm at most eps around given example
+            FeatId fid = 0;
+            for (FeatId fid : opt.finfo->feat_ids0())
             {
+                const py::handle& o = example[fid];
                 if (py::isinstance<py::float_>(o))
                 {
-                    FloatT value = o.cast<FloatT>();
-                    b.refine(LtSplit(feat_id, value-eps), false, [](FeatId i) { return i; });
-                    b.refine(LtSplit(feat_id, value+eps), true, [](FeatId i) { return i; });
+                    FloatT v = o.cast<FloatT>();
+                    b.refine(LtSplit(fid, v-eps), false, [=](FeatId i) { return opt.finfo->get_id(0, i); });
+                    b.refine(LtSplit(fid, v+eps), true, [=](FeatId i) { return opt.finfo->get_id(0, i); });
                 }
-                else throw std::runtime_error("not supported");
-                feat_id += 1;
+                //else throw std::runtime_error("not supported");
             }
+            for (FeatId fid : opt.finfo->feat_ids1())
+            {
+                const py::handle& o = example[fid];
+                if (py::isinstance<py::float_>(o))
+                {
+                    FloatT v = o.cast<FloatT>();
+                    b.refine(LtSplit(fid, v-eps), false, [=](FeatId i) { return opt.finfo->get_id(1, i); });
+                    b.refine(LtSplit(fid, v+eps), true, [=](FeatId i) { return opt.finfo->get_id(1, i); });
+                }
+                //else throw std::runtime_error("not supported");
+            }
+
             auto f = [opt, &b](const DomainBox& box) {
                 return box.overlaps(b);
             };
@@ -433,7 +450,7 @@ PYBIND11_MODULE(pytreeck, m) {
             if (kwargs.contains("min_output_difference"))
             {
                 FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
-                std::cout << "step " << nsteps << " with min_output_difference " << min_output_difference << std::endl;
+                //std::cout << "step " << nsteps << " with min_output_difference " << min_output_difference << std::endl;
                 if (opt.solver)
                     return opt.opt->steps(nsteps, f, min_output_difference);
                 else
@@ -447,9 +464,9 @@ PYBIND11_MODULE(pytreeck, m) {
                     max_output0 = kwargs["max_output"].cast<FloatT>();
                 if (kwargs.contains("min_output"))
                     min_output1 = kwargs["min_output"].cast<FloatT>();
-                std::cout << "step " << nsteps << " with max "
-                    << max_output0 << " and min "
-                    << min_output1 << std::endl;
+                //std::cout << "step " << nsteps << " with max "
+                //    << max_output0 << " and min "
+                //    << min_output1 << std::endl;
                 if (opt.solver)
                     return opt.opt->steps(nsteps, f, max_output0, min_output1);
                 else

@@ -3,7 +3,6 @@ import numpy as np
 import imageio
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
-from io import StringIO
 
 from treeck import *
 
@@ -108,7 +107,7 @@ class TestGraph(unittest.TestCase):
         opt = Optimizer(minimize=at)
         self.assertEqual(opt.num_vertices(0, 0), 4)
         self.assertEqual(opt.num_vertices(0, 1), 5)
-        opt.prune(0, [1.2, 10.0], 0.5)
+        opt.prune([1.2, 10.0, True], 0.5)
         self.assertEqual(opt.num_vertices(0, 0), 2)
         self.assertEqual(opt.num_vertices(0, 1), 1)
         
@@ -259,29 +258,54 @@ class TestGraph(unittest.TestCase):
 
         print(opt.solutions())
 
+    def test_mnist_prune(self):
+        at = AddTree.read(f"tests/models/xgb-mnist-yis1-easy.json")
+        with open("tests/models/mnist-instances.json") as f:
+            example_key = 1
+            example = np.array(json.load(f)[str(example_key)])
+            vreal = at.predict_single(example)
+            print("predicted value:", vreal)
+
+        d = 1.0001
+
+        opt_smt = Optimizer(minimize=at)
+        opt_box = Optimizer(minimize=at)
+
+        xvar_id_map = get_xvar_id_map(opt_smt, instance=0)
+        self.assertEqual(xvar_id_map, get_xvar_id_map(opt_box, instance=0))
+
+        self.assertEqual(opt_smt.current_bounds(), opt_box.current_bounds())
+        self.assertEqual(opt_smt.num_vertices(0), opt_box.num_vertices(0))
+
+        opt_smt.enable_smt()
+        opt_smt.set_smt_program(get_example_box_smt(opt_smt, 0, example, d))
+        opt_smt.prune()
+        
+        opt_box.prune(list(example), d)
+
+        #print(opt_smt)
+        #print(opt_box)
+        #print({k : example[fid] for k, fid in xvar_id_map.items()})
+
+        self.assertEqual(opt_smt.current_bounds(), opt_box.current_bounds())
+        self.assertEqual(opt_smt.num_vertices(0), opt_box.num_vertices(0))
+
     def test_mnist(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis1-easy.json")
         with open("tests/models/mnist-instances.json") as f:
-            instance_key = 1
-            instance = np.array(json.load(f)[str(instance_key)])
-            vreal = at.predict_single(instance)
+            example_key = 1
+            example = np.array(json.load(f)[str(example_key)])
+            vreal = at.predict_single(example)
             print("predicted value:", vreal)
-            #plt.imshow(instance.reshape((28, 28)), cmap="binary")
+            #plt.imshow(example.reshape((28, 28)), cmap="binary")
             #plt.show()
 
         
         opt = Optimizer(minimize=at)
         opt.enable_smt()
 
-        d = 1
-        feat_ids = opt.get_used_feat_ids()[0];
-        smt = StringIO()
-        for feat_id in feat_ids:
-            x = opt.xvar(0, feat_id)
-            v = instance[feat_id]
-            print(f"(assert (<= {x} {v+d}))", file=smt)
-            print(f"(assert (> {x} {v-d}))", file=smt)
-        opt.set_smt_program(smt.getvalue())
+        d = 1.1
+        opt.set_smt_program(get_example_box_smt(opt, 0, example, d))
 
         bounds_before = opt.current_bounds()[0]
         num_vertices_before_prune = opt.num_vertices(0)
@@ -305,19 +329,71 @@ class TestGraph(unittest.TestCase):
         #print("solutions", solutions)
         xvar_id_map = get_xvar_id_map(opt, instance=0)
         print("xvar_id_map", xvar_id_map)
-        instance1 = get_closest_instance(xvar_id_map, instance, solutions[0][2])
-        vfake = at.predict_single(instance1)
-        diff = min(instance1 - instance), max(instance1 - instance)
+        example1 = get_closest_example(xvar_id_map, example, solutions[0][2])
+        vfake = at.predict_single(example1)
+        diff = min(example1 - example), max(example1 - example)
         print("diff", diff)
 
         print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
 
         fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
-        ax0.imshow(instance.reshape((28, 28)), cmap="binary")
+        ax0.imshow(example.reshape((28, 28)), cmap="binary")
         ax0.set_title(f"{vreal:.4f}")
-        ax1.imshow(instance1.reshape((28, 28)), cmap="binary")
+        ax1.imshow(example1.reshape((28, 28)), cmap="binary")
         ax1.set_title(f"{vfake:.4f}")
-        im = ax2.imshow((instance1-instance).reshape((28, 28)), cmap="binary")
+        im = ax2.imshow((example1-example).reshape((28, 28)), cmap="binary")
+        fig.colorbar(im, ax=ax2)
+        plt.show()
+
+    def test_mnist2(self):
+        at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
+        with open("tests/models/mnist-instances.json") as f:
+            example_key = 0
+            example = np.array(json.load(f)[str(example_key)])
+            vreal = at.predict_single(example)
+            print("predicted value:", vreal)
+            #plt.imshow(example.reshape((28, 28)), cmap="binary")
+            #plt.show()
+
+        opt = Optimizer(minimize=at)
+
+        d = 1.1
+
+        bounds_before = opt.current_bounds()[0]
+        num_vertices_before_prune = opt.num_vertices(0)
+        opt.prune(list(example), d)
+        bounds_after = opt.current_bounds()[0]
+        num_vertices_after_prune = opt.num_vertices(0)
+        print(f"prune: num_vertices {num_vertices_before_prune} -> {num_vertices_after_prune}")
+        print(f"       bounds {bounds_before} -> {bounds_after}")
+
+        current_bounds = [opt.current_bounds()]
+        while opt.num_solutions() == 0:
+            if not opt.step(25):
+                print("no solution")
+                break
+            current_bounds.append(opt.current_bounds())
+
+        self.assertTrue(opt.num_solutions() > 0)
+
+        solutions = opt.solutions()
+        print([x[0] for x in current_bounds])
+        #print("solutions", solutions)
+        xvar_id_map = get_xvar_id_map(opt, instance=0)
+        print("xvar_id_map", xvar_id_map)
+        example1 = get_closest_example(xvar_id_map, example, solutions[0][2])
+        vfake = at.predict_single(example1)
+        diff = min(example1 - example), max(example1 - example)
+        print("diff", diff)
+
+        print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
+
+        fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
+        ax0.imshow(example.reshape((28, 28)), cmap="binary")
+        ax0.set_title(f"{vreal:.4f}")
+        ax1.imshow(example1.reshape((28, 28)), cmap="binary")
+        ax1.set_title(f"{vfake:.4f}")
+        im = ax2.imshow((example1-example).reshape((28, 28)), cmap="binary")
         fig.colorbar(im, ax=ax2)
         plt.show()
 

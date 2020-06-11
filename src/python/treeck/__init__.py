@@ -144,21 +144,41 @@ def get_xvar_id_map(opt, instance):
     feat_ids = opt.get_used_feat_ids()[instance]
     return { opt.xvar_id(instance, fid) : fid for fid in feat_ids }
 
-def get_closest_instance(xvar_id_map, base_instance, doms, delta=1e-5):
-    instance = base_instance.copy()
+def get_closest_example(xvar_id_map, base_example, doms, delta=1e-5):
+    example = base_example.copy()
 
     for i, dom in enumerate(doms):
         assert isinstance(dom, RealDomain)
         feat_id = xvar_id_map[i]
-        v = instance[feat_id]
+        v = example[feat_id]
         if dom.contains(v):
             continue # keep the value
 
         dist_lo = abs(dom.lo - v)
         dist_hi = abs(v - dom.hi)
         if dist_lo > dist_hi:
-            instance[feat_id] = dom.hi - delta # hi is not included
+            example[feat_id] = dom.hi - delta # hi is not included
         else:
-            instance[feat_id] = dom.lo
+            example[feat_id] = dom.lo
 
-    return instance
+    return example
+
+def get_example_box_smt(opt, instance, example, eps):
+    smt = StringIO()
+    if not isinstance(instance, list):
+        instance = [instance]
+
+    if 0 in instance:
+        for feat_id in opt.get_used_feat_ids()[0]:
+            x = opt.xvar(0, feat_id)
+            v = example[feat_id]
+            print(f"(assert (< {x} {v+eps}))", file=smt)
+            print(f"(assert (>= {x} {v-eps}))", file=smt)
+    if 1 in instance:
+        for feat_id in opt.get_used_feat_ids()[1]:
+            x = opt.xvar(1, feat_id)
+            v = example[feat_id]
+            print(f"(assert (< {x} {v+eps}))", file=smt)
+            print(f"(assert (>= {x} {v-eps}))", file=smt)
+
+    return smt.getvalue()

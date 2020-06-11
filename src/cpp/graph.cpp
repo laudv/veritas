@@ -58,8 +58,12 @@ namespace treeck {
             if (in_matches == match_is_reuse)
             {
                 auto lookup = key2id_.find(static_cast<int>(feat_id)); // feat_id == key of instance0
-                if (lookup == key2id_.end()) throw std::runtime_error("invalid state");
-                key2id_.emplace(key, lookup->second);
+                if (lookup != key2id_.end())
+                    key2id_.emplace(key, lookup->second);
+                // if at0 and at1 are different, then it is possible that we haven't seen feat_id yet
+                // if so, create a new id
+                else
+                    key2id_.emplace(key, ++max_id_);
             }
             else
             {
@@ -73,12 +77,12 @@ namespace treeck {
         {
             auto split_values = splits0.find(feat_id);
             if (split_values == splits0.end())
-                throw std::runtime_error("invalid state");
+                throw std::runtime_error("FeatInfo: invalid state 1");
 
             int key = feat_id;
             auto lookup = key2id_.find(key);
             if (lookup == key2id_.end())
-                throw std::runtime_error("invalid state");
+                throw std::runtime_error("FeatInfo: invalid state 2");
 
             int id = lookup->second;
             if (split_values->second.size() != 0) // at least one split value => real split
@@ -88,12 +92,12 @@ namespace treeck {
         {
             auto split_values = splits1.find(feat_id);
             if (split_values == splits1.end())
-                throw std::runtime_error("invalid state");
+                throw std::runtime_error("FeatInfo: invalid state 3");
 
             int key = ~static_cast<int>(feat_id);
             auto lookup = key2id_.find(key);
             if (lookup == key2id_.end())
-                throw std::runtime_error("invalid state");
+                throw std::runtime_error("FeatInfo: invalid state 4");
 
             int id = lookup->second;
             if (split_values->second.size() != 0) // at least one split value => real split
@@ -776,7 +780,7 @@ namespace treeck {
         cmp_.eps = eps;
         std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
 
-        std::cout << "EPS set to " << cmp_.eps << std::endl;
+        //std::cout << "ARA* EPS set to " << cmp_.eps << std::endl;
     }
 
     bool
@@ -1008,6 +1012,7 @@ namespace treeck {
             {
                 FloatT new_eps = cmp_.eps + eps_incr_;
                 new_eps = new_eps > 1.0 ? 1.0 : new_eps;
+                std::cout << "ARA*: eps update: " << cmp_.eps << " -> " << new_eps << std::endl;
                 set_eps(new_eps, eps_incr_);
             }
         }
