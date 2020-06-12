@@ -26,7 +26,17 @@
 
 namespace treeck {
 
+    // to avoid having to check whether a domain is real or bool, we use RealDomain for both
+    // True = [0.0, 1.0), False = [1.0, 2.0), Everything = [0.0, 2.0)
+    // (like a LtSplit(_, 1.0))
+    using DomainT = RealDomain;
+    const DomainT BOOL_DOMAIN{static_cast<FloatT>(0.0), static_cast<FloatT>(2.0)};
+    const DomainT TRUE_DOMAIN{static_cast<FloatT>(0.0), static_cast<FloatT>(1.0)};
+    const DomainT FALSE_DOMAIN{static_cast<FloatT>(1.0), static_cast<FloatT>(2.0)};
+
+
     class DomainBox;
+
     using BoxFilter = const std::function<bool(const DomainBox&)>&;
     using FeatIdMapper = const std::function<int(FeatId)>&;
 
@@ -64,7 +74,7 @@ namespace treeck {
     };
 
     class DomainStore {
-        using Block = std::vector<Domain>;
+        using Block = std::vector<DomainT>;
 
         std::vector<Block> store_;
         size_t box_size_;
@@ -81,13 +91,13 @@ namespace treeck {
 
 
     class DomainBox {
-        using iterator = Domain *;
-        using const_iterator = const Domain *;
-        Domain *begin_;
-        Domain *end_;
+        using iterator = DomainT *;
+        using const_iterator = const DomainT *;
+        DomainT *begin_;
+        DomainT *end_;
 
     public:
-        DomainBox(Domain *begin, Domain *end);
+        DomainBox(DomainT *begin, DomainT *end);
         static DomainBox null_box();
 
         const_iterator begin() const;
@@ -174,7 +184,10 @@ namespace treeck {
         FloatT output;              // A*'s g(clique_instance)
         FloatT prev_bound;          // A*'s h(clique_instance)
 
-        FloatT output_bound(FloatT eps = 1.0) const; // g(clique_instance) + eps * h(clique_instance)
+        inline FloatT output_bound(FloatT eps = 1.0) const
+        {
+            return output + eps * prev_bound;
+        } // g(clique_instance) + eps * h(clique_instance)
 
         short indep_set; // index of tree (= independent set in graph) to merge with
         int vertex;      // index of next vertex to merge from `indep_set` (must be a compatible one!)

@@ -102,7 +102,16 @@ class TestGraph(unittest.TestCase):
 
         notdone = opt.step(100)
         self.assertFalse(notdone)
-        self.assertEqual(opt.num_solutions(), 4)
+        self.assertEqual(opt.num_solutions(), 5)
+
+        for fid in opt.get_used_feat_ids()[0]:
+            print(0, fid, "->", opt.xvar_id(0, fid))
+        for fid in opt.get_used_feat_ids()[1]:
+            print(1, fid, "->", opt.xvar_id(1, fid))
+        print()
+        
+        for s0, s1, sd in opt.solutions():
+            print(s0, s1, sd)
 
         opt = Optimizer(minimize=at)
         self.assertEqual(opt.num_vertices(0, 0), 4)

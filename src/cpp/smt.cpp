@@ -242,9 +242,8 @@ namespace treeck {
         if (begin == end)
             return ctx_.bool_val(true);
 
-        int id;
-        Domain dom;
-
+        //int id;
+        //Domain dom;
         //std::tie(id, dom) = *(begin++);
         //z3::expr e = domain_to_z3(id, dom);
 
@@ -257,10 +256,22 @@ namespace treeck {
         z3::expr e = ctx_.bool_val(true);
         for (int id = 0; begin != end; ++begin, ++id)
         {
-            visit_domain(
-                [this, &e, id](const RealDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
-                [this, &e, id](const BoolDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
-                *begin);
+            DomainT dom = *begin;
+            if (dom.is_everything()) continue;
+            if (finfo_->is_real(id))
+            {
+                e = e && domain_to_z3(id, dom);
+            }
+            else
+            {
+                BoolDomain bdom{dom == TRUE_DOMAIN};
+                e = e && domain_to_z3(id, bdom);
+            }
+
+            //visit_domain(
+            //    [this, &e, id](const RealDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
+            //    [this, &e, id](const BoolDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
+            //    *begin);
         }
         return e;
     }

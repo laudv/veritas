@@ -207,8 +207,8 @@ namespace treeck {
             int id = finfo.get_id(0, feat_id);
             if (id != block.size()) throw std::runtime_error("invalid state");
 
-            if (finfo.is_real(id)) block.push_back(RealDomain{});
-            else                   block.push_back(BoolDomain{});
+            if (finfo.is_real(id)) block.push_back({});
+            else                   block.push_back(BOOL_DOMAIN);
         }
 
         // push domains for instance1
@@ -218,8 +218,8 @@ namespace treeck {
             if (finfo.is_instance0_id(id)) continue;
             if (id != block.size()) throw std::runtime_error("invalid state");
 
-            if (finfo.is_real(id)) block.push_back(RealDomain{});
-            else                   block.push_back(BoolDomain{});
+            if (finfo.is_real(id)) block.push_back({});
+            else                   block.push_back(BOOL_DOMAIN);
         }
     }
 
@@ -227,7 +227,7 @@ namespace treeck {
     DomainStore::push_box()
     {
         // copy the prototype domain
-        Domain *ptr = &store_[0][0];
+        DomainT *ptr = &store_[0][0];
         return push_copy({ptr, ptr + box_size_});
     }
 
@@ -240,19 +240,19 @@ namespace treeck {
         Block& block = get_last_block();
         size_t start_index = block.size();
 
-        for (const Domain& d : other)
+        for (const DomainT& d : other)
             block.push_back(d);
 
         if (block.size() != start_index+box_size_) throw std::runtime_error("invalid state");
 
-        Domain *ptr = &block[start_index];
+        DomainT *ptr = &block[start_index];
         return { ptr, ptr + box_size_ };
     }
 
 
 
 
-    DomainBox::DomainBox(Domain *b, Domain *e) : begin_(b), end_(e) { }
+    DomainBox::DomainBox(DomainT *b, DomainT *e) : begin_(b), end_(e) { }
 
     DomainBox
     DomainBox::null_box() {
@@ -283,15 +283,16 @@ namespace treeck {
         visit_split(
                 [this, &fmap, is_left_child](const LtSplit& s) {
                     int id = fmap(s.feat_id);
-                    Domain *ptr = begin_ + id;
-                    RealDomain dom = util::get_or<RealDomain>(*ptr);
-                    *ptr = refine_domain(dom, s, is_left_child);
+                    DomainT *ptr = begin_ + id;
+                    //RealDomain dom = util::get_or<RealDomain>(*ptr);
+                    *ptr = refine_domain(*ptr, s, is_left_child);
                 },
-                [this, &fmap, is_left_child](const BoolSplit& s) {
-                    int id = fmap(s.feat_id);
-                    Domain *ptr = begin_ + id;
-                    BoolDomain dom = util::get_or<BoolDomain>(*ptr);
-                    *ptr = refine_domain(dom, s, is_left_child);
+                [this, &fmap, is_left_child](const BoolSplit& bs) {
+                    int id = fmap(bs.feat_id);
+                    DomainT *ptr = begin_ + id;
+                    LtSplit s{bs.feat_id, 1.0};
+                    //BoolDomain dom = util::get_or<BoolDomain>(*ptr);
+                    *ptr = refine_domain(*ptr, s, is_left_child);
                 },
                 split);
     }
@@ -309,16 +310,18 @@ namespace treeck {
         // assume sorted
         for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
         {
-            bool overlaps = visit_domain(
-                [it1](const RealDomain& dom0) {
-                    auto dom1 = util::get_or<RealDomain>(*it1);
-                    return dom0.overlaps(dom1);
-                },
-                [it1](const BoolDomain& dom0) {
-                    auto dom1 = util::get_or<BoolDomain>(*it1);
-                    return (dom0.value_ & dom1.value_) != 0;
-                },
-                *it0);
+            //bool overlaps = visit_domain(
+            //    [it1](const RealDomain& dom0) {
+            //        auto dom1 = util::get_or<RealDomain>(*it1);
+            //        return dom0.overlaps(dom1);
+            //    },
+            //    [it1](const BoolDomain& dom0) {
+            //        auto dom1 = util::get_or<BoolDomain>(*it1);
+            //        return (dom0.value_ & dom1.value_) != 0;
+            //    },
+            //    *it0);
+
+            bool overlaps = it0->overlaps(*it1);
 
             if (!overlaps)
                 return false;
@@ -330,22 +333,23 @@ namespace treeck {
     void
     DomainBox::combine(const DomainBox& other) const
     {
-        Domain *it0 = begin_;
-        Domain *it1 = other.begin_;
+        DomainT *it0 = begin_;
+        DomainT *it1 = other.begin_;
 
         // assume sorted
         for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
         {
-            visit_domain(
-                [it0](const RealDomain& dom1) {
-                    auto dom0 = util::get_or<RealDomain>(*it0);
-                    *it0 = dom0.intersect(dom1);
-                },
-                [it0](const BoolDomain& dom1) {
-                    auto dom0 = util::get_or<BoolDomain>(*it0);
-                    *it0 = dom0.intersect(dom1);
-                },
-                *it1);
+            *it0 = it0->intersect(*it1);
+            //visit_domain(
+            //    [it0](const RealDomain& dom1) {
+            //        auto dom0 = util::get_or<RealDomain>(*it0);
+            //        *it0 = dom0.intersect(dom1);
+            //    },
+            //    [it0](const BoolDomain& dom1) {
+            //        auto dom0 = util::get_or<BoolDomain>(*it0);
+            //        *it0 = dom0.intersect(dom1);
+            //    },
+            //    *it1);
         }
     }
 
@@ -450,7 +454,6 @@ namespace treeck {
             while (!node.is_root())
             {
                 auto child_node = node;
-                bool is_left = child_node.is_left_child();
                 node = node.parent();
                 box.refine(node.get_split(), child_node.is_left_child(), fmap);
             }
@@ -653,18 +656,15 @@ namespace treeck {
     template <typename T> static T& get1(two_of<T>& t) { return std::get<1>(t); }
     template <typename T> static const T& get1(const two_of<T>& t) { return std::get<1>(t); }
 
-    FloatT
-    CliqueInstance::output_bound(FloatT eps) const
-    {
-        return output + eps * prev_bound;
-    }
+    //FloatT
+    //CliqueInstance::output_bound(FloatT eps) const
+    //{
+    //    return output + eps * prev_bound;
+    //}
 
     bool
     CliqueMaxDiffPqCmp::operator()(const Clique& a, const Clique& b) const
     {
-        int depth_a = get0(a.instance).indep_set + get1(a.instance).indep_set;
-        int depth_b = get0(b.instance).indep_set + get1(b.instance).indep_set;
-        
         FloatT diff_a = get1(a.instance).output_bound(eps) - get0(a.instance).output_bound(eps);
         FloatT diff_b = get1(b.instance).output_bound(eps) - get0(b.instance).output_bound(eps);
 
@@ -718,11 +718,11 @@ namespace treeck {
         , cliques_()
         , cmp_{1.0}
         , eps_incr_{0.0}
-        , solutions()
         , nsteps{0, 0}
         , nupdate_fails{0}
         , nrejected{0}
         , nbox_filter_calls{0}
+        , solutions()
     {
         if (g0.store_ != store_ || g1.store_ != store_)
             throw std::runtime_error("invalid store");
