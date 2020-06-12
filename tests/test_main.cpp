@@ -1,5 +1,6 @@
 #include <functional>
 #include <iostream>
+#include <chrono>
 #include "tree.h"
 #include "graph.h"
 #include "smt.h"
@@ -69,8 +70,44 @@ void test_img()
     }
 }
 
+void test_calhouse_bounds()
+{
+    auto file = "tests/models/xgb-calhouse-hard.json";
+    AddTree at = AddTree::from_json_file(file);
+    AddTree dummy;
+
+    FeatInfo finfo(at, dummy, {}, true); // minimize
+    DomainStore store(finfo);
+    KPartiteGraph g0(&store);
+    KPartiteGraph g1(&store, at, finfo, 0);
+    KPartiteGraphOptimize opt(g0, g1);
+    opt.set_eps(0.02, 0.02);
+
+    auto start = std::chrono::high_resolution_clock::now();
+    std::vector<double> timings;
+    while (opt.num_candidate_cliques() < 1000000 && opt.get_eps() < 1.0)
+    {
+        if (!opt.steps(1000))
+            break;
+
+        while (timings.size() < opt.solutions.size())
+        {
+            double d = std::chrono::duration_cast<std::chrono::milliseconds>(
+                    std::chrono::high_resolution_clock::now() - start).count();
+            timings.push_back(d / 1000.0);
+        }
+    }
+
+    for (size_t i = 0; i < opt.solutions.size(); ++i)
+    {
+        auto sol = opt.solutions[i].output1;
+        std::cout << sol << ", " << timings[i] << std::endl;
+    }
+}
+
 int main()
 {
     //test_simple();
-    test_img();
+    //test_img();
+    test_calhouse_bounds();
 }
