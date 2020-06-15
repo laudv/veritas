@@ -78,11 +78,15 @@ namespace treeck {
 
         std::vector<Block> store_;
         size_t box_size_;
+        size_t max_mem_size_;
 
         Block& get_last_block();
         void push_prototype_box(const FeatInfo& finfo);
 
     public:
+        size_t get_mem_size() const;
+        void set_max_mem_size(size_t max_mem);
+
         DomainStore(const FeatInfo& finfo);
         DomainBox push_box();
         DomainBox push_copy(const DomainBox& box);

@@ -59,7 +59,7 @@ def test_calhouse():
 
 
     # ==== Merging
-    opt = Optimizer(maximize=at)
+    opt = Optimizer(maximize=at, max_memory=1024*1024*256)
     prune_calhouse(opt, instance)
 
     start = timeit.default_timer()

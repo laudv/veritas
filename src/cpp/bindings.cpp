@@ -302,6 +302,10 @@ PYBIND11_MODULE(pytreeck, m) {
                 match_is_reuse = kwargs["match_is_reuse"].cast<bool>();
 
             opt.initialize_opt(matches, match_is_reuse);
+
+            if (kwargs.contains("max_memory"))
+                opt.store->set_max_mem_size(kwargs["max_memory"].cast<size_t>());
+
             return opt;
         }))
         .def("enable_smt", [](Optimizer& opt) {
@@ -432,12 +436,13 @@ PYBIND11_MODULE(pytreeck, m) {
             }
             return l;
         })
-        .def("nsteps", [](Optimizer& opt) { return opt.opt->nsteps; })
-        .def("nupdate_fails", [](Optimizer& opt) { return opt.opt->nupdate_fails; })
-        .def("nrejected", [](Optimizer& opt) { return opt.opt->nrejected; })
-        .def("nbox_filter_calls", [](Optimizer& opt) { return opt.opt->nbox_filter_calls; })
-        .def("current_bounds", [](Optimizer& opt) { return opt.opt->current_bounds(); })
-        .def("num_candidate_cliques", [](Optimizer& opt) { return opt.opt->num_candidate_cliques(); })
+        .def("nsteps", [](const Optimizer& opt) { return opt.opt->nsteps; })
+        .def("nupdate_fails", [](const Optimizer& opt) { return opt.opt->nupdate_fails; })
+        .def("nrejected", [](const Optimizer& opt) { return opt.opt->nrejected; })
+        .def("nbox_filter_calls", [](const Optimizer& opt) { return opt.opt->nbox_filter_calls; })
+        .def("current_bounds", [](const Optimizer& opt) { return opt.opt->current_bounds(); })
+        .def("num_candidate_cliques", [](const Optimizer& opt) { return opt.opt->num_candidate_cliques(); })
+        .def("memory", [](const Optimizer& opt) { return opt.store->get_mem_size(); })
         .def("step", [](Optimizer& opt, int nsteps, py::kwargs kwargs) {
             auto f = [opt](const DomainBox& box) {
                 z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());

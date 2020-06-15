@@ -158,9 +158,9 @@ namespace treeck {
     const size_t DOMAIN_STORE_MAX_MEM = 4294967296; // 4GB
 
     DomainStore::DomainStore(const FeatInfo& finfo)
-        : store_{}, box_size_(0)
+        : store_{}, box_size_(0), max_mem_size_(DOMAIN_STORE_MAX_MEM)
     {
-        const size_t DEFAULT_SIZE = 1024*128;
+        const size_t DEFAULT_SIZE = 1024*1024 / sizeof(Domain); // 1mb of domains
         Block block;
         block.reserve(DEFAULT_SIZE);
         store_.push_back(std::move(block));
@@ -174,19 +174,23 @@ namespace treeck {
         Block& block = store_.back();
         if (block.capacity() - block.size() < box_size_)
         {
-            size_t mem = block.size() * 2 * sizeof(Domain);
-            for (const Block& b : store_)
-                mem += b.size() * sizeof(Domain);
-
-            if (mem > DOMAIN_STORE_MAX_MEM)
+            size_t mem = get_mem_size();
+            size_t rem_capacity = (max_mem_size_ - mem) / sizeof(Domain);
+            if (rem_capacity > block.capacity() * 2) // double size of blocks each time, unless memory limit almost reached
+                rem_capacity = block.capacity() * 2;
+            else if (rem_capacity > 0)
+                std::cerr << "WARNING: almost running out of memory, "
+                    << static_cast<double>(rem_capacity * sizeof(Domain)) / (1024.0*1024.0)
+                    << " mb left" << std::endl;
+            else
                 throw std::runtime_error("DomainStore: out of memory");
 
             Block new_block;
-            new_block.reserve(block.size() * 2);
+            new_block.reserve(rem_capacity);
             store_.push_back(std::move(new_block));
 
             std::cout << "DomainStore memory: " << mem << " bytes, "
-                << (static_cast<double>(mem) / (1024.0 * 1024.0)) << " mb ("
+                << (static_cast<double>(get_mem_size()) / (1024.0 * 1024.0)) << " mb ("
                 << store_.size() << " blocks)" << std::endl;
         }
         return store_.back();
@@ -221,6 +225,21 @@ namespace treeck {
             if (finfo.is_real(id)) block.push_back({});
             else                   block.push_back(BOOL_DOMAIN);
         }
+    }
+
+    size_t
+    DomainStore::get_mem_size() const
+    {
+        size_t mem = 0;
+        for (const Block& b : store_)
+            mem += b.capacity() * sizeof(Domain);
+        return mem;
+    }
+
+    void
+    DomainStore::set_max_mem_size(size_t mem)
+    {
+        max_mem_size_ = mem;
     }
 
     DomainBox
