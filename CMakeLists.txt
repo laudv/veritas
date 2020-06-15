@@ -3,10 +3,10 @@
 cmake_minimum_required(VERSION 3.1)
 project(treeck)
 
-SET(SOURCE_DIR "src/cpp")
+set(SOURCE_DIR "src/cpp")
 # Tell cmake that headers are also in source_dir
 include_directories(${SOURCE_DIR})
-SET(SOURCES
+set(SOURCES
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
     #"${SOURCE_DIR}/domtree.cpp"
@@ -24,6 +24,14 @@ else()
     add_compile_options(-Wall -Wextra -pedantic)
     add_compile_options(-march=native)
 endif()
+
+#
+set(Z3_INSTALL "" CACHE PATH "Custom Z3 install path")
+if (NOT "${Z3_INSTALL}" STREQUAL "")
+    link_directories("${Z3_INSTALL}/build")
+    include_directories("${Z3_INSTALL}/src/api")
+    include_directories("${Z3_INSTALL}/src/api/c++")
+endif ()
 
 # GProf
 #cmake -DCMAKE_CXX_FLAGS=-pg -DCMAKE_EXE_LINKER_FLAGS=-pg -DCMAKE_SHARED_LINKER_FLAGS=-pg <SOURCE_DIR>
@@ -48,6 +56,7 @@ if (BUILD_PYTHON_BINDINGS)
     # Use Ubuntu's z3 (libz3-dev) install
     #find_package(Z3 REQUIRED)
     target_link_libraries("py${PROJECT_NAME}" PRIVATE -lz3)
+
 endif (BUILD_PYTHON_BINDINGS)
 
 option(BUILD_TESTS "Build C++ test files" OFF)

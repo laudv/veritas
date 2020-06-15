@@ -16,7 +16,7 @@ RESULT_DIR = "tests/experiments/mnist-single-instance"
 
 if not os.path.exists("tests/data/mnist.mat"):
     print("loading MNIST with fetch_openml")
-    mnist = fetch_openml("mnist_784")
+    mnist = skds.fetch_openml("mnist_784")
     X = mnist["data"]
     y = np.array(list(map(lambda v: int(v), mnist["target"])))
     scipy.io.savemat("tests/data/mnist.mat", {"X": X, "y": y},

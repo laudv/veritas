@@ -1,2 +1,2 @@
-mnist.mat
-mnist.libsvm
+*.mat
+*.libsvm
