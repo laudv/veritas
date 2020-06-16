@@ -315,7 +315,7 @@ PYBIND11_MODULE(pytreeck, m) {
             if (!opt.solver)
                 throw std::runtime_error("smt not enabled");
             opt.solver->parse_smt(smt);
-            std::cout << opt.solver->get_z3() << std::endl;
+            //std::cout << opt.solver->get_z3() << std::endl;
         })
         .def("disable_smt", [](Optimizer& opt) {
             if (opt.solver)

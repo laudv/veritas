@@ -543,6 +543,7 @@ namespace treeck {
 
             for (int k = 1; k < K && it != sets_.cend(); ++k, ++it)
             {
+                //std::cout << "merge " << set0.vertices.size() << " x " << it->vertices.size() << std::endl;
                 for (const auto& v0 : set0.vertices)
                 {
                     for (const auto& v1 : it->vertices)
@@ -561,6 +562,7 @@ namespace treeck {
                 std::swap(set0, set1);
             }
 
+            //std::cout << "merge new_set of size " << set0.vertices.size() << std::endl;
             new_sets.push_back(std::move(set0));
         }
 

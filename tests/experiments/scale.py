@@ -1,4 +1,5 @@
-import os, pickle, timeit, subprocess
+import os, io, pickle, time, timeit, subprocess, json
+import multiprocessing as mp
 import scipy.io
 import numpy as np
 import xgboost as xgb
@@ -56,36 +57,139 @@ def train_model(lr, num_trees, max_depth=5):
 
 # - Optimizer routines --------------------------------------------------------
 
-
 def get_opt():
-    opt = Optimizer(maximize=at)
+    opt = Optimizer(maximize=at, max_memory=1024*1024*1024*1) # 10GB
     opt.enable_smt()
+    feat_ids = opt.get_used_feat_ids()[1]
 
-    # hoz. dist to road < 2000, distance to fire source < 1800, not wilderness type 1, soil type 29
-    opt.set_smt_program(f"""
-(assert (< {opt.xvar(1, 5)} 2000.0))
-(assert (< {opt.xvar(1, 9)} 1800.0))
-(assert (< {opt.xvar(1, 10)} 0.5))
-(assert (> {opt.xvar(1, 42)} 0.5))
-    """)
+    smt = io.StringIO()
+    print(f"(assert (> {opt.xvar(1, 0)} 3200.0))", file=smt) # elevation
+    print(f"(assert (< {opt.xvar(1, 5)} 1800.0))", file=smt) # hoz dist to road
+    #print(f"(assert (> {opt.xvar(1, 9)} 1800.0))", file=smt) # hoz dist fire road
+    for i in set(range(10, 14)).intersection(feat_ids):
+        op = ">" if i == 13 else "<"
+        print(f"(assert ({op} {opt.xvar(1, i)} 0.5))", file=smt) # Wilderness_Area
+    for i in set(range(14, 54)).intersection(feat_ids):
+        op = ">" if i == 36 else "<"
+        print(f"(assert ({op} {opt.xvar(1, i)} 0.5))", file=smt) # Soil_Type
+
+    opt.set_smt_program(smt.getvalue())
+
+    print("before num_vertices", opt.num_vertices(1))
+    opt.prune()
+    print("after num_vertices", opt.num_vertices(1))
     opt.disable_smt()
 
     return opt
 
 def astar():
-    pass
+    nsteps = 100
+    opt = get_opt()
+    timings = [0.0]
+    bounds = [opt.current_bounds()[1]]
+    memory = [opt.memory()]
+    steps = [0]
+    start = timeit.default_timer()
+    done = False
+    while not done and opt.num_solutions() == 0:
+        try:
+            done = not opt.step(nsteps)
+            nsteps = min(204800, nsteps * 2)
+        except:
+            print("OUT OF MEMORY")
+            done = True
 
-def arastar():
-    pass
+        timings.append(timeit.default_timer() - start)
+        bounds.append(opt.current_bounds()[1])
+        memory.append(opt.memory())
+        steps.append(opt.nsteps()[1])
 
-def merge():
-    pass
+    return opt, timings, bounds, memory, steps
 
+def arastar(eps, eps_incr):
+    nsteps = 100
+    opt = get_opt()
+    opt.set_ara_eps(eps, eps_incr)
+    timings = []
+    epses = []
+    steps = []
+    memory = []
+    start = timeit.default_timer()
+    done = False
+    while not done and opt.get_ara_eps() < 1.0:
+        try:
+            done = not opt.step(nsteps)
+            nsteps = min(204800, nsteps * 2)
+        except:
+            print("OUT OF MEMORY")
+            done = True
 
+        while len(timings) < opt.num_solutions():
+            timings.append(timeit.default_timer() - start)
+            epses.append(opt.get_ara_eps())
+            memory.append(opt.memory())
+            steps.append(opt.nsteps()[1])
+
+    return opt, timings, epses, memory, steps
+
+def merge(conn):
+    opt = get_opt()
+
+    t = 0.0
+    b = opt.current_bounds()[1]
+    m = opt.memory()
+    v = opt.num_vertices(1)
+    conn.send((t, b, m, v))
+
+    start = timeit.default_timer()
+    try:
+        while True:
+            try:
+                opt.merge(2)
+            except:
+                print("MERGE worker: OUT OF MEMORY")
+                break
+
+            if b == opt.current_bounds()[1]:
+                break
+
+            t = timeit.default_timer() - start
+            b = opt.current_bounds()[1]
+            m = opt.memory()
+            v = opt.num_vertices(1)
+            conn.send((t, b, m, v))
+    finally:
+        print("MERGE worker: closing")
+        conn.close()
+
+def merge_in_process(max_runtime):
+    cparent, cchild = mp.Pipe()
+    p = mp.Process(target=merge, name="Merger", args=(cchild,))
+    p.start()
+    start = timeit.default_timer()
+    timings, bounds, memory, vertices = [], [], [], []
+    print("MERGE host: runtime", max_runtime)
+    while timeit.default_timer() - start < max_runtime:
+        has_data = cparent.poll(1)
+        if has_data:
+            t, b, m, v = cparent.recv()
+            print("MERGE host: data", t, b, m, v)
+            timings.append(t)
+            bounds.append(b)
+            memory.append(m)
+            vertices.append(v)
+        elif p.exitcode is not None:
+            break
+    print("MERGE host: terminating")
+    p.terminate()
+    cparent.close()
+    return timings, bounds, memory, vertices
 
 
 # - Robustness for increasing model complexity --------------------------------
 
+
+o = []
 for lr, num_trees in [
         (1.0, 1),
         (0.9, 5),
@@ -101,7 +205,11 @@ for lr, num_trees in [
         (0.30, 100),
         ]:
 
-    print(f"\n= num_trees {num_trees}===========")
+    #for i, (m0, m1) in enumerate(zip(X[y==0].mean(axis=0), X[y==1].mean(axis=0))):
+    #    print(i, m0, m1, m1-m0)
+    #break
+
+    print(f"\n= num_trees {num_trees} ===========")
     model, acc = train_model(lr, num_trees)
     print(f"accuracy: {acc}")
     at = addtree_from_xgb_model(model)
@@ -109,12 +217,45 @@ for lr, num_trees in [
 
     print("double check:", util.double_check_at_output(model, at, X[0:100, :]))
 
-    means0 = X[y==0, :].mean(axis=0)
-    means1 = X[y==1, :].mean(axis=0)
-    for i, (m0, m1) in enumerate(zip(means0, means1)):
-        print(i, m0, m1, m1-m0)
+    start = timeit.default_timer()
+    oo = {
+        "num_trees": num_trees,
+        "lr": lr,
+    }
 
+    print(f"\n -- A* {time.ctime()} --")
+    opt, t0, bounds0, m0, steps0 = astar()
+    oo["num_vertices"]: opt.num_vertices(1)
+    oo["astar"] = {
+        "solutions": [s[1] for s in opt.solutions()],
+        "timings": t0,
+        "bounds": bounds0,
+        "memory": m0,
+        "steps": steps0,
+    }
+    del opt
 
-    #while opt.num_solutions() < 
+    print(f"\n -- ARA* {time.ctime()} --")
+    opt, t1, epses, m1, steps1 = arastar(0.05, 0.05)
+    oo["arastar"] = {
+        "solutions": [s[1] for s in opt.solutions()],
+        "timings": t1,
+        "epses": epses,
+        "memory": m1,
+        "steps": steps1,
+    }
+    del opt
+    
+    print(f"\n -- MERGE {time.ctime()} --")
+    t2, bounds2, m2, v2 = merge_in_process(max(10, timeit.default_timer() - start))
+    oo["merge"] = {
+        "timings": t2,
+        "bounds": bounds2,
+        "memory": m2,
+        "vertices": v2,
+    }
 
-    break
+    o.append(oo)
+
+with open(os.path.join(RESULT_DIR, f"output"), "w") as f:
+    json.dump(o, f)
