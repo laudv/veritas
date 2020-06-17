@@ -272,12 +272,11 @@ PYBIND11_MODULE(pytreeck, m) {
             at1 = std::make_shared<AddTree>(); // dummy addtree
         }
 
-        void initialize_opt(std::unordered_set<FeatId> matches, bool match_is_reuse) {
+        void init_graphs(std::unordered_set<FeatId> matches, bool match_is_reuse) {
             finfo = std::make_shared<FeatInfo>(*at0, *at1, matches, match_is_reuse);
             store = std::make_shared<DomainStore>(*finfo);
             g0 = std::make_shared<KPartiteGraph>(&*store, *at0, *finfo, 0);
             g1 = std::make_shared<KPartiteGraph>(&*store, *at1, *finfo, 1);
-            reset_opt();
         }
 
         void reset_opt() {
@@ -301,7 +300,21 @@ PYBIND11_MODULE(pytreeck, m) {
             if (kwargs.contains("match_is_reuse"))
                 match_is_reuse = kwargs["match_is_reuse"].cast<bool>();
 
-            opt.initialize_opt(matches, match_is_reuse);
+            opt.init_graphs(matches, match_is_reuse);
+
+            // simplify before generate opt, because opt sorts vertices!
+            // vertices need to be in DFS order
+            if (kwargs.contains("simplify"))
+            {
+                int instance = 0;
+                FloatT max_err = 0.0;
+                std::tie(instance, max_err) = kwargs["simplify"].cast<std::tuple<int, FloatT>>();
+                if (instance == 0)      opt.g0->simplify(max_err, true); // overestimate minimum
+                else if (instance == 1) opt.g1->simplify(max_err, false); // underestimate maximum
+                else { opt.g0->simplify(max_err, true); opt.g1->simplify(max_err, false); }
+            }
+
+            opt.reset_opt();
 
             if (kwargs.contains("max_memory"))
                 opt.store->set_max_mem_size(kwargs["max_memory"].cast<size_t>());
@@ -347,6 +360,10 @@ PYBIND11_MODULE(pytreeck, m) {
             opt.g1->merge(K);
             opt.reset_opt();
         })
+        //.def("simplify", [](Optimizer opt, int instance, FloatT max_err) {
+        //    if (instance == 0)  opt.g0->simplify(max_err);
+        //    else                opt.g1->simplify(max_err);
+        //})
         .def("prune", [](Optimizer& opt) {
             if (!opt.solver)
                 throw std::runtime_error("smt not enabled");
@@ -364,7 +381,6 @@ PYBIND11_MODULE(pytreeck, m) {
         })
         .def("prune", [](Optimizer& opt, const py::list& example, FloatT eps) {
             DomainBox b = opt.store->push_box();
-            FeatId fid = 0;
             for (FeatId fid : opt.finfo->feat_ids0())
             {
                 const py::handle& o = example[fid];

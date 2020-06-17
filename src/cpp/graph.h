@@ -110,8 +110,12 @@ namespace treeck {
         void refine(Split split, bool is_left_child, FeatIdMapper fmap);
 
         bool overlaps(const DomainBox& other) const;
+        bool covers(const DomainBox& other) const;
         void combine(const DomainBox& other) const;
         size_t size() const;
+
+        bool is_right_neighbor(const DomainBox& other) const;
+        void join_right_neighbor(const DomainBox& other);
     };
 
     std::ostream&
@@ -166,6 +170,7 @@ namespace treeck {
 
         std::tuple<FloatT, FloatT> propagate_outputs();
         void merge(int K);
+        void simplify(FloatT max_err, bool overestimate); // vertices must be in DFS order, left to right!
         void sort_asc();
         void sort_desc();
         void sort_bound_asc();
