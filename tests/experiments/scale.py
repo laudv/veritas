@@ -1,4 +1,4 @@
-import os, io, pickle, time, timeit, subprocess, json
+import os, io, pickle, time, timeit, subprocess, json, sys
 import multiprocessing as mp
 import scipy.io
 import numpy as np
@@ -82,14 +82,23 @@ def get_opt():
 
     return opt
 
-def astar():
+def astar(mergeK = 0):
     nsteps = 100
     opt = get_opt()
+
     timings = [0.0]
     bounds = [opt.current_bounds()[1]]
     memory = [opt.memory()]
     steps = [0]
+
     start = timeit.default_timer()
+    if mergeK > 0:
+        opt.merge(mergeK)
+        timings.append(timeit.default_timer() - start)
+        bounds.append(opt.current_bounds()[1])
+        memory.append(opt.memory())
+        steps.append(0)
+
     done = False
     while not done and opt.num_solutions() == 0:
         try:
@@ -106,15 +115,24 @@ def astar():
 
     return opt, timings, bounds, memory, steps
 
-def arastar(eps, eps_incr):
+def arastar(eps, eps_incr, mergeK = 0):
     nsteps = 100
     opt = get_opt()
-    opt.set_ara_eps(eps, eps_incr)
+
     timings = []
     epses = []
-    steps = []
     memory = []
+    steps = []
+
     start = timeit.default_timer()
+    if mergeK > 0:
+        opt.merge(mergeK)
+        timings.append(timeit.default_timer() - start)
+        epses.append(eps)
+        memory.append(opt.memory())
+        steps.append(opt.nsteps()[1])
+    opt.set_ara_eps(eps, eps_incr)
+
     done = False
     while not done and opt.get_ara_eps() < 1.0:
         try:
@@ -189,73 +207,91 @@ def merge_in_process(max_runtime):
 # - Robustness for increasing model complexity --------------------------------
 
 
-o = []
-for lr, num_trees in [
-        (1.0, 1),
-        (0.9, 5),
-        (0.8, 10),
-        (0.75, 20),
-        (0.6, 30),
-        (0.65, 40),
-        (0.6, 50),
-        (0.50, 60),
-        (0.40, 70),
-        (0.35, 80),
-        (0.30, 90),
-        (0.30, 100),
-        ]:
+if __name__ == "__main__":
+    o = []
+    output_file = sys.argv[1]
 
-    #for i, (m0, m1) in enumerate(zip(X[y==0].mean(axis=0), X[y==1].mean(axis=0))):
-    #    print(i, m0, m1, m1-m0)
-    #break
+    print("writing output to", os.path.join(RESULT_DIR, output_file))
+    if input("OK? ") != "y":
+        sys.exit()
 
-    print(f"\n= num_trees {num_trees} ===========")
-    model, acc = train_model(lr, num_trees)
-    print(f"accuracy: {acc}")
-    at = addtree_from_xgb_model(model)
-    at.base_score = 0
+    for lr, num_trees in [
+            (1.0, 1),
+            (0.9, 5),
+            (0.8, 10),
+            (0.75, 20),
+            (0.6, 30),
+            (0.65, 40),
+            (0.6, 50),
+            (0.50, 60),
+            (0.40, 70),
+            (0.35, 80),
+            (0.30, 90),
+            (0.30, 100),
+            (0.25, 110),
+            (0.25, 120),
+            (0.25, 120),
+            (0.20, 130),
+            (0.20, 140),
+            (0.20, 150),
+            (0.15, 160),
+            (0.15, 170),
+            (0.15, 180),
+            (0.10, 190),
+            (0.10, 200),
+            ]:
 
-    print("double check:", util.double_check_at_output(model, at, X[0:100, :]))
+        #for i, (m0, m1) in enumerate(zip(X[y==0].mean(axis=0), X[y==1].mean(axis=0))):
+        #    print(i, m0, m1, m1-m0)
+        #break
 
-    start = timeit.default_timer()
-    oo = {
-        "num_trees": num_trees,
-        "lr": lr,
-    }
+        print(f"\n= num_trees {num_trees} ===========")
+        model, acc = train_model(lr, num_trees)
+        print(f"accuracy: {acc}")
+        at = addtree_from_xgb_model(model)
+        at.base_score = 0
 
-    print(f"\n -- A* {time.ctime()} --")
-    opt, t0, bounds0, m0, steps0 = astar()
-    oo["num_vertices"]: opt.num_vertices(1)
-    oo["astar"] = {
-        "solutions": [s[1] for s in opt.solutions()],
-        "timings": t0,
-        "bounds": bounds0,
-        "memory": m0,
-        "steps": steps0,
-    }
-    del opt
+        print("double check:", util.double_check_at_output(model, at, X[0:100, :]))
 
-    print(f"\n -- ARA* {time.ctime()} --")
-    opt, t1, epses, m1, steps1 = arastar(0.05, 0.05)
-    oo["arastar"] = {
-        "solutions": [s[1] for s in opt.solutions()],
-        "timings": t1,
-        "epses": epses,
-        "memory": m1,
-        "steps": steps1,
-    }
-    del opt
-    
-    print(f"\n -- MERGE {time.ctime()} --")
-    t2, bounds2, m2, v2 = merge_in_process(max(10, timeit.default_timer() - start))
-    oo["merge"] = {
-        "timings": t2,
-        "bounds": bounds2,
-        "memory": m2,
-        "vertices": v2,
-    }
+        start = timeit.default_timer()
+        oo = {
+            "num_trees": num_trees,
+            "lr": lr,
+        }
 
-    o.append(oo)
+        print(f"\n -- A* {time.ctime()} --")
+        opt, t0, bounds0, m0, steps0 = astar(mergeK=4)
+        oo["num_vertices"]: opt.num_vertices(1)
+        oo["astar"] = {
+            "solutions": [s[1] for s in opt.solutions()],
+            "timings": t0,
+            "bounds": bounds0,
+            "memory": m0,
+            "steps": steps0,
+        }
+        del opt
 
-with open(os.path.join(RESULT_DIR, f"output"), "w") as f:
-    json.dump(o, f)
+        print(f"\n -- ARA* {time.ctime()} --")
+        opt, t1, epses, m1, steps1 = arastar(0.1, 0.01, mergeK=4)
+        oo["arastar"] = {
+            "solutions": [s[1] for s in opt.solutions()],
+            "timings": t1,
+            "epses": epses,
+            "memory": m1,
+            "steps": steps1,
+        }
+        del opt
+        
+        print(f"\n -- MERGE {time.ctime()} --")
+        t2, bounds2, m2, v2 = merge_in_process(max(10, timeit.default_timer() - start))
+        oo["merge"] = {
+            "timings": t2,
+            "bounds": bounds2,
+            "memory": m2,
+            "vertices": v2,
+        }
+
+        o.append(oo)
+
+    with open(os.path.join(RESULT_DIR, output_file), "w") as f:
+        json.dump(o, f)

@@ -35,6 +35,7 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
 
         opt = Optimizer(maximize=at)
+        print(at)
         print(opt)
         notdone = opt.step(100, min_output=3.5)
         self.assertFalse(notdone)
@@ -66,7 +67,6 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.right(t.root()))), 0.6)
 
         opt = Optimizer(minimize=at, maximize=at, matches={1}, match_is_reuse=True); # share feature 1 between two trees
-
         opt.enable_smt()
 
         self.assertEqual(opt.xvar(0, 0), "x0_0")
