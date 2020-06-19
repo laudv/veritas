@@ -57,8 +57,8 @@ def train_model(lr, num_trees, max_depth=5):
 
 # - Optimizer routines --------------------------------------------------------
 
-def get_opt():
-    opt = Optimizer(maximize=at, max_memory=1024*1024*1024*1) # 10GB
+def get_opt(simplify=None):
+    opt = Optimizer(maximize=at, simplify=simplify, max_memory=MAX_MEMORY)
     opt.enable_smt()
     feat_ids = opt.get_used_feat_ids()[1]
 
@@ -115,9 +115,9 @@ def astar(mergeK = 0):
 
     return opt, timings, bounds, memory, steps
 
-def arastar(eps, eps_incr, mergeK = 0):
+def arastar(eps, eps_incr, mergeK = 0, simplify=None):
     nsteps = 100
-    opt = get_opt()
+    opt = get_opt(simplify=simplify)
 
     timings = []
     epses = []
@@ -206,6 +206,7 @@ def merge_in_process(max_runtime):
 
 # - Robustness for increasing model complexity --------------------------------
 
+MAX_MEMORY = 1024*1024*1024*1 # 1GB
 
 if __name__ == "__main__":
     o = []
@@ -216,28 +217,28 @@ if __name__ == "__main__":
         sys.exit()
 
     for lr, num_trees in [
-            (1.0, 1),
-            (0.9, 5),
-            (0.8, 10),
-            (0.75, 20),
-            (0.6, 30),
-            (0.65, 40),
-            (0.6, 50),
-            (0.50, 60),
-            (0.40, 70),
-            (0.35, 80),
-            (0.30, 90),
+            #(1.0, 1),
+            #(0.9, 5),
+            #(0.8, 10),
+            #(0.75, 20),
+            #(0.6, 30),
+            #(0.65, 40),
+            #(0.6, 50),
+            #(0.50, 60),
+            #(0.40, 70),
+            #(0.35, 80),
+            #(0.30, 90),
             (0.30, 100),
-            (0.25, 110),
-            (0.25, 120),
-            (0.25, 120),
-            (0.20, 130),
-            (0.20, 140),
+            #(0.25, 110),
+            #(0.25, 120),
+            #(0.25, 120),
+            #(0.20, 130),
+            #(0.20, 140),
             (0.20, 150),
-            (0.15, 160),
-            (0.15, 170),
-            (0.15, 180),
-            (0.10, 190),
+            #(0.15, 160),
+            #(0.15, 170),
+            #(0.15, 180),
+            #(0.10, 190),
             (0.10, 200),
             ]:
 
@@ -281,9 +282,21 @@ if __name__ == "__main__":
             "steps": steps1,
         }
         del opt
+
+        print(f"\n -- ARA* simplify {time.ctime()} --")
+        opt, t1, epses, m1, steps1 = arastar(0.1, 0.01, mergeK=4, simplify=(2.0, 1, False)) # underest
+        oo["arastar_simplify"] = {
+            "simplify": 2.0,
+            "solutions": [s[1] for s in opt.solutions()],
+            "timings": t1,
+            "epses": epses,
+            "memory": m1,
+            "steps": steps1,
+        }
+        del opt
         
         print(f"\n -- MERGE {time.ctime()} --")
-        t2, bounds2, m2, v2 = merge_in_process(max(10, timeit.default_timer() - start))
+        t2, bounds2, m2, v2 = merge_in_process(max(10, (timeit.default_timer() - start)/2.0))
         oo["merge"] = {
             "timings": t2,
             "bounds": bounds2,

@@ -415,7 +415,7 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 2.0)
         t.set_leaf_value(t.right(t.right(t.root())), 1.0)
 
-        opt = Optimizer(maximize=at, simplify=(1, 2.0))
+        opt = Optimizer(maximize=at, simplify=(2.0, 1, False)) # underestimate
         self.assertEqual(opt.num_vertices(1), 3)
 
     def test_simplify2(self):
@@ -431,7 +431,7 @@ class TestGraph(unittest.TestCase):
 
         #print(at)
 
-        opt = Optimizer(minimize=at, simplify=(0, 2.0))
+        opt = Optimizer(minimize=at, simplify=(2.0, 0, True)) # overestimate
         self.assertEqual(opt.num_vertices(0), 2)
         self.assertFalse(opt.step(10))
         self.assertEqual(opt.solutions()[0][0], 1)
@@ -445,7 +445,7 @@ class TestGraph(unittest.TestCase):
         print(at)
 
         opt0 = Optimizer(minimize=at)
-        opt1 = Optimizer(minimize=at, simplify=(0, 50.0))
+        opt1 = Optimizer(minimize=at, simplify=(50.0, 0, True)) # overestimate
 
         opt0.step(100)
         opt1.step(100)
@@ -459,26 +459,39 @@ class TestGraph(unittest.TestCase):
         #plot_img_solutions(imghat, opt1.solutions()[0:1])
 
     def test_simplify4(self):
-        at = AddTree.read(f"tests/models/xgb-calhouse-intermediate.json")
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        imghat = np.array(ys).reshape((100, 100))
+        at = AddTree.read(f"tests/models/xgb-img-easy.json")
+
+        def numvert(opt0, opt1):
+            v0 = opt0.num_vertices(0)
+            v1 = opt1.num_vertices(0)
+            return v0, v1, (v0-v1)/v0
 
         opt0 = Optimizer(minimize=at)
-        opt1 = Optimizer(minimize=at, simplify=(0, 2.0))
+        opt1 = Optimizer(minimize=at, simplify=(20.0, 0, True)) # overestimate
 
-        print(opt0.num_vertices(0))
-        print(opt1.num_vertices(0))
+        print("num_vertices", numvert(opt0, opt1))
+        opt0.prune([70, 50], 20.0)
+        opt1.prune([70, 50], 20.0)
+        print("num_vertices", numvert(opt0, opt1))
 
         #opt0.set_ara_eps(0.5, 0.1)
         while opt0.num_solutions() == 0:
-            opt0.step(100)
+            opt0.step(1)
         #opt1.set_ara_eps(0.5, 0.1)
         while opt1.num_solutions() == 0:
-            opt1.step(100)
+            opt1.step(1)
 
         print(opt0.solutions())
         print(opt1.solutions())
 
         print(opt0.nsteps())
         print(opt1.nsteps())
+
+        plot_img_solutions(imghat, opt0.solutions()[0:1])
+        plot_img_solutions(imghat, opt1.solutions()[0:1])
 
 
 if __name__ == "__main__":

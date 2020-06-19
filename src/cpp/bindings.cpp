@@ -304,14 +304,17 @@ PYBIND11_MODULE(pytreeck, m) {
 
             // simplify before generate opt, because opt sorts vertices!
             // vertices need to be in DFS order
-            if (kwargs.contains("simplify"))
+            if (kwargs.contains("simplify") and py::isinstance<py::tuple>(kwargs["simplify"]))
             {
-                int instance = 0;
-                FloatT max_err = 0.0;
-                std::tie(instance, max_err) = kwargs["simplify"].cast<std::tuple<int, FloatT>>();
-                if (instance == 0)      opt.g0->simplify(max_err, true); // overestimate minimum
-                else if (instance == 1) opt.g1->simplify(max_err, false); // underestimate maximum
-                else { opt.g0->simplify(max_err, true); opt.g1->simplify(max_err, false); }
+                py::tuple t = kwargs["simplify"].cast<py::tuple>();
+                FloatT max_err = t[0].cast<FloatT>();
+                for (size_t i = 1; i < 5 && i < t.size();)
+                {
+                    int instance = t[i++].cast<int>();
+                    bool overestimate = t[i++].cast<bool>();
+                    if (instance == 0)      opt.g0->simplify(max_err, overestimate);
+                    else if (instance == 1) opt.g1->simplify(max_err, overestimate);
+                }
             }
 
             opt.reset_opt();
@@ -360,9 +363,10 @@ PYBIND11_MODULE(pytreeck, m) {
             opt.g1->merge(K);
             opt.reset_opt();
         })
-        //.def("simplify", [](Optimizer opt, int instance, FloatT max_err) {
-        //    if (instance == 0)  opt.g0->simplify(max_err);
-        //    else                opt.g1->simplify(max_err);
+        //.def("simplify", [](Optimizer opt, int instance, FloatT max_err, bool overestimate) {
+        //    if (instance == 0) opt.g0->simplify(max_err, overestimate);
+        //    else               opt.g1->simplify(max_err, overestimate);
+        //    opt.reset_opt();
         //})
         .def("prune", [](Optimizer& opt) {
             if (!opt.solver)
@@ -384,7 +388,7 @@ PYBIND11_MODULE(pytreeck, m) {
             for (FeatId fid : opt.finfo->feat_ids0())
             {
                 const py::handle& o = example[fid];
-                if (py::isinstance<py::float_>(o))
+                if (py::isinstance<py::float_>(o) || py::isinstance<py::int_>(o))
                 {
                     FloatT v = o.cast<FloatT>();
                     b.refine(LtSplit(fid, v-eps), false, [=](FeatId i) { return opt.finfo->get_id(0, i); });

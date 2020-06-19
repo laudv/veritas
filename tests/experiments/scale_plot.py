@@ -7,7 +7,7 @@ RESULT_DIR = "tests/experiments/scale"
 def plot_output(f):
     with open(f) as fh:
         o = json.load(fh)
-    o = o[2:]
+    #o = o[2:]
 
     x = [oo["num_trees"] for oo in o]
 
@@ -45,7 +45,7 @@ def plot_output(f):
 def plot_output2(f):
     with open(f) as fh:
         o = json.load(fh)
-    o = o[5:]
+    #o = o[5:]
 
 
     for oo in o:
@@ -56,6 +56,12 @@ def plot_output2(f):
         t0 = oo["astar"]["timings"]
         t1 = oo["arastar"]["timings"]
         t2 = oo["merge"]["timings"]
+
+        if "arastar_simplify" in oo:
+            s3 = oo["arastar_simplify"]["solutions"]
+            e3 = oo["arastar_simplify"]["epses"]
+            t3 = oo["arastar_simplify"]["timings"]
+            max_err = oo["arastar_simplify"]["simplify"]
 
         # if the next solution is worse, then its better eps transfers to the previous solution
         e1f = e1.copy()
@@ -75,6 +81,23 @@ def plot_output2(f):
                 print(f"s1b: {i} [{s1b[i-1]}, {s1b[i]}]")
                 s1b[i] = s1b[i-1]
 
+
+        # if the next solution is worse, then its better eps transfers to the previous solution
+        e3f = e3.copy()
+        change = True
+        while change:
+            change = False
+            for i in range(0, len(e3f)-1):
+                if s3[i] > s3[i+1] and e3f[i] < e3f[i+1]: # better solution, but worse eps
+                    change = True
+                    e3f[i] = e3f[i+1]
+
+        # for the ara* upper bound, always use the current best solution
+        s3b = s3.copy()
+        for i in range(1, len(s3)):
+            if s3b[i] < s3b[i-1]:
+                s3b[i] = s3b[i-1]
+
         print("epses:", oo["arastar"]["epses"])
         print("levels:", len(oo["merge"]["bounds"]))
 
@@ -90,13 +113,17 @@ def plot_output2(f):
         print(len(t2), len(b2))
         ax.plot(t2, b2, "x-", label="merge")
         ax.set_title(f"num_trees = {oo['num_trees']}")
+        if "arastar_simplify" in oo:
+            print(len(t1), len(s1))
+            ax.plot(t3, s3, "x:", label="ARA* simplify")
+            ax.plot(t3, [s/e + max_err for s, e in zip(s3b, e3f)], ":", label="ARA* upper")
 
         ax.legend()
         plt.show()
 
 
 if __name__ == "__main__":
-    #plot_output("tests/experiments/scale/output_10G_merge5")
-    plot_output2("tests/experiments/scale/output_10G_merge4_epsinc001")
+    #plot_output("tests/experiments/scale/output_10G_merge6_epsinc001")
+    plot_output2("tests/experiments/scale/output_1G_merge4_small2")
 
 

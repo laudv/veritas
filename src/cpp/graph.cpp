@@ -626,8 +626,6 @@ namespace treeck {
         struct E { size_t set; DomainBox box; FloatT abs_err; };
         std::vector<E> errors;
 
-        std::cout << "before " << *this << std::endl;
-
         while (true) {
             FloatT min_err = max_err; // anything larger is skipped
             size_t min_set = sets_.size(); // invalid
@@ -663,32 +661,29 @@ namespace treeck {
 
             // nothing found, everything larger than max_err, we're done
             if (min_set == sets_.size())
-            {
-                std::cout << "no more!" << std::endl;
                 break;
-            }
 
             // merge the two neighboring vertices with the smallest error
-            std::cout << "simplify " << min_set << ", " << min_vertex << " with error " << min_err << std::endl;
+            //std::cout << "simplify " << min_set << ", " << min_vertex << " with error " << min_err << std::endl;
 
             IndependentSet& set = sets_[min_set];
             Vertex& v0 = set.vertices[min_vertex-1];
             const Vertex& v1 = set.vertices[min_vertex];
             FloatT err = std::abs(v0.output - v1.output); // measure before changing v0
 
-            std::cout << "is_right_neighbor " << v0.box.is_right_neighbor(v1.box) << std::endl;
+            //std::cout << "is_right_neighbor " << v0.box.is_right_neighbor(v1.box) << std::endl;
 
             // update v0
-            std::cout << "before " << v0.box << ", " << v0.output << std::endl;
-            std::cout << "    +  " << v1.box << ", " << v0.output << std::endl;
+            //std::cout << "before " << v0.box << ", " << v0.output << std::endl;
+            //std::cout << "    +  " << v1.box << ", " << v0.output << std::endl;
             v0.box.join_right_neighbor(v1.box);
-            std::cout << "after " << v0.box << std::endl;
+            //std::cout << "after " << v0.box << std::endl;
 
             v0.output = overestimate ? std::max(v0.output, v1.output) : std::min(v0.output, v1.output);
             v0.max_bound = v0.output;
             v0.min_bound = v0.output;
 
-            std::cout << "new vertex output " << v0.output << std::endl;
+            //std::cout << "new vertex output " << v0.output << std::endl;
 
             // remove v1
             for (size_t i = min_vertex + 1; i < set.vertices.size(); ++i)
@@ -699,64 +694,9 @@ namespace treeck {
             errors.push_back({min_set, v0.box, err});
 
 
-            for (auto e : errors)
-                std::cout << "- error: " << e.abs_err << " for " << e.box << std::endl;
+            //for (auto e : errors)
+            //    std::cout << "- error: " << e.abs_err << " for " << e.box << std::endl;
         }
-
-        std::cout << "after " << *this << std::endl;
-
-
-        //struct C { int set; int vertex; FloatT err; FloatT max_err; };
-        //std::vector<C> candidates;
-        //
-        //for (int j = 0; j < sets_.size(); ++j)
-        //{
-        //    const auto& set = sets_[j];
-        //    for (int i = 1; i < set.vertices.size(); ++i)
-        //    {
-        //        const auto& v0 = set.vertices[i-1];
-        //        const auto& v1 = set.vertices[i];
-        //
-        //        std::cout << "is_neighbor? " << v0.box.is_right_neighbor(v1.box) << std::endl;
-        //        if (v0.box.is_right_neighbor(v1.box))
-        //        {
-        //            FloatT err = std::abs((v0.output - v1.output) / 2.0); // use mean as replacement value
-        //            if (err <= max_err)
-        //                candidates.push_back({j, i, err, err});
-        //        }
-        //    }
-        //}
-        //
-        //for (int i = 0; i < candidates.size(); ++i)
-        //{
-        //    const auto& c = candidates[i];
-        //    std::cout << "candidate " << c.set << ", " << c.vertex << ", " << c.err << std::endl;
-        //}
-        //
-        //auto begin = candidates.begin();
-        //while (true)
-        //{
-        //    {
-        //        auto it = std::min_element(begin, candidates.end(),
-        //                [](const C& a, const C& b) { return a.max_err < b.max_err; });
-        //        std::swap(*begin, *it);
-        //    }
-        //
-        //    const auto& candidate = *begin;
-        //    begin++;
-        //
-        //    std::cout << "first " << candidate.max_err << std::endl;
-        //    break;
-        //}
-        //
-        //for (int i = 0; i < candidates.size(); ++i)
-        //{
-        //    const auto& c = candidates[i];
-        //    std::cout << "candidate " << c.set << ", " << c.vertex << ", " << c.err << std::endl;
-        //}
-
-
-
     }
 
     void
