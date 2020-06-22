@@ -1157,6 +1157,7 @@ namespace treeck {
                 get0(c.instance).output,
                 get1(c.instance).output
             });
+            epses.push_back(cmp_.eps);
 
             // ARA*: decrease eps
             if (eps_incr_ > 0.0 && cmp_.eps < 1.0)

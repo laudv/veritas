@@ -456,6 +456,7 @@ PYBIND11_MODULE(pytreeck, m) {
             }
             return l;
         })
+        .def("epses", [](const Optimizer& opt) { return opt.opt->epses; })
         .def("nsteps", [](const Optimizer& opt) { return opt.opt->nsteps; })
         .def("nupdate_fails", [](const Optimizer& opt) { return opt.opt->nupdate_fails; })
         .def("nrejected", [](const Optimizer& opt) { return opt.opt->nrejected; })

@@ -120,7 +120,6 @@ def arastar(eps, eps_incr, mergeK = 0, simplify=None):
     opt = get_opt(simplify=simplify)
 
     timings = []
-    epses = []
     memory = []
     steps = []
 
@@ -128,7 +127,6 @@ def arastar(eps, eps_incr, mergeK = 0, simplify=None):
     if mergeK > 0:
         opt.merge(mergeK)
         timings.append(timeit.default_timer() - start)
-        epses.append(eps)
         memory.append(opt.memory())
         steps.append(opt.nsteps()[1])
     opt.set_ara_eps(eps, eps_incr)
@@ -144,11 +142,10 @@ def arastar(eps, eps_incr, mergeK = 0, simplify=None):
 
         while len(timings) < opt.num_solutions():
             timings.append(timeit.default_timer() - start)
-            epses.append(opt.get_ara_eps())
             memory.append(opt.memory())
             steps.append(opt.nsteps()[1])
 
-    return opt, timings, epses, memory, steps
+    return opt, timings, memory, steps
 
 def merge(conn):
     opt = get_opt()
@@ -206,7 +203,7 @@ def merge_in_process(max_runtime):
 
 # - Robustness for increasing model complexity --------------------------------
 
-MAX_MEMORY = 1024*1024*1024*1 # 1GB
+MAX_MEMORY = 1024*1024*1024 * 1 # GB
 
 if __name__ == "__main__":
     o = []
@@ -224,20 +221,19 @@ if __name__ == "__main__":
             #(0.6, 30),
             #(0.65, 40),
             #(0.6, 50),
-            #(0.50, 60),
+            (0.50, 60),
             #(0.40, 70),
-            #(0.35, 80),
+            (0.35, 80),
             #(0.30, 90),
             (0.30, 100),
             #(0.25, 110),
-            #(0.25, 120),
-            #(0.25, 120),
+            (0.25, 120),
             #(0.20, 130),
-            #(0.20, 140),
-            (0.20, 150),
-            #(0.15, 160),
+            (0.20, 140),
+            #(0.20, 150),
+            (0.15, 160),
             #(0.15, 170),
-            #(0.15, 180),
+            (0.15, 180),
             #(0.10, 190),
             (0.10, 200),
             ]:
@@ -255,14 +251,16 @@ if __name__ == "__main__":
         print("double check:", util.double_check_at_output(model, at, X[0:100, :]))
 
         start = timeit.default_timer()
+        opt = get_opt()
         oo = {
+            "num_vertices": opt.num_vertices(1),
             "num_trees": num_trees,
             "lr": lr,
         }
+        del opt
 
         print(f"\n -- A* {time.ctime()} --")
         opt, t0, bounds0, m0, steps0 = astar(mergeK=4)
-        oo["num_vertices"]: opt.num_vertices(1)
         oo["astar"] = {
             "solutions": [s[1] for s in opt.solutions()],
             "timings": t0,
@@ -273,30 +271,18 @@ if __name__ == "__main__":
         del opt
 
         print(f"\n -- ARA* {time.ctime()} --")
-        opt, t1, epses, m1, steps1 = arastar(0.1, 0.01, mergeK=4)
+        opt, t1, m1, steps1 = arastar(0.2, 0.01, mergeK=4)
         oo["arastar"] = {
             "solutions": [s[1] for s in opt.solutions()],
             "timings": t1,
-            "epses": epses,
+            "epses": opt.epses(),
             "memory": m1,
             "steps": steps1,
         }
         del opt
 
-        print(f"\n -- ARA* simplify {time.ctime()} --")
-        opt, t1, epses, m1, steps1 = arastar(0.1, 0.01, mergeK=4, simplify=(2.0, 1, False)) # underest
-        oo["arastar_simplify"] = {
-            "simplify": 2.0,
-            "solutions": [s[1] for s in opt.solutions()],
-            "timings": t1,
-            "epses": epses,
-            "memory": m1,
-            "steps": steps1,
-        }
-        del opt
-        
         print(f"\n -- MERGE {time.ctime()} --")
-        t2, bounds2, m2, v2 = merge_in_process(max(10, (timeit.default_timer() - start)/2.0))
+        t2, bounds2, m2, v2 = merge_in_process(max(10, (timeit.default_timer() - start)/1.8))
         oo["merge"] = {
             "timings": t2,
             "bounds": bounds2,

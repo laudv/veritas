@@ -49,3 +49,30 @@ def double_check_at_output(model, at, X):
         p = at.predict_single(X[i, :])
         max_diff = max(max_diff, p-tmp[i])
     return max_diff
+
+def get_ara_bound(epses, sols, task="maximize"):
+    """
+    epses strictly fall over time, but a solutions don't
+    a solution s is eps optimal with eps the eps of the last solution that
+    is smaller than s
+
+    epses = [0.5 0.6 0.7 0.8]
+    sols =  [5.0 4.4 3.9 6.3]
+    """
+    assert len(epses) == len(sols)
+    solsbest = sols.copy()
+    epsesbest = epses.copy()
+    ibest = 0
+    for i in range(1, len(sols) + 1):
+        better = i == len(sols) \
+              or (task == "maximize" and sols[ibest] < sols[i]) \
+              or (task == "minimize" and sols[ibest] > sols[i])
+        if better:
+            old_ibest = ibest
+            while ibest < i:
+                solsbest[ibest] = sols[old_ibest] # ibest was better than everything until i
+                epsesbest[ibest] = epses[i-1] # sols[old_ibest] is epses[i-1] optimal
+                ibest += 1
+            assert ibest == i
+    bound = [s/e for s, e in zip(solsbest, epsesbest)]
+    return solsbest, epsesbest, bound

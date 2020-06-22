@@ -260,6 +260,7 @@ namespace treeck {
         size_t nbox_filter_calls;
 
         std::vector<Solution> solutions;
+        std::vector<FloatT> epses;
 
     public:
         //KPartiteGraphOptimize(KPartiteGraph& g0); // minimize g0
@@ -282,43 +283,6 @@ namespace treeck {
         two_of<FloatT> current_bounds() const;
         size_t num_candidate_cliques() const;
     };
-
-
-    /*
-    template <typename Cmp>
-    class KPartiteGraphFind {
-        const KPartiteGraph& graph_;
-
-        // a priority queue containing all "partial" cliques (no max-cliques) that can still be expanded.
-        std::vector<Clique> pq_buf_;
-        std::vector<Clique> solutions_;
-        Cmp cmp_;
-
-    public:
-        size_t nsteps;
-        size_t nupdate_fails;
-        size_t nrejected;
-
-    private:
-        Clique pq_pop();
-        void pq_push(Clique&& c);
-
-        bool is_solution(const Clique& c) const;
-        bool update_clique(Clique& c);
-
-    public:
-        KPartiteGraphFind(KPartiteGraph& graph);
-
-        bool step();
-        bool steps(int nsteps);
-
-        FloatT current_output_estimate() const;
-        const std::vector<Clique>& solutions() const;
-    };
-
-    using MaxKPartiteGraphFind = KPartiteGraphFind<std::less<Clique>>;
-    using MinKPartiteGraphFind = KPartiteGraphFind<std::greater<Clique>>;
-    */
 
 } /* namespace treeck */
 
