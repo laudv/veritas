@@ -981,6 +981,32 @@ namespace treeck {
                     ci.heuristic = v.min_bound;  // minimize instance 0
                 else ci.heuristic = v.max_bound; // maximize instance 1
 
+                // TEST: can we get a better heuristic value by scanning all layers, no dynamic programming?
+                FloatT alt_heuristic = v.output;
+                for (size_t j = ci.indep_set + 1; j < graph.sets_.size(); ++j)
+                {
+                    FloatT tmp = -std::numeric_limits<FloatT>::infinity();
+                    if constexpr (instance==0) tmp = std::numeric_limits<FloatT>::infinity();
+
+                    const auto& set1 = graph.sets_[j].vertices;
+
+                    for (const Vertex& v1 : set1)
+                    {
+                        if (!(c.box.overlaps(v1.box) && v.box.overlaps(v1.box)))
+                            continue;
+                        if constexpr (instance==0)
+                            tmp = tmp > v.output ? v.output : tmp;  // minimize instance 0
+                        else tmp = tmp < v.output ? v.output : tmp; // maximize instance 1
+                    }
+                    alt_heuristic += tmp;
+                }
+
+                std::cout << "alternative " << ci.indep_set << " ";
+                if constexpr (instance==0)
+                    std::cout << "min " << (alt_heuristic > ci.heuristic);
+                else std::cout << "max " << (alt_heuristic < ci.heuristic);
+                std::cout << " " << ci.heuristic  << ", " << alt_heuristic << std::endl;
+
                 return true; // update successful!
             }
             else ++nupdate_fails;
