@@ -72,7 +72,7 @@ void test_img()
 
 void test_calhouse_bounds()
 {
-    auto file = "tests/models/xgb-calhouse-intermediate.json";
+    auto file = "tests/models/xgb-calhouse-hard.json";
     AddTree at = AddTree::from_json_file(file);
     AddTree dummy;
 
@@ -81,15 +81,17 @@ void test_calhouse_bounds()
     KPartiteGraph g0(&store);
     KPartiteGraph g1(&store, at, finfo, 0);
     KPartiteGraphOptimize opt(g0, g1);
-    opt.set_eps(0.02, 0.02);
+    //opt.set_eps(0.02, 0.02);
 
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<double> timings;
     std::vector<double> num_steps;
-    while (opt.num_candidate_cliques() < 1000000 && opt.get_eps() < 1.0)
+    while (opt.num_candidate_cliques() < 1000000)
     {
-        if (!opt.steps(10))
+        if (!opt.steps(1000))
             break;
+
+        std::cout << std::get<1>(opt.current_bounds()) << std::endl;
 
         while (timings.size() < opt.solutions.size())
         {

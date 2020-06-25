@@ -51,37 +51,43 @@ def plot_output2(f):
 
     for oo in o:
         b0 = oo["astar"]["bounds"]
+        s0 = oo["astar"]["solutions"]
         s1 = oo["arastar"]["solutions"]
         e1 = oo["arastar"]["epses"]
-        u1 = util.get_ara_bound(e1, s1, task="maximize")[2]
+        s1f, e1f, b1 = util.get_ara_bound(e1, s1, task="maximize")
         b2 = oo["merge"]["bounds"]
         t0 = oo["astar"]["timings"]
         t1 = oo["arastar"]["timings"]
         t2 = oo["merge"]["timings"]
 
-        print("epses:", e1)
+        print("== num_trees", oo["num_trees"])
+        print("best eps:", e1[-1])
+        print("best solution ARA*", max(s1), f"({len(s1)})")
+        print("best solution A*  ", s0[0] if len(s0) > 0 else "NA", f"({len(s0)})")
         print("merge levels:", len(oo["merge"]["bounds"]))
 
         fig, ax = plt.subplots(figsize=(12, 7))
         
-        if len(oo["astar"]["solutions"]) > 0:
-            s = oo["astar"]["solutions"][0]
-            ax.axhline(s, color="gray", linestyle=":", linewidth=1, label="Optimal")
-            b0 = [x for x in b0 if x >= s]
-            t0 = [y for x, y in zip(b0, t0) if x >= s]
+        if len(s0) > 0:
+            ax.axhline(s0[0], color="gray", linestyle=":", linewidth=1, label="Optimal")
+            b0.append(s0[0])
+            t0.append(t0[-1])
+            b0 = [x for x in b0 if x >= s0[0]]
+            t0 = [y for x, y in zip(b0, t0) if x >= s0[0]]
         else:
             ax.axhline(min(b0), color="gray", linestyle=":", linewidth=1, label="A* upper bound")
             ax.axhline(max(s1), color="gray", linestyle=":", linewidth=1, label="ARA* lower bound")
         ax.plot(t0, b0, label="A*")
-        ax.plot(t1, s1, ".-", label="ARA*")
-        ax.plot(t1, u1, "-.", label="ARA* upper")
+        ax.plot(t1, s1f, "-", label="ARA*")
+        ax.plot(t1, b1, "-.", label="ARA* upper")
         l, = ax.plot(t2, b2, "x-", label="merge")
         if True or len(oo["astar"]["solutions"]) == 0: # should actually be disabled when merge finds the solution
             #t2.append(max(t0[-1], t1[-1]))
             #b2.append(b2[-1])
             t3 = max(t0[-1], t1[-1])
-            ax.plot([t2[-1], t3], [b2[-1], b2[-1]], "-", color=l.get_color())
-            ax.text(t3, b2[-1], "OOT", horizontalalignment='right', verticalalignment='bottom', color=l.get_color())
+            if t3 > t2[-1]:
+                ax.plot([t2[-1], t3], [b2[-1], b2[-1]], "-", color=l.get_color())
+                ax.text(t3, b2[-1], "OOT", horizontalalignment='right', verticalalignment='bottom', color=l.get_color())
         ax.set_title(f"num_trees = {oo['num_trees']}")
         ax.legend()
         ax.set_xlabel("time");

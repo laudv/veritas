@@ -189,9 +189,9 @@ namespace treeck {
             new_block.reserve(rem_capacity);
             store_.push_back(std::move(new_block));
 
-            std::cout << "DomainStore memory: " << mem << " bytes, "
-                << (static_cast<double>(get_mem_size()) / (1024.0 * 1024.0)) << " mb ("
-                << store_.size() << " blocks)" << std::endl;
+            //std::cout << "DomainStore memory: " << mem << " bytes, "
+            //    << (static_cast<double>(get_mem_size()) / (1024.0 * 1024.0)) << " mb ("
+            //    << store_.size() << " blocks)" << std::endl;
         }
         return store_.back();
     }
@@ -1303,7 +1303,7 @@ namespace treeck {
             {
                 FloatT new_eps = cmp_.eps + eps_incr_;
                 new_eps = new_eps > 1.0 ? 1.0 : new_eps;
-                std::cout << "ARA*: eps update: " << cmp_.eps << " -> " << new_eps << std::endl;
+                //std::cout << "ARA*: eps update: " << cmp_.eps << " -> " << new_eps << std::endl;
                 set_eps(new_eps, eps_incr_);
             }
         }

@@ -127,15 +127,16 @@ def adv_example_for_eps(example, label, at0, at1, eps,
     # optimizing
     bounds = [opt.current_bounds()]
     start = timeit.default_timer()
-    #opt.set_ara_eps(0.05, 0.0)
+    opt.set_ara_eps(0.01, 0.01)
     if opt_stepsize > 0:
         while opt.num_solutions() == 0 and opt.num_candidate_cliques() < max_opt_cliques:
-            if not opt.step(opt_stepsize, min_output_difference=0.0):
-                #print("NO SOLUTION")
-                break
+            is_not_done = opt.step(opt_stepsize, min_output_difference=0.0)
             b = opt.current_bounds()
             #print(b, opt.nsteps(), opt.num_candidate_cliques())
             bounds.append(b)
+            if not is_not_done:
+                print("NO SOLUTION")
+                break
             if timeit.default_timer() - start > max_opt_time:
                 break
     stop = timeit.default_timer()
@@ -149,6 +150,9 @@ def adv_example_for_eps(example, label, at0, at1, eps,
         print(f"       bound           {bound_before[0]:.3f}/{bounds[0][0]:.3f}/{bounds[-1][0]:.3f},",
                                      f"{bound_before[1]:.3f}/{bounds[0][1]:.3f}/{bounds[-1][1]:.3f}")
         print(f"       time            {prune_time:.3f}+{merge_time:.3f}+{opt_time:.3f}")
+
+    #plt.plot([x[1] - x[0] for x in bounds])
+    #plt.show()
 
     # return new lower bound for epsilon if we found one
     if len(solutions) > 0:
@@ -166,7 +170,7 @@ def adv_example_for_eps(example, label, at0, at1, eps,
 def binary_search(nsteps, example, label, at0, at1, eps,
         merges=[2, 2],
         opt_stepsize=1000,
-        max_opt_time=0.1,
+        max_opt_time=1.0,
         max_opt_cliques=200000):
 
     verified_eps = 0
@@ -191,10 +195,10 @@ def binary_search(nsteps, example, label, at0, at1, eps,
                 upper = eps
             else:
                 lower = eps
-                eps = eps + 0.5 * (upper - eps)
+                eps = eps + 0.5 * (upper - lower)
         else: # we found an adversarial example, or we could not prove that one does not exist
             upper = eps1
-            eps = eps - 0.5 * (eps1 - lower)
+            eps = eps1 - 0.5 * (upper - lower)
 
         print(f" => eps update {old_eps:.4f} -> {eps:.4f} ({lower:.4f}, {upper:.4f})")
 
@@ -207,8 +211,9 @@ def binary_search(nsteps, example, label, at0, at1, eps,
 
 eps = 10
 n_adv = 1
-examples = X[Itest[0:n_adv]]
-labels = y[Itest[0:n_adv]]
+start_i = 1
+examples = X[Itest[start_i:start_i+n_adv]]
+labels = y[Itest[start_i:start_i+n_adv]]
 
 start = timeit.default_timer()
 for i, (example, label) in enumerate(zip(examples, labels)):
@@ -220,7 +225,7 @@ for i, (example, label) in enumerate(zip(examples, labels)):
     for j in range(len(ats)):
         if j == label: continue
         print(f"MNIST digit {label} vs. {j} (example {i})")
-        eps0 = binary_search(10, example, label, at, ats[j], eps, opt_stepsize=1000)
+        eps0 = binary_search(10, example, label, at, ats[j], eps, opt_stepsize=500, merges=[], max_opt_time=0.1)
         min_eps = min(eps0, min_eps)
         print(f"=> result {label} vs. {j}: {eps0:.3f} [min_eps={min_eps:.3f}]")
     print(f"==> final result for {label}: {min_eps:.4f}")
