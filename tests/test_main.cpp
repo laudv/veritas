@@ -72,11 +72,11 @@ void test_img()
 
 void test_calhouse_bounds()
 {
-    auto file = "tests/models/xgb-calhouse-hard.json";
+    auto file = "tests/models/xgb-calhouse-intermediate.json";
     AddTree at = AddTree::from_json_file(file);
     AddTree dummy;
 
-    FeatInfo finfo(at, dummy, {}, true); // minimize
+    FeatInfo finfo(at, dummy, {}, true);
     DomainStore store(finfo);
     KPartiteGraph g0(&store);
     KPartiteGraph g1(&store, at, finfo, 0);
@@ -85,23 +85,29 @@ void test_calhouse_bounds()
 
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<double> timings;
+    std::vector<double> num_steps;
     while (opt.num_candidate_cliques() < 1000000 && opt.get_eps() < 1.0)
     {
-        if (!opt.steps(1000))
+        if (!opt.steps(10))
             break;
 
         while (timings.size() < opt.solutions.size())
         {
-            double d = std::chrono::duration_cast<std::chrono::milliseconds>(
+            double d = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::high_resolution_clock::now() - start).count();
-            timings.push_back(d / 1000.0);
+            timings.push_back(d / 1000000.0);
+            num_steps.push_back(std::get<0>(opt.nsteps) + std::get<1>(opt.nsteps));
         }
     }
 
     for (size_t i = 0; i < opt.solutions.size(); ++i)
     {
         auto sol = opt.solutions[i].output1;
-        std::cout << sol << ", " << timings[i] << std::endl;
+        auto eps = opt.epses[i];
+        std::cout << sol << ", " << eps
+            << ", " << num_steps[i]
+            << ", " << timings[i]
+            << std::endl;
     }
 }
 

@@ -90,6 +90,7 @@ namespace treeck {
         DomainStore(const FeatInfo& finfo);
         DomainBox push_box();
         DomainBox push_copy(const DomainBox& box);
+        void pop_last_box(const DomainBox& last_box);
     };
 
 
@@ -111,7 +112,8 @@ namespace treeck {
 
         bool overlaps(const DomainBox& other) const;
         bool covers(const DomainBox& other) const;
-        void combine(const DomainBox& other) const;
+        void combine(const DomainBox& other);
+        void copy(const DomainBox& other);
         size_t size() const;
 
         bool is_right_neighbor(const DomainBox& other) const;
@@ -249,6 +251,9 @@ namespace treeck {
 
         template <size_t instance, typename BF, typename OF>
         void step_instance(Clique c, BF box_filter, OF output_filter);
+
+        template <size_t instance, typename BF, typename OF>
+        void expand_clique_instance(Clique c, BF box_filter, OF output_filter);
 
         template <typename BF, typename OF>
         bool step_aux(BF bf, OF of);

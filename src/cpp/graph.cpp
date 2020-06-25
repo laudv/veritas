@@ -268,6 +268,16 @@ namespace treeck {
         return { ptr, ptr + box_size_ };
     }
 
+    void
+    DomainStore::pop_last_box(const DomainBox& last_box)
+    {
+        Block& block = store_.back(); // don't need get_last_block, because no resize needed!
+        size_t start_index = block.size() - box_size_;
+        if (last_box.begin() != &block[start_index])
+            throw std::runtime_error("invalid call to pop_last_box");
+        block.resize(start_index);
+    }
+
 
 
 
@@ -401,12 +411,11 @@ namespace treeck {
     }
 
     void
-    DomainBox::combine(const DomainBox& other) const
+    DomainBox::combine(const DomainBox& other)
     {
         DomainT *it0 = begin_;
         DomainT *it1 = other.begin_;
 
-        // assume sorted
         for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
         {
             *it0 = it0->intersect(*it1);
@@ -421,6 +430,16 @@ namespace treeck {
             //    },
             //    *it1);
         }
+    }
+
+    void
+    DomainBox::copy(const DomainBox& other)
+    {
+        DomainT *it0 = begin_;
+        DomainT *it1 = other.begin_;
+
+        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+            *it0 = *it1;
     }
 
     std::ostream&
@@ -981,31 +1000,31 @@ namespace treeck {
                     ci.heuristic = v.min_bound;  // minimize instance 0
                 else ci.heuristic = v.max_bound; // maximize instance 1
 
-                // TEST: can we get a better heuristic value by scanning all layers, no dynamic programming?
-                FloatT alt_heuristic = v.output;
-                for (size_t j = ci.indep_set + 1; j < graph.sets_.size(); ++j)
-                {
-                    FloatT tmp = -std::numeric_limits<FloatT>::infinity();
-                    if constexpr (instance==0) tmp = std::numeric_limits<FloatT>::infinity();
+                //// TEST: can we get a better heuristic value by scanning all layers, no dynamic programming?
+                //FloatT alt_heuristic = v.output;
+                //for (size_t j = ci.indep_set + 1; j < graph.sets_.size(); ++j)
+                //{
+                //    FloatT tmp = -std::numeric_limits<FloatT>::infinity();
+                //    if constexpr (instance==0) tmp = std::numeric_limits<FloatT>::infinity();
 
-                    const auto& set1 = graph.sets_[j].vertices;
+                //    const auto& set1 = graph.sets_[j].vertices;
 
-                    for (const Vertex& v1 : set1)
-                    {
-                        if (!(c.box.overlaps(v1.box) && v.box.overlaps(v1.box)))
-                            continue;
-                        if constexpr (instance==0)
-                            tmp = tmp > v.output ? v.output : tmp;  // minimize instance 0
-                        else tmp = tmp < v.output ? v.output : tmp; // maximize instance 1
-                    }
-                    alt_heuristic += tmp;
-                }
+                //    for (const Vertex& v1 : set1)
+                //    {
+                //        if (!(c.box.overlaps(v1.box) && v.box.overlaps(v1.box)))
+                //            continue;
+                //        if constexpr (instance==0)
+                //            tmp = tmp > v.output ? v.output : tmp;  // minimize instance 0
+                //        else tmp = tmp < v.output ? v.output : tmp; // maximize instance 1
+                //    }
+                //    alt_heuristic += tmp;
+                //}
 
-                std::cout << "alternative " << ci.indep_set << " ";
-                if constexpr (instance==0)
-                    std::cout << "min " << (alt_heuristic > ci.heuristic);
-                else std::cout << "max " << (alt_heuristic < ci.heuristic);
-                std::cout << " " << ci.heuristic  << ", " << alt_heuristic << std::endl;
+                //std::cout << "alternative " << ci.indep_set << " ";
+                //if constexpr (instance==0)
+                //    std::cout << "min " << (alt_heuristic > ci.heuristic);
+                //else std::cout << "max " << (alt_heuristic < ci.heuristic);
+                //std::cout << " " << ci.heuristic  << ", " << alt_heuristic << std::endl;
 
                 return true; // update successful!
             }
@@ -1147,6 +1166,100 @@ namespace treeck {
         std::get<instance>(nsteps)++;
     }
 
+    template <size_t instance, typename BF, typename OF>
+    void
+    KPartiteGraphOptimize::expand_clique_instance(Clique c, BF box_filter, OF output_filter)
+    {
+        // invariant: Clique `c` can be extended
+        //
+        // Things to do (cont. step_aux)
+        // 3. find first next vertex with box that overlaps c.box
+        // 4. construct combined box
+        // 5. check box_filter, if reject, continue to next vertex
+        // 6. compute heuristic
+        // 7. check output_filter, if reject, continue to next vertex
+        // 8. push new clique to pq
+
+        const CliqueInstance& ci = std::get<instance>(c.instance);
+        const KPartiteGraph& graph = std::get<instance>(graph_);
+        const auto& next_set = graph.sets_[ci.indep_set];
+
+        DomainBox box = store_->push_box(); // preallocated box, reused if new_c fails somewhere
+
+        for (const Vertex& v : next_set.vertices)
+        {
+            if (!c.box.overlaps(v.box))
+                continue;
+
+            box.copy(c.box);
+            box.combine(v.box);
+
+            // do we accept this new box?
+            if (!box_filter(box))
+            {
+                ++nbox_filter_calls;
+                ++nrejected;
+                continue;
+            }
+
+            // given this new box, whats an upper/lower bound on the output for the remaining indep.sets?
+            FloatT heuristic = 0.0;
+            auto set_it = graph.sets_.begin() + ci.indep_set + 1;
+            for (; set_it < graph.sets_.end(); ++set_it)
+            {
+                FloatT set_limit = -std::numeric_limits<FloatT>::infinity();
+                if constexpr (instance==0) set_limit = -set_limit; // pos inf for instance0 (larger than anything)
+                for (const Vertex& w : set_it->vertices)
+                {
+                    if (!box.overlaps(w.box))
+                        continue;
+                    if constexpr (instance==0) // minimize instance 0 (set_limit = minimum)
+                        set_limit = std::min(w.output, set_limit);
+                    else // maximize instance 1 (set_limit = maximum)
+                        set_limit = std::max(w.output, set_limit);
+                }
+                heuristic += set_limit;
+                if (std::isinf(heuristic))
+                    break;
+            }
+
+            // some set where none of the vertices overlap box -> don't add to pq
+            if (std::isinf(heuristic))
+            {
+                std::cout << "inf heuristic at indep_set=" << ci.indep_set << std::endl;
+                continue;
+            }
+
+            //std::cout << "heuristic " << heuristic << std::endl;
+
+            // construct new clique
+            Clique new_c = {
+                box,
+                c.instance // copy
+            };
+            CliqueInstance& new_ci = std::get<instance>(new_c.instance);
+            new_ci.output += v.output;
+            new_ci.indep_set += 1;
+            new_ci.heuristic = heuristic;
+            // new_ci.vertex is unused
+
+            // do we accept these output bounds?
+            if (!output_filter(
+                    get0(new_c.instance).output_bound(),
+                    get1(new_c.instance).output_bound()))
+            {
+                ++nrejected;
+                continue;
+            }
+
+            pq_push(std::move(new_c));
+            box = store_->push_box(); // pre-allocate new box for next iteration
+        }
+
+        store_->pop_last_box(box);
+        std::get<instance>(nsteps)++;
+    }
+
     template <typename BF, typename OF>
     bool
     KPartiteGraphOptimize::step_aux(BF box_filter, OF output_filter)
@@ -1157,7 +1270,7 @@ namespace treeck {
         // Things to do:
         // 1. check whether the top of the pq is a solution
         // 2. determine which graph to use to extend the best clique
-        // --> goto step_instance
+        // --> goto step_instance / expand_clique_instance
 
         //std::cout << "ncliques=" << cliques_.size()
         //    << ", nsteps=" << get0(nsteps) << ":" << get1(nsteps)
@@ -1199,12 +1312,14 @@ namespace treeck {
                     || is_solution1))
         {
             //std::cout << "step(): extend graph0" << std::endl;
-            step_instance<0>(std::move(c), box_filter, output_filter);
+            //step_instance<0>(std::move(c), box_filter, output_filter);
+            expand_clique_instance<0>(std::move(c), box_filter, output_filter);
         }
         else if (!is_solution1)
         {
             //std::cout << "step(): extend graph1" << std::endl;
-            step_instance<1>(std::move(c), box_filter, output_filter);
+            //step_instance<1>(std::move(c), box_filter, output_filter);
+            expand_clique_instance<1>(std::move(c), box_filter, output_filter);
         }
         else // there's a solution in `cliques_` -> shouldn't happen
         {
