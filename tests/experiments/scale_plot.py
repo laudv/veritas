@@ -53,51 +53,44 @@ def plot_output2(f):
         b0 = oo["astar"]["bounds"]
         s1 = oo["arastar"]["solutions"]
         e1 = oo["arastar"]["epses"]
+        u1 = util.get_ara_bound(e1, s1, task="maximize")[2]
         b2 = oo["merge"]["bounds"]
         t0 = oo["astar"]["timings"]
         t1 = oo["arastar"]["timings"]
         t2 = oo["merge"]["timings"]
 
-        # if the next solution is worse, then its better eps transfers to the previous solution
-        e1f = e1.copy()
-        change = True
-        while change:
-            change = False
-            for i in range(0, len(e1f)-1):
-                if s1[i] > s1[i+1] and e1f[i] < e1f[i+1]: # better solution, but worse eps
-                    change = True
-                    print(f"e1f: {i}: {e1f[i]} -> {e1f[i+1]} [{s1[i]}, {s1[i+1]}]")
-                    e1f[i] = e1f[i+1]
+        print("epses:", e1)
+        print("merge levels:", len(oo["merge"]["bounds"]))
 
-        # for the ara* upper bound, always use the current best solution
-        s1b = s1.copy()
-        for i in range(1, len(s1)):
-            if s1b[i] < s1b[i-1]:
-                print(f"s1b: {i} [{s1b[i-1]}, {s1b[i]}]")
-                s1b[i] = s1b[i-1]
-
-        print("epses:", oo["arastar"]["epses"])
-        print("levels:", len(oo["merge"]["bounds"]))
-
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(12, 7))
         
-        print(len(t0), len(b0))
-        ax.plot(t0, b0, label="A*")
         if len(oo["astar"]["solutions"]) > 0:
-            ax.axhline(oo["astar"]["solutions"][0], color="gray", linestyle=":", linewidth=1, label="A* best")
-        print(len(t1), len(s1))
-        ax.plot(t1, s1, "o-", label="ARA*")
-        ax.plot(t1, [s/e for s, e in zip(s1b, e1f)], label="ARA* upper")
-        print(len(t2), len(b2))
-        ax.plot(t2, b2, "x-", label="merge")
-        ax.plot(t1, util.get_ara_bound(e1, s1, task="maximize")[2], "-.", label="ARA* upper 2")
+            s = oo["astar"]["solutions"][0]
+            ax.axhline(s, color="gray", linestyle=":", linewidth=1, label="Optimal")
+            b0 = [x for x in b0 if x >= s]
+            t0 = [y for x, y in zip(b0, t0) if x >= s]
+        else:
+            ax.axhline(min(b0), color="gray", linestyle=":", linewidth=1, label="A* upper bound")
+            ax.axhline(max(s1), color="gray", linestyle=":", linewidth=1, label="ARA* lower bound")
+        ax.plot(t0, b0, label="A*")
+        ax.plot(t1, s1, ".-", label="ARA*")
+        ax.plot(t1, u1, "-.", label="ARA* upper")
+        l, = ax.plot(t2, b2, "x-", label="merge")
+        if True or len(oo["astar"]["solutions"]) == 0: # should actually be disabled when merge finds the solution
+            #t2.append(max(t0[-1], t1[-1]))
+            #b2.append(b2[-1])
+            t3 = max(t0[-1], t1[-1])
+            ax.plot([t2[-1], t3], [b2[-1], b2[-1]], "-", color=l.get_color())
+            ax.text(t3, b2[-1], "OOT", horizontalalignment='right', verticalalignment='bottom', color=l.get_color())
         ax.set_title(f"num_trees = {oo['num_trees']}")
         ax.legend()
+        ax.set_xlabel("time");
+        ax.set_ylabel("model output");
         plt.show()
 
 
 if __name__ == "__main__":
-    #plot_output("tests/experiments/scale/output_10G_merge6_epsinc001")
+    #plot_output("tests/experiments/scale/output5G")
     plot_output2("tests/experiments/scale/output5G")
 
 

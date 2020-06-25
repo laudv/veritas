@@ -191,11 +191,11 @@ namespace treeck {
 
     struct CliqueInstance {
         FloatT output;              // A*'s g(clique_instance)
-        FloatT prev_bound;          // A*'s h(clique_instance)
+        FloatT heuristic;          // A*'s h(clique_instance)
 
         inline FloatT output_bound(FloatT eps = 1.0) const
         {
-            return output + eps * prev_bound;
+            return output + eps * heuristic;
         } // g(clique_instance) + eps * h(clique_instance)
 
         short indep_set; // index of tree (= independent set in graph) to merge with

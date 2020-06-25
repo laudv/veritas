@@ -810,7 +810,7 @@ namespace treeck {
     //FloatT
     //CliqueInstance::output_bound(FloatT eps) const
     //{
-    //    return output + eps * prev_bound;
+    //    return output + eps * heuristic;
     //}
 
     bool
@@ -972,14 +972,14 @@ namespace treeck {
                 ci.vertex = i;
 
                 // reuse dynamic programming value (propagate_outputs) to update bound
-                // the bound for the current clique instance is ci.output + ci.prev_bound
+                // the bound for the current clique instance is ci.output + ci.heuristic
                 // we store the components separately so we can relax A*'s heuristic:
                 //      f(c) = g(c) + eps * h(c)
                 //      with g(c) = ci.output
-                //           h(c) = ci.prev_bound
+                //           h(c) = ci.heuristic
                 if constexpr (instance==0)
-                    ci.prev_bound = v.min_bound;  // minimize instance 0
-                else ci.prev_bound = v.max_bound; // maximize instance 1
+                    ci.heuristic = v.min_bound;  // minimize instance 0
+                else ci.heuristic = v.max_bound; // maximize instance 1
 
                 return true; // update successful!
             }
@@ -1023,7 +1023,7 @@ namespace treeck {
         new_ci.output += v.output; // output of clique is previous output + output of newly merged vertex
         new_ci.indep_set += 1;
         new_ci.vertex = 0; // start from beginning in new `indep_set` (= tree)
-        new_ci.prev_bound = 0.0; // if not a solution, will be set by update_clique
+        new_ci.heuristic = 0.0; // if not a solution, will be set by update_clique
 
         // UPDATE OLD
         // push old clique if it still has a valid extension
