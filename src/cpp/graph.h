@@ -237,6 +237,8 @@ namespace treeck {
         CliqueMaxDiffPqCmp cmp_;
         FloatT eps_incr_;
 
+        enum { DYN_PROG, RECOMPUTE } heuristic_type;
+
     private:
         Clique pq_pop();
         void pq_push(Clique&& c);
@@ -275,6 +277,7 @@ namespace treeck {
 
         FloatT get_eps() const;
         void set_eps(FloatT eps, FloatT eps_incr);
+        void use_dyn_prog_heuristic();
 
         bool step();
         bool step(BoxFilter bf);

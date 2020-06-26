@@ -888,6 +888,7 @@ namespace treeck {
         , cliques_()
         , cmp_{1.0}
         , eps_incr_{0.0}
+        , heuristic_type(KPartiteGraphOptimize::RECOMPUTE)
         , nsteps{0, 0}
         , nupdate_fails{0}
         , nrejected{0}
@@ -953,6 +954,14 @@ namespace treeck {
         //std::cout << "ARA* EPS set to " << cmp_.eps << std::endl;
     }
 
+    void
+    KPartiteGraphOptimize::use_dyn_prog_heuristic()
+    {
+        if (get0(nsteps) + get1(nsteps) != 0)
+            throw std::runtime_error("cannot change heuristic mid optimization");
+        heuristic_type = DYN_PROG;
+    }
+
     bool
     KPartiteGraphOptimize::is_solution(const Clique& c) const
     {
@@ -964,7 +973,7 @@ namespace treeck {
     KPartiteGraphOptimize::is_instance_solution(const Clique& c) const
     {
         return std::get<instance>(c.instance).indep_set ==
-            std::get<instance>(graph_).sets_.size();
+            static_cast<int>(std::get<instance>(graph_).sets_.size());
     }
 
     template <size_t instance>
@@ -979,7 +988,7 @@ namespace treeck {
 
         const auto& set = graph.sets_[ci.indep_set].vertices;
         //std::cout << "UPDATE " << instance << ": " << ci.vertex << " -> " << set.size() << std::endl;
-        for (int i = ci.vertex; i < set.size(); ++i) // (!) including ci.vertex!
+        for (size_t i = ci.vertex; i < set.size(); ++i) // (!) including ci.vertex!
         {
             const Vertex& v = set[i];
             //std::cout << "CHECK BOXES OVERLAP " << instance << " i=" << i << std::endl;
@@ -1312,14 +1321,18 @@ namespace treeck {
                     || is_solution1))
         {
             //std::cout << "step(): extend graph0" << std::endl;
-            //step_instance<0>(std::move(c), box_filter, output_filter);
-            expand_clique_instance<0>(std::move(c), box_filter, output_filter);
+            if (heuristic_type == DYN_PROG)
+                step_instance<0>(std::move(c), box_filter, output_filter);
+            else
+                expand_clique_instance<0>(std::move(c), box_filter, output_filter);
         }
         else if (!is_solution1)
         {
             //std::cout << "step(): extend graph1" << std::endl;
-            //step_instance<1>(std::move(c), box_filter, output_filter);
-            expand_clique_instance<1>(std::move(c), box_filter, output_filter);
+            if (heuristic_type == DYN_PROG)
+                step_instance<1>(std::move(c), box_filter, output_filter);
+            else
+                expand_clique_instance<1>(std::move(c), box_filter, output_filter);
         }
         else // there's a solution in `cliques_` -> shouldn't happen
         {

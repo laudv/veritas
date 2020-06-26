@@ -343,6 +343,9 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("set_ara_eps", [](Optimizer& opt, FloatT eps, FloatT eps_incr) {
             opt.opt->set_eps(eps, eps_incr);
         })
+        .def("use_dyn_prog_heuristic", [](Optimizer& opt) {
+            opt.opt->use_dyn_prog_heuristic();
+        })
         .def("get_ara_eps", [](const Optimizer& opt) {
             return opt.opt->get_eps();
         })
