@@ -821,10 +821,10 @@ namespace treeck {
 
     // - KPartiteGraphOptimize ------------------------------------------------
     
-    template <typename T> static T& get0(two_of<T>& t) { return std::get<0>(t); }
-    template <typename T> static const T& get0(const two_of<T>& t) { return std::get<0>(t); }
-    template <typename T> static T& get1(two_of<T>& t) { return std::get<1>(t); }
-    template <typename T> static const T& get1(const two_of<T>& t) { return std::get<1>(t); }
+    template <typename T> inline T& get0(two_of<T>& t) { return std::get<0>(t); }
+    template <typename T> inline const T& get0(const two_of<T>& t) { return std::get<0>(t); }
+    template <typename T> inline T& get1(two_of<T>& t) { return std::get<1>(t); }
+    template <typename T> inline const T& get1(const two_of<T>& t) { return std::get<1>(t); }
 
     //FloatT
     //CliqueInstance::output_bound(FloatT eps) const
@@ -845,7 +845,8 @@ namespace treeck {
     operator<<(std::ostream& s, const CliqueInstance& ci)
     {
         return s
-            << "    output=" << ci.output << ", bound=" << ci.output_bound() << ", " << std::endl
+            << "    output=" << ci.output << ", heuristic=" << ci.heuristic
+            << ", bound=" << ci.output_bound() << ", " << std::endl
             << "    indep_set=" << ci.indep_set << ", vertex=" << ci.vertex;
     }
 
@@ -870,7 +871,6 @@ namespace treeck {
             << "  output0=" << sol.output0 << ", output1=" << sol.output1
             << " (diff=" << (sol.output1-sol.output0) << ')' << std::endl
             << '}';
-
     }
 
     //KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0)
@@ -1211,35 +1211,40 @@ namespace treeck {
                 continue;
             }
 
-            // given this new box, whats an upper/lower bound on the output for the remaining indep.sets?
-            FloatT heuristic = 0.0;
-            auto set_it = graph.sets_.begin() + ci.indep_set + 1;
-            for (; set_it < graph.sets_.end(); ++set_it)
+            // recompute heuristic for graph0
+            FloatT heuristic0 = 0.0;
+            for (auto it = get0(graph_).sets_.cbegin() + get0(c.instance).indep_set + 1;
+                    it < get0(graph_).sets_.cend() && !std::isinf(heuristic0);
+                    ++it)
             {
-                FloatT set_limit = -std::numeric_limits<FloatT>::infinity();
-                if constexpr (instance==0) set_limit = -set_limit; // pos inf for instance0 (larger than anything)
-                for (const Vertex& w : set_it->vertices)
-                {
-                    if (!box.overlaps(w.box))
-                        continue;
-                    if constexpr (instance==0) // minimize instance 0 (set_limit = minimum)
-                        set_limit = std::min(w.output, set_limit);
-                    else // maximize instance 1 (set_limit = maximum)
-                        set_limit = std::max(w.output, set_limit);
-                }
-                heuristic += set_limit;
-                if (std::isinf(heuristic))
-                    break;
+                FloatT min = std::numeric_limits<FloatT>::infinity(); // minimize this value for graph0
+                for (const Vertex& w : it->vertices)
+                    if (box.overlaps(w.box))
+                        min = std::min(w.output, min);
+                heuristic0 += min;
+            }
+
+            // recompute heuristic for graph1
+            FloatT heuristic1 = 0.0;
+            for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + 1;
+                    it < get1(graph_).sets_.cend() && !std::isinf(heuristic1);
+                    ++it)
+            {
+                FloatT max = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
+                for (const Vertex& w : it->vertices)
+                    if (box.overlaps(w.box))
+                        max = std::max(w.output, max);
+                heuristic1 += max;
             }
 
             // some set where none of the vertices overlap box -> don't add to pq
-            if (std::isinf(heuristic))
+            if (std::isinf(heuristic0) ||std::isinf(heuristic1))
             {
-                std::cout << "inf heuristic at indep_set=" << ci.indep_set << std::endl;
+                std::cout << "inf heuristic" << std::endl;
                 continue;
             }
 
-            //std::cout << "heuristic " << heuristic << std::endl;
+            //std::cout << "heuristic " << heuristic0 << ", " << heuristic1 << std::endl;
 
             // construct new clique
             Clique new_c = {
@@ -1249,8 +1254,13 @@ namespace treeck {
             CliqueInstance& new_ci = std::get<instance>(new_c.instance);
             new_ci.output += v.output;
             new_ci.indep_set += 1;
-            new_ci.heuristic = heuristic;
             // new_ci.vertex is unused
+
+            // update heuristics
+            get0(new_c.instance).heuristic = heuristic0;
+            get1(new_c.instance).heuristic = heuristic1;
+
+            //std::cout << "new_c " << new_c << std::endl;
 
             // do we accept these output bounds?
             if (!output_filter(

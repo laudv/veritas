@@ -214,11 +214,11 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(solutions[0][1], imghat[48, 80])
 
     def test_img3(self): # with two instances
-        with open("tests/models/xgb-img-easy-values.json") as f:
+        with open("tests/models/xgb-img-hard-values.json") as f:
             ys = json.load(f)
         imghat = np.array(ys).reshape((100, 100))
         img = imageio.imread("tests/data/img.png")
-        at = AddTree.read("tests/models/xgb-img-easy.json")
+        at = AddTree.read("tests/models/xgb-img-hard.json")
 
         opt = Optimizer(maximize=at)
         opt.enable_smt()
@@ -244,6 +244,8 @@ class TestGraph(unittest.TestCase):
             current_bounds.append(opt.current_bounds())
 
         print("previous bounds:", current_bounds)
+        print("number of steps:", opt.nsteps())
+        print("number of solutions:", opt.num_solutions())
         fig, ax = plt.subplots()
         #ax.plot([x[0] for x in current_bounds], label="lower")
         ax.plot([x[1] for x in current_bounds], label="upper")
@@ -342,6 +344,7 @@ class TestGraph(unittest.TestCase):
         print("diff", diff)
 
         print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
+        self.assertTrue(abs(solutions[0][0] - vfake) < 1e-5)
 
         fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
         ax0.imshow(example.reshape((28, 28)), cmap="binary")
@@ -394,6 +397,7 @@ class TestGraph(unittest.TestCase):
         print("diff", diff)
 
         print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
+        self.assertTrue(abs(solutions[0][0] - vfake) < 1e-5)
 
         fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
         ax0.imshow(example.reshape((28, 28)), cmap="binary")
