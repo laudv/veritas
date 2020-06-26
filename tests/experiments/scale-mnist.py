@@ -8,11 +8,11 @@ import util
 from treeck import *
 from treeck.xgb import addtree_from_xgb_model
 
-RESULT_DIR = "tests/experiments/scale"
+RESULT_DIR = "tests/experiments/scale-mnist"
 
 # - Loading the covertype data set --------------------------------------------
 
-X, y = util.load_openml("covtype", data_id=1596)
+X, y = util.load_openml("mnist", data_id=554)
 y = (y==2)
 num_examples, num_features = X.shape
 print("balance:", sum(y) / num_examples)
@@ -59,26 +59,26 @@ def train_model(lr, num_trees, max_depth=5):
 
 def get_opt(simplify=None):
     opt = Optimizer(maximize=at, simplify=simplify, max_memory=MAX_MEMORY)
-    opt.enable_smt()
+    #opt.enable_smt()
     feat_ids = opt.get_used_feat_ids()[1]
 
-    smt = io.StringIO()
-    print(f"(assert (> {opt.xvar(1, 0)} 3200.0))", file=smt) # elevation
-    print(f"(assert (< {opt.xvar(1, 5)} 1800.0))", file=smt) # hoz dist to road
-    #print(f"(assert (> {opt.xvar(1, 9)} 1800.0))", file=smt) # hoz dist fire road
-    for i in set(range(10, 14)).intersection(feat_ids):
-        op = ">" if i == 13 else "<"
-        print(f"(assert ({op} {opt.xvar(1, i)} 0.5))", file=smt) # Wilderness_Area
-    for i in set(range(14, 54)).intersection(feat_ids):
-        op = ">" if i == 36 else "<"
-        print(f"(assert ({op} {opt.xvar(1, i)} 0.5))", file=smt) # Soil_Type
+    #smt = io.StringIO()
+    #print(f"(assert (> {opt.xvar(1, 0)} 3200.0))", file=smt) # elevation
+    #print(f"(assert (< {opt.xvar(1, 5)} 1800.0))", file=smt) # hoz dist to road
+    ##print(f"(assert (> {opt.xvar(1, 9)} 1800.0))", file=smt) # hoz dist fire road
+    #for i in set(range(10, 14)).intersection(feat_ids):
+    #    op = ">" if i == 13 else "<"
+    #    print(f"(assert ({op} {opt.xvar(1, i)} 0.5))", file=smt) # Wilderness_Area
+    #for i in set(range(14, 54)).intersection(feat_ids):
+    #    op = ">" if i == 36 else "<"
+    #    print(f"(assert ({op} {opt.xvar(1, i)} 0.5))", file=smt) # Soil_Type
 
-    opt.set_smt_program(smt.getvalue())
+    #opt.set_smt_program(smt.getvalue())
 
     print("before num_vertices", opt.num_vertices(1))
-    opt.prune()
+    #opt.prune()
     print("after num_vertices", opt.num_vertices(1))
-    opt.disable_smt()
+    #opt.disable_smt()
 
     return opt
 
@@ -203,7 +203,7 @@ def merge_in_process(max_runtime):
 
 # - Robustness for increasing model complexity --------------------------------
 
-MAX_MEMORY = 1024*1024*1024 * 1 # GB
+MAX_MEMORY = 1024*1024*1024 * 2 # GB
 
 if __name__ == "__main__":
     o = []
@@ -260,7 +260,7 @@ if __name__ == "__main__":
         del opt
 
         print(f"\n -- A* {time.ctime()} --")
-        opt, t0, bounds0, m0, steps0 = astar(mergeK=4)
+        opt, t0, bounds0, m0, steps0 = astar(mergeK=0)
         oo["astar"] = {
             "solutions": [s[1] for s in opt.solutions()],
             "timings": t0,
@@ -271,7 +271,7 @@ if __name__ == "__main__":
         del opt
 
         print(f"\n -- ARA* {time.ctime()} --")
-        opt, t1, m1, steps1 = arastar(0.2, 0.01, mergeK=4)
+        opt, t1, m1, steps1 = arastar(0.2, 0.01, mergeK=0)
         oo["arastar"] = {
             "solutions": [s[1] for s in opt.solutions()],
             "timings": t1,

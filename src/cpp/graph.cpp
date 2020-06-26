@@ -181,6 +181,8 @@ namespace treeck {
             else if (rem_capacity > 0)
                 std::cerr << "WARNING: almost running out of memory, "
                     << static_cast<double>(rem_capacity * sizeof(Domain)) / (1024.0*1024.0)
+                    << " mb out of "
+                    << static_cast<double>(max_mem_size_) / (1024.0*1024.0)
                     << " mb left" << std::endl;
             else
                 throw std::runtime_error("DomainStore: out of memory");
