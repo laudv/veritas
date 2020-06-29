@@ -157,22 +157,21 @@ namespace treeck {
 
     const size_t DOMAIN_STORE_MAX_MEM = 4294967296; // 4GB
 
-    DomainStore::DomainStore(const FeatInfo& finfo)
-        : store_{}, box_size_(0), max_mem_size_(DOMAIN_STORE_MAX_MEM)
+    DomainStore::DomainStore()
+        : store_{}, workspace_{}, max_mem_size_(DOMAIN_STORE_MAX_MEM)
     {
         const size_t DEFAULT_SIZE = 1024*1024 / sizeof(Domain); // 1mb of domains
         Block block;
         block.reserve(DEFAULT_SIZE);
         store_.push_back(std::move(block));
-
-        push_prototype_box(finfo);
     }
 
     DomainStore::Block&
-    DomainStore::get_last_block()
+    DomainStore::get_block_with_capacity(size_t cap)
     {
+        // allocate a new block if necessary
         Block& block = store_.back();
-        if (block.capacity() - block.size() < box_size_)
+        if (block.capacity() - block.size() < cap)
         {
             size_t mem = get_mem_size();
             size_t rem_capacity = (max_mem_size_ - mem) / sizeof(Domain);
@@ -195,40 +194,8 @@ namespace treeck {
             //    << (static_cast<double>(get_mem_size()) / (1024.0 * 1024.0)) << " mb ("
             //    << store_.size() << " blocks)" << std::endl;
         }
+
         return store_.back();
-    }
-
-    void
-    DomainStore::push_prototype_box(const FeatInfo& finfo)
-    {
-        if (box_size_ > 0)
-            throw std::runtime_error("prototype already pushed");
-        box_size_ = finfo.num_ids();
-
-        Block& block = get_last_block();
-
-        // push domains for instance0
-        for (FeatId feat_id : finfo.feat_ids0())
-        {
-            int id = finfo.get_id(0, feat_id);
-            if (id != static_cast<int>(block.size()))
-                throw std::runtime_error("invalid state");
-
-            if (finfo.is_real(id)) block.push_back({});
-            else                   block.push_back(BOOL_DOMAIN);
-        }
-
-        // push domains for instance1
-        for (FeatId feat_id : finfo.feat_ids1())
-        {
-            int id = finfo.get_id(1, feat_id);
-            if (finfo.is_instance0_id(id)) continue;
-            if (id != static_cast<int>(block.size()))
-                throw std::runtime_error("invalid state");
-
-            if (finfo.is_real(id)) block.push_back({});
-            else                   block.push_back(BOOL_DOMAIN);
-        }
     }
 
     size_t
@@ -236,7 +203,7 @@ namespace treeck {
     {
         size_t mem = 0;
         for (const Block& b : store_)
-            mem += b.capacity() * sizeof(Domain);
+            mem += b.capacity() * sizeof(Block::value_type);
         return mem;
     }
 
@@ -246,63 +213,179 @@ namespace treeck {
         max_mem_size_ = mem;
     }
 
-    DomainBox
-    DomainStore::push_box()
-    {
-        // copy the prototype domain
-        DomainT *ptr = &store_[0][0];
-        return push_copy({ptr, ptr + box_size_});
-    }
-
-    DomainBox
-    DomainStore::push_copy(const DomainBox& other)
-    {
-        if (box_size_ == 0) throw std::runtime_error("zero-sized prototype box");
-        if (other.size() != box_size_) throw std::runtime_error("incompatible boxes");
-
-        Block& block = get_last_block();
-        size_t start_index = block.size();
-
-        for (const DomainT& d : other)
-            block.push_back(d);
-
-        if (block.size() != start_index+box_size_) throw std::runtime_error("invalid state");
-
-        DomainT *ptr = &block[start_index];
-        return { ptr, ptr + box_size_ };
-    }
-
     void
-    DomainStore::pop_last_box(const DomainBox& last_box)
+    DomainStore::refine_workspace(Split split, bool is_left_child, FeatIdMapper fmap)
     {
-        Block& block = store_.back(); // don't need get_last_block, because no resize needed!
-        size_t start_index = block.size() - box_size_;
-        if (last_box.begin() != &block[start_index])
-            throw std::runtime_error("invalid call to pop_last_box");
-        block.resize(start_index);
+        int id = visit_split(
+                [&fmap](const LtSplit& s) { return fmap(s.feat_id); },
+                [&fmap](const BoolSplit& bs) { return fmap(bs.feat_id); },
+                split);
+        DomainT dom;
+
+        auto it = std::find_if(workspace_.begin(), workspace_.end(),
+                [id](const DomainPair& p) { return p.first == id; });
+
+        if (it != workspace_.end())
+            dom = it->second;
+
+        dom = visit_split(
+                [=](const LtSplit& s) { return refine_domain(dom, s, is_left_child); },
+                [=](const BoolSplit& bs) {
+                    LtSplit s{bs.feat_id, 1.0};
+                    return refine_domain(dom, s, is_left_child);
+                },
+                split);
+        if (it == workspace_.end())
+        {
+            workspace_.push_back({ id, dom });
+            for (size_t i = workspace_.size(); i > 0; --i) // ids sorted
+                if (workspace_[i-1].first > workspace_[i].first)
+                    std::swap(workspace_[i-1], workspace_[i]);
+            //std::sort(workspace_.begin(), workspace_.end(),
+            //        [](const DomainPair& a, const DomainPair& b) {
+            //            return a.first < b.first;
+            //        })
+        }
+        else
+        {
+            it->second = dom;
+        }
     }
-
-
-
-
-    DomainBox::DomainBox(DomainT *b, DomainT *e) : begin_(b), end_(e) { }
 
     DomainBox
-    DomainBox::null_box() {
-        return DomainBox(nullptr, nullptr);
+    DomainStore::push_workspace()
+    {
+        // this store_ block has enough space to accomodate the workspace DomainBox
+        DomainBox workspace = get_workspace_box();
+        Block& block = get_block_with_capacity(workspace.size());
+
+        // push a copy of the workspace DomainBox
+        size_t start_index = block.size();
+        for (auto&& [id, domain] : workspace)
+            block.push_back({ id, domain });
+
+        DomainPair *ptr = &block[start_index];
+        DomainBox box = { ptr, ptr + workspace_.size() };
+
+        workspace_.clear();
+
+        return box;
     }
 
-    DomainBox::const_iterator
-    DomainBox::begin() const
+    DomainBox
+    DomainStore::combine(const DomainBox& a, const DomainBox& b)
     {
-        return begin_;
+        const DomainPair *it0 = a.begin();
+        const DomainPair *it1 = b.begin();
+
+        // assume sorted
+        while (it0 != a.end() && it1 != b.end())
+        {
+            if (it0->first == it1->first)
+            {
+                DomainT dom = it0->second.intersect(it1->second);
+                workspace_.push_back({ it0->first, dom });
+                ++it0; ++it1;
+            }
+            else if (it0->first < it1->first)
+            {
+                workspace_.push_back(*it0); // copy
+                ++it0;
+            }
+            else
+            {
+                workspace_.push_back(*it1); // copy
+                ++it1;
+            }
+        }
+
+        // push all remaining items (one of them is already at the end, no need to compare anymore)
+        for (; it0 != a.end(); ++it0)
+            workspace_.push_back(*it0); // copy
+        for (; it1 != b.end(); ++it1)
+            workspace_.push_back(*it1); // copy
+
+        return push_workspace();
     }
 
-    DomainBox::const_iterator
-    DomainBox::end() const
-    {
-        return end_;
-    }
+    //void
+    //DomainStore::push_prototype_box(const FeatInfo& finfo)
+    //{
+    //    if (box_size_ > 0)
+    //        throw std::runtime_error("prototype already pushed");
+    //    box_size_ = finfo.num_ids();
+
+    //    Block& block = get_last_block();
+
+    //    // push domains for instance0
+    //    for (FeatId feat_id : finfo.feat_ids0())
+    //    {
+    //        int id = finfo.get_id(0, feat_id);
+    //        if (id != static_cast<int>(block.size()))
+    //            throw std::runtime_error("invalid state");
+
+    //        if (finfo.is_real(id)) block.push_back({});
+    //        else                   block.push_back(BOOL_DOMAIN);
+    //    }
+
+    //    // push domains for instance1
+    //    for (FeatId feat_id : finfo.feat_ids1())
+    //    {
+    //        int id = finfo.get_id(1, feat_id);
+    //        if (finfo.is_instance0_id(id)) continue;
+    //        if (id != static_cast<int>(block.size()))
+    //            throw std::runtime_error("invalid state");
+
+    //        if (finfo.is_real(id)) block.push_back({});
+    //        else                   block.push_back(BOOL_DOMAIN);
+    //    }
+    //}
+
+    //DomainBox
+    //DomainStore::push_box()
+    //{
+    //    // copy the prototype domain
+    //    DomainT *ptr = &store_[0][0];
+    //    return push_copy({ptr, ptr + box_size_});
+    //}
+
+    //DomainBox
+    //DomainStore::push_copy(const DomainBox& other)
+    //{
+    //    if (box_size_ == 0) throw std::runtime_error("zero-sized prototype box");
+    //    if (other.size() != box_size_) throw std::runtime_error("incompatible boxes");
+
+    //    Block& block = get_last_block();
+    //    size_t start_index = block.size();
+
+    //    for (const DomainT& d : other)
+    //        block.push_back(d);
+
+    //    if (block.size() != start_index+box_size_) throw std::runtime_error("invalid state");
+
+    //    DomainT *ptr = &block[start_index];
+    //    return { ptr, ptr + box_size_ };
+    //}
+
+    //void
+    //DomainStore::pop_last_box(const DomainBox& last_box)
+    //{
+    //    Block& block = store_.back(); // don't need get_last_block, because no resize needed!
+    //    size_t start_index = block.size() - box_size_;
+    //    if (last_box.begin() != &block[start_index])
+    //        throw std::runtime_error("invalid call to pop_last_box");
+    //    block.resize(start_index);
+    //}
+
+
+
+
+    DomainBox::DomainBox(const DomainPair *b, const DomainPair *e) : begin_(b), end_(e) { }
+
+    //DomainBox
+    //DomainBox::null_box() {
+    //    return DomainBox(nullptr, nullptr);
+    //}
 
     size_t
     DomainBox::size() const
@@ -310,156 +393,137 @@ namespace treeck {
         return end_ - begin_;
     }
 
-    bool
-    DomainBox::is_right_neighbor(const DomainBox& other) const
-    {
-        auto it0 = begin_;
-        auto it1 = other.begin_;
-        
-        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
-        {
-            const RealDomain& a = *it0;
-            const RealDomain& b = *it1;
-            if (a == b)
-                continue;
-            if (a.hi != b.lo) // discontinuity
-                return false;
-        }
+    //bool
+    //DomainBox::is_right_neighbor(const DomainBox& other) const
+    //{
+    //    auto it0 = begin_;
+    //    auto it1 = other.begin_;
+    //    
+    //    for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+    //    {
+    //        const RealDomain& a = *it0;
+    //        const RealDomain& b = *it1;
+    //        if (a == b)
+    //            continue;
+    //        if (a.hi != b.lo) // discontinuity
+    //            return false;
+    //    }
 
-        return true;
-    }
+    //    return true;
+    //}
 
-    void
-    DomainBox::join_right_neighbor(const DomainBox& other)
-    {
-        auto it0 = begin_;
-        auto it1 = other.begin_;
-        
-        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
-        {
-            RealDomain& a = *it0;
-            const RealDomain& b = *it1;
-            if (a == b)
-                continue;
-            if (a.hi != b.lo) // discontinuity
-                throw std::runtime_error("not a right neighbor");
-            a.hi = b.hi;
-        }
-    }
+    //void
+    //DomainBox::join_right_neighbor(const DomainBox& other)
+    //{
+    //    auto it0 = begin_;
+    //    auto it1 = other.begin_;
+    //    
+    //    for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+    //    {
+    //        RealDomain& a = *it0;
+    //        const RealDomain& b = *it1;
+    //        if (a == b)
+    //            continue;
+    //        if (a.hi != b.lo) // discontinuity
+    //            throw std::runtime_error("not a right neighbor");
+    //        a.hi = b.hi;
+    //    }
+    //}
 
-    void
-    DomainBox::refine(Split split, bool is_left_child, FeatIdMapper fmap)
-    {
-        visit_split(
-                [this, &fmap, is_left_child](const LtSplit& s) {
-                    int id = fmap(s.feat_id);
-                    DomainT *ptr = begin_ + id;
-                    //RealDomain dom = util::get_or<RealDomain>(*ptr);
-                    *ptr = refine_domain(*ptr, s, is_left_child);
-                },
-                [this, &fmap, is_left_child](const BoolSplit& bs) {
-                    int id = fmap(bs.feat_id);
-                    DomainT *ptr = begin_ + id;
-                    LtSplit s{bs.feat_id, 1.0};
-                    //BoolDomain dom = util::get_or<BoolDomain>(*ptr);
-                    *ptr = refine_domain(*ptr, s, is_left_child);
-                },
-                split);
-    }
+    //void
+    //DomainBox::refine(Split split, bool is_left_child, FeatIdMapper fmap)
+    //{
+    //    visit_split(
+    //            [this, &fmap, is_left_child](const LtSplit& s) {
+    //                int id = fmap(s.feat_id);
+    //                DomainT *ptr = begin_ + id;
+    //                //RealDomain dom = util::get_or<RealDomain>(*ptr);
+    //                *ptr = refine_domain(*ptr, s, is_left_child);
+    //            },
+    //            [this, &fmap, is_left_child](const BoolSplit& bs) {
+    //                int id = fmap(bs.feat_id);
+    //                DomainT *ptr = begin_ + id;
+    //                LtSplit s{bs.feat_id, 1.0};
+    //                //BoolDomain dom = util::get_or<BoolDomain>(*ptr);
+    //                *ptr = refine_domain(*ptr, s, is_left_child);
+    //            },
+    //            split);
+    //}
 
     bool
     DomainBox::overlaps(const DomainBox& other) const
     {
-        //std::cout << "OVERLAPS" << std::endl;
-        //std::cout << "  " << *this << std::endl;
-        //std::cout << "  " << other << std::endl;
-
         auto it0 = begin_;
         auto it1 = other.begin_;
-        
-        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+
+        while (it0 != end_ && it1 != other.end_)
         {
-            //bool overlaps = visit_domain(
-            //    [it1](const RealDomain& dom0) {
-            //        auto dom1 = util::get_or<RealDomain>(*it1);
-            //        return dom0.overlaps(dom1);
-            //    },
-            //    [it1](const BoolDomain& dom0) {
-            //        auto dom1 = util::get_or<BoolDomain>(*it1);
-            //        return (dom0.value_ & dom1.value_) != 0;
-            //    },
-            //    *it0);
-
-            bool overlaps = it0->overlaps(*it1);
-
-            if (!overlaps)
-                return false;
+            if (it0->first == it1->first)
+            {
+                if (!it0->second.overlaps(it1->second))
+                    return false;
+                ++it0; ++it1;
+            }
+            else if (it0->first < it1->first) ++it0;
+            else ++it1;
         }
 
         return true;
     }
 
-    bool
-    DomainBox::covers(const DomainBox& other) const
-    {
-        auto it0 = begin_;
-        auto it1 = other.begin_;
-        
-        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
-        {
-            if (!it0->covers(*it1))
-                return false;
-        }
+    //bool
+    //DomainBox::covers(const DomainBox& other) const
+    //{
+    //    auto it0 = begin_;
+    //    auto it1 = other.begin_;
+    //    
+    //    for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+    //    {
+    //        if (!it0->covers(*it1))
+    //            return false;
+    //    }
 
-        return true;
-    }
+    //    return true;
+    //}
 
-    void
-    DomainBox::combine(const DomainBox& other)
-    {
-        DomainT *it0 = begin_;
-        DomainT *it1 = other.begin_;
+    //void
+    //DomainBox::combine(const DomainBox& other)
+    //{
+    //    DomainT *it0 = begin_;
+    //    DomainT *it1 = other.begin_;
 
-        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
-        {
-            *it0 = it0->intersect(*it1);
-            //visit_domain(
-            //    [it0](const RealDomain& dom1) {
-            //        auto dom0 = util::get_or<RealDomain>(*it0);
-            //        *it0 = dom0.intersect(dom1);
-            //    },
-            //    [it0](const BoolDomain& dom1) {
-            //        auto dom0 = util::get_or<BoolDomain>(*it0);
-            //        *it0 = dom0.intersect(dom1);
-            //    },
-            //    *it1);
-        }
-    }
+    //    for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+    //    {
+    //        *it0 = it0->intersect(*it1);
+    //        //visit_domain(
+    //        //    [it0](const RealDomain& dom1) {
+    //        //        auto dom0 = util::get_or<RealDomain>(*it0);
+    //        //        *it0 = dom0.intersect(dom1);
+    //        //    },
+    //        //    [it0](const BoolDomain& dom1) {
+    //        //        auto dom0 = util::get_or<BoolDomain>(*it0);
+    //        //        *it0 = dom0.intersect(dom1);
+    //        //    },
+    //        //    *it1);
+    //    }
+    //}
 
-    void
-    DomainBox::copy(const DomainBox& other)
-    {
-        DomainT *it0 = begin_;
-        DomainT *it1 = other.begin_;
+    //void
+    //DomainBox::copy(const DomainBox& other)
+    //{
+    //    DomainT *it0 = begin_;
+    //    DomainT *it1 = other.begin_;
 
-        for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
-            *it0 = *it1;
-    }
+    //    for (; it0 != end_ && it1 != other.end_; ++it0, ++it1)
+    //        *it0 = *it1;
+    //}
 
     std::ostream&
     operator<<(std::ostream& s, const DomainBox& box)
     {
         s << "DBox { ";
-        for (auto it = box.begin(); it != box.end(); ++it)
-        {
-            int id = it - box.begin();
-            bool is_everything = visit_domain(
-                    [](const RealDomain& dom) { return dom.is_everything(); },
-                    [](const BoolDomain& dom) { return dom.is_everything(); },
-                    *it);
-            if (!is_everything)
-                s << id << ":" << *it << " ";
-        }
+        for (auto&& [id, dom] : box)
+            s << id << ":" << dom << " ";
         s << '}';
         return s;
     }
@@ -643,84 +707,84 @@ namespace treeck {
         std::swap(new_sets, sets_);
     }
 
-    void
-    KPartiteGraph::simplify(FloatT max_err, bool overestimate)
-    {
-        struct E { size_t set; DomainBox box; FloatT abs_err; };
-        std::vector<E> errors;
+    //void
+    //KPartiteGraph::simplify(FloatT max_err, bool overestimate)
+    //{
+    //    struct E { size_t set; DomainBox box; FloatT abs_err; };
+    //    std::vector<E> errors;
 
-        while (true) {
-            FloatT min_err = max_err; // anything larger is skipped
-            size_t min_set = sets_.size(); // invalid
-            size_t min_vertex = 0;
+    //    while (true) {
+    //        FloatT min_err = max_err; // anything larger is skipped
+    //        size_t min_set = sets_.size(); // invalid
+    //        size_t min_vertex = 0;
 
-            for (size_t j = 0; j < sets_.size(); ++j)
-            {
-                const IndependentSet& set = sets_[j];
-                for (size_t i = 1; i < set.vertices.size(); ++i)
-                {
-                    const Vertex& v0 = set.vertices[i-1];
-                    const Vertex& v1 = set.vertices[i];
-                    if (v0.box.is_right_neighbor(v1.box))
-                    {
-                        FloatT err = std::abs(v0.output - v1.output);
-                        if (err <= min_err)
-                        {
-                            for (E e : errors)
-                            {
-                               if (v0.box.overlaps(e.box) || v1.box.overlaps(e.box))
-                                    err += e.abs_err;
-                            }
-                            if (err <= min_err)
-                            {
-                                min_err = err;
-                                min_set = j;
-                                min_vertex = i;
-                            }
-                        }
-                    }
-                }
-            }
+    //        for (size_t j = 0; j < sets_.size(); ++j)
+    //        {
+    //            const IndependentSet& set = sets_[j];
+    //            for (size_t i = 1; i < set.vertices.size(); ++i)
+    //            {
+    //                const Vertex& v0 = set.vertices[i-1];
+    //                const Vertex& v1 = set.vertices[i];
+    //                if (v0.box.is_right_neighbor(v1.box))
+    //                {
+    //                    FloatT err = std::abs(v0.output - v1.output);
+    //                    if (err <= min_err)
+    //                    {
+    //                        for (E e : errors)
+    //                        {
+    //                           if (v0.box.overlaps(e.box) || v1.box.overlaps(e.box))
+    //                                err += e.abs_err;
+    //                        }
+    //                        if (err <= min_err)
+    //                        {
+    //                            min_err = err;
+    //                            min_set = j;
+    //                            min_vertex = i;
+    //                        }
+    //                    }
+    //                }
+    //            }
+    //        }
 
-            // nothing found, everything larger than max_err, we're done
-            if (min_set == sets_.size())
-                break;
+    //        // nothing found, everything larger than max_err, we're done
+    //        if (min_set == sets_.size())
+    //            break;
 
-            // merge the two neighboring vertices with the smallest error
-            //std::cout << "simplify " << min_set << ", " << min_vertex << " with error " << min_err << std::endl;
+    //        // merge the two neighboring vertices with the smallest error
+    //        //std::cout << "simplify " << min_set << ", " << min_vertex << " with error " << min_err << std::endl;
 
-            IndependentSet& set = sets_[min_set];
-            Vertex& v0 = set.vertices[min_vertex-1];
-            const Vertex& v1 = set.vertices[min_vertex];
-            FloatT err = std::abs(v0.output - v1.output); // measure before changing v0
+    //        IndependentSet& set = sets_[min_set];
+    //        Vertex& v0 = set.vertices[min_vertex-1];
+    //        const Vertex& v1 = set.vertices[min_vertex];
+    //        FloatT err = std::abs(v0.output - v1.output); // measure before changing v0
 
-            //std::cout << "is_right_neighbor " << v0.box.is_right_neighbor(v1.box) << std::endl;
+    //        //std::cout << "is_right_neighbor " << v0.box.is_right_neighbor(v1.box) << std::endl;
 
-            // update v0
-            //std::cout << "before " << v0.box << ", " << v0.output << std::endl;
-            //std::cout << "    +  " << v1.box << ", " << v0.output << std::endl;
-            v0.box.join_right_neighbor(v1.box);
-            //std::cout << "after " << v0.box << std::endl;
+    //        // update v0
+    //        //std::cout << "before " << v0.box << ", " << v0.output << std::endl;
+    //        //std::cout << "    +  " << v1.box << ", " << v0.output << std::endl;
+    //        v0.box.join_right_neighbor(v1.box);
+    //        //std::cout << "after " << v0.box << std::endl;
 
-            v0.output = overestimate ? std::max(v0.output, v1.output) : std::min(v0.output, v1.output);
-            v0.max_bound = v0.output;
-            v0.min_bound = v0.output;
+    //        v0.output = overestimate ? std::max(v0.output, v1.output) : std::min(v0.output, v1.output);
+    //        v0.max_bound = v0.output;
+    //        v0.min_bound = v0.output;
 
-            //std::cout << "new vertex output " << v0.output << std::endl;
+    //        //std::cout << "new vertex output " << v0.output << std::endl;
 
-            // remove v1
-            for (size_t i = min_vertex + 1; i < set.vertices.size(); ++i)
-                set.vertices[i-1] = set.vertices[i];
-            set.vertices.pop_back();
+    //        // remove v1
+    //        for (size_t i = min_vertex + 1; i < set.vertices.size(); ++i)
+    //            set.vertices[i-1] = set.vertices[i];
+    //        set.vertices.pop_back();
 
-            // store error of region
-            errors.push_back({min_set, v0.box, err});
+    //        // store error of region
+    //        errors.push_back({min_set, v0.box, err});
 
 
-            //for (auto e : errors)
-            //    std::cout << "- error: " << e.abs_err << " for " << e.box << std::endl;
-        }
-    }
+    //        //for (auto e : errors)
+    //        //    std::cout << "- error: " << e.abs_err << " for " << e.box << std::endl;
+    //    }
+    //}
 
     void
     KPartiteGraph::sort_asc()

@@ -33,6 +33,7 @@ namespace treeck {
     const DomainT BOOL_DOMAIN{static_cast<FloatT>(0.0), static_cast<FloatT>(2.0)};
     const DomainT TRUE_DOMAIN{static_cast<FloatT>(0.0), static_cast<FloatT>(1.0)};
     const DomainT FALSE_DOMAIN{static_cast<FloatT>(1.0), static_cast<FloatT>(2.0)};
+    using DomainPair = std::pair<int, DomainT>;
 
 
     class DomainBox;
@@ -73,51 +74,48 @@ namespace treeck {
         const std::vector<FeatId>& feat_ids1() const;
     };
 
+
+
     class DomainStore {
-        using Block = std::vector<DomainT>;
+        using Block = std::vector<DomainPair>;
 
         std::vector<Block> store_;
-        size_t box_size_;
+        Block workspace_;
         size_t max_mem_size_;
 
-        Block& get_last_block();
-        void push_prototype_box(const FeatInfo& finfo);
+        Block& get_block_with_capacity(size_t cap);
 
     public:
         size_t get_mem_size() const;
         void set_max_mem_size(size_t max_mem);
 
-        DomainStore(const FeatInfo& finfo);
-        DomainBox push_box();
-        DomainBox push_copy(const DomainBox& box);
-        void pop_last_box(const DomainBox& last_box);
+        DomainStore();
+
+        /** get the workspace DomainBox. (!) don't store somewhere, pointers in DomainBox not stable */
+        DomainBox get_workspace_box() const;
+        DomainBox push_workspace();
+
+        void refine_workspace(Split split, bool is_left_child, FeatIdMapper fmap);
+        DomainBox combine(const DomainBox& a, const DomainBox& b);
     };
 
-
-
     class DomainBox {
-        using iterator = DomainT *;
-        using const_iterator = const DomainT *;
-        DomainT *begin_;
-        DomainT *end_;
+        const DomainPair *begin_;
+        const DomainPair *end_;
 
     public:
-        DomainBox(DomainT *begin, DomainT *end);
-        static DomainBox null_box();
+        DomainBox(const DomainPair *begin, const DomainPair *end);
+        //static DomainBox null_box();
 
-        const_iterator begin() const;
-        const_iterator end() const;
+        inline const DomainPair *begin() const { return begin_; }
+        inline const DomainPair *end() const { return end_; }
 
-        void refine(Split split, bool is_left_child, FeatIdMapper fmap);
-
+        const DomainPair * find(int id) const;
         bool overlaps(const DomainBox& other) const;
-        bool covers(const DomainBox& other) const;
-        void combine(const DomainBox& other);
-        void copy(const DomainBox& other);
         size_t size() const;
 
-        bool is_right_neighbor(const DomainBox& other) const;
-        void join_right_neighbor(const DomainBox& other);
+        //bool is_right_neighbor(const DomainBox& other) const;
+        //void join_right_neighbor(const DomainBox& other);
     };
 
     std::ostream&
