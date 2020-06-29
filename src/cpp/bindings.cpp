@@ -34,13 +34,13 @@ std::string tostr(T& o)
     return s.str();
 }
 
-static
-py::tuple
-encode_split(const DomTreeSplit& split)
-{
-    size_t i = split.instance_index;
-    return py::make_tuple(i, split.split);
-}
+//static
+//py::tuple
+//encode_split(const DomTreeSplit& split)
+//{
+//    size_t i = split.instance_index;
+//    return py::make_tuple(i, split.split);
+//}
 
 static AddTree DUMMY_ADDTREE{};
 
@@ -475,7 +475,7 @@ PYBIND11_MODULE(pytreeck, m) {
                 //std::cout << opt.solver->get_z3() << std::endl;
                 return res;
             };
-            auto f_noz3 = [](const DomainBox& box) { return true; };
+            auto f_noz3 = [](const DomainBox&) { return true; };
             if (kwargs.contains("min_output_difference"))
             {
                 FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();

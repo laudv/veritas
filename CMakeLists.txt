@@ -31,6 +31,8 @@ if (NOT "${Z3_INSTALL}" STREQUAL "")
     link_directories("${Z3_INSTALL}/build")
     include_directories("${Z3_INSTALL}/src/api")
     include_directories("${Z3_INSTALL}/src/api/c++")
+else()
+    include_directories("/usr/include/z3")
 endif ()
 
 # GProf

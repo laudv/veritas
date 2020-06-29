@@ -211,7 +211,8 @@ namespace treeck {
         for (FeatId feat_id : finfo.feat_ids0())
         {
             int id = finfo.get_id(0, feat_id);
-            if (id != block.size()) throw std::runtime_error("invalid state");
+            if (id != static_cast<int>(block.size()))
+                throw std::runtime_error("invalid state");
 
             if (finfo.is_real(id)) block.push_back({});
             else                   block.push_back(BOOL_DOMAIN);
@@ -222,7 +223,8 @@ namespace treeck {
         {
             int id = finfo.get_id(1, feat_id);
             if (finfo.is_instance0_id(id)) continue;
-            if (id != block.size()) throw std::runtime_error("invalid state");
+            if (id != static_cast<int>(block.size()))
+                throw std::runtime_error("invalid state");
 
             if (finfo.is_real(id)) block.push_back({});
             else                   block.push_back(BOOL_DOMAIN);
@@ -1359,8 +1361,8 @@ namespace treeck {
     {
         // accept everything
         return step_aux(
-                [](const DomainBox& box) { return true; },
-                [](FloatT output0, FloatT output1) { return true; });
+                [](const DomainBox&) { return true; },
+                [](FloatT, FloatT) { return true; });
     }
 
     bool
@@ -1368,7 +1370,7 @@ namespace treeck {
     {
         return step_aux(
                 [&bf](const DomainBox& box) { return bf(box); },
-                [](FloatT output0, FloatT output1) { return true; }); // accept all outputs
+                [](FloatT, FloatT) { return true; }); // accept all outputs
     }
 
     bool

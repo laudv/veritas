@@ -23,8 +23,8 @@ namespace treeck {
 #define TREECK_ENABLE_TYPENAME(T) \
         template <> struct util::Typename<T> { static const char* get() { return #T; } }
 
-        static void
-        _get_or_msg(std::ostringstream& ss) {}
+        [[maybe_unused]] static void
+        _get_or_msg(std::ostringstream&) {}
 
         template <typename A, typename... Args>
         static void

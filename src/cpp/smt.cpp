@@ -39,7 +39,7 @@ namespace treeck {
             [this](const LtSplit& s) {
                 float_to_z3(s.split_value);
             },
-            [](const BoolSplit& s) {},
+            [](const BoolSplit&) {},
             node.get_split());
 
         fill_const_cache(node.left());
@@ -75,8 +75,8 @@ namespace treeck {
     z3::expr&
     Solver::float_to_z3(FloatT value)
     {
-        static_assert(sizeof(FloatT) == sizeof(int));
-        int i = *reinterpret_cast<int *>(&value);
+        static_assert(sizeof(FloatT) == sizeof(uint32_t));
+        uint32_t i = *reinterpret_cast<uint32_t *>(&value);
         auto fd = const_cache_.find(i);
 
         if (fd != const_cache_.end())
