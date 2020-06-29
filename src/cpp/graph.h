@@ -110,7 +110,6 @@ namespace treeck {
         inline const DomainPair *begin() const { return begin_; }
         inline const DomainPair *end() const { return end_; }
 
-        const DomainPair * find(int id) const;
         bool overlaps(const DomainBox& other) const;
         size_t size() const;
 
