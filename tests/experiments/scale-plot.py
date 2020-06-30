@@ -56,29 +56,25 @@ def plot_output2(*args):
         fig, axs = plt.subplots(n, 1, figsize=(8, 5*n), sharey=True)
         axs = list(axs)
 
-        print(n, axs)
-
         for oo, ax, name in zip(oos, axs, filenames):
-            b0 = oo["astar"]["bounds"]
+            b0 = oo["astar"]["bounds"][1:]
             s0 = oo["astar"]["solutions"]
             s1 = oo["arastar"]["solutions"]
             e1 = oo["arastar"]["epses"]
             s1f, e1f, b1 = util.get_ara_bound(e1, s1, task="maximize")
             b2 = oo["merge"]["bounds"]
-            t0 = oo["astar"]["timings"]
+            t0 = oo["astar"]["timings"][1:]
             t1 = oo["arastar"]["timings"]
             t2 = oo["merge"]["timings"]
 
-            print("== num_trees", oo["num_trees"])
+            print("== num_trees", oo["num_trees"], name)
             print("best eps:", e1[-1])
             print("best solution ARA*", max(s1), f"({len(s1)})")
             print("best solution A*  ", s0[0] if len(s0) > 0 else "NA", f"({len(s0)})")
             print("best bound A*     ", min(b0))
+            print("max memory        ", max(oo["astar"]["memory"])/(1024*1024))
             print("merge levels:", len(oo["merge"]["bounds"]))
 
-            print("s1", s1)
-            print("epses", e1)
-            
             if len(s0) > 0:
                 ax.axhline(s0[0], color="gray", linestyle=":", linewidth=1, label="Optimal")
                 b0.append(s0[0])
@@ -109,7 +105,7 @@ def plot_output2(*args):
 
 if __name__ == "__main__":
     #plot_output("tests/experiments/scale/output5G")
-    plot_output2("tests/experiments/scale-covtype/output5G", "tests/experiments/scale-covtype/new5G_merge0")
-    #plot_output2("tests/experiments/scale-mnist/output_dp", "tests/experiments/scale-mnist/output")
+    plot_output2("tests/experiments/scale-covtype/neww5G_merge0", "tests/experiments/scale-covtype/new5G_merge0")
+    #plot_output2("tests/experiments/scale-mnist/output2_dp", "tests/experiments/scale-mnist/output2")
 
 

@@ -57,8 +57,8 @@ def train_model(lr, num_trees, max_depth=5):
 
 # - Optimizer routines --------------------------------------------------------
 
-def get_opt(simplify=None):
-    opt = Optimizer(maximize=at, simplify=simplify, max_memory=MAX_MEMORY)
+def get_opt():
+    opt = Optimizer(maximize=at, max_memory=MAX_MEMORY)
     #opt.enable_smt()
     feat_ids = opt.get_used_feat_ids()[1]
 
@@ -80,6 +80,8 @@ def get_opt(simplify=None):
     print("after num_vertices", opt.num_vertices(1))
     #opt.disable_smt()
 
+    if USE_DYN_PROG:
+        opt.use_dyn_prog_heuristic()
     return opt
 
 def astar(mergeK = 0):
@@ -115,9 +117,9 @@ def astar(mergeK = 0):
 
     return opt, timings, bounds, memory, steps
 
-def arastar(eps, eps_incr, mergeK = 0, simplify=None):
+def arastar(eps, eps_incr, mergeK = 0):
     nsteps = 100
-    opt = get_opt(simplify=simplify)
+    opt = get_opt()
 
     timings = []
     memory = []
@@ -204,10 +206,12 @@ def merge_in_process(max_runtime):
 # - Robustness for increasing model complexity --------------------------------
 
 MAX_MEMORY = 1024*1024*1024 * 2 # GB
+USE_DYN_PROG = False
 
 if __name__ == "__main__":
     o = []
     output_file = sys.argv[1]
+    MAX_MEMORY = 1024*1024*1024*int(sys.argv[2])
 
     print("writing output to", os.path.join(RESULT_DIR, output_file))
     if input("OK? ") != "y":
@@ -222,20 +226,20 @@ if __name__ == "__main__":
             #(0.65, 40),
             #(0.6, 50),
             (0.50, 60),
-            #(0.40, 70),
-            (0.35, 80),
-            #(0.30, 90),
-            (0.30, 100),
-            #(0.25, 110),
-            (0.25, 120),
-            #(0.20, 130),
-            (0.20, 140),
-            #(0.20, 150),
-            (0.15, 160),
-            #(0.15, 170),
-            (0.15, 180),
-            #(0.10, 190),
-            (0.10, 200),
+            ##(0.40, 70),
+            #(0.35, 80),
+            ##(0.30, 90),
+            #(0.30, 100),
+            ##(0.25, 110),
+            #(0.25, 120),
+            ##(0.20, 130),
+            #(0.20, 140),
+            ##(0.20, 150),
+            #(0.15, 160),
+            ##(0.15, 170),
+            #(0.15, 180),
+            ##(0.10, 190),
+            #(0.10, 200),
             ]:
 
         #for i, (m0, m1) in enumerate(zip(X[y==0].mean(axis=0), X[y==1].mean(axis=0))):

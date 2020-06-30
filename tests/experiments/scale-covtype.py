@@ -57,8 +57,8 @@ def train_model(lr, num_trees, max_depth=5):
 
 # - Optimizer routines --------------------------------------------------------
 
-def get_opt(simplify=None):
-    opt = Optimizer(maximize=at, simplify=simplify, max_memory=MAX_MEMORY)
+def get_opt():
+    opt = Optimizer(maximize=at, max_memory=MAX_MEMORY)
     opt.enable_smt()
     feat_ids = opt.get_used_feat_ids()[1]
 
@@ -80,6 +80,8 @@ def get_opt(simplify=None):
     print("after num_vertices", opt.num_vertices(1))
     opt.disable_smt()
 
+    if USE_DYN_PROG:
+        opt.use_dyn_prog_heuristic()
     return opt
 
 def astar(mergeK = 0):
@@ -115,9 +117,9 @@ def astar(mergeK = 0):
 
     return opt, timings, bounds, memory, steps
 
-def arastar(eps, eps_incr, mergeK = 0, simplify=None):
+def arastar(eps, eps_incr, mergeK = 0):
     nsteps = 100
-    opt = get_opt(simplify=simplify)
+    opt = get_opt()
 
     timings = []
     memory = []
@@ -204,10 +206,12 @@ def merge_in_process(max_runtime):
 # - Robustness for increasing model complexity --------------------------------
 
 MAX_MEMORY = 1024*1024*1024 * 1 # GB
+USE_DYN_PROG = False
 
 if __name__ == "__main__":
     o = []
     output_file = sys.argv[1]
+    MAX_MEMORY = 1024*1024*1024*int(sys.argv[2])
 
     print("writing output to", os.path.join(RESULT_DIR, output_file))
     if input("OK? ") != "y":
@@ -260,7 +264,7 @@ if __name__ == "__main__":
         del opt
 
         print(f"\n -- A* {time.ctime()} --")
-        opt, t0, bounds0, m0, steps0 = astar(mergeK=4)
+        opt, t0, bounds0, m0, steps0 = astar(mergeK=0)
         oo["astar"] = {
             "solutions": [s[1] for s in opt.solutions()],
             "timings": t0,
@@ -271,7 +275,7 @@ if __name__ == "__main__":
         del opt
 
         print(f"\n -- ARA* {time.ctime()} --")
-        opt, t1, m1, steps1 = arastar(0.2, 0.01, mergeK=4)
+        opt, t1, m1, steps1 = arastar(0.2, 0.01, mergeK=0)
         oo["arastar"] = {
             "solutions": [s[1] for s in opt.solutions()],
             "timings": t1,
