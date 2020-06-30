@@ -122,28 +122,37 @@ void test_img()
         std::cout << s.output0 << " " << s.box << std::endl;
 }
 
-void test_calhouse_bounds()
+void test_unconstrained_bounds(const char *model)
 {
-    auto file = "tests/models/xgb-calhouse-hard.json";
-    AddTree at = AddTree::from_json_file(file);
+    AddTree at = AddTree::from_json_file(model);
     AddTree dummy;
 
     FeatInfo finfo(at, dummy, {}, true);
     DomainStore store;
+    store.set_max_mem_size(1024*1024*50);
     KPartiteGraph g0(&store);
     KPartiteGraph g1(&store, at, finfo, 0);
-    KPartiteGraphOptimize opt(g0, g1);
+    KPartiteGraphOptimize opt(g0, g1); // maximize, g0 is dummy
     //opt.set_eps(0.02, 0.02);
 
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<double> timings;
     std::vector<double> num_steps;
+    std::cout << "bound, mem, nsteps" << std::endl;
     while (opt.num_candidate_cliques() < 1000000)
     {
-        if (!opt.steps(1000))
+        try {
+            if (!opt.steps(1000))
+                break;
+        } catch(...) {
+            std::cout << "out of memory" << std::endl;
             break;
+        }
 
-        std::cout << std::get<1>(opt.current_bounds()) << std::endl;
+        std::cout << std::get<1>(opt.current_bounds())
+            << ", " << (store.get_mem_size() / (1024*1024))
+            << ", " << std::get<1>(opt.nsteps)
+            << std::endl;
 
         while (timings.size() < opt.solutions.size())
         {
@@ -170,5 +179,6 @@ int main()
     //test_very_simple();
     //test_simple();
     //test_img();
-    test_calhouse_bounds();
+    //test_unconstrained_bounds("tests/models/xgb-calhouse-hard.json");
+    test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
 }

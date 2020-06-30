@@ -255,10 +255,10 @@ namespace treeck {
         bool update_clique(Clique& c);
 
         template <size_t instance, typename BF, typename OF>
-        void step_instance(Clique c, BF box_filter, OF output_filter);
+        void step_instance(Clique&& c, BF box_filter, OF output_filter);
 
         template <size_t instance, typename BF, typename OF>
-        void expand_clique_instance(Clique c, BF box_filter, OF output_filter);
+        void expand_clique_instance(Clique&& c, BF box_filter, OF output_filter);
 
         template <typename BF, typename OF>
         bool step_aux(BF bf, OF of);

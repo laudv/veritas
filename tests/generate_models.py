@@ -271,6 +271,23 @@ def generate_mnist():
     print(f"mnist y==0: mae model difference {mae}")
     at.write("tests/models/xgb-mnist-yis0-easy.json")
 
+    print("Training MNIST y==0 hard")
+    y0 = y==0
+    clf = xgb.XGBClassifier(
+            nthread=4,
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=0.2,
+            n_estimators=100)
+    model = clf.fit(X, y0)
+    at = addtree_from_xgb_model(model)
+    at.base_score = 0.0
+    acc = accuracy_score(model.predict(X), y0)
+    print(f"mnist y==0: accuracy y==0: {acc}")
+    mae = mean_absolute_error(model.predict(X[:5000], output_margin=True), at.predict(X[:5000]))
+    print(f"mnist y==0: mae model difference {mae}")
+    at.write("tests/models/xgb-mnist-yis0-hard.json")
+
     print("Exporting instances")
     with open("tests/models/mnist-instances.json", "w") as f:
         d = {}
@@ -317,5 +334,5 @@ if __name__ == "__main__":
     #generate_california_housing()
     #generate_covertype()
     #generate_img()
-    #generate_mnist()
+    generate_mnist()
     #generate_bin_mnist()

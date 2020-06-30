@@ -1135,7 +1135,7 @@ namespace treeck {
 
     template <size_t instance, typename BF, typename OF>
     void
-    KPartiteGraphOptimize::step_instance(Clique c, BF box_filter, OF output_filter)
+    KPartiteGraphOptimize::step_instance(Clique&& c, BF box_filter, OF output_filter)
     {
         // invariant: Clique `c` can be extended
         //
@@ -1152,7 +1152,6 @@ namespace treeck {
         //    if the clique is not in any of the above states, do not add to `cliques_`
 
         const KPartiteGraph& graph = std::get<instance>(graph_);
-
 
         // v is vertex to merge with: new_c = c + v
         CliqueInstance& ci = std::get<instance>(c.instance);
@@ -1253,7 +1252,7 @@ namespace treeck {
 
     template <size_t instance, typename BF, typename OF>
     void
-    KPartiteGraphOptimize::expand_clique_instance(Clique c, BF box_filter, OF output_filter)
+    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BF box_filter, OF output_filter)
     {
         // invariant: Clique `c` can be extended
         //
@@ -1313,7 +1312,7 @@ namespace treeck {
             }
 
             // some set where none of the vertices overlap box -> don't add to pq
-            if (std::isinf(heuristic0) ||std::isinf(heuristic1))
+            if (std::isinf(heuristic0) || std::isinf(heuristic1))
             {
                 std::cout << "inf heuristic" << std::endl;
                 continue;
