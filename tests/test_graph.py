@@ -118,6 +118,61 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(opt.num_vertices(0, 0), 2)
         self.assertEqual(opt.num_vertices(0, 1), 1)
         
+    def test_three_trees_dynprog(self):
+        at = AddTree()
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 0, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 0.1)
+        t.set_leaf_value(t.right( t.left(t.root())), 0.2)
+        t.set_leaf_value( t.left(t.right(t.root())), 0.3)
+        t.set_leaf_value(t.right(t.right(t.root())), 0.4)
+
+        t = at.add_tree();
+        t.split(t.root(), 0, 3)
+        t.split( t.left(t.root()), 1, 1.2)
+        t.split(t.right(t.root()), 1, 3.3)
+        t.split(t.right(t.right(t.root())), 2)
+        t.set_leaf_value( t.left( t.left(t.root())), 1)
+        t.set_leaf_value(t.right( t.left(t.root())), 2)
+        t.set_leaf_value( t.left(t.right(t.root())), 3)
+        t.set_leaf_value( t.left(t.right(t.right(t.root()))), 5)
+        t.set_leaf_value(t.right(t.right(t.right(t.root()))), 6)
+
+        t = at.add_tree();
+        t.split(t.root(), 0, 1.2)
+        t.split( t.left(t.root()), 0, 0.5)
+        t.split(t.right(t.root()), 0, 3.9)
+        t.set_leaf_value( t.left( t.left(t.root())), 100)
+        t.set_leaf_value(t.right( t.left(t.root())), 200)
+        t.set_leaf_value( t.left(t.right(t.root())), 300)
+        t.set_leaf_value(t.right(t.right(t.root())), 400)
+
+        opt0 = Optimizer(minimize=at, maximize=at, matches={1}, match_is_reuse=True); # share feature 1 between two trees
+        opt0.use_dyn_prog_heuristic()
+        opt0.step(1000)
+        opt1 = Optimizer(minimize=at, maximize=at, matches={1}, match_is_reuse=True); # share feature 1 between two trees
+        opt1.step(1000)
+
+        print("num_steps DYN_PROG ", sum(opt0.nsteps()))
+        print("num_steps RECOMPUTE", sum(opt1.nsteps()))
+
+        self.assertEqual(opt0.num_solutions(), opt1.num_solutions()) # check solutions dynprog vs recompute
+
+        sols0 = sorted(opt0.solutions(), key=lambda x: x[0])
+        sols1 = sorted(opt1.solutions(), key=lambda x: x[0])
+        sols0 = sorted(sols0, key=lambda x: x[1]-x[0]) # assuming stable sort
+        sols1 = sorted(sols1, key=lambda x: x[1]-x[0])
+
+        for (lo0, hi0, doms0), (lo1, hi1, doms1) in zip(sols0, sols1):
+            self.assertEqual(lo0, lo1)
+            self.assertEqual(hi0, hi1)
+            self.assertEqual(doms0, doms1)
+
+        self.assertEqual(sols0, sols1)
+
+
 
     def test_img(self):
         with open("tests/models/xgb-img-very-easy-values.json") as f:
@@ -221,6 +276,7 @@ class TestGraph(unittest.TestCase):
         at = AddTree.read("tests/models/xgb-img-hard.json")
 
         opt = Optimizer(maximize=at)
+        #opt.use_dyn_prog_heuristic()
         opt.enable_smt()
         #opt = Optimizer(at, at, set(), True) # share no attributes
 #        opt.set_smt_program(f"""
@@ -235,7 +291,7 @@ class TestGraph(unittest.TestCase):
 (assert (< {opt.xvar(1, 1)} 70))
 """)
 
-        current_bounds = [opt.current_bounds()]
+        current_bounds = [] #[opt.current_bounds()]
 
         while opt.num_solutions() == 0:
             if not opt.step(1):
@@ -243,9 +299,17 @@ class TestGraph(unittest.TestCase):
                 break
             current_bounds.append(opt.current_bounds())
 
-        print("previous bounds:", current_bounds)
+        solutions = sorted(opt.solutions(), key=lambda x: x[1], reverse=True)
+        print("solutions: ", solutions)
+
+        self.assertEqual(solutions[0][1], 122.28324127197266)
+        self.assertEqual(solutions[0][2][0], RealDomain(93, 94))
+        self.assertEqual(solutions[0][2][1], RealDomain(69, 70))
+
+        #print("previous bounds:", current_bounds)
         print("number of steps:", opt.nsteps())
-        print("number of solutions:", opt.num_solutions())
+        print("number of solutions:", len(solutions))
+        print("best solution:", solutions[0][1])
         fig, ax = plt.subplots()
         #ax.plot([x[0] for x in current_bounds], label="lower")
         ax.plot([x[1] for x in current_bounds], label="upper")
@@ -260,12 +324,19 @@ class TestGraph(unittest.TestCase):
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")
         opt = Optimizer(minimize=at, maximize=at, matches={2}, match_is_reuse=False) # feature two not shared
+        opt.use_dyn_prog_heuristic()
         
         while opt.num_solutions() == 0:
             if not opt.step(100, min_output_difference=0.0):
                 break
 
-        print(opt.solutions())
+        print(opt.nsteps())
+        for sol in opt.solutions():
+            print("solution", sol[0], sol[1], sol[1]-sol[0])
+
+        solutions = sorted(opt.solutions(), key=lambda x: x[1]-x[0], reverse=True)
+        self.assertEqual(solutions[0][0], 3.848149061203003)
+        self.assertEqual(solutions[0][1], 4.45944881439209)
 
     def test_mnist_prune(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis1-easy.json")
@@ -324,6 +395,7 @@ class TestGraph(unittest.TestCase):
         print(f"prune: num_vertices {num_vertices_before_prune} -> {num_vertices_after_prune}")
         print(f"       bounds {bounds_before} -> {bounds_after}")
 
+        #opt.use_dyn_prog_heuristic()
         current_bounds = [opt.current_bounds()]
         while opt.num_solutions() == 0:
             if not opt.step(25):
@@ -344,6 +416,7 @@ class TestGraph(unittest.TestCase):
         print("diff", diff)
 
         print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
+        print("nsteps:", opt.nsteps())
         self.assertTrue(abs(solutions[0][0] - vfake) < 1e-5)
 
         fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
@@ -377,6 +450,7 @@ class TestGraph(unittest.TestCase):
         print(f"prune: num_vertices {num_vertices_before_prune} -> {num_vertices_after_prune}")
         print(f"       bounds {bounds_before} -> {bounds_after}")
 
+        #opt.use_dyn_prog_heuristic()
         current_bounds = [opt.current_bounds()]
         while opt.num_solutions() == 0:
             if not opt.step(25):
@@ -397,6 +471,7 @@ class TestGraph(unittest.TestCase):
         print("diff", diff)
 
         print("predictions:", vreal, vfake, "(", solutions[0][0], ")")
+        print("nsteps:", opt.nsteps())
         self.assertTrue(abs(solutions[0][0] - vfake) < 1e-5)
 
         fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
@@ -408,94 +483,94 @@ class TestGraph(unittest.TestCase):
         fig.colorbar(im, ax=ax2)
         plt.show()
 
-    def test_simplify(self):
-        at = AddTree()
-        t = at.add_tree();
-        t.split(t.root(), 0, 2)
-        t.split( t.left(t.root()), 0, 1)
-        t.split(t.right(t.root()), 0, 3)
-        t.set_leaf_value( t.left( t.left(t.root())), 8.0)
-        t.set_leaf_value(t.right( t.left(t.root())), 4.0)
-        t.set_leaf_value( t.left(t.right(t.root())), 2.0)
-        t.set_leaf_value(t.right(t.right(t.root())), 1.0)
+    #def test_simplify(self):
+    #    at = AddTree()
+    #    t = at.add_tree();
+    #    t.split(t.root(), 0, 2)
+    #    t.split( t.left(t.root()), 0, 1)
+    #    t.split(t.right(t.root()), 0, 3)
+    #    t.set_leaf_value( t.left( t.left(t.root())), 8.0)
+    #    t.set_leaf_value(t.right( t.left(t.root())), 4.0)
+    #    t.set_leaf_value( t.left(t.right(t.root())), 2.0)
+    #    t.set_leaf_value(t.right(t.right(t.root())), 1.0)
 
-        opt = Optimizer(maximize=at, simplify=(2.0, 1, False)) # underestimate
-        self.assertEqual(opt.num_vertices(1), 3)
+    #    opt = Optimizer(maximize=at, simplify=(2.0, 1, False)) # underestimate
+    #    self.assertEqual(opt.num_vertices(1), 3)
 
-    def test_simplify2(self):
-        at = AddTree()
-        t = at.add_tree();
-        t.split(t.root(), 0, 5)
-        t.split(t.right(t.root()), 1, 5)
-        t.split(t.left(t.right(t.root())), 2, 5)
-        t.set_leaf_value(t.left(t.root()), 1)
-        t.set_leaf_value( t.left(t.left(t.right(t.root()))), 2)
-        t.set_leaf_value(t.right(t.left(t.right(t.root()))), 3)
-        t.set_leaf_value(t.right(t.right(t.root())), 4)
+    #def test_simplify2(self):
+    #    at = AddTree()
+    #    t = at.add_tree();
+    #    t.split(t.root(), 0, 5)
+    #    t.split(t.right(t.root()), 1, 5)
+    #    t.split(t.left(t.right(t.root())), 2, 5)
+    #    t.set_leaf_value(t.left(t.root()), 1)
+    #    t.set_leaf_value( t.left(t.left(t.right(t.root()))), 2)
+    #    t.set_leaf_value(t.right(t.left(t.right(t.root()))), 3)
+    #    t.set_leaf_value(t.right(t.right(t.root())), 4)
 
-        #print(at)
+    #    #print(at)
 
-        opt = Optimizer(minimize=at, simplify=(2.0, 0, True)) # overestimate
-        self.assertEqual(opt.num_vertices(0), 2)
-        self.assertFalse(opt.step(10))
-        self.assertEqual(opt.solutions()[0][0], 1)
-        self.assertEqual(opt.solutions()[1][0], 4)
+    #    opt = Optimizer(minimize=at, simplify=(2.0, 0, True)) # overestimate
+    #    self.assertEqual(opt.num_vertices(0), 2)
+    #    self.assertFalse(opt.step(10))
+    #    self.assertEqual(opt.solutions()[0][0], 1)
+    #    self.assertEqual(opt.solutions()[1][0], 4)
 
-    def test_simplify3(self):
-        with open("tests/models/xgb-img-very-easy-values.json") as f:
-            ys = json.load(f)
-        imghat = np.array(ys).reshape((100, 100))
-        at = AddTree.read(f"tests/models/xgb-img-very-easy.json")
-        print(at)
+    #def test_simplify3(self):
+    #    with open("tests/models/xgb-img-very-easy-values.json") as f:
+    #        ys = json.load(f)
+    #    imghat = np.array(ys).reshape((100, 100))
+    #    at = AddTree.read(f"tests/models/xgb-img-very-easy.json")
+    #    print(at)
 
-        opt0 = Optimizer(minimize=at)
-        opt1 = Optimizer(minimize=at, simplify=(50.0, 0, True)) # overestimate
+    #    opt0 = Optimizer(minimize=at)
+    #    opt1 = Optimizer(minimize=at, simplify=(50.0, 0, True)) # overestimate
 
-        opt0.step(100)
-        opt1.step(100)
+    #    opt0.step(100)
+    #    opt1.step(100)
 
-        print(opt0.solutions()[0])
-        print(opt1.solutions()[0])
+    #    print(opt0.solutions()[0])
+    #    print(opt1.solutions()[0])
 
-        self.assertTrue(opt1.solutions()[0][0] - opt0.solutions()[0][0] < 50.0)
+    #    self.assertTrue(opt1.solutions()[0][0] - opt0.solutions()[0][0] < 50.0)
 
-        #plot_img_solutions(imghat, opt0.solutions()[0:1])
-        #plot_img_solutions(imghat, opt1.solutions()[0:1])
+    #    #plot_img_solutions(imghat, opt0.solutions()[0:1])
+    #    #plot_img_solutions(imghat, opt1.solutions()[0:1])
 
-    def test_simplify4(self):
-        with open("tests/models/xgb-img-easy-values.json") as f:
-            ys = json.load(f)
-        imghat = np.array(ys).reshape((100, 100))
-        at = AddTree.read(f"tests/models/xgb-img-easy.json")
+    #def test_simplify4(self):
+    #    with open("tests/models/xgb-img-easy-values.json") as f:
+    #        ys = json.load(f)
+    #    imghat = np.array(ys).reshape((100, 100))
+    #    at = AddTree.read(f"tests/models/xgb-img-easy.json")
 
-        def numvert(opt0, opt1):
-            v0 = opt0.num_vertices(0)
-            v1 = opt1.num_vertices(0)
-            return v0, v1, (v0-v1)/v0
+    #    def numvert(opt0, opt1):
+    #        v0 = opt0.num_vertices(0)
+    #        v1 = opt1.num_vertices(0)
+    #        return v0, v1, (v0-v1)/v0
 
-        opt0 = Optimizer(minimize=at)
-        opt1 = Optimizer(minimize=at, simplify=(20.0, 0, True)) # overestimate
+    #    opt0 = Optimizer(minimize=at)
+    #    opt1 = Optimizer(minimize=at, simplify=(20.0, 0, True)) # overestimate
 
-        print("num_vertices", numvert(opt0, opt1))
-        opt0.prune([70, 50], 20.0)
-        opt1.prune([70, 50], 20.0)
-        print("num_vertices", numvert(opt0, opt1))
+    #    print("num_vertices", numvert(opt0, opt1))
+    #    opt0.prune([70, 50], 20.0)
+    #    opt1.prune([70, 50], 20.0)
+    #    print("num_vertices", numvert(opt0, opt1))
 
-        #opt0.set_ara_eps(0.5, 0.1)
-        while opt0.num_solutions() == 0:
-            opt0.step(1)
-        #opt1.set_ara_eps(0.5, 0.1)
-        while opt1.num_solutions() == 0:
-            opt1.step(1)
+    #    #opt0.set_ara_eps(0.5, 0.1)
+    #    while opt0.num_solutions() == 0:
+    #        opt0.step(1)
+    #    #opt1.set_ara_eps(0.5, 0.1)
+    #    while opt1.num_solutions() == 0:
+    #        opt1.step(1)
 
-        print(opt0.solutions())
-        print(opt1.solutions())
+    #    print(opt0.solutions())
+    #    print(opt1.solutions())
 
-        print(opt0.nsteps())
-        print(opt1.nsteps())
+    #    print(opt0.nsteps())
+    #    print(opt1.nsteps())
 
-        plot_img_solutions(imghat, opt0.solutions()[0:1])
-        plot_img_solutions(imghat, opt1.solutions()[0:1])
+    #    plot_img_solutions(imghat, opt0.solutions()[0:1])
+    #    plot_img_solutions(imghat, opt1.solutions()[0:1])
 
 
 if __name__ == "__main__":

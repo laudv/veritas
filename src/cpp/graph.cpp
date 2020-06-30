@@ -160,7 +160,7 @@ namespace treeck {
     DomainStore::DomainStore()
         : store_{}, workspace_{}, max_mem_size_(DOMAIN_STORE_MAX_MEM)
     {
-        const size_t DEFAULT_SIZE = 1024*1024 / sizeof(Domain); // 1mb of domains
+        const size_t DEFAULT_SIZE = 1024*1024 / sizeof(Block::value_type); // 1mb of domains
         Block block;
         block.reserve(DEFAULT_SIZE);
         store_.push_back(std::move(block));
@@ -174,12 +174,12 @@ namespace treeck {
         if (block.capacity() - block.size() < cap)
         {
             size_t mem = get_mem_size();
-            size_t rem_capacity = (max_mem_size_ - mem) / sizeof(Domain);
-            if (rem_capacity > block.capacity() * 2) // double size of blocks each time, unless memory limit almost reached
-                rem_capacity = block.capacity() * 2;
+            size_t rem_capacity = (max_mem_size_ - mem) / sizeof(Block::value_type);
+            if (rem_capacity > block.capacity() * 2) // double size of blocks each time,..
+                rem_capacity = block.capacity() * 2; // .. unless memory limit almost reached
             else if (rem_capacity > 0)
                 std::cerr << "WARNING: almost running out of memory, "
-                    << static_cast<double>(rem_capacity * sizeof(Domain)) / (1024.0*1024.0)
+                    << static_cast<double>(rem_capacity * sizeof(Block::value_type)) / (1024.0*1024.0)
                     << " mb out of "
                     << static_cast<double>(max_mem_size_) / (1024.0*1024.0)
                     << " mb left" << std::endl;
@@ -238,7 +238,7 @@ namespace treeck {
         if (it == workspace_.end())
         {
             workspace_.push_back({ id, dom });
-            for (size_t i = workspace_.size(); i > 0; --i) // ids sorted
+            for (size_t i = workspace_.size() - 1; i > 0; --i) // ids sorted
                 if (workspace_[i-1].first > workspace_[i].first)
                     std::swap(workspace_[i-1], workspace_[i]);
             //std::sort(workspace_.begin(), workspace_.end(),
@@ -250,6 +250,18 @@ namespace treeck {
         {
             it->second = dom;
         }
+    }
+
+    DomainBox
+    DomainStore::get_workspace_box() const
+    {
+        size_t len = workspace_.size();
+        if (len > 0)
+        {
+            const DomainPair *front = &workspace_[0];
+            return { front, front + len };
+        }
+        else return DomainBox::null_box();
     }
 
     DomainBox
@@ -272,9 +284,12 @@ namespace treeck {
         return box;
     }
 
-    DomainBox
-    DomainStore::combine(const DomainBox& a, const DomainBox& b)
+    void
+    DomainStore::combine_in_workspace(const DomainBox& a, const DomainBox& b)
     {
+        if (!workspace_.empty())
+            throw std::runtime_error("workspace not empty");
+
         const DomainPair *it0 = a.begin();
         const DomainPair *it1 = b.begin();
 
@@ -304,8 +319,19 @@ namespace treeck {
             workspace_.push_back(*it0); // copy
         for (; it1 != b.end(); ++it1)
             workspace_.push_back(*it1); // copy
+    }
 
+    DomainBox
+    DomainStore::combine_and_push(const DomainBox& a, const DomainBox& b)
+    {
+        combine_in_workspace(a, b);
         return push_workspace();
+    }
+
+    void
+    DomainStore::clear_workspace()
+    {
+        workspace_.clear();
     }
 
     //void
@@ -382,10 +408,10 @@ namespace treeck {
 
     DomainBox::DomainBox(const DomainPair *b, const DomainPair *e) : begin_(b), end_(e) { }
 
-    //DomainBox
-    //DomainBox::null_box() {
-    //    return DomainBox(nullptr, nullptr);
-    //}
+    DomainBox
+    DomainBox::null_box() {
+        return DomainBox(nullptr, nullptr);
+    }
 
     size_t
     DomainBox::size() const
@@ -563,7 +589,7 @@ namespace treeck {
         {
             //std::cout << "adding base_score set" << std::endl;
             IndependentSet set;
-            set.vertices.push_back({store_->push_box(), addtree.base_score});
+            set.vertices.push_back({ DomainBox::null_box(), addtree.base_score });
             sets_.push_back(set);
         }
 
@@ -571,7 +597,6 @@ namespace treeck {
         {
             IndependentSet set;
             fill_independence_set(set, tree.root(), fmap);
-
             sets_.push_back(set);
         }
     }
@@ -607,14 +632,14 @@ namespace treeck {
         else
         {
             FloatT leaf_value = node.leaf_value();
-            DomainBox box = store_->push_box();
             while (!node.is_root())
             {
                 auto child_node = node;
                 node = node.parent();
-                box.refine(node.get_split(), child_node.is_left_child(), fmap);
+                store_->refine_workspace(node.get_split(), child_node.is_left_child(), fmap);
             }
-            set.vertices.push_back({box, leaf_value});
+            DomainBox box = store_->push_workspace();
+            set.vertices.push_back({ box, leaf_value });
         }
     }
 
@@ -688,8 +713,7 @@ namespace treeck {
                     {
                         if (v0.box.overlaps(v1.box))
                         {
-                            DomainBox box = store_->push_copy(v0.box);
-                            box.combine(v1.box);
+                            DomainBox box = store_->combine_and_push(v0.box, v1.box);
                             FloatT output = v0.output + v1.output;
                             set1.vertices.push_back({box, output});
                         }
@@ -975,9 +999,8 @@ namespace treeck {
         bool unsat = std::isinf(output_bound0) || std::isinf(output_bound1); // some empty indep set
         if (!unsat && (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0))
         {
-            DomainBox box = store_->push_box();
             cliques_.push_back({
-                box, // empty domain, ie no restrictions
+                DomainBox::null_box(), // empty domain, ie no restrictions
                 {
                     {0.0, output_bound0, 0, 0}, // output, bound, indep_set, vertex
                     {0.0, output_bound1, 0, 0}
@@ -1130,24 +1153,25 @@ namespace treeck {
 
         const KPartiteGraph& graph = std::get<instance>(graph_);
 
-        // prepare `new_c`
-        Clique new_c = {
-            DomainBox::null_box(), // null box for now, we'll first check if we can reuse `c`'s box
-            c.instance // copy
-        };
 
         // v is vertex to merge with: new_c = c + v
         CliqueInstance& ci = std::get<instance>(c.instance);
         const Vertex& v = graph.sets_[ci.indep_set].vertices.at(ci.vertex);
         ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
+        // prepare `new_c`
+        DomainBox new_box = store_->combine_and_push(v.box, c.box);
+        Clique new_c = {
+            new_box,
+            c.instance // copy
+        };
         CliqueInstance& new_ci = std::get<instance>(new_c.instance);
         new_ci.output += v.output; // output of clique is previous output + output of newly merged vertex
         new_ci.indep_set += 1;
         new_ci.vertex = 0; // start from beginning in new `indep_set` (= tree)
         new_ci.heuristic = 0.0; // if not a solution, will be set by update_clique
 
-        // UPDATE OLD
+        // == UPDATE OLD
         // push old clique if it still has a valid extension
         // we only need to update the current instance: box did not change so
         // other instance cannot be affected
@@ -1162,31 +1186,15 @@ namespace treeck {
             {
                 //std::cout << "push old again: " << c << std::endl;
                 pq_push(std::move(c));
-
-                // `new_c` needs a new box
-                new_c.box = store_->push_copy(c.box);
-                new_c.box.combine(v.box);
             }
             else
             {
                 //std::cout << "rejected old because of output " << c << std::endl;
                 ++nrejected;
-
-                // `new_c` can reuse `c`'s box
-                new_c.box = c.box;
-                new_c.box.combine(v.box);
             }
         }
-        else
-        {
-            //std::cout << "done with old: " << c << std::endl;
 
-            // `new_c` can reuse `c`'s box
-            new_c.box = c.box;
-            new_c.box.combine(v.box);
-        }
-
-        // UPDATE NEW
+        // == UPDATE NEW
         bool is_solution0 = is_instance_solution<0>(new_c);
         bool is_solution1 = is_instance_solution<1>(new_c);
 
@@ -1261,29 +1269,28 @@ namespace treeck {
         const KPartiteGraph& graph = std::get<instance>(graph_);
         const auto& next_set = graph.sets_[ci.indep_set];
 
-        DomainBox box = store_->push_box(); // preallocated box, reused if new_c fails somewhere
-
         for (const Vertex& v : next_set.vertices)
         {
             if (!c.box.overlaps(v.box))
                 continue;
 
-            box.copy(c.box);
-            box.combine(v.box);
+            store_->clear_workspace();
+            store_->combine_in_workspace(c.box, v.box);
+            DomainBox box = store_->get_workspace_box();
 
             // do we accept this new box?
+            ++nbox_filter_calls;
             if (!box_filter(box))
             {
-                ++nbox_filter_calls;
                 ++nrejected;
                 continue;
             }
 
-            // recompute heuristic for graph0
+            // recompute heuristic for `instance`
             FloatT heuristic0 = 0.0;
-            for (auto it = get0(graph_).sets_.cbegin() + get0(c.instance).indep_set + 1;
-                    it < get0(graph_).sets_.cend() && !std::isinf(heuristic0);
-                    ++it)
+            constexpr size_t plusone0 = instance == 0 ? 1 : 0; // include this indep_set? only when not expanding
+            for (auto it = get0(graph_).sets_.cbegin() + get0(c.instance).indep_set + plusone0;
+                    it < get0(graph_).sets_.cend() && !std::isinf(heuristic0); ++it)
             {
                 FloatT min = std::numeric_limits<FloatT>::infinity(); // minimize this value for graph0
                 for (const Vertex& w : it->vertices)
@@ -1292,11 +1299,11 @@ namespace treeck {
                 heuristic0 += min;
             }
 
-            // recompute heuristic for graph1
+            // recompute heuristic for `other_instance`
             FloatT heuristic1 = 0.0;
-            for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + 1;
-                    it < get1(graph_).sets_.cend() && !std::isinf(heuristic1);
-                    ++it)
+            constexpr size_t plusone1 = instance == 1 ? 1 : 0;
+            for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + plusone1;
+                    it < get1(graph_).sets_.cend() && !std::isinf(heuristic1); ++it)
             {
                 FloatT max = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
                 for (const Vertex& w : it->vertices)
@@ -1315,6 +1322,7 @@ namespace treeck {
             //std::cout << "heuristic " << heuristic0 << ", " << heuristic1 << std::endl;
 
             // construct new clique
+            box = store_->push_workspace(); // (!) push workspace box to store!
             Clique new_c = {
                 box,
                 c.instance // copy
@@ -1340,10 +1348,8 @@ namespace treeck {
             }
 
             pq_push(std::move(new_c));
-            box = store_->push_box(); // pre-allocate new box for next iteration
         }
 
-        store_->pop_last_box(box);
         std::get<instance>(nsteps)++;
     }
 

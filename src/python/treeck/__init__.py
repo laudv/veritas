@@ -147,9 +147,9 @@ def get_xvar_id_map(opt, instance):
 def get_closest_example(xvar_id_map, base_example, doms, delta=1e-5):
     example = base_example.copy()
 
-    for i, dom in enumerate(doms):
+    for id, dom in doms.items():
         assert isinstance(dom, RealDomain)
-        feat_id = xvar_id_map[i]
+        feat_id = xvar_id_map[id]
         v = example[feat_id]
         if dom.contains(v):
             continue # keep the value

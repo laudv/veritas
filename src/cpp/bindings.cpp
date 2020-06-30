@@ -274,7 +274,7 @@ PYBIND11_MODULE(pytreeck, m) {
 
         void init_graphs(std::unordered_set<FeatId> matches, bool match_is_reuse) {
             finfo = std::make_shared<FeatInfo>(*at0, *at1, matches, match_is_reuse);
-            store = std::make_shared<DomainStore>(*finfo);
+            store = std::make_shared<DomainStore>();
             g0 = std::make_shared<KPartiteGraph>(&*store, *at0, *finfo, 0);
             g1 = std::make_shared<KPartiteGraph>(&*store, *at1, *finfo, 1);
         }
@@ -302,20 +302,20 @@ PYBIND11_MODULE(pytreeck, m) {
 
             opt.init_graphs(matches, match_is_reuse);
 
-            // simplify before generate opt, because opt sorts vertices!
-            // vertices need to be in DFS order
-            if (kwargs.contains("simplify") and py::isinstance<py::tuple>(kwargs["simplify"]))
-            {
-                py::tuple t = kwargs["simplify"].cast<py::tuple>();
-                FloatT max_err = t[0].cast<FloatT>();
-                for (size_t i = 1; i < 5 && i < t.size();)
-                {
-                    int instance = t[i++].cast<int>();
-                    bool overestimate = t[i++].cast<bool>();
-                    if (instance == 0)      opt.g0->simplify(max_err, overestimate);
-                    else if (instance == 1) opt.g1->simplify(max_err, overestimate);
-                }
-            }
+            //// simplify before generate opt, because opt sorts vertices!
+            //// vertices need to be in DFS order
+            //if (kwargs.contains("simplify") and py::isinstance<py::tuple>(kwargs["simplify"]))
+            //{
+            //    py::tuple t = kwargs["simplify"].cast<py::tuple>();
+            //    FloatT max_err = t[0].cast<FloatT>();
+            //    for (size_t i = 1; i < 5 && i < t.size();)
+            //    {
+            //        int instance = t[i++].cast<int>();
+            //        bool overestimate = t[i++].cast<bool>();
+            //        if (instance == 0)      opt.g0->simplify(max_err, overestimate);
+            //        else if (instance == 1) opt.g1->simplify(max_err, overestimate);
+            //    }
+            //}
 
             opt.reset_opt();
 
@@ -376,7 +376,7 @@ PYBIND11_MODULE(pytreeck, m) {
                 throw std::runtime_error("smt not enabled");
 
             auto f = [opt](const DomainBox& box) {
-                z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
+                z3::expr e = opt.solver->domains_to_z3(box);
                 bool res = opt.solver->check(e);
                 //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
                 return res;
@@ -387,15 +387,15 @@ PYBIND11_MODULE(pytreeck, m) {
             opt.reset_opt();
         })
         .def("prune", [](Optimizer& opt, const py::list& example, FloatT eps) {
-            DomainBox b = opt.store->push_box();
             for (FeatId fid : opt.finfo->feat_ids0())
             {
                 const py::handle& o = example[fid];
                 if (py::isinstance<py::float_>(o) || py::isinstance<py::int_>(o))
                 {
                     FloatT v = o.cast<FloatT>();
-                    b.refine(LtSplit(fid, v-eps), false, [=](FeatId i) { return opt.finfo->get_id(0, i); });
-                    b.refine(LtSplit(fid, v+eps), true, [=](FeatId i) { return opt.finfo->get_id(0, i); });
+                    auto f = [=](FeatId i) { return opt.finfo->get_id(0, i); };
+                    opt.store->refine_workspace(LtSplit(fid, v-eps), false, f);
+                    opt.store->refine_workspace(LtSplit(fid, v+eps), true, f);
                 }
                 //else throw std::runtime_error("not supported");
             }
@@ -405,12 +405,14 @@ PYBIND11_MODULE(pytreeck, m) {
                 if (py::isinstance<py::float_>(o))
                 {
                     FloatT v = o.cast<FloatT>();
-                    b.refine(LtSplit(fid, v-eps), false, [=](FeatId i) { return opt.finfo->get_id(1, i); });
-                    b.refine(LtSplit(fid, v+eps), true, [=](FeatId i) { return opt.finfo->get_id(1, i); });
+                    auto f = [=](FeatId i) { return opt.finfo->get_id(1, i); };
+                    opt.store->refine_workspace(LtSplit(fid, v-eps), false, f);
+                    opt.store->refine_workspace(LtSplit(fid, v+eps), true, f);
                 }
                 //else throw std::runtime_error("not supported");
             }
 
+            DomainBox b = opt.store->get_workspace_box();
             auto f = [opt, &b](const DomainBox& box) {
                 return box.overlaps(b);
             };
@@ -418,6 +420,7 @@ PYBIND11_MODULE(pytreeck, m) {
             opt.g0->prune(f);
             opt.g1->prune(f);
             opt.reset_opt();
+            opt.store->clear_workspace();
         })
         .def("num_independent_sets", [](const Optimizer& opt, int instance) {
             if (instance == 0)
@@ -452,9 +455,9 @@ PYBIND11_MODULE(pytreeck, m) {
             py::list l;
             for (auto& sol : opt.opt->solutions)
             {
-                py::list b;
-                for (const auto &d : sol.box)
-                    b.append(d);
+                py::dict b;
+                for (auto&& [id, d] : sol.box)
+                    b[py::int_(id)] = d;
                 l.append(py::make_tuple(sol.output0, sol.output1, b));
             }
             return l;
@@ -469,7 +472,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("memory", [](const Optimizer& opt) { return opt.store->get_mem_size(); })
         .def("step", [](Optimizer& opt, int nsteps, py::kwargs kwargs) {
             auto f = [opt](const DomainBox& box) {
-                z3::expr e = opt.solver->domains_to_z3(box.begin(), box.end());
+                z3::expr e = opt.solver->domains_to_z3(box);
                 bool res = opt.solver->check(e);
                 //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
                 //std::cout << opt.solver->get_z3() << std::endl;

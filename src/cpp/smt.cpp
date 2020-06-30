@@ -235,29 +235,12 @@ namespace treeck {
             throw std::runtime_error("unconstrained bool domain");
     }
 
-    template <typename I>
     z3::expr
-    Solver::domains_to_z3(I begin, I end)
+    Solver::domains_to_z3(DomainBox box)
     {
-        if (begin == end)
-            return ctx_.bool_val(true);
-
-        //int id;
-        //Domain dom;
-        //std::tie(id, dom) = *(begin++);
-        //z3::expr e = domain_to_z3(id, dom);
-
-        //for (; begin != end; ++begin)
-        //{
-        //    std::tie(id, dom) = *begin;
-        //    e = e && domain_to_z3(id, dom);
-        //}
-        //
         z3::expr e = ctx_.bool_val(true);
-        for (int id = 0; begin != end; ++begin, ++id)
+        for (auto&& [id, dom] : box)
         {
-            DomainT dom = *begin;
-            if (dom.is_everything()) continue;
             if (finfo_->is_real(id))
             {
                 e = e && domain_to_z3(id, dom);
@@ -267,20 +250,9 @@ namespace treeck {
                 BoolDomain bdom{dom == TRUE_DOMAIN};
                 e = e && domain_to_z3(id, bdom);
             }
-
-            //visit_domain(
-            //    [this, &e, id](const RealDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
-            //    [this, &e, id](const BoolDomain& d) { if (!d.is_everything()) e = e && domain_to_z3(id, d); },
-            //    *begin);
         }
         return e;
     }
-
-    template
-    z3::expr
-    Solver::domains_to_z3(
-            DomainBox::const_iterator begin,
-            DomainBox::const_iterator end);
 
     bool
     Solver::check(z3::expr& e)

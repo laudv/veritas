@@ -96,16 +96,22 @@ namespace treeck {
         DomainBox push_workspace();
 
         void refine_workspace(Split split, bool is_left_child, FeatIdMapper fmap);
-        DomainBox combine(const DomainBox& a, const DomainBox& b);
+        void combine_in_workspace(const DomainBox& a, const DomainBox& b);
+        DomainBox combine_and_push(const DomainBox& a, const DomainBox& b);
+        void clear_workspace();
     };
 
     class DomainBox {
-        const DomainPair *begin_;
-        const DomainPair *end_;
+    public:
+        using const_iterator = const DomainPair *;
+
+    private:
+        const_iterator begin_;
+        const_iterator end_;
 
     public:
         DomainBox(const DomainPair *begin, const DomainPair *end);
-        //static DomainBox null_box();
+        static DomainBox null_box();
 
         inline const DomainPair *begin() const { return begin_; }
         inline const DomainPair *end() const { return end_; }

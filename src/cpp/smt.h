@@ -55,8 +55,7 @@ namespace treeck {
         z3::expr domain_to_z3(int id, const RealDomain& dom);
         z3::expr domain_to_z3(int id, const BoolDomain& dom);
 
-        template <typename I>
-        z3::expr domains_to_z3(I begin, I end);
+        z3::expr domains_to_z3(DomainBox box);
 
         bool check(z3::expr& e);
     };
