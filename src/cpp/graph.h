@@ -20,6 +20,9 @@
 #include <unordered_set>
 #include <unordered_map>
 #include <functional>
+#include <thread>
+#include <mutex>
+#include <condition_variable>
 
 #include "domain.h"
 #include "tree.h"
@@ -39,6 +42,7 @@ namespace treeck {
     class DomainBox;
 
     using BoxFilter = const std::function<bool(const DomainBox&)>&;
+    using BoxFilterT = std::remove_const_t<std::remove_reference_t<BoxFilter>>;
     using FeatIdMapper = const std::function<int(FeatId)>&;
 
 
@@ -87,6 +91,7 @@ namespace treeck {
 
     public:
         size_t get_mem_size() const;
+        size_t get_max_mem_size() const;
         void set_max_mem_size(size_t max_mem);
 
         DomainStore();
@@ -232,6 +237,8 @@ namespace treeck {
 
 
     class KPartiteGraphOptimize {
+        friend class KPartiteGraphParOpt;
+
         DomainStore *store_;
         two_of<const KPartiteGraph&> graph_; // <0> minimize, <1> maximize
 
@@ -273,12 +280,14 @@ namespace treeck {
         std::vector<FloatT> epses;
 
     public:
-        //KPartiteGraphOptimize(KPartiteGraph& g0); // minimize g0
-        //KPartiteGraphOptimize(bool maximize, KPartiteGraph& g1); // maximize g1
-        KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1); // minimize g0, maximize g1
         KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1);
 
+        /** copy states i, i+K, i+2K,... from `other` */
+        KPartiteGraphOptimize(DomainStore *store, const KPartiteGraphOptimize& other,
+                size_t i, size_t K);
+
         FloatT get_eps() const;
+        FloatT get_eps_incr() const;
         void set_eps(FloatT eps, FloatT eps_incr);
         void use_dyn_prog_heuristic();
 
@@ -293,6 +302,67 @@ namespace treeck {
 
         two_of<FloatT> current_bounds() const;
         size_t num_candidate_cliques() const;
+
+        const KPartiteGraph& graph0() const;
+        const KPartiteGraph& graph1() const;
+    };
+
+    class Worker {
+        friend class KPartiteGraphParOpt;
+
+        bool work_flag_;
+        bool stop_flag_;
+        size_t num_millisecs_;
+        FloatT new_eps_;
+        FloatT max_output0_;
+        FloatT min_output1_;
+        FloatT min_output_difference_;
+
+        std::thread thread_;
+        std::mutex mutex_;
+        std::condition_variable cv_;
+        DomainStore store_;
+        std::optional<KPartiteGraphOptimize> opt_;
+        BoxFilterT box_filter_;
+
+        Worker();
+    };
+
+    class KPartiteGraphParOpt {
+        size_t nthreads_;
+        std::unique_ptr<Worker[]> workers_;
+
+        void wait();
+
+        static void worker_fun(Worker* self);
+
+    public:
+        KPartiteGraphParOpt(size_t nthreads,
+                const KPartiteGraphOptimize& opt);
+
+        void join_all();
+        void redistribute_work();
+
+        void steps_for(size_t num_millisecs);
+
+        size_t nthreads() const;
+        const KPartiteGraphOptimize& opt(size_t worker) const;
+
+        template <typename F>
+        inline void set_box_filter(F f)
+        {
+            for (size_t i = 0; i < nthreads_; ++i)
+            {
+                Worker& w = workers_[i];
+                std::lock_guard guard(w.mutex_);
+                w.box_filter_ = f();
+            }
+        }
+        void set_output_limits(FloatT max_output0, FloatT min_output1);
+        void set_output_limits(FloatT min_output_difference);
+
+        size_t num_solutions() const;
+        two_of<FloatT> current_bounds() const;
     };
 
 } /* namespace treeck */

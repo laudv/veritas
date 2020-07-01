@@ -44,6 +44,10 @@ endif ()
     add_library(${PROJECT_NAME} STATIC ${SOURCES})
 #endif()
 
+# multi-threading
+find_package(Threads REQUIRED)
+target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+
 # systems usually have old version of cereal, so we use a git submodule
 include_directories(lib/cereal/include)
 

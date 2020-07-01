@@ -23,9 +23,9 @@ void test_very_simple()
     KPartiteGraph g0(&store, at, finfo, 0);
     KPartiteGraph g1(&store, at, finfo, 1);
 
-    KPartiteGraphOptimize opt0(g0, g1);
+    KPartiteGraphOptimize opt0(&store, g0, g1);
     opt0.use_dyn_prog_heuristic();
-    KPartiteGraphOptimize opt1(g0, g1);
+    KPartiteGraphOptimize opt1(&store, g0, g1);
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
 
@@ -72,7 +72,7 @@ void test_simple()
     DomainStore store;
     KPartiteGraph g0(&store, at, finfo, 0);
     KPartiteGraph g1(&store, at, finfo, 1);
-    KPartiteGraphOptimize opt(g0, g1);
+    KPartiteGraphOptimize opt(&store, g0, g1);
     //opt.use_dyn_prog_heuristic();
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
@@ -104,7 +104,7 @@ void test_img()
     DomainStore store;
     KPartiteGraph g0(&store, at, finfo, 0);
     KPartiteGraph dummyg(&store);
-    KPartiteGraphOptimize opt(g0, dummyg);
+    KPartiteGraphOptimize opt(&store, g0, dummyg);
     //opt.use_dyn_prog_heuristic();
 
     std::cout << g0 << std::endl;
@@ -132,7 +132,7 @@ void test_unconstrained_bounds(const char *model)
     store.set_max_mem_size(1024*1024*50);
     KPartiteGraph g0(&store);
     KPartiteGraph g1(&store, at, finfo, 0);
-    KPartiteGraphOptimize opt(g0, g1); // maximize, g0 is dummy
+    KPartiteGraphOptimize opt(&store, g0, g1); // maximize, g0 is dummy
     //opt.set_eps(0.02, 0.02);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -174,11 +174,52 @@ void test_unconstrained_bounds(const char *model)
     }
 }
 
+void test_parallel(const char *model)
+{
+    AddTree at = AddTree::from_json_file(model);
+    AddTree dummy;
+
+    FeatInfo finfo(at, dummy, {}, true);
+    DomainStore store;
+    store.set_max_mem_size(1024*1024*50);
+    KPartiteGraph g0(&store);
+    KPartiteGraph g1(&store, at, finfo, 0);
+    KPartiteGraphOptimize opt(&store, g0, g1); // maximize, g0 is dummy
+    //opt.set_eps(0.02, 0.02);
+
+    std::cout << "steps(100)" << std::endl;
+    auto start = std::chrono::high_resolution_clock::now();
+    opt.steps(1000);
+    auto stop = std::chrono::high_resolution_clock::now();
+    double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+    std::cout << "steps(100) done: " << opt.num_candidate_cliques()
+        << " cliques in " << (dur * 1e-6)
+        << " bound=" << std::get<1>(opt.current_bounds())
+        << " nsteps=" << std::get<1>(opt.nsteps)
+        << std::endl;
+
+    KPartiteGraphParOpt paropt(4, opt);
+    paropt.set_box_filter([]() { return [](const DomainBox&) { return true; }; });
+    std::cout << "parallel steps(100)" << std::endl;
+    paropt.steps_for(10000);
+    std::cout << "redistribute_work" << std::endl;
+    paropt.redistribute_work();
+    std::cout << "parallel steps(100)" << std::endl;
+    paropt.steps_for(10000);
+    std::cout << "redistribute_work" << std::endl;
+    paropt.redistribute_work();
+    std::cout << "joining..." << std::endl;
+    //std::this_thread::sleep_for(std::chrono::seconds(1));
+    paropt.join_all();
+    std::cout << "joined!" << std::endl;
+}
+
 int main()
 {
     //test_very_simple();
     //test_simple();
     //test_img();
     //test_unconstrained_bounds("tests/models/xgb-calhouse-hard.json");
-    test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
+    //test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
+    test_parallel("tests/models/xgb-calhouse-hard.json");
 }

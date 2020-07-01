@@ -6,7 +6,9 @@
  * ----
  *
  * This file contains reimplemplementations of concepts introduced by the
- * following paper Chen et al. 2019:
+ * following paper Chen et al. 2019
+ *  - KPartiteGraph::merge (the core algorithm of the paper)
+ *  - KPartiteGraph::propagate_outputs (dynamic programming output estimation agorithm)
  *
  * https://papers.nips.cc/paper/9399-robustness-verification-of-tree-based-models
  * https://github.com/chenhongge/treeVerification
@@ -14,6 +16,7 @@
 
 #include <cmath>
 #include <algorithm>
+#include <chrono>
 #include <iostream>
 #include <iomanip>
 #include <limits>
@@ -211,6 +214,12 @@ namespace treeck {
     DomainStore::set_max_mem_size(size_t mem)
     {
         max_mem_size_ = mem;
+    }
+
+    size_t
+    DomainStore::get_max_mem_size() const
+    {
+        return max_mem_size_;
     }
 
     void
@@ -965,15 +974,6 @@ namespace treeck {
             << '}';
     }
 
-    //KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0)
-    //    : KPartiteGraphOptimize(g0.store_, g0, {g0.store_}) { }
-
-    //KPartiteGraphOptimize::KPartiteGraphOptimize(bool, KPartiteGraph& g1)
-    //    : KPartiteGraphOptimize(g1.store_, {g1.store_}, g1) { }
-
-    KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1)
-        : KPartiteGraphOptimize(g0.store_, g0, g1) { }
-
     KPartiteGraphOptimize::KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1)
         : store_(store)
         , graph_{g0, g1} // minimize g0, maximize g1
@@ -987,9 +987,6 @@ namespace treeck {
         , nbox_filter_calls{0}
         , solutions()
     {
-        if (g0.store_ != store_ || g1.store_ != store_)
-            throw std::runtime_error("invalid store");
-
         auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
         auto&& [min1, output_bound1] = g1.propagate_outputs(); // max output bound of first clique
 
@@ -1007,6 +1004,25 @@ namespace treeck {
                 }
             });
         }
+    }
+
+    KPartiteGraphOptimize::KPartiteGraphOptimize(DomainStore *store,
+            const KPartiteGraphOptimize& other, size_t i, size_t K)
+        : store_(store)
+        , graph_{other.graph_}
+        , cliques_{}
+        , cmp_{other.cmp_.eps}
+        , eps_incr_{other.eps_incr_}
+        , heuristic_type(other.heuristic_type)
+        , nsteps{0, 0}
+        , nupdate_fails{0}
+        , nrejected{0}
+        , nbox_filter_calls{0}
+        , solutions{}
+    {
+        for (size_t j = i; j < other.cliques_.size(); j += K)
+            cliques_.push_back(other.cliques_[i]); // copy
+        std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
     }
 
     Clique 
@@ -1031,17 +1047,26 @@ namespace treeck {
         return cmp_.eps;
     }
 
+    FloatT
+    KPartiteGraphOptimize::get_eps_incr() const
+    {
+        return eps_incr_;
+    }
+
     void
     KPartiteGraphOptimize::set_eps(FloatT eps, FloatT eps_incr)
     {
         // we maximize diff, so h(x) must be underestimated to make the search prefer deeper solutions
         if (eps > 1.0) throw std::runtime_error("nonsense eps");
         if (eps_incr < 0.0) throw std::runtime_error("nonsense eps_incr");
+        if (eps < cmp_.eps) throw std::runtime_error("decreasing eps?");
 
         eps_incr_ = eps_incr;
-        cmp_.eps = eps;
-        std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
-
+        if (eps != cmp_.eps)
+        {
+            cmp_.eps = eps;
+            std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
+        }
         //std::cout << "ARA* EPS set to " << cmp_.eps << std::endl;
     }
 
@@ -1516,4 +1541,259 @@ namespace treeck {
     {
         return cliques_.size();
     }
+
+    const KPartiteGraph&
+    KPartiteGraphOptimize::graph0() const { return get0(graph_); }
+
+    const KPartiteGraph&
+    KPartiteGraphOptimize::graph1() const { return get1(graph_); }
+
+
+
+
+
+
+    // PARALLEL
+    
+    static bool default_box_filter(const DomainBox&) { return true; }
+
+    Worker::Worker()
+        : work_flag_(false), stop_flag_(false)
+        , num_millisecs_(0), new_eps_(0.0)
+        , max_output0_(std::numeric_limits<FloatT>::quiet_NaN())
+        , min_output1_(std::numeric_limits<FloatT>::quiet_NaN())
+        , min_output_difference_(std::numeric_limits<FloatT>::quiet_NaN())
+        , box_filter_{default_box_filter}
+    {}
+    
+    void 
+    KPartiteGraphParOpt::worker_fun(Worker *self)
+    {
+        while (true)
+        {
+            std::unique_lock lock(self->mutex_);
+            self->cv_.wait(lock, [self]() { return self->work_flag_; });
+
+            if (self->stop_flag_)
+            {
+                break;
+            }
+            if (self->new_eps_ != 0.0)
+            {
+                self->opt_->set_eps(self->new_eps_, self->opt_->get_eps_incr());
+                self->new_eps_ = 0.0;
+            }
+            if (self->num_millisecs_ != 0)
+            {
+                using clock = std::chrono::high_resolution_clock;
+                auto start = clock::now();
+                auto stop = start + std::chrono::milliseconds(self->num_millisecs_);
+                if (!std::isnan(self->max_output0_))
+                {
+                    while (clock::now() < stop)
+                        if (!self->opt_->step(self->box_filter_, self->max_output0_, self->min_output1_))
+                            break;
+                }
+                else if (!std::isnan(self->min_output_difference_))
+                {
+                    while (clock::now() < stop)
+                        if (!self->opt_->step(self->box_filter_, self->min_output_difference_))
+                            break;
+                }
+                else
+                {
+                    while (clock::now() < stop)
+                        if (!self->opt_->step(self->box_filter_))
+                            break;
+                }
+                self->num_millisecs_ = 0;
+            }
+
+            self->work_flag_ = false;
+            lock.unlock();
+            self->cv_.notify_one();
+        }
+    }
+    
+    KPartiteGraphParOpt::KPartiteGraphParOpt(size_t nthreads,
+            const KPartiteGraphOptimize& opt)
+        : nthreads_{nthreads}
+        , workers_{new Worker[nthreads]}
+    {
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker& w = workers_[i];
+            std::lock_guard guard(w.mutex_);
+            w.store_.set_max_mem_size(opt.store_->get_max_mem_size());
+            w.opt_.emplace(&w.store_, opt, i, nthreads_);
+            w.thread_ = std::thread(worker_fun, &w);
+        }
+    }
+
+    void
+    KPartiteGraphParOpt::join_all()
+    {
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker& w = workers_[i];
+            {
+                std::lock_guard(w.mutex_);
+                w.work_flag_ = true; 
+                w.stop_flag_ = true;
+            }
+            w.cv_.notify_one();
+        }
+        for (size_t i = 0; i < nthreads_; ++i)
+            workers_[i].thread_.join();
+    }
+
+    void
+    KPartiteGraphParOpt::wait()
+    {
+        // try to lock the mutex, if successful, workers is done and waiting for work
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w = &workers_[i];
+            std::unique_lock lock(w->mutex_);
+            w->cv_.wait(lock, [w](){ return !w->work_flag_; });
+        }
+    }
+
+    void
+    KPartiteGraphParOpt::redistribute_work()
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+
+        // update epses:
+        FloatT max_eps = 0.0;
+        size_t mean_num_cliques = 0;
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w = &workers_[i];
+            std::lock_guard lock(w->mutex_);
+            max_eps = std::max(max_eps, w->opt_->get_eps());
+            mean_num_cliques += w->opt_->num_candidate_cliques();
+            std::cout << "worker" << i << ": "
+                << " cliques=" << w->opt_->num_candidate_cliques()
+                << " bounds=" << get1(w->opt_->current_bounds())
+                << " nsteps=" << get1(w->opt_->nsteps)
+                << " nsols=" << w->opt_->solutions.size()
+                << std::endl;
+        }
+        mean_num_cliques = (mean_num_cliques / nthreads_) + 1;
+
+        std::cout << "max_eps " << max_eps << std::endl;
+
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            bool do_notify = false;
+            Worker *w = &workers_[i];
+            {
+                std::lock_guard lock(w->mutex_);
+                if (w->opt_->get_eps() < max_eps)
+                {
+                    w->work_flag_ = true; 
+                    w->new_eps_ = max_eps; // run in thread
+                    do_notify = true;
+                }
+            }
+            if (do_notify)
+                w->cv_.notify_one();
+        }
+        
+        wait();
+
+        // w1 receives cliques from w2
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w1 = &workers_[i];
+            std::lock_guard lock1(w1->mutex_);
+            for (size_t j = 0; j < nthreads_; ++j)
+            {
+                if (i == j) continue;
+
+                Worker *w2 = &workers_[j];
+                std::lock_guard lock1(w2->mutex_);
+
+                // transfer cliques from w2 to w1
+                while (w2->opt_->num_candidate_cliques() > mean_num_cliques &&
+                       w1->opt_->num_candidate_cliques() < mean_num_cliques)
+                {
+                    Clique c = w2->opt_->pq_pop(); // from w2
+                    w1->opt_->pq_push(std::move(c)); // to w1
+                }
+            }
+        }
+
+        auto stop = std::chrono::high_resolution_clock::now();
+        double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+        std::cout << "redistribute_work in " << (dur * 1e-6) << std::endl;
+    }
+
+    void
+    KPartiteGraphParOpt::steps_for(size_t num_millisecs)
+    {
+        auto start = std::chrono::high_resolution_clock::now();
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker& w = workers_[i];
+            {
+                std::lock_guard(w.mutex_);
+                w.work_flag_ = true; 
+                w.num_millisecs_ = num_millisecs;
+            }
+            w.cv_.notify_one();
+        }
+        wait();
+        auto stop = std::chrono::high_resolution_clock::now();
+        double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+        std::cout << "duration steps_for " << (dur * 1e-6) << std::endl;
+    }
+
+    void
+    KPartiteGraphParOpt::set_output_limits(FloatT max_output0, FloatT min_output1)
+    {
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker& w = workers_[i];
+            std::lock_guard guard(w.mutex_);
+            w.max_output0_ = max_output0;
+            w.min_output1_ = min_output1;
+            w.min_output_difference_ = std::numeric_limits<FloatT>::quiet_NaN();
+        }
+    }
+
+    void 
+    KPartiteGraphParOpt::set_output_limits(FloatT min_output_difference)
+    {
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker& w = workers_[i];
+            std::lock_guard guard(w.mutex_);
+            w.max_output0_ = std::numeric_limits<FloatT>::quiet_NaN();
+            w.min_output1_ = std::numeric_limits<FloatT>::quiet_NaN();
+            w.min_output_difference_ = min_output_difference;
+        }
+    }
+
+    size_t
+    KPartiteGraphParOpt::num_solutions() const {
+        size_t sum = 0;
+        for (size_t i = 0; i < nthreads_; ++i)
+            sum += workers_[i].opt_->solutions.size();
+        return sum;
+    }
+
+    two_of<FloatT>
+    KPartiteGraphParOpt::current_bounds() const {
+        FloatT min, max = 0;
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            auto p = workers_[i].opt_->current_bounds();
+            min = std::max(min, get0(p));
+            max = std::min(max, get1(p));
+        }
+        return { min, max };
+    }
+
 } /* namespace treeck */
