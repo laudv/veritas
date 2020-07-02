@@ -36,17 +36,17 @@ void test_very_simple()
     std::cout << "DYN_PROG:" << std::endl;
     for (auto& s : opt0.solutions)
         std::cout << s.output0 << ", " << s.output1 << " (" << s.output1 - s.output0 << ')' << "  " << s.box << std::endl;
-    std::cout << "nrejected " << opt0.nrejected << std::endl;
-    std::cout << "nbox_filter_calls " << opt0.nbox_filter_calls << std::endl;
-    std::cout << "nsteps " << std::get<0>(opt0.nsteps) << ", " << std::get<1>(opt0.nsteps) << std::endl << std::endl;
+    std::cout << "num_rejected " << opt0.num_rejected << std::endl;
+    std::cout << "num_box_filter_calls " << opt0.num_box_filter_calls << std::endl;
+    std::cout << "num_steps " << std::get<0>(opt0.num_steps) << ", " << std::get<1>(opt0.num_steps) << std::endl << std::endl;
 
     while (opt1.step(box_filter, 0.0001));
     std::cout << "RECOMPUTE:" << std::endl;
     for (auto& s : opt1.solutions)
         std::cout << s.output0 << ", " << s.output1 << " (" << s.output1 - s.output0 << ')' << "  " << s.box << std::endl;
-    std::cout << "nrejected " << opt1.nrejected << std::endl;
-    std::cout << "nbox_filter_calls " << opt1.nbox_filter_calls << std::endl;
-    std::cout << "nsteps " << std::get<0>(opt1.nsteps) << ", " << std::get<1>(opt1.nsteps) << std::endl;
+    std::cout << "num_rejected " << opt1.num_rejected << std::endl;
+    std::cout << "num_box_filter_calls " << opt1.num_box_filter_calls << std::endl;
+    std::cout << "num_steps " << std::get<0>(opt1.num_steps) << ", " << std::get<1>(opt1.num_steps) << std::endl;
 }
 
 void test_simple()
@@ -86,8 +86,8 @@ void test_simple()
         std::cout << s.output0 << ", " << s.output1 << " (" << s.output1 - s.output0 << ')'
             << "  " << s.box << std::endl;
     }
-    std::cout << "nrejected " << opt.nrejected << std::endl;
-    std::cout << "nsteps " << std::get<0>(opt.nsteps) << ", " << std::get<1>(opt.nsteps) << std::endl;
+    std::cout << "num_rejected " << opt.num_rejected << std::endl;
+    std::cout << "num_steps " << std::get<0>(opt.num_steps) << ", " << std::get<1>(opt.num_steps) << std::endl;
 }
 
 void test_img()
@@ -134,7 +134,7 @@ void test_unconstrained_bounds(const char *model)
     auto start = std::chrono::high_resolution_clock::now();
     std::vector<double> timings;
     std::vector<double> num_steps;
-    std::cout << "bound, mem, nsteps" << std::endl;
+    std::cout << "bound, mem, num_steps" << std::endl;
     while (opt.num_candidate_cliques() < 1000000)
     {
         try {
@@ -147,7 +147,7 @@ void test_unconstrained_bounds(const char *model)
 
         std::cout << std::get<1>(opt.current_bounds())
             << ", " << (opt.store().get_mem_size() / (1024*1024))
-            << ", " << std::get<1>(opt.nsteps)
+            << ", " << std::get<1>(opt.num_steps)
             << std::endl;
 
         while (timings.size() < opt.solutions.size())
@@ -155,7 +155,7 @@ void test_unconstrained_bounds(const char *model)
             double d = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::high_resolution_clock::now() - start).count();
             timings.push_back(d / 1000000.0);
-            num_steps.push_back(std::get<0>(opt.nsteps) + std::get<1>(opt.nsteps));
+            num_steps.push_back(std::get<0>(opt.num_steps) + std::get<1>(opt.num_steps));
         }
     }
 
@@ -190,7 +190,7 @@ void test_parallel(const char *model)
     std::cout << "steps(100) done: " << opt.num_candidate_cliques()
         << " cliques in " << (dur * 1e-6)
         << " bound=" << std::get<1>(opt.current_bounds())
-        << " nsteps=" << std::get<1>(opt.nsteps)
+        << " num_steps=" << std::get<1>(opt.num_steps)
         << std::endl;
 
     KPartiteGraphParOpt paropt(4, opt);
