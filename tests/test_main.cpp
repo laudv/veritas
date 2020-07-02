@@ -19,13 +19,12 @@ void test_very_simple()
     FeatInfo finfo(at, at, {}, true);
 
     std::cout << at << std::endl;
-    DomainStore store;
-    KPartiteGraph g0(&store, at, finfo, 0);
-    KPartiteGraph g1(&store, at, finfo, 1);
+    KPartiteGraph g0(at, finfo, 0);
+    KPartiteGraph g1(at, finfo, 1);
 
-    KPartiteGraphOptimize opt0(&store, g0, g1);
+    KPartiteGraphOptimize opt0(g0, g1);
     opt0.use_dyn_prog_heuristic();
-    KPartiteGraphOptimize opt1(&store, g0, g1);
+    KPartiteGraphOptimize opt1(g0, g1);
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
 
@@ -69,10 +68,9 @@ void test_simple()
     FeatInfo finfo(at, at, {1}, true);
 
     std::cout << at << std::endl;
-    DomainStore store;
-    KPartiteGraph g0(&store, at, finfo, 0);
-    KPartiteGraph g1(&store, at, finfo, 1);
-    KPartiteGraphOptimize opt(&store, g0, g1);
+    KPartiteGraph g0(at, finfo, 0);
+    KPartiteGraph g1(at, finfo, 1);
+    KPartiteGraphOptimize opt(g0, g1);
     //opt.use_dyn_prog_heuristic();
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
@@ -101,10 +99,9 @@ void test_img()
     //std::cout << at << std::endl;
 
     FeatInfo finfo(at, dummy, {}, true); // minimize
-    DomainStore store;
-    KPartiteGraph g0(&store, at, finfo, 0);
-    KPartiteGraph dummyg(&store);
-    KPartiteGraphOptimize opt(&store, g0, dummyg);
+    KPartiteGraph g0(at, finfo, 0);
+    KPartiteGraph dummyg;
+    KPartiteGraphOptimize opt(g0, dummyg);
     //opt.use_dyn_prog_heuristic();
 
     std::cout << g0 << std::endl;
@@ -128,11 +125,10 @@ void test_unconstrained_bounds(const char *model)
     AddTree dummy;
 
     FeatInfo finfo(at, dummy, {}, true);
-    DomainStore store;
-    store.set_max_mem_size(1024*1024*50);
-    KPartiteGraph g0(&store);
-    KPartiteGraph g1(&store, at, finfo, 0);
-    KPartiteGraphOptimize opt(&store, g0, g1); // maximize, g0 is dummy
+    KPartiteGraph g0;
+    KPartiteGraph g1(at, finfo, 0);
+    KPartiteGraphOptimize opt(g0, g1); // maximize, g0 is dummy
+    opt.store().set_max_mem_size(1024*1024*50);
     //opt.set_eps(0.02, 0.02);
 
     auto start = std::chrono::high_resolution_clock::now();
@@ -150,7 +146,7 @@ void test_unconstrained_bounds(const char *model)
         }
 
         std::cout << std::get<1>(opt.current_bounds())
-            << ", " << (store.get_mem_size() / (1024*1024))
+            << ", " << (opt.store().get_mem_size() / (1024*1024))
             << ", " << std::get<1>(opt.nsteps)
             << std::endl;
 
@@ -180,11 +176,10 @@ void test_parallel(const char *model)
     AddTree dummy;
 
     FeatInfo finfo(at, dummy, {}, true);
-    DomainStore store;
-    store.set_max_mem_size(1024*1024*50);
-    KPartiteGraph g0(&store);
-    KPartiteGraph g1(&store, at, finfo, 0);
-    KPartiteGraphOptimize opt(&store, g0, g1); // maximize, g0 is dummy
+    KPartiteGraph g0;
+    KPartiteGraph g1(at, finfo, 0);
+    KPartiteGraphOptimize opt(g0, g1); // maximize, g0 is dummy
+    opt.store().set_max_mem_size(1024*1024*50);
     //opt.set_eps(0.02, 0.02);
 
     std::cout << "steps(100)" << std::endl;

@@ -583,16 +583,14 @@ namespace treeck {
 
     // - KPartiteGraph ---------------------------------------------------------
 
-    KPartiteGraph::KPartiteGraph(DomainStore* store)
-        : store_(store)
+    KPartiteGraph::KPartiteGraph()
     {
         //sets_.push_back({
         //    std::vector<Vertex>{{{}, 0.0}} // one dummy vertex
         //});
     }
 
-    KPartiteGraph::KPartiteGraph(DomainStore *store, const AddTree& addtree, FeatIdMapper fmap)
-        : store_(store)
+    KPartiteGraph::KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap)
     {
         if (addtree.base_score != 0.0)
         {
@@ -610,9 +608,9 @@ namespace treeck {
         }
     }
 
-    KPartiteGraph::KPartiteGraph(DomainStore *store, const AddTree& addtree,
+    KPartiteGraph::KPartiteGraph(const AddTree& addtree,
             const FeatInfo& finfo, int instance)
-        : KPartiteGraph(store, addtree, [=](FeatId feat_id) { return finfo.get_id(instance, feat_id); })
+        : KPartiteGraph(addtree, [=](FeatId feat_id) { return finfo.get_id(instance, feat_id); })
     { }
 
 
@@ -645,9 +643,9 @@ namespace treeck {
             {
                 auto child_node = node;
                 node = node.parent();
-                store_->refine_workspace(node.get_split(), child_node.is_left_child(), fmap);
+                store_.refine_workspace(node.get_split(), child_node.is_left_child(), fmap);
             }
-            DomainBox box = store_->push_workspace();
+            DomainBox box = store_.push_workspace();
             set.vertices.push_back({ box, leaf_value });
         }
     }
@@ -722,7 +720,7 @@ namespace treeck {
                     {
                         if (v0.box.overlaps(v1.box))
                         {
-                            DomainBox box = store_->combine_and_push(v0.box, v1.box);
+                            DomainBox box = store_.combine_and_push(v0.box, v1.box);
                             FloatT output = v0.output + v1.output;
                             set1.vertices.push_back({box, output});
                         }
@@ -974,9 +972,8 @@ namespace treeck {
             << '}';
     }
 
-    KPartiteGraphOptimize::KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1)
-        : store_(store)
-        , graph_{g0, g1} // minimize g0, maximize g1
+    KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1)
+        : graph_{g0, g1} // minimize g0, maximize g1
         , cliques_()
         , cmp_{1.0}
         , eps_incr_{0.0}
@@ -1006,10 +1003,9 @@ namespace treeck {
         }
     }
 
-    KPartiteGraphOptimize::KPartiteGraphOptimize(DomainStore *store,
+    KPartiteGraphOptimize::KPartiteGraphOptimize(
             const KPartiteGraphOptimize& other, size_t i, size_t K)
-        : store_(store)
-        , graph_{other.graph_}
+        : graph_{other.graph_}
         , cliques_{}
         , cmp_{other.cmp_.eps}
         , eps_incr_{other.eps_incr_}
@@ -1184,7 +1180,7 @@ namespace treeck {
         ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
         // prepare `new_c`
-        DomainBox new_box = store_->combine_and_push(v.box, c.box);
+        DomainBox new_box = store_.combine_and_push(v.box, c.box);
         Clique new_c = {
             new_box,
             c.instance // copy
@@ -1298,9 +1294,9 @@ namespace treeck {
             if (!c.box.overlaps(v.box))
                 continue;
 
-            store_->clear_workspace();
-            store_->combine_in_workspace(c.box, v.box);
-            DomainBox box = store_->get_workspace_box();
+            store_.clear_workspace();
+            store_.combine_in_workspace(c.box, v.box);
+            DomainBox box = store_.get_workspace_box();
 
             // do we accept this new box?
             ++nbox_filter_calls;
@@ -1346,7 +1342,7 @@ namespace treeck {
             //std::cout << "heuristic " << heuristic0 << ", " << heuristic1 << std::endl;
 
             // construct new clique
-            box = store_->push_workspace(); // (!) push workspace box to store!
+            box = store_.push_workspace(); // (!) push workspace box to store!
             Clique new_c = {
                 box,
                 c.instance // copy
@@ -1624,8 +1620,8 @@ namespace treeck {
         {
             Worker& w = workers_[i];
             std::lock_guard guard(w.mutex_);
-            w.store_.set_max_mem_size(opt.store_->get_max_mem_size());
-            w.opt_.emplace(&w.store_, opt, i, nthreads_);
+            w.opt_.emplace(opt, i, nthreads_);
+            w.opt_->store_.set_max_mem_size(opt.store_.get_max_mem_size());
             w.thread_ = std::thread(worker_fun, &w);
         }
     }

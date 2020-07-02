@@ -157,7 +157,7 @@ namespace treeck {
 
 
     class KPartiteGraph {
-        DomainStore *store_;
+        DomainStore store_;
         std::vector<IndependentSet> sets_;
         friend class KPartiteGraphOptimize;
 
@@ -167,10 +167,10 @@ namespace treeck {
                 FeatIdMapper fmap);
 
     public:
-        KPartiteGraph(DomainStore *store_);
-        //KPartiteGraph(DomainStore *store_, const AddTree& addtree);
-        KPartiteGraph(DomainStore *store_, const AddTree& addtree, FeatIdMapper fmap);
-        KPartiteGraph(DomainStore *store_, const AddTree& addtree, const FeatInfo& finfo, int instance);
+        KPartiteGraph();
+        //KPartiteGraph(const AddTree& addtree);
+        KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap);
+        KPartiteGraph(const AddTree& addtree, const FeatInfo& finfo, int instance);
 
         std::vector<IndependentSet>::const_iterator begin() const;
         std::vector<IndependentSet>::const_iterator end() const;
@@ -189,6 +189,9 @@ namespace treeck {
         size_t num_independent_sets() const;
         size_t num_vertices() const;
         size_t num_vertices_in_set(int indep_set) const;
+
+        inline const DomainStore& store() const { return store_; }
+        inline DomainStore& store() { return store_; }
     };
 
     std::ostream& operator<<(std::ostream& s, const KPartiteGraph& graph);
@@ -239,7 +242,7 @@ namespace treeck {
     class KPartiteGraphOptimize {
         friend class KPartiteGraphParOpt;
 
-        DomainStore *store_;
+        DomainStore store_;
         two_of<const KPartiteGraph&> graph_; // <0> minimize, <1> maximize
 
         // a vector ordered as a pq containing "partial" cliques (no max-cliques)
@@ -280,11 +283,10 @@ namespace treeck {
         std::vector<FloatT> epses;
 
     public:
-        KPartiteGraphOptimize(DomainStore *store, KPartiteGraph& g0, KPartiteGraph& g1);
+        KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1);
 
         /** copy states i, i+K, i+2K,... from `other` */
-        KPartiteGraphOptimize(DomainStore *store, const KPartiteGraphOptimize& other,
-                size_t i, size_t K);
+        KPartiteGraphOptimize(const KPartiteGraphOptimize& other, size_t i, size_t K);
 
         FloatT get_eps() const;
         FloatT get_eps_incr() const;
@@ -305,6 +307,9 @@ namespace treeck {
 
         const KPartiteGraph& graph0() const;
         const KPartiteGraph& graph1() const;
+
+        inline const DomainStore& store() const { return store_; }
+        inline DomainStore& store() { return store_; }
     };
 
     class Worker {
@@ -321,7 +326,6 @@ namespace treeck {
         std::thread thread_;
         std::mutex mutex_;
         std::condition_variable cv_;
-        DomainStore store_;
         std::optional<KPartiteGraphOptimize> opt_;
         BoxFilterT box_filter_;
 
