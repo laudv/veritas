@@ -978,10 +978,10 @@ namespace treeck {
         , cmp_{1.0}
         , eps_incr_{0.0}
         , heuristic_type(KPartiteGraphOptimize::RECOMPUTE)
-        , nsteps{0, 0}
-        , nupdate_fails{0}
-        , nrejected{0}
-        , nbox_filter_calls{0}
+        , num_steps{0, 0}
+        , num_update_fails{0}
+        , num_rejected{0}
+        , num_box_filter_calls{0}
         , solutions()
     {
         auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
@@ -1010,10 +1010,10 @@ namespace treeck {
         , cmp_{other.cmp_.eps}
         , eps_incr_{other.eps_incr_}
         , heuristic_type(other.heuristic_type)
-        , nsteps{0, 0}
-        , nupdate_fails{0}
-        , nrejected{0}
-        , nbox_filter_calls{0}
+        , num_steps{0, 0}
+        , num_update_fails{0}
+        , num_rejected{0}
+        , num_box_filter_calls{0}
         , solutions{}
     {
         for (size_t j = i; j < other.cliques_.size(); j += K)
@@ -1069,7 +1069,7 @@ namespace treeck {
     void
     KPartiteGraphOptimize::use_dyn_prog_heuristic()
     {
-        if (get0(nsteps) + get1(nsteps) != 0)
+        if (get0(num_steps) + get1(num_steps) != 0)
             throw std::runtime_error("cannot change heuristic mid optimization");
         heuristic_type = DYN_PROG;
     }
@@ -1149,7 +1149,7 @@ namespace treeck {
 
                 return true; // update successful!
             }
-            else ++nupdate_fails;
+            else ++num_update_fails;
         }
         return false; // out of compatible vertices in `indep_set`
     }
@@ -1210,7 +1210,7 @@ namespace treeck {
             else
             {
                 //std::cout << "rejected old because of output " << c << std::endl;
-                ++nrejected;
+                ++num_rejected;
             }
         }
 
@@ -1226,7 +1226,7 @@ namespace treeck {
                     get0(new_c.instance).output,
                     get1(new_c.instance).output);
 
-            ++nbox_filter_calls;
+            ++num_box_filter_calls;
 
             if (is_valid_box && is_valid_output)
             {
@@ -1237,7 +1237,7 @@ namespace treeck {
             else
             {
                 //std::cout << "discarding invalid solution" << std::endl;
-                ++nrejected;
+                ++num_rejected;
             }
         }
         else
@@ -1252,7 +1252,7 @@ namespace treeck {
                     get0(new_c.instance).output_bound(),
                     get1(new_c.instance).output_bound());
 
-            ++nbox_filter_calls;
+            ++num_box_filter_calls;
 
             // there is a valid extension of this clique and it is not yet a solution -> push to `cliques_`
             if (is_valid0 && is_valid1 && is_valid_box && is_valid_output)
@@ -1264,11 +1264,11 @@ namespace treeck {
             {
                 //std::cout << "reject: " << is_valid0 << is_valid1
                 //    << is_valid_box << is_valid_output << std::endl;
-                ++nrejected;
+                ++num_rejected;
             }
         }
 
-        std::get<instance>(nsteps)++;
+        std::get<instance>(num_steps)++;
     }
 
     template <size_t instance, typename BF, typename OF>
@@ -1299,10 +1299,10 @@ namespace treeck {
             DomainBox box = store_.get_workspace_box();
 
             // do we accept this new box?
-            ++nbox_filter_calls;
+            ++num_box_filter_calls;
             if (!box_filter(box))
             {
-                ++nrejected;
+                ++num_rejected;
                 continue;
             }
 
@@ -1363,14 +1363,14 @@ namespace treeck {
                     get0(new_c.instance).output_bound(),
                     get1(new_c.instance).output_bound()))
             {
-                ++nrejected;
+                ++num_rejected;
                 continue;
             }
 
             pq_push(std::move(new_c));
         }
 
-        std::get<instance>(nsteps)++;
+        std::get<instance>(num_steps)++;
     }
 
     template <typename BF, typename OF>
@@ -1386,9 +1386,9 @@ namespace treeck {
         // --> goto step_instance / expand_clique_instance
 
         //std::cout << "ncliques=" << cliques_.size()
-        //    << ", nsteps=" << get0(nsteps) << ":" << get1(nsteps)
-        //    << ", nupdate_fails=" << nupdate_fails
-        //    << ", nbox_filter_calls=" << nbox_filter_calls
+        //    << ", num_steps=" << get0(num_steps) << ":" << get1(num_steps)
+        //    << ", num_update_fails=" << num_update_fails
+        //    << ", num_box_filter_calls=" << num_box_filter_calls
         //    << std::endl;
 
         Clique c = pq_pop();
@@ -1672,7 +1672,7 @@ namespace treeck {
             std::cout << "worker" << i << ": "
                 << " cliques=" << w->opt_->num_candidate_cliques()
                 << " bounds=" << get1(w->opt_->current_bounds())
-                << " nsteps=" << get1(w->opt_->nsteps)
+                << " num_steps=" << get1(w->opt_->num_steps)
                 << " nsols=" << w->opt_->solutions.size()
                 << std::endl;
         }
@@ -1746,6 +1746,14 @@ namespace treeck {
         std::cout << "duration steps_for " << (dur * 1e-6) << std::endl;
     }
 
+    const KPartiteGraphOptimize&
+    KPartiteGraphParOpt::worker_opt(size_t worker_index) const
+    {
+        if (worker_index >= nthreads_)
+            throw std::out_of_range("worker index out of range");
+        return *workers_[worker_index].opt_;
+    }
+
     void
     KPartiteGraphParOpt::set_output_limits(FloatT max_output0, FloatT min_output1)
     {
@@ -1790,6 +1798,17 @@ namespace treeck {
             max = std::min(max, get1(p));
         }
         return { min, max };
+    }
+    
+    std::vector<size_t>
+    KPartiteGraphParOpt::current_memory() const {
+        std::vector<size_t> mem;
+        mem.reserve(nthreads_);
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            mem.push_back(workers_[i].opt_->store().get_mem_size());
+        }
+        return mem;
     }
 
 } /* namespace treeck */

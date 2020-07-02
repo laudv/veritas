@@ -16,7 +16,7 @@
 
 namespace treeck {
 
-    class Solver  {
+    class SMTSolver  {
         const FeatInfo *finfo_;
         z3::context ctx_;
         z3::solver solver_;
@@ -38,8 +38,7 @@ namespace treeck {
         std::tuple<std::string, z3::expr>& xvar_tuple(int instance, FeatId feat_id);
 
     public:
-        //Solver(const AddTree& at);
-        Solver(const FeatInfo *finfo, const AddTree& at0, const AddTree& at1);
+        SMTSolver(const FeatInfo *finfo, const AddTree& at0, const AddTree& at1);
 
         z3::solver& get_z3();
         z3::context& get_z3_ctx();

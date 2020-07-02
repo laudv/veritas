@@ -24,6 +24,7 @@ def plot_img_solutions(imghat, solutions):
 
 class TestGraph(unittest.TestCase):
     def test_single_tree(self):
+        dummy = AddTree()
         at = AddTree()
         t = at.add_tree();
         t.split(t.root(), 0, 2)
@@ -34,13 +35,21 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value( t.left(t.right(t.root())), 4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
 
-        opt = Optimizer(maximize=at)
-        notdone = opt.step(100, min_output=3.5)
+        finfo = FeatInfo(dummy, at, set(), False);
+        print(finfo.feat_ids0())
+        print(finfo.feat_ids1())
+        g0 = KPartiteGraph(dummy, finfo, 0)
+        print(g0)
+        g1 = KPartiteGraph(at, finfo, 1)
+        print(g1)
+        opt = KPartiteGraphOptimize(g0, g1)
+        notdone = opt.steps(100, min_output=3.5)
         self.assertFalse(notdone)
         self.assertEqual(opt.num_solutions(), 2)
-        solutions = opt.solutions()
-        self.assertEqual(solutions[0][1], 8.0)
-        self.assertEqual(solutions[1][1], 4.0)
+        solutions = opt.solutions
+        self.assertEqual(solutions[0].output1, 8.0)
+        self.assertEqual(solutions[1].output1, 4.0)
+        print(solutions[0].box())
 
     def test_two_trees(self):
         at = AddTree()
@@ -65,58 +74,57 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.right(t.root()))), 0.6)
 
         opt = Optimizer(minimize=at, maximize=at, matches={1}, match_is_reuse=True); # share feature 1 between two trees
-        opt.enable_smt()
+        s = SMTSolver(opt.feat_info, opt.at0, opt.at1)
 
-        self.assertEqual(opt.xvar(0, 0), "x0_0")
-        self.assertEqual(opt.xvar(0, 1), "x0_1")
-        self.assertEqual(opt.xvar(1, 0), "x1_0")
-        self.assertEqual(opt.xvar(1, 1), "x0_1") # shared
-        self.assertEqual(opt.xvar(0, 2), "x0_2")
-        self.assertEqual(opt.xvar(1, 2), "x1_2")
+        self.assertEqual(s.xvar_name(0, 0), "x0_0")
+        self.assertEqual(s.xvar_name(0, 1), "x0_1")
+        self.assertEqual(s.xvar_name(1, 0), "x1_0")
+        self.assertEqual(s.xvar_name(1, 1), "x0_1") # shared
+        self.assertEqual(s.xvar_name(0, 2), "x0_2")
+        self.assertEqual(s.xvar_name(1, 2), "x1_2")
 
-        self.assertEqual(opt.num_vertices(0, 0), 4)
-        self.assertEqual(opt.num_vertices(0, 1), 5)
-        self.assertEqual(opt.num_vertices(1, 0), 4)
-        self.assertEqual(opt.num_vertices(1, 1), 5)
+        self.assertEqual(opt.g0.num_vertices_in_set(0), 4)
+        self.assertEqual(opt.g0.num_vertices_in_set(1), 5)
+        self.assertEqual(opt.g1.num_vertices_in_set(0), 4)
+        self.assertEqual(opt.g1.num_vertices_in_set(1), 5)
 
-        opt.set_smt_program(f"""
-(assert (< {opt.xvar(0, 0)} 0.0))
-(assert (> {opt.xvar(0, 1)} 1.2))
-(assert (> {opt.xvar(1, 0)} 1.0))""")
-        opt.prune()
+        opt.prune_smt("""
+(assert (< {instance0_var_0} 0.0))
+(assert (> {instance0_var_1} 1.2))
+(assert (> {g0} 1.0))""", var_prefix0="instance0_var_")
 
-        self.assertEqual(opt.num_vertices(0, 0), 1)
-        self.assertEqual(opt.num_vertices(0, 1), 1)
-        self.assertEqual(opt.num_vertices(1, 0), 3)
-        self.assertEqual(opt.num_vertices(1, 1), 4)
+        self.assertEqual(opt.g0.num_vertices_in_set(0), 1)
+        self.assertEqual(opt.g0.num_vertices_in_set(1), 1)
+        self.assertEqual(opt.g1.num_vertices_in_set(0), 3)
+        self.assertEqual(opt.g1.num_vertices_in_set(1), 4)
 
-        self.assertEqual(opt.num_independent_sets(0), 2)
-        self.assertEqual(opt.num_independent_sets(1), 2)
+        self.assertEqual(opt.g0.num_independent_sets(), 2)
+        self.assertEqual(opt.g1.num_independent_sets(), 2)
 
         opt.merge(2)
 
-        self.assertEqual(opt.num_independent_sets(0), 1)
-        self.assertEqual(opt.num_independent_sets(1), 1)
+        self.assertEqual(opt.g0.num_independent_sets(), 1)
+        self.assertEqual(opt.g1.num_independent_sets(), 1)
 
-        notdone = opt.step(100)
+        notdone = opt.steps(100)
         self.assertFalse(notdone)
         self.assertEqual(opt.num_solutions(), 5)
 
-        for fid in opt.get_used_feat_ids()[0]:
-            print(0, fid, "->", opt.xvar_id(0, fid))
-        for fid in opt.get_used_feat_ids()[1]:
-            print(1, fid, "->", opt.xvar_id(1, fid))
+        for fid in opt.feat_info.feat_ids0():
+            print(0, fid, "->", s.xvar_id(0, fid))
+        for fid in opt.feat_info.feat_ids1():
+            print(1, fid, "->", s.xvar_id(1, fid))
         print()
         
-        for s0, s1, sd in opt.solutions():
-            print(s0, s1, sd)
+        for s in opt.solutions():
+            print(s.output0, s.output1, s.box())
 
         opt = Optimizer(minimize=at)
-        self.assertEqual(opt.num_vertices(0, 0), 4)
-        self.assertEqual(opt.num_vertices(0, 1), 5)
-        opt.prune([1.2, 10.0, True], 0.5)
-        self.assertEqual(opt.num_vertices(0, 0), 2)
-        self.assertEqual(opt.num_vertices(0, 1), 1)
+        self.assertEqual(opt.g0.num_vertices_in_set(0), 4)
+        self.assertEqual(opt.g0.num_vertices_in_set(1), 5)
+        opt.prune_example([1.2, 10.0, True], 0.5)
+        self.assertEqual(opt.g0.num_vertices_in_set(0), 2)
+        self.assertEqual(opt.g0.num_vertices_in_set(1), 1)
         
     def test_three_trees_dynprog(self):
         at = AddTree()

@@ -4,7 +4,7 @@
 
 namespace treeck {
 
-    Solver::Solver(
+    SMTSolver::SMTSolver(
             const FeatInfo* finfo,
             const AddTree& at0,
             const AddTree& at1)
@@ -23,14 +23,14 @@ namespace treeck {
     }
 
     void
-    Solver::fill_const_cache(const AddTree& at)
+    SMTSolver::fill_const_cache(const AddTree& at)
     {
         for (const auto& tree : at.trees())
             fill_const_cache(tree.root());
     }
 
     void
-    Solver::fill_const_cache(AddTree::TreeT::CRef node)
+    SMTSolver::fill_const_cache(AddTree::TreeT::CRef node)
     {
         if (!node.is_internal())
             return;
@@ -47,14 +47,14 @@ namespace treeck {
     }
 
     void
-    Solver::fill_var_map(int instance, const AddTree& at)
+    SMTSolver::fill_var_map(int instance, const AddTree& at)
     {
         for (const auto& tree : at.trees())
             fill_var_map(instance, tree.root());
     }
 
     void
-    Solver::fill_var_map(int instance, AddTree::TreeT::CRef node)
+    SMTSolver::fill_var_map(int instance, AddTree::TreeT::CRef node)
     {
         if (!node.is_internal())
             return;
@@ -73,7 +73,7 @@ namespace treeck {
     }
 
     z3::expr&
-    Solver::float_to_z3(FloatT value)
+    SMTSolver::float_to_z3(FloatT value)
     {
         static_assert(sizeof(FloatT) == sizeof(uint32_t));
         uint32_t i = *reinterpret_cast<uint32_t *>(&value);
@@ -92,19 +92,19 @@ namespace treeck {
     }
 
     z3::solver&
-    Solver::get_z3()
+    SMTSolver::get_z3()
     {
         return solver_;
     }
 
     z3::context&
-    Solver::get_z3_ctx()
+    SMTSolver::get_z3_ctx()
     {
         return ctx_;
     }
 
     void
-    Solver::parse_smt(const char *smt)
+    SMTSolver::parse_smt(const char *smt)
     {
         solver_.reset();
         std::stringstream ss;
@@ -126,7 +126,7 @@ namespace treeck {
     }
 
     std::string
-    Solver::var_name(int instance, FeatId feat_id) const
+    SMTSolver::var_name(int instance, FeatId feat_id) const
     {
         int id = finfo_->get_id(instance, feat_id);
         if (instance != 0 && finfo_->is_instance0_id(id))
@@ -143,13 +143,13 @@ namespace treeck {
     }
 
     int
-    Solver::xvar_id(int instance, FeatId feat_id) const
+    SMTSolver::xvar_id(int instance, FeatId feat_id) const
     {
         return finfo_->get_id(instance, feat_id);
     }
 
     void
-    Solver::mk_real_xvar(int instance, FeatId feat_id)
+    SMTSolver::mk_real_xvar(int instance, FeatId feat_id)
     {
         int id = xvar_id(instance, feat_id);
 
@@ -162,7 +162,7 @@ namespace treeck {
     }
     
     void
-    Solver::mk_bool_xvar(int instance, FeatId feat_id)
+    SMTSolver::mk_bool_xvar(int instance, FeatId feat_id)
     {
         int id = xvar_id(instance, feat_id);
 
@@ -175,7 +175,7 @@ namespace treeck {
     }
 
     std::tuple<std::string, z3::expr>&
-    Solver::xvar_tuple(int instance, FeatId feat_id)
+    SMTSolver::xvar_tuple(int instance, FeatId feat_id)
     {
         int id = xvar_id(instance, feat_id);
         auto fd = var_map_.find(id);
@@ -185,19 +185,19 @@ namespace treeck {
     }
 
     const std::string&
-    Solver::xvar_name(int instance, FeatId feat_id)
+    SMTSolver::xvar_name(int instance, FeatId feat_id)
     {
         return std::get<0>(xvar_tuple(instance, feat_id));
     }
 
     z3::expr&
-    Solver::xvar(int instance, FeatId feat_id)
+    SMTSolver::xvar(int instance, FeatId feat_id)
     {
         return std::get<1>(xvar_tuple(instance, feat_id));
     }
 
     z3::expr&
-    Solver::xvar_by_id(int id)
+    SMTSolver::xvar_by_id(int id)
     {
         auto fd = var_map_.find(id);
         if (fd == var_map_.end())
@@ -206,7 +206,7 @@ namespace treeck {
     }
 
     z3::expr
-    Solver::domain_to_z3(int id, const RealDomain& d)
+    SMTSolver::domain_to_z3(int id, const RealDomain& d)
     {
         const z3::expr& xvar = xvar_by_id(id);
         if (!xvar.is_real())
@@ -222,7 +222,7 @@ namespace treeck {
     }
 
     z3::expr
-    Solver::domain_to_z3(int id, const BoolDomain& d)
+    SMTSolver::domain_to_z3(int id, const BoolDomain& d)
     {
         const z3::expr& xvar = xvar_by_id(id);
         if (!xvar.is_bool())
@@ -236,7 +236,7 @@ namespace treeck {
     }
 
     z3::expr
-    Solver::domains_to_z3(DomainBox box)
+    SMTSolver::domains_to_z3(DomainBox box)
     {
         z3::expr e = ctx_.bool_val(true);
         for (auto&& [id, dom] : box)
@@ -255,7 +255,7 @@ namespace treeck {
     }
 
     bool
-    Solver::check(z3::expr& e)
+    SMTSolver::check(z3::expr& e)
     {
         return solver_.check(1, &e) == z3::sat;
     }

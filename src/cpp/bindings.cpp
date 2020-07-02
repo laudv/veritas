@@ -255,6 +255,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_split", [](const DomTreeT& t, NodeId n) { return encode_split(t[n].get_split()); });
     */
 
+        /*
     struct Optimizer {
         std::shared_ptr<FeatInfo> finfo;
         std::shared_ptr<DomainStore> store;
@@ -509,13 +510,142 @@ PYBIND11_MODULE(pytreeck, m) {
             return KPartiteGraphParOpt(nthreads, *opt.opt);
         })
         ;
+        */
 
-    py::class_<KPartiteGraphParOpt>(m, "ParOptimizer")
+    py::class_<FeatInfo>(m, "FeatInfo")
+        .def(py::init<const AddTree&, const AddTree&, const std::unordered_set<FeatId>&, bool>())
+        .def("get_id", &FeatInfo::get_id)
+        .def("is_instance0_id", &FeatInfo::is_instance0_id)
+        .def("is_real", &FeatInfo::is_real)
+        .def("feat_ids0", &FeatInfo::feat_ids0)
+        .def("feat_ids1", &FeatInfo::feat_ids1)
+        ;
+
+    py::class_<KPartiteGraph>(m, "KPartiteGraph")
+        .def(py::init<const AddTree&, const FeatInfo&, int>())
+        .def("set_max_mem_size", [](KPartiteGraph& g, size_t m) { g.store().set_max_mem_size(m); })
+        .def("get_max_mem_size", [](const KPartiteGraph& o) { return o.store().get_max_mem_size(); })
+        .def("get_mem_size", [](const KPartiteGraph& o) { return o.store().get_mem_size(); })
+        .def("merge", &KPartiteGraph::merge)
+        .def("num_independent_sets", &KPartiteGraph::num_independent_sets)
+        .def("num_vertices", &KPartiteGraph::num_vertices)
+        .def("num_vertices_in_set", &KPartiteGraph::num_vertices_in_set)
+        .def("__str__", [](const KPartiteGraph& g) { return tostr(g); })
+        .def("prune_example", [](KPartiteGraph& g, const FeatInfo& finfo, const py::list& example, FloatT delta) {
+            for (FeatId fid : finfo.feat_ids0())
+            {
+                const py::handle& o = example[fid];
+                if (py::isinstance<py::float_>(o) || py::isinstance<py::int_>(o))
+                {
+                    FloatT v = o.cast<FloatT>();
+                    auto f = [=](FeatId i) { return finfo.get_id(0, i); };
+                    g.store().refine_workspace(LtSplit(fid, v-delta), false, f);
+                    g.store().refine_workspace(LtSplit(fid, v+delta), true, f);
+                }
+                //else throw std::runtime_error("not supported");
+            }
+            for (FeatId fid : finfo.feat_ids1())
+            {
+                const py::handle& o = example[fid];
+                if (py::isinstance<py::float_>(o))
+                {
+                    FloatT v = o.cast<FloatT>();
+                    auto f = [=](FeatId i) { return finfo.get_id(1, i); };
+                    g.store().refine_workspace(LtSplit(fid, v-delta), false, f);
+                    g.store().refine_workspace(LtSplit(fid, v+delta), true, f);
+                }
+                //else throw std::runtime_error("not supported");
+            }
+
+            DomainBox b = g.store().get_workspace_box();
+            g.prune([b](const DomainBox& box) {
+                return box.overlaps(b);
+            });
+            g.store().clear_workspace();
+        })
+        .def("prune_smt", [](KPartiteGraph& g, SMTSolver& solver) {
+            g.prune([&solver](const DomainBox& box) {
+                z3::expr e = solver.domains_to_z3(box);
+                bool res = solver.check(e);
+                //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
+                return res;
+            });
+        })
+        ;
+
+    py::class_<Solution>(m, "Solution")
+        .def_readonly("output0", &Solution::output0)
+        .def_readonly("output1", &Solution::output1)
+        .def("box", [](const Solution& sol) {
+            py::dict b;
+            for (auto&& [id, d] : sol.box)
+                b[py::int_(id)] = d;
+            return b;
+        })
+        .def("__str__", [](const Solution& s) { return tostr(s); })
+        ;
+
+    py::class_<KPartiteGraphOptimize>(m, "KPartiteGraphOptimize")
+        .def(py::init<KPartiteGraph&, KPartiteGraph&>(), py::keep_alive<1, 2>(), py::keep_alive<1, 3>())
+        .def("set_max_mem_size", [](KPartiteGraphOptimize& o, size_t m) { o.store().set_max_mem_size(m); })
+        .def("get_max_mem_size", [](const KPartiteGraphOptimize& o) { return o.store().get_max_mem_size(); })
+        .def("get_mem_size", [](const KPartiteGraphOptimize& o) { return o.store().get_mem_size(); })
+        .def_readonly("num_steps", &KPartiteGraphOptimize::num_steps)
+        .def_readonly("num_update_fails", &KPartiteGraphOptimize::num_update_fails)
+        .def_readonly("num_rejected", &KPartiteGraphOptimize::num_rejected)
+        .def_readonly("num_box_filter_calls", &KPartiteGraphOptimize::num_box_filter_calls)
+        .def_readonly("solutions", &KPartiteGraphOptimize::solutions)
+        .def_readonly("epses", &KPartiteGraphOptimize::epses)
+        .def("num_solutions", [](const KPartiteGraphOptimize& o) { return o.solutions.size(); })
+        .def("current_bounds", &KPartiteGraphOptimize::current_bounds)
+        .def("num_candidate_cliques", &KPartiteGraphOptimize::num_candidate_cliques)
+        .def("get_eps", &KPartiteGraphOptimize::get_eps)
+        .def("get_eps_incr", &KPartiteGraphOptimize::get_eps_incr)
+        .def("set_eps", &KPartiteGraphOptimize::set_eps)
+        .def("use_dyn_prog_heuristic", &KPartiteGraphOptimize::use_dyn_prog_heuristic)
+        //.def("__str__", [](const KPartiteGraphOptimize& o) { return tostr(o); })
+        .def("steps", [](KPartiteGraphOptimize& opt, int nsteps, py::kwargs kwargs) {
+            //auto f = [opt](const DomainBox& box) {
+            //    z3::expr e = opt.solver->domains_to_z3(box);
+            //    bool res = opt.solver->check(e);
+            //    //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
+            //    //std::cout << opt.solver->get_z3() << std::endl;
+            //    return res;
+            //};
+            auto f_noz3 = [](const DomainBox&) { return true; };
+            if (kwargs.contains("min_output_difference"))
+            {
+                FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
+                //if (opt.solver)
+                //    return opt.opt->steps(nsteps, f, min_output_difference);
+                return opt.steps(nsteps, f_noz3, min_output_difference);
+            }
+            else
+            {
+                FloatT max_output0 = std::numeric_limits<FloatT>::infinity();
+                FloatT min_output1 = -std::numeric_limits<FloatT>::infinity();
+                if (kwargs.contains("max_output"))
+                    max_output0 = kwargs["max_output"].cast<FloatT>();
+                if (kwargs.contains("min_output"))
+                    min_output1 = kwargs["min_output"].cast<FloatT>();
+                //if (opt.solver)
+                //    return opt.opt->steps(nsteps, f, max_output0, min_output1);
+                return opt.steps(nsteps, f_noz3, max_output0, min_output1);
+            }
+        })
+        .def("parallel", [](const KPartiteGraphOptimize& opt, size_t nthreads) {
+            return KPartiteGraphParOpt(nthreads, opt);
+        })
+        ;
+
+    py::class_<KPartiteGraphParOpt>(m, "KPartiteGraphParOpt")
         .def("nthreads", &KPartiteGraphParOpt::nthreads)
         .def("redistribute_work", &KPartiteGraphParOpt::redistribute_work)
         .def("num_solutions", &KPartiteGraphParOpt::num_solutions)
         .def("current_bounds", &KPartiteGraphParOpt::current_bounds)
+        .def("current_memory", &KPartiteGraphParOpt::current_memory)
         .def("join_all", &KPartiteGraphParOpt::join_all)
+        .def("worker_opt", &KPartiteGraphParOpt::worker_opt)
         .def("steps_for", [](KPartiteGraphParOpt& opt, size_t num_millisecs, py::kwargs kwargs) {
             if (kwargs.contains("min_output_difference"))
             {
@@ -534,4 +664,13 @@ PYBIND11_MODULE(pytreeck, m) {
             }
             opt.steps_for(num_millisecs);
         });
+
+    py::class_<SMTSolver>(m, "SMTSolver")
+        .def(py::init<const FeatInfo *, const AddTree&, const AddTree&>())
+        .def("parse_smt", &SMTSolver::parse_smt)
+        .def("xvar_id", &SMTSolver::xvar_id)
+        .def("xvar_name", &SMTSolver::xvar_name)
+        ;
+
+
 } /* PYBIND11_MODULE */

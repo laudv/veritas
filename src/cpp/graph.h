@@ -180,7 +180,7 @@ namespace treeck {
 
         std::tuple<FloatT, FloatT> propagate_outputs();
         void merge(int K);
-        void simplify(FloatT max_err, bool overestimate); // vertices must be in DFS order, left to right!
+        //void simplify(FloatT max_err, bool overestimate); // vertices must be in DFS order, left to right!
         void sort_asc();
         void sort_desc();
         void sort_bound_asc();
@@ -274,10 +274,10 @@ namespace treeck {
         bool step_aux(BF bf, OF of);
 
     public:
-        two_of<size_t> nsteps;
-        size_t nupdate_fails;
-        size_t nrejected;
-        size_t nbox_filter_calls;
+        two_of<size_t> num_steps;
+        size_t num_update_fails;
+        size_t num_rejected;
+        size_t num_box_filter_calls;
 
         std::vector<Solution> solutions;
         std::vector<FloatT> epses;
@@ -350,7 +350,7 @@ namespace treeck {
         void steps_for(size_t num_millisecs);
 
         inline size_t nthreads() const { return nthreads_; }
-        const KPartiteGraphOptimize& opt(size_t worker) const;
+        const KPartiteGraphOptimize& worker_opt(size_t worker) const;
 
         template <typename F>
         inline void set_box_filter(F f)
@@ -367,6 +367,7 @@ namespace treeck {
 
         size_t num_solutions() const;
         two_of<FloatT> current_bounds() const;
+        std::vector<size_t> current_memory() const;
     };
 
 } /* namespace treeck */

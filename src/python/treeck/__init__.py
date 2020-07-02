@@ -182,3 +182,131 @@ def get_example_box_smt(opt, instance, example, eps):
             print(f"(assert (>= {x} {v-eps}))", file=smt)
 
     return smt.getvalue()
+
+class Optimizer:
+    def __init__(self, **kwargs):
+        self.at0 = AddTree(); # dummy tree
+        self.at1 = AddTree(); # dummy tree
+
+        if "minimize" in kwargs: self.at0 = kwargs["minimize"]
+        if "maximize" in kwargs: self.at1 = kwargs["maximize"]
+
+        matches = set()
+        match_is_reuse = True
+        if "matches" in kwargs:
+            matches = kwargs["matches"]
+        if "match_is_reuse" in kwargs:
+            match_is_reuse = kwargs["match_is_reuse"]
+        self.feat_info = FeatInfo(self.at0, self.at1, matches, match_is_reuse)
+
+        self.g0 = KPartiteGraph(self.at0, self.feat_info, 0)
+        self.g1 = KPartiteGraph(self.at1, self.feat_info, 1)
+
+        self.max_memory = 1024*1024*1024*1 # 1 gb default
+        if "max_memory" in kwargs:
+            self.max_memory = kwargs["max_memory"]
+            self.g0.set_max_mem_size(mem)
+            self.g1.set_max_mem_size(mem)
+
+        self.ara_eps = 1.0 # just A*
+        self.ara_eps_incr = 0.0
+        if "ara_eps" in kwargs:
+            self.ara_eps = kwargs["ara_eps"]
+        if "ara_eps_incr" in kwargs:
+            self.ara_eps_incr = kwargs["ara_eps_incr"]
+
+        self.use_dyn_prog_heuristic = False
+        if "use_dyn_prog_heuristic" in kwargs:
+            self.use_dyn_prog_heuristic = kwargs["use_dyn_prog_heuristic"]
+
+        self.reset_optimizer()
+
+    def reset_optimizer(self):
+        self.opt = KPartiteGraphOptimize(self.g0, self.g1)
+        self.opt.set_max_mem_size(self.max_memory)
+        self.opt.set_eps(self.ara_eps, self.ara_eps_incr)
+        if self.use_dyn_prog_heuristic:
+            self.opt.use_dyn_prog_heuristic()
+        self.bounds = []
+        self.memory = []
+
+    def merge(self, K):
+        self.g0.merge(K)
+        self.g1.merge(K)
+        self.reset_optimizer()
+
+    def prune_example(self, example, delta):
+        self.g0.prune_example(self.feat_info, example, delta)
+        self.g1.prune_example(self.feat_info, example, delta)
+        self.reset_optimizer()
+
+    def prune_smt(self, smt, var_prefix0="f", var_prefix1="g"): # (assert (< {<var_prefix><feat_id> ...}))
+        solver = SMTSolver(self.feat_info, self.at0, self.at1)
+        print("before", smt)
+        b = StringIO()
+        var_open, var_close = -1, -1
+        for i, c in enumerate(smt):
+            if c == "{":
+                var_open = i+1
+            elif c == "}":
+                assert var_open != -1
+                var_close = i
+                var = smt[var_open:var_close]
+                if var.startswith(var_prefix0):
+                    feat_id = int(var[len(var_prefix0):])
+                    #print("var0:", var, feat_id)
+                    b.write(solver.xvar_name(0, feat_id))
+                elif var.startswith(var_prefix1):
+                    feat_id = int(var[len(var_prefix1):])
+                    #print("var1:", var, feat_id)
+                    b.write(solver.xvar_name(1, feat_id))
+                else:
+                    raise RuntimeError(f"invalid SMT variable {var}, prefixes are {var_prefix0} and {var_prefix1}")
+                var_open, var_close = -1, -1
+            elif var_open == -1 and var_close == -1:
+                b.write(c)
+        smt = b.getvalue()
+        print("after", smt)
+        solver.parse_smt(smt)
+        self.g0.prune_smt(solver)
+        self.g1.prune_smt(solver)
+        self.reset_optimizer()
+
+    def num_solutions(self): return self.opt.num_solutions()
+    def solutions(self): return self.opt.solutions
+    def epses(self): return self.opt.epses
+    def num_steps(self): return self.opt.num_steps
+    def num_update_fails(self): return self.opt.num_update_fails
+    def num_rejected(self): return self.opt.num_rejected
+    def num_box_filter_calls(self): return self.opt.num_box_filter_calls
+    def current_bounds(self): return self.opt.current_bounds
+    def current_memory(self):
+        return self.g0.get_mem_size() + self.g1.get_mem_size() + self.opt.get_mem_size()
+
+    def steps(self, num_steps, **kwargs):
+        value = self.opt.steps(num_steps, **kwargs)
+        self.bounds.append(self.current_bounds())
+        self.memory.append(self.current_memory())
+        return value
+
+    def parallel(self, nthreads):
+        return ParallelOptimizer(self, nthreads)
+        
+
+class ParallelOptimizer:
+    def __init__(self, opt, nthreads):
+        self.opt = opt
+        self.paropt = self.opt.parallel(nthreads)
+        self.bounds = []
+        self.memory = []
+
+    def nthreads(self): return self.paropt.nthreads()
+    def redistribute_work(self): self.paropt.redistribute_work()
+    def num_solutions(self): return self.paropt.num_solutions()
+    def current_bounds(self): return self.paropt.current_bounds()
+    def current_memory(self): return self.paropt.current_memory()
+    def join_all(self): self.paropt.join_all()
+    def steps_for(self, millis, **kwargs):
+        self.paropt.steps_for(millis, **kwargs)
+        self.bounds.append(self.paropt.current_bounds())
+        self.memory.append(self.paropt.current_memory())
