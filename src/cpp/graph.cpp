@@ -982,7 +982,10 @@ namespace treeck {
         , num_update_fails{0}
         , num_rejected{0}
         , num_box_filter_calls{0}
-        , solutions()
+        , solutions{}
+        , epses{}
+        , times{}
+        , start_time{0.0}
     {
         auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
         auto&& [min1, output_bound1] = g1.propagate_outputs(); // max output bound of first clique
@@ -1001,6 +1004,9 @@ namespace treeck {
                 }
             });
         }
+
+        start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() * 1e-3;
     }
 
     KPartiteGraphOptimize::KPartiteGraphOptimize(
@@ -1015,10 +1021,16 @@ namespace treeck {
         , num_rejected{0}
         , num_box_filter_calls{0}
         , solutions{}
+        , epses{}
+        , times{}
+        , start_time{0.0}
     {
         for (size_t j = i; j < other.cliques_.size(); j += K)
             cliques_.push_back(other.cliques_[i]); // copy
         std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
+
+        start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() * 1e-3;
     }
 
     Clique 
@@ -1055,7 +1067,7 @@ namespace treeck {
         // we maximize diff, so h(x) must be underestimated to make the search prefer deeper solutions
         if (eps > 1.0) throw std::runtime_error("nonsense eps");
         if (eps_incr < 0.0) throw std::runtime_error("nonsense eps_incr");
-        if (eps < cmp_.eps) throw std::runtime_error("decreasing eps?");
+        if (eps < cmp_.eps) std::cout << "WARNING decreasing eps " << cmp_.eps << " -> " << eps << std::endl;
 
         eps_incr_ = eps_incr;
         if (eps != cmp_.eps)
@@ -1410,6 +1422,9 @@ namespace treeck {
                 get1(c.instance).output
             });
             epses.push_back(cmp_.eps);
+            double t = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() * 1e-3;
+            times.push_back(t - start_time);
 
             // ARA*: decrease eps
             if (eps_incr_ > 0.0 && cmp_.eps < 1.0)
@@ -1581,7 +1596,7 @@ namespace treeck {
             }
             if (self->num_millisecs_ != 0)
             {
-                using clock = std::chrono::high_resolution_clock;
+                using clock = std::chrono::steady_clock;
                 auto start = clock::now();
                 auto stop = start + std::chrono::milliseconds(self->num_millisecs_);
                 if (!std::isnan(self->max_output0_))
@@ -1611,10 +1626,10 @@ namespace treeck {
         }
     }
     
-    KPartiteGraphParOpt::KPartiteGraphParOpt(size_t nthreads,
+    KPartiteGraphParOpt::KPartiteGraphParOpt(size_t num_threads,
             const KPartiteGraphOptimize& opt)
-        : nthreads_{nthreads}
-        , workers_{new Worker[nthreads]}
+        : nthreads_{num_threads}
+        , workers_{new Worker[num_threads]}
     {
         for (size_t i = 0; i < nthreads_; ++i)
         {
@@ -1658,7 +1673,7 @@ namespace treeck {
     void
     KPartiteGraphParOpt::redistribute_work()
     {
-        auto start = std::chrono::high_resolution_clock::now();
+        //auto start = std::chrono::steady_clock::now();
 
         // update epses:
         FloatT max_eps = 0.0;
@@ -1721,15 +1736,15 @@ namespace treeck {
             }
         }
 
-        auto stop = std::chrono::high_resolution_clock::now();
-        double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
-        std::cout << "redistribute_work in " << (dur * 1e-6) << std::endl;
+        //auto stop = std::chrono::steady_clock::now();
+        //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+        //std::cout << "redistribute_work in " << (dur * 1e-6) << std::endl;
     }
 
     void
     KPartiteGraphParOpt::steps_for(size_t num_millisecs)
     {
-        auto start = std::chrono::high_resolution_clock::now();
+        //auto start = std::chrono::steady_clock::now();
         for (size_t i = 0; i < nthreads_; ++i)
         {
             Worker& w = workers_[i];
@@ -1741,9 +1756,9 @@ namespace treeck {
             w.cv_.notify_one();
         }
         wait();
-        auto stop = std::chrono::high_resolution_clock::now();
-        double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
-        std::cout << "duration steps_for " << (dur * 1e-6) << std::endl;
+        //auto stop = std::chrono::steady_clock::now();
+        //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+        //std::cout << "duration steps_for " << (dur * 1e-6) << std::endl;
     }
 
     const KPartiteGraphOptimize&
@@ -1790,14 +1805,14 @@ namespace treeck {
 
     two_of<FloatT>
     KPartiteGraphParOpt::current_bounds() const {
-        FloatT min, max = 0;
+        FloatT lower, upper = 0;
         for (size_t i = 0; i < nthreads_; ++i)
         {
             auto p = workers_[i].opt_->current_bounds();
-            min = std::max(min, get0(p));
-            max = std::min(max, get1(p));
+            lower = std::min(lower, get0(p));
+            upper = std::max(upper, get1(p));
         }
-        return { min, max };
+        return { lower, upper };
     }
     
     std::vector<size_t>

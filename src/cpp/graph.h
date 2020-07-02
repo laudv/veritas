@@ -234,6 +234,8 @@ namespace treeck {
     struct Solution {
         DomainBox box;
         FloatT output0, output1;
+
+        inline FloatT difference() { return output1 - output0; }
     };
 
     std::ostream& operator<<(std::ostream& s, const Solution& sol);
@@ -281,6 +283,8 @@ namespace treeck {
 
         std::vector<Solution> solutions;
         std::vector<FloatT> epses;
+        std::vector<double> times;
+        double start_time;
 
     public:
         KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1);
@@ -341,7 +345,7 @@ namespace treeck {
         static void worker_fun(Worker* self);
 
     public:
-        KPartiteGraphParOpt(size_t nthreads,
+        KPartiteGraphParOpt(size_t num_threads,
                 const KPartiteGraphOptimize& opt);
 
         void join_all();
@@ -349,7 +353,7 @@ namespace treeck {
 
         void steps_for(size_t num_millisecs);
 
-        inline size_t nthreads() const { return nthreads_; }
+        inline size_t num_threads() const { return nthreads_; }
         const KPartiteGraphOptimize& worker_opt(size_t worker) const;
 
         template <typename F>

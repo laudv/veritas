@@ -2,7 +2,7 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import codecs
+import timeit
 from io import StringIO
 
 from .pytreeck import *
@@ -141,8 +141,8 @@ class AddTreeFeatureTypes:
         return self._types[feat_id]
 
 def get_xvar_id_map(opt, instance):
-    feat_ids = opt.get_used_feat_ids()[instance]
-    return { opt.xvar_id(instance, fid) : fid for fid in feat_ids }
+    feat_ids = opt.feat_info.feat_ids0() if instance==0 else opt.feat_info.feat_ids1()
+    return { opt.feat_info.get_id(instance, fid) : fid for fid in feat_ids }
 
 def get_closest_example(xvar_id_map, base_example, doms, delta=1e-5):
     example = base_example.copy()
@@ -169,17 +169,15 @@ def get_example_box_smt(opt, instance, example, eps):
         instance = [instance]
 
     if 0 in instance:
-        for feat_id in opt.get_used_feat_ids()[0]:
-            x = opt.xvar(0, feat_id)
+        for feat_id in opt.feat_info.feat_ids0():
             v = example[feat_id]
-            print(f"(assert (< {x} {v+eps}))", file=smt)
-            print(f"(assert (>= {x} {v-eps}))", file=smt)
+            print(f"(assert (< {{f{feat_id}}} {v+eps}))", file=smt)
+            print(f"(assert (>= {{f{feat_id}}} {v-eps}))", file=smt)
     if 1 in instance:
-        for feat_id in opt.get_used_feat_ids()[1]:
-            x = opt.xvar(1, feat_id)
+        for feat_id in opt.feat_info.feat_ids1():
             v = example[feat_id]
-            print(f"(assert (< {x} {v+eps}))", file=smt)
-            print(f"(assert (>= {x} {v-eps}))", file=smt)
+            print(f"(assert (< {{g{feat_id}}} {v+eps}))", file=smt)
+            print(f"(assert (>= {{g{feat_id}}} {v-eps}))", file=smt)
 
     return smt.getvalue()
 
@@ -229,6 +227,8 @@ class Optimizer:
             self.opt.use_dyn_prog_heuristic()
         self.bounds = []
         self.memory = []
+        self.times = []
+        self.start_time = timeit.default_timer()
 
     def merge(self, K):
         self.g0.merge(K)
@@ -242,7 +242,7 @@ class Optimizer:
 
     def prune_smt(self, smt, var_prefix0="f", var_prefix1="g"): # (assert (< {<var_prefix><feat_id> ...}))
         solver = SMTSolver(self.feat_info, self.at0, self.at1)
-        print("before", smt)
+        #print("before", smt)
         b = StringIO()
         var_open, var_close = -1, -1
         for i, c in enumerate(smt):
@@ -266,7 +266,7 @@ class Optimizer:
             elif var_open == -1 and var_close == -1:
                 b.write(c)
         smt = b.getvalue()
-        print("after", smt)
+        #print("after", smt)
         solver.parse_smt(smt)
         self.g0.prune_smt(solver)
         self.g1.prune_smt(solver)
@@ -279,7 +279,7 @@ class Optimizer:
     def num_update_fails(self): return self.opt.num_update_fails
     def num_rejected(self): return self.opt.num_rejected
     def num_box_filter_calls(self): return self.opt.num_box_filter_calls
-    def current_bounds(self): return self.opt.current_bounds
+    def current_bounds(self): return self.opt.current_bounds()
     def current_memory(self):
         return self.g0.get_mem_size() + self.g1.get_mem_size() + self.opt.get_mem_size()
 
@@ -287,26 +287,47 @@ class Optimizer:
         value = self.opt.steps(num_steps, **kwargs)
         self.bounds.append(self.current_bounds())
         self.memory.append(self.current_memory())
+        self.times.append(timeit.default_timer() - self.start_time)
         return value
 
-    def parallel(self, nthreads):
-        return ParallelOptimizer(self, nthreads)
+    def parallel(self, num_threads):
+        return ParallelOptimizer(self, num_threads)
         
 
 class ParallelOptimizer:
-    def __init__(self, opt, nthreads):
+    def __init__(self, opt, num_threads):
         self.opt = opt
-        self.paropt = self.opt.parallel(nthreads)
+        self.paropt = self.opt.opt.parallel(num_threads)
         self.bounds = []
         self.memory = []
+        self.times = []
+        self.start_time = timeit.default_timer()
 
-    def nthreads(self): return self.paropt.nthreads()
+    def num_threads(self): return self.paropt.num_threads()
     def redistribute_work(self): self.paropt.redistribute_work()
     def num_solutions(self): return self.paropt.num_solutions()
     def current_bounds(self): return self.paropt.current_bounds()
     def current_memory(self): return self.paropt.current_memory()
     def join_all(self): self.paropt.join_all()
+    def worker_opt(self, i): return self.paropt.worker_opt(i)
     def steps_for(self, millis, **kwargs):
         self.paropt.steps_for(millis, **kwargs)
         self.bounds.append(self.paropt.current_bounds())
         self.memory.append(self.paropt.current_memory())
+        self.times.append(timeit.default_timer() - self.start_time)
+
+    def solutions(self):
+        solutions = []
+        epses = []
+        times = []
+        for i in range(self.num_threads()):
+            wopt = self.worker_opt(i)
+            solutions += wopt.solutions
+            epses += wopt.epses
+            times += wopt.times
+        t = tuple(map(list, zip(*sorted(zip(solutions, epses, times), key=lambda p: p[2]))))
+        solutions, epses, times = t
+
+        print(len(solutions), len(epses), len(times))
+        return solutions, epses, times
+

@@ -576,6 +576,7 @@ PYBIND11_MODULE(pytreeck, m) {
     py::class_<Solution>(m, "Solution")
         .def_readonly("output0", &Solution::output0)
         .def_readonly("output1", &Solution::output1)
+        .def("difference", &Solution::difference)
         .def("box", [](const Solution& sol) {
             py::dict b;
             for (auto&& [id, d] : sol.box)
@@ -596,6 +597,8 @@ PYBIND11_MODULE(pytreeck, m) {
         .def_readonly("num_box_filter_calls", &KPartiteGraphOptimize::num_box_filter_calls)
         .def_readonly("solutions", &KPartiteGraphOptimize::solutions)
         .def_readonly("epses", &KPartiteGraphOptimize::epses)
+        .def_readonly("start_time", &KPartiteGraphOptimize::start_time)
+        .def_readonly("times", &KPartiteGraphOptimize::times)
         .def("num_solutions", [](const KPartiteGraphOptimize& o) { return o.solutions.size(); })
         .def("current_bounds", &KPartiteGraphOptimize::current_bounds)
         .def("num_candidate_cliques", &KPartiteGraphOptimize::num_candidate_cliques)
@@ -633,13 +636,13 @@ PYBIND11_MODULE(pytreeck, m) {
                 return opt.steps(nsteps, f_noz3, max_output0, min_output1);
             }
         })
-        .def("parallel", [](const KPartiteGraphOptimize& opt, size_t nthreads) {
-            return KPartiteGraphParOpt(nthreads, opt);
+        .def("parallel", [](const KPartiteGraphOptimize& opt, size_t num_threads) {
+            return KPartiteGraphParOpt(num_threads, opt);
         })
         ;
 
     py::class_<KPartiteGraphParOpt>(m, "KPartiteGraphParOpt")
-        .def("nthreads", &KPartiteGraphParOpt::nthreads)
+        .def("num_threads", &KPartiteGraphParOpt::num_threads)
         .def("redistribute_work", &KPartiteGraphParOpt::redistribute_work)
         .def("num_solutions", &KPartiteGraphParOpt::num_solutions)
         .def("current_bounds", &KPartiteGraphParOpt::current_bounds)
