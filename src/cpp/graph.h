@@ -319,10 +319,14 @@ namespace treeck {
     class Worker {
         friend class KPartiteGraphParOpt;
 
+        size_t index_;
+
         bool work_flag_;
-        bool stop_flag_;
-        size_t num_millisecs_;
-        FloatT new_eps_;
+        bool stop_flag_; // false to disable task
+        enum { REDISTRIBUTE_DISABLED, DISABLED, REDISTRIBUTE_SETUP,
+            REDISTRIBUTE_READY, REDISTRIBUTE_GO, REDISTRIBUTE_DONE,
+            REDISTRIBUTE_STORE } redistribute_;
+        size_t num_millisecs_; // 0 to disable task
         FloatT max_output0_;
         FloatT min_output1_;
         FloatT min_output_difference_;
@@ -342,7 +346,7 @@ namespace treeck {
 
         void wait();
 
-        static void worker_fun(Worker* self);
+        static void worker_fun(KPartiteGraphParOpt* paropt, size_t self_index);
 
     public:
         KPartiteGraphParOpt(size_t num_threads,

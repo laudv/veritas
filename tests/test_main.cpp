@@ -196,13 +196,13 @@ void test_parallel(const char *model)
     KPartiteGraphParOpt paropt(4, opt);
     paropt.set_box_filter([]() { return [](const DomainBox&) { return true; }; });
     std::cout << "parallel steps(100)" << std::endl;
-    paropt.steps_for(10000);
+    paropt.steps_for(500);
     std::cout << "redistribute_work" << std::endl;
     paropt.redistribute_work();
-    std::cout << "parallel steps(100)" << std::endl;
-    paropt.steps_for(10000);
-    std::cout << "redistribute_work" << std::endl;
-    paropt.redistribute_work();
+    //std::cout << "parallel steps(100)" << std::endl;
+    //paropt.steps_for(500);
+    //std::cout << "redistribute_work" << std::endl;
+    //paropt.redistribute_work();
     std::cout << "joining..." << std::endl;
     //std::this_thread::sleep_for(std::chrono::seconds(1));
     paropt.join_all();

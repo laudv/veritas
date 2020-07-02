@@ -518,6 +518,7 @@ class TestGraph(unittest.TestCase):
             start = timeit.default_timer()
             while timeit.default_timer() - start < 0.5:
                 paropt_ara.steps_for(100)
+                paropt_ara.redistribute_work()
                 for i in range(paropt_ara.num_threads()):
                     wopt = paropt_ara.worker_opt(i)
                     num_cands = wopt.num_candidate_cliques()

@@ -1067,7 +1067,6 @@ namespace treeck {
         // we maximize diff, so h(x) must be underestimated to make the search prefer deeper solutions
         if (eps > 1.0) throw std::runtime_error("nonsense eps");
         if (eps_incr < 0.0) throw std::runtime_error("nonsense eps_incr");
-        if (eps < cmp_.eps) std::cout << "WARNING decreasing eps " << cmp_.eps << " -> " << eps << std::endl;
 
         eps_incr_ = eps_incr;
         if (eps != cmp_.eps)
@@ -1569,8 +1568,10 @@ namespace treeck {
     static bool default_box_filter(const DomainBox&) { return true; }
 
     Worker::Worker()
-        : work_flag_(false), stop_flag_(false)
-        , num_millisecs_(0), new_eps_(0.0)
+        : index_(0)
+        , work_flag_(false), stop_flag_(false)
+        , redistribute_(REDISTRIBUTE_DISABLED)
+        , num_millisecs_(0)
         , max_output0_(std::numeric_limits<FloatT>::quiet_NaN())
         , min_output1_(std::numeric_limits<FloatT>::quiet_NaN())
         , min_output_difference_(std::numeric_limits<FloatT>::quiet_NaN())
@@ -1578,8 +1579,10 @@ namespace treeck {
     {}
     
     void 
-    KPartiteGraphParOpt::worker_fun(Worker *self)
+    KPartiteGraphParOpt::worker_fun(KPartiteGraphParOpt* paropt, size_t self_index)
     {
+        Worker *self = &paropt->workers_[self_index];
+
         while (true)
         {
             std::unique_lock lock(self->mutex_);
@@ -1588,11 +1591,6 @@ namespace treeck {
             if (self->stop_flag_)
             {
                 break;
-            }
-            if (self->new_eps_ != 0.0)
-            {
-                self->opt_->set_eps(self->new_eps_, self->opt_->get_eps_incr());
-                self->new_eps_ = 0.0;
             }
             if (self->num_millisecs_ != 0)
             {
@@ -1619,6 +1617,41 @@ namespace treeck {
                 }
                 self->num_millisecs_ = 0;
             }
+            //if (self->new_eps_ != 0.0)
+            //{
+            //    self->opt_->set_eps(self->new_eps_, self->opt_->get_eps_incr());
+            //    self->new_eps_ = 0.0;
+            //}
+            if (self->redistribute_ == Worker::REDISTRIBUTE_SETUP)
+            {
+                // signal to main thread that we're in this section
+                // we have to make sure all workers are in this section before we start copying cliques between workers
+                std::cout << self->index_;
+
+                self->redistribute_ = Worker::REDISTRIBUTE_READY;
+                lock.unlock();
+                self->cv_.notify_one();
+
+                lock.lock();
+                self->cv_.wait(lock, [self]() { return self->redistribute_ == Worker::REDISTRIBUTE_GO; });
+
+                std::cout << self->index_;
+
+                // DO REDISTRIBUTE
+
+                self->redistribute_ = Worker::REDISTRIBUTE_DONE;
+                lock.unlock();
+                self->cv_.notify_one();
+
+                lock.lock();
+                self->cv_.wait(lock, [self]() { return self->redistribute_ == Worker::REDISTRIBUTE_STORE; });
+
+                // STORE NEW SEARCH CLIQUES
+
+                std::cout << self->index_;
+
+                self->redistribute_ = Worker::REDISTRIBUTE_DISABLED;
+            }
 
             self->work_flag_ = false;
             lock.unlock();
@@ -1635,9 +1668,10 @@ namespace treeck {
         {
             Worker& w = workers_[i];
             std::lock_guard guard(w.mutex_);
+            w.index_ = i;
             w.opt_.emplace(opt, i, nthreads_);
             w.opt_->store_.set_max_mem_size(opt.store_.get_max_mem_size());
-            w.thread_ = std::thread(worker_fun, &w);
+            w.thread_ = std::thread(worker_fun, this, i);
         }
     }
 
@@ -1673,16 +1707,72 @@ namespace treeck {
     void
     KPartiteGraphParOpt::redistribute_work()
     {
+        std::cout << "redistribute_work SETUP" << std::endl;
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker& w = workers_[i];
+            {
+                std::lock_guard(w.mutex_);
+                w.work_flag_ = true; 
+                w.redistribute_ = Worker::REDISTRIBUTE_SETUP;
+            }
+            w.cv_.notify_one();
+        }
+
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w = &workers_[i];
+            std::unique_lock lock(w->mutex_);
+            w->cv_.wait(lock, [w](){ return w->redistribute_ == Worker::REDISTRIBUTE_READY; });
+        }
+
+        // all workers are in state REDISTRIBUTE_READY -> no worker is modifying itself in unexpected ways
+
+        std::cout << std::endl << "redistribute_work GO" << std::endl;
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w = &workers_[i];
+            {
+                std::unique_lock lock(w->mutex_);
+                w->redistribute_ = Worker::REDISTRIBUTE_GO;
+            }
+            w->cv_.notify_one();
+        }
+
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w = &workers_[i];
+            std::unique_lock lock(w->mutex_);
+            w->cv_.wait(lock, [w](){ return w->redistribute_ == Worker::REDISTRIBUTE_DONE; });
+        }
+
+        // all workers are in state REDISTRIBUTE_READY -> no worker is modifying itself in unexpected ways
+
+        std::cout << std::endl << "redistribute_work STORE" << std::endl;
+        for (size_t i = 0; i < nthreads_; ++i)
+        {
+            Worker *w = &workers_[i];
+            {
+                std::unique_lock lock(w->mutex_);
+                w->redistribute_ = Worker::REDISTRIBUTE_STORE;
+            }
+            w->cv_.notify_one();
+        }
+
+        wait();
+
+        std::cout << std::endl << "redistribute_work waiting done" << std::endl;
         //auto start = std::chrono::steady_clock::now();
 
+        /*
         // update epses:
-        FloatT max_eps = 0.0;
+        FloatT min_eps = 0.0;
         size_t mean_num_cliques = 0;
         for (size_t i = 0; i < nthreads_; ++i)
         {
             Worker *w = &workers_[i];
             std::lock_guard lock(w->mutex_);
-            max_eps = std::max(max_eps, w->opt_->get_eps());
+            min_eps = std::min(min_eps, w->opt_->get_eps());
             mean_num_cliques += w->opt_->num_candidate_cliques();
             std::cout << "worker" << i << ": "
                 << " cliques=" << w->opt_->num_candidate_cliques()
@@ -1693,7 +1783,7 @@ namespace treeck {
         }
         mean_num_cliques = (mean_num_cliques / nthreads_) + 1;
 
-        std::cout << "max_eps " << max_eps << std::endl;
+        std::cout << "min_eps " << min_eps << std::endl;
 
         for (size_t i = 0; i < nthreads_; ++i)
         {
@@ -1701,10 +1791,10 @@ namespace treeck {
             Worker *w = &workers_[i];
             {
                 std::lock_guard lock(w->mutex_);
-                if (w->opt_->get_eps() < max_eps)
+                if (w->opt_->get_eps() > min_eps)
                 {
                     w->work_flag_ = true; 
-                    w->new_eps_ = max_eps; // run in thread
+                    w->new_eps_ = min_eps; // run in thread
                     do_notify = true;
                 }
             }
@@ -1735,6 +1825,7 @@ namespace treeck {
                 }
             }
         }
+        */
 
         //auto stop = std::chrono::steady_clock::now();
         //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
