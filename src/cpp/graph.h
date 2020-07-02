@@ -345,7 +345,7 @@ namespace treeck {
 
         void steps_for(size_t num_millisecs);
 
-        size_t nthreads() const;
+        inline size_t nthreads() const { return nthreads_; }
         const KPartiteGraphOptimize& opt(size_t worker) const;
 
         template <typename F>

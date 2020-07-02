@@ -505,6 +505,33 @@ PYBIND11_MODULE(pytreeck, m) {
                     return opt.opt->steps(nsteps, f_noz3, max_output0, min_output1);
             }
         })
+        .def("parallel", [](const Optimizer& opt, size_t nthreads) {
+            return KPartiteGraphParOpt(nthreads, *opt.opt);
+        })
         ;
 
+    py::class_<KPartiteGraphParOpt>(m, "ParOptimizer")
+        .def("nthreads", &KPartiteGraphParOpt::nthreads)
+        .def("redistribute_work", &KPartiteGraphParOpt::redistribute_work)
+        .def("num_solutions", &KPartiteGraphParOpt::num_solutions)
+        .def("current_bounds", &KPartiteGraphParOpt::current_bounds)
+        .def("join_all", &KPartiteGraphParOpt::join_all)
+        .def("steps_for", [](KPartiteGraphParOpt& opt, size_t num_millisecs, py::kwargs kwargs) {
+            if (kwargs.contains("min_output_difference"))
+            {
+                FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
+                opt.set_output_limits(min_output_difference);
+            }
+            else if (kwargs.contains("max_output"))
+            {
+                FloatT max_output0 = std::numeric_limits<FloatT>::infinity();
+                FloatT min_output1 = -std::numeric_limits<FloatT>::infinity();
+                if (kwargs.contains("max_output"))
+                    max_output0 = kwargs["max_output"].cast<FloatT>();
+                if (kwargs.contains("min_output"))
+                    min_output1 = kwargs["min_output"].cast<FloatT>();
+                opt.set_output_limits(max_output0, min_output1);
+            }
+            opt.steps_for(num_millisecs);
+        });
 } /* PYBIND11_MODULE */

@@ -483,6 +483,23 @@ class TestGraph(unittest.TestCase):
         fig.colorbar(im, ax=ax2)
         plt.show()
 
+    def multithread(self):
+        at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
+        with open("tests/models/mnist-instances.json") as f:
+            example_key = 0
+            example = np.array(json.load(f)[str(example_key)])
+            vreal = at.predict_single(example)
+            print("predicted value:", vreal)
+            #plt.imshow(example.reshape((28, 28)), cmap="binary")
+            #plt.show()
+        opt = Optimizer(minimize=at)
+        paropt = opt.parallel(2)
+
+        paropt.steps_for(1000)
+        paropt.join_all()
+
+        print("num_solutions", paropt.num_solutions())
+
     #def test_simplify(self):
     #    at = AddTree()
     #    t = at.add_tree();
