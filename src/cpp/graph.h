@@ -17,6 +17,7 @@
 
 #include <tuple>
 #include <vector>
+#include <deque>
 #include <unordered_set>
 #include <unordered_map>
 #include <functional>
@@ -323,9 +324,8 @@ namespace treeck {
 
         bool work_flag_;
         bool stop_flag_; // false to disable task
-        enum { REDISTRIBUTE_DISABLED, DISABLED, REDISTRIBUTE_SETUP,
-            REDISTRIBUTE_READY, REDISTRIBUTE_GO, REDISTRIBUTE_DONE,
-            REDISTRIBUTE_STORE } redistribute_;
+        enum { RDIST_DISABLED, RDIST_SETUP, RDIST_READY, RDIST_GO, RDIST_DONE,
+            RDIST_STORE } redistribute_;
         size_t num_millisecs_; // 0 to disable task
         FloatT max_output0_;
         FloatT min_output1_;
@@ -337,16 +337,14 @@ namespace treeck {
         std::optional<KPartiteGraphOptimize> opt_;
         BoxFilterT box_filter_;
 
+    public:
         Worker();
     };
 
     class KPartiteGraphParOpt {
-        size_t nthreads_;
-        std::unique_ptr<Worker[]> workers_;
-
+        std::unique_ptr<std::deque<Worker>> workers_;
         void wait();
-
-        static void worker_fun(KPartiteGraphParOpt* paropt, size_t self_index);
+        static void worker_fun(std::deque<Worker> *workers, size_t self_index);
 
     public:
         KPartiteGraphParOpt(size_t num_threads,
@@ -357,15 +355,15 @@ namespace treeck {
 
         void steps_for(size_t num_millisecs);
 
-        inline size_t num_threads() const { return nthreads_; }
+        inline size_t num_threads() const { return workers_->size(); }
         const KPartiteGraphOptimize& worker_opt(size_t worker) const;
 
         template <typename F>
         inline void set_box_filter(F f)
         {
-            for (size_t i = 0; i < nthreads_; ++i)
+            for (size_t i = 0; i < num_threads(); ++i)
             {
-                Worker& w = workers_[i];
+                Worker& w = workers_->at(i);
                 std::lock_guard guard(w.mutex_);
                 w.box_filter_ = f();
             }
@@ -374,8 +372,10 @@ namespace treeck {
         void set_output_limits(FloatT min_output_difference);
 
         size_t num_solutions() const;
+        size_t num_candidate_cliques() const;
         two_of<FloatT> current_bounds() const;
         std::vector<size_t> current_memory() const;
+        FloatT current_min_eps() const;
     };
 
 } /* namespace treeck */

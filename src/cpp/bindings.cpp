@@ -645,8 +645,10 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("num_threads", &KPartiteGraphParOpt::num_threads)
         .def("redistribute_work", &KPartiteGraphParOpt::redistribute_work)
         .def("num_solutions", &KPartiteGraphParOpt::num_solutions)
+        .def("num_candidate_cliques", &KPartiteGraphParOpt::num_candidate_cliques)
         .def("current_bounds", &KPartiteGraphParOpt::current_bounds)
         .def("current_memory", &KPartiteGraphParOpt::current_memory)
+        .def("current_min_eps", &KPartiteGraphParOpt::current_min_eps)
         .def("join_all", &KPartiteGraphParOpt::join_all)
         .def("worker_opt", &KPartiteGraphParOpt::worker_opt)
         .def("steps_for", [](KPartiteGraphParOpt& opt, size_t num_millisecs, py::kwargs kwargs) {

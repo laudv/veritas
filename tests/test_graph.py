@@ -469,21 +469,15 @@ class TestGraph(unittest.TestCase):
 
     def multithread(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
-        with open("tests/models/mnist-instances.json") as f:
-            example_key = 0
-            example = np.array(json.load(f)[str(example_key)])
-            vreal = at.predict_single(example)
-            print("predicted value:", vreal)
-            #plt.imshow(example.reshape((28, 28)), cmap="binary")
-            #plt.show()
-        opt = Optimizer(minimize=at)
+        opt = Optimizer(maximize=at)
         opt.steps(2)
         paropt = opt.parallel(2)
         for i in range(paropt.num_threads()):
             wopt = paropt.worker_opt(i)
             print(f"worker{i}: #candidates={wopt.num_candidate_cliques()}")
 
-        paropt.steps_for(1000)
+        paropt.steps_for(100)
+        paropt.redistribute_work()
         paropt.join_all()
 
         print("num_solutions", paropt.num_solutions())
@@ -493,38 +487,70 @@ class TestGraph(unittest.TestCase):
 
     def multithread2(self):
         at = AddTree.read(f"tests/models/xgb-calhouse-hard.json")
+        #at = AddTree.read(f"tests/models/xgb-mnist-yis0-hard.json")
 
         # A*
-        opt_a = Optimizer(maximize=at)
+        opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*5)
+        start = timeit.default_timer()
         opt_a.steps(100)
-        paropt_a = opt_a.parallel(4)
+        #while timeit.default_timer() - start < 20 and opt_a.opt.num_solutions() == 0:
+        #    opt_a.steps(1000)
+        #    print("opt_a", opt_a.current_bounds(), opt_a.opt.num_steps, opt_a.opt.num_box_filter_calls)
 
+        print(opt_a.opt.num_solutions())
+        print(timeit.default_timer() - start, "sec")
+
+        opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*5)
+        opt_a.steps(100)
         try:
+            paropt_a = opt_a.parallel(2)
             start = timeit.default_timer()
-            while timeit.default_timer() - start < 20:
-                paropt_a.steps_for(1000)
+            while timeit.default_timer() - start < 30 and paropt_a.num_solutions() == 0:
+                paropt_a.steps_for(750)
+                #print("before current bound: ", paropt_a.current_bounds(), paropt_a.num_solutions())
+                #for i in range(paropt_a.num_threads()):
+                #    wopt = paropt_a.worker_opt(i)
+                #    print(f"before worker{i}: #candidates={wopt.num_candidate_cliques()}, bound={wopt.current_bounds()[1]}, eps={wopt.get_eps()}")
+                paropt_a.redistribute_work()
+                #print("after  current bound: ", paropt_a.current_bounds())
                 for i in range(paropt_a.num_threads()):
                     wopt = paropt_a.worker_opt(i)
-                    print(f"worker{i}: #candidates={wopt.num_candidate_cliques()}, bound={wopt.current_bounds()[1]}")
+                    print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_filter_calls)
+                    #print(f"after  worker{i}: #candidates={wopt.num_candidate_cliques()}, bound={wopt.current_bounds()[1]}, eps={wopt.get_eps()}")
+            print("num_sols:", paropt_a.num_solutions())
         finally:
             paropt_a.join_all()
+
+        print(timeit.default_timer() - start, "sec")
 
         # ARA*
         opt_ara = Optimizer(maximize=at, ara_eps=0.05, ara_eps_incr=0.05)
         opt_ara.steps(100)
-        paropt_ara = opt_ara.parallel(6)
+        print("opt_ara", opt_ara.opt.num_candidate_cliques(), opt_ara.num_solutions(), opt_ara.opt.get_eps())
 
         try:
+            paropt_ara = opt_ara.parallel(1)
+            for i in range(paropt_ara.num_threads()):
+                wopt = paropt_ara.worker_opt(i)
+                print(f"worker{i}: #cand {wopt.num_candidate_cliques()} eps={wopt.get_eps()}")
+            print(paropt_ara.num_candidate_cliques())
+
             start = timeit.default_timer()
-            while timeit.default_timer() - start < 0.5:
-                paropt_ara.steps_for(100)
+            while paropt_ara.current_min_eps() != 1.0 and paropt_ara.num_candidate_cliques() > 0:
+                paropt_ara.steps_for(1000)
+                for i in range(paropt_ara.num_threads()):
+                    wopt = paropt_ara.worker_opt(i)
+                    num_cands = wopt.num_candidate_cliques()
+                    num_sols = wopt.num_solutions()
+                    eps = wopt.get_eps()
+                    print(f"before worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
                 paropt_ara.redistribute_work()
                 for i in range(paropt_ara.num_threads()):
                     wopt = paropt_ara.worker_opt(i)
                     num_cands = wopt.num_candidate_cliques()
                     num_sols = wopt.num_solutions()
                     eps = wopt.get_eps()
-                    print(f"worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
+                    print(f"after  worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
         finally:
             paropt_ara.join_all()
 
@@ -533,9 +559,13 @@ class TestGraph(unittest.TestCase):
         smax = -1000
         for i in range(paropt_ara.num_threads()):
             wopt = paropt_ara.worker_opt(i)
+            ss = sorted(wopt.solutions, key=lambda x: x.output1, reverse=True)
             s, e, b = get_ara_bound(wopt.epses, [x.output1 for x in wopt.solutions])
             l, = ax.plot(wopt.times, s, label=f"ara* lower {i}")
-            ax.plot(wopt.times, b, ":", label=f"ara* upper {i}", color=l.get_color())
+            print(wopt.num_solutions())
+            print(i, s[-1], ss[0].output1)
+            print(ss[0].box())
+            #ax.plot(wopt.times, b, ":", label=f"ara* upper {i}", color=l.get_color())
             smax = max(max(s), smax)
         ax.axhline(smax, linestyle="--", color=l.get_color(), label="ara* best")
         ax.legend()

@@ -203,8 +203,8 @@ class Optimizer:
         self.max_memory = 1024*1024*1024*1 # 1 gb default
         if "max_memory" in kwargs:
             self.max_memory = kwargs["max_memory"]
-            self.g0.set_max_mem_size(mem)
-            self.g1.set_max_mem_size(mem)
+            self.g0.set_max_mem_size(self.max_memory)
+            self.g1.set_max_mem_size(self.max_memory)
 
         self.ara_eps = 1.0 # just A*
         self.ara_eps_incr = 0.0
@@ -306,8 +306,10 @@ class ParallelOptimizer:
     def num_threads(self): return self.paropt.num_threads()
     def redistribute_work(self): self.paropt.redistribute_work()
     def num_solutions(self): return self.paropt.num_solutions()
+    def num_candidate_cliques(self): return self.paropt.num_candidate_cliques()
     def current_bounds(self): return self.paropt.current_bounds()
     def current_memory(self): return self.paropt.current_memory()
+    def current_min_eps(self): return self.paropt.current_min_eps()
     def join_all(self): self.paropt.join_all()
     def worker_opt(self, i): return self.paropt.worker_opt(i)
     def steps_for(self, millis, **kwargs):

@@ -1026,7 +1026,7 @@ namespace treeck {
         , start_time{0.0}
     {
         for (size_t j = i; j < other.cliques_.size(); j += K)
-            cliques_.push_back(other.cliques_[i]); // copy
+            cliques_.push_back(other.cliques_[j]); // copy
         std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
 
         start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -1570,18 +1570,22 @@ namespace treeck {
     Worker::Worker()
         : index_(0)
         , work_flag_(false), stop_flag_(false)
-        , redistribute_(REDISTRIBUTE_DISABLED)
+        , redistribute_(RDIST_DISABLED)
         , num_millisecs_(0)
         , max_output0_(std::numeric_limits<FloatT>::quiet_NaN())
         , min_output1_(std::numeric_limits<FloatT>::quiet_NaN())
         , min_output_difference_(std::numeric_limits<FloatT>::quiet_NaN())
+        , thread_{}
+        , mutex_{}
+        , cv_{}
+        , opt_{}
         , box_filter_{default_box_filter}
     {}
     
     void 
-    KPartiteGraphParOpt::worker_fun(KPartiteGraphParOpt* paropt, size_t self_index)
+    KPartiteGraphParOpt::worker_fun(std::deque<Worker> *workers, size_t self_index)
     {
-        Worker *self = &paropt->workers_[self_index];
+        Worker *self = &workers->at(self_index);
 
         while (true)
         {
@@ -1600,19 +1604,19 @@ namespace treeck {
                 if (!std::isnan(self->max_output0_))
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->step(self->box_filter_, self->max_output0_, self->min_output1_))
+                        if (!self->opt_->steps(100, self->box_filter_, self->max_output0_, self->min_output1_))
                             break;
                 }
                 else if (!std::isnan(self->min_output_difference_))
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->step(self->box_filter_, self->min_output_difference_))
+                        if (!self->opt_->steps(100, self->box_filter_, self->min_output_difference_))
                             break;
                 }
                 else
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->step(self->box_filter_))
+                        if (!self->opt_->steps(100, self->box_filter_))
                             break;
                 }
                 self->num_millisecs_ = 0;
@@ -1622,35 +1626,44 @@ namespace treeck {
             //    self->opt_->set_eps(self->new_eps_, self->opt_->get_eps_incr());
             //    self->new_eps_ = 0.0;
             //}
-            if (self->redistribute_ == Worker::REDISTRIBUTE_SETUP)
+            if (self->redistribute_ == Worker::RDIST_SETUP)
             {
-                // signal to main thread that we're in this section
-                // we have to make sure all workers are in this section before we start copying cliques between workers
-                std::cout << self->index_;
-
-                self->redistribute_ = Worker::REDISTRIBUTE_READY;
+                // signal to main thread that we're in this section, we have to
+                // make sure all workers are in this section before we start
+                // copying cliques between workers
+                self->redistribute_ = Worker::RDIST_READY;
                 lock.unlock();
                 self->cv_.notify_one();
 
                 lock.lock();
-                self->cv_.wait(lock, [self]() { return self->redistribute_ == Worker::REDISTRIBUTE_GO; });
+                self->cv_.wait(lock, [self]() { return self->redistribute_ == Worker::RDIST_GO; });
 
-                std::cout << self->index_;
+                // == DO REDISTRIBUTE: copy cliques from each worker
+                size_t num_threads = workers->size();
+                std::vector<Clique> new_cliques;
+                FloatT min_eps = 1.0;
+                for (size_t i = 0; i < num_threads; ++i)
+                {
+                    const KPartiteGraphOptimize *opt = &*workers->at(i).opt_;
+                    for (size_t j = self_index; j < opt->cliques_.size(); j += num_threads)
+                    {
+                        new_cliques.push_back(opt->cliques_[j]);
+                    }
+                    min_eps = std::min(min_eps, opt->get_eps());
+                }
+                self->opt_->cmp_.eps = min_eps;
+                std::make_heap(new_cliques.begin(), new_cliques.end(), self->opt_->cmp_);
 
-                // DO REDISTRIBUTE
-
-                self->redistribute_ = Worker::REDISTRIBUTE_DONE;
+                self->redistribute_ = Worker::RDIST_DONE;
                 lock.unlock();
                 self->cv_.notify_one();
 
                 lock.lock();
-                self->cv_.wait(lock, [self]() { return self->redistribute_ == Worker::REDISTRIBUTE_STORE; });
+                self->cv_.wait(lock, [self]() { return self->redistribute_ == Worker::RDIST_STORE; });
 
-                // STORE NEW SEARCH CLIQUES
-
-                std::cout << self->index_;
-
-                self->redistribute_ = Worker::REDISTRIBUTE_DISABLED;
+                // == STORE NEW SEARCH CLIQUES
+                std::swap(self->opt_->cliques_, new_cliques);
+                self->redistribute_ = Worker::RDIST_DISABLED;
             }
 
             self->work_flag_ = false;
@@ -1661,26 +1674,26 @@ namespace treeck {
     
     KPartiteGraphParOpt::KPartiteGraphParOpt(size_t num_threads,
             const KPartiteGraphOptimize& opt)
-        : nthreads_{num_threads}
-        , workers_{new Worker[num_threads]}
+        : workers_{new std::deque<Worker>(num_threads)}
     {
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads; ++i)
         {
-            Worker& w = workers_[i];
+            //workers_->emplace(workers_->end());
+            Worker& w = workers_->at(i);
             std::lock_guard guard(w.mutex_);
             w.index_ = i;
-            w.opt_.emplace(opt, i, nthreads_);
+            w.opt_.emplace(opt, i, num_threads);
             w.opt_->store_.set_max_mem_size(opt.store_.get_max_mem_size());
-            w.thread_ = std::thread(worker_fun, this, i);
+            w.thread_ = std::thread(worker_fun, &*workers_, i);
         }
     }
 
     void
     KPartiteGraphParOpt::join_all()
     {
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker& w = workers_[i];
+            Worker& w = workers_->at(i);
             {
                 std::lock_guard(w.mutex_);
                 w.work_flag_ = true; 
@@ -1688,17 +1701,17 @@ namespace treeck {
             }
             w.cv_.notify_one();
         }
-        for (size_t i = 0; i < nthreads_; ++i)
-            workers_[i].thread_.join();
+        for (size_t i = 0; i < num_threads(); ++i)
+            workers_->at(i).thread_.join();
     }
 
     void
     KPartiteGraphParOpt::wait()
     {
         // try to lock the mutex, if successful, workers is done and waiting for work
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker *w = &workers_[i];
+            Worker *w = &workers_->at(i);
             std::unique_lock lock(w->mutex_);
             w->cv_.wait(lock, [w](){ return !w->work_flag_; });
         }
@@ -1707,62 +1720,68 @@ namespace treeck {
     void
     KPartiteGraphParOpt::redistribute_work()
     {
-        std::cout << "redistribute_work SETUP" << std::endl;
-        for (size_t i = 0; i < nthreads_; ++i)
+        //auto start = std::chrono::system_clock::now();
+
+        // ask all workers to go to their redistribute_work code section
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker& w = workers_[i];
+            Worker& w = workers_->at(i);
             {
                 std::lock_guard(w.mutex_);
                 w.work_flag_ = true; 
-                w.redistribute_ = Worker::REDISTRIBUTE_SETUP;
+                w.redistribute_ = Worker::RDIST_SETUP;
             }
             w.cv_.notify_one();
         }
 
-        for (size_t i = 0; i < nthreads_; ++i)
+        // wait untill all workers have notified that they have entered the redistribute_work
+        // section
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker *w = &workers_[i];
+            Worker *w = &workers_->at(i);
             std::unique_lock lock(w->mutex_);
-            w->cv_.wait(lock, [w](){ return w->redistribute_ == Worker::REDISTRIBUTE_READY; });
+            w->cv_.wait(lock, [w](){ return w->redistribute_ == Worker::RDIST_READY; });
         }
 
-        // all workers are in state REDISTRIBUTE_READY -> no worker is modifying itself in unexpected ways
+        // All workers are in state RDIST_READY -> no worker is modifying itself in
+        // unexpected ways. We can tell them to start redistributing search cliques
 
-        std::cout << std::endl << "redistribute_work GO" << std::endl;
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker *w = &workers_[i];
+            Worker *w = &workers_->at(i);
             {
                 std::unique_lock lock(w->mutex_);
-                w->redistribute_ = Worker::REDISTRIBUTE_GO;
+                w->redistribute_ = Worker::RDIST_GO;
             }
             w->cv_.notify_one();
         }
 
-        for (size_t i = 0; i < nthreads_; ++i)
+        // wait for all workers to finish redistributing, then we can tell them to swap out their
+        // search cliques
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker *w = &workers_[i];
+            Worker *w = &workers_->at(i);
             std::unique_lock lock(w->mutex_);
-            w->cv_.wait(lock, [w](){ return w->redistribute_ == Worker::REDISTRIBUTE_DONE; });
+            w->cv_.wait(lock, [w](){ return w->redistribute_ == Worker::RDIST_DONE; });
         }
 
-        // all workers are in state REDISTRIBUTE_READY -> no worker is modifying itself in unexpected ways
+        // all workers are done with redistribution, tell them to swap their search states
 
-        std::cout << std::endl << "redistribute_work STORE" << std::endl;
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker *w = &workers_[i];
+            Worker *w = &workers_->at(i);
             {
                 std::unique_lock lock(w->mutex_);
-                w->redistribute_ = Worker::REDISTRIBUTE_STORE;
+                w->redistribute_ = Worker::RDIST_STORE;
             }
             w->cv_.notify_one();
         }
 
         wait();
 
-        std::cout << std::endl << "redistribute_work waiting done" << std::endl;
-        //auto start = std::chrono::steady_clock::now();
+        //auto stop = std::chrono::system_clock::now();
+        //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+        //std::cout << "redistribute_work in " << (dur * 1e-6) << std::endl;
 
         /*
         // update epses:
@@ -1836,9 +1855,9 @@ namespace treeck {
     KPartiteGraphParOpt::steps_for(size_t num_millisecs)
     {
         //auto start = std::chrono::steady_clock::now();
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker& w = workers_[i];
+            Worker& w = workers_->at(i);
             {
                 std::lock_guard(w.mutex_);
                 w.work_flag_ = true; 
@@ -1855,17 +1874,15 @@ namespace treeck {
     const KPartiteGraphOptimize&
     KPartiteGraphParOpt::worker_opt(size_t worker_index) const
     {
-        if (worker_index >= nthreads_)
-            throw std::out_of_range("worker index out of range");
-        return *workers_[worker_index].opt_;
+        return *workers_->at(worker_index).opt_;
     }
 
     void
     KPartiteGraphParOpt::set_output_limits(FloatT max_output0, FloatT min_output1)
     {
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker& w = workers_[i];
+            Worker& w = workers_->at(i);
             std::lock_guard guard(w.mutex_);
             w.max_output0_ = max_output0;
             w.min_output1_ = min_output1;
@@ -1876,9 +1893,9 @@ namespace treeck {
     void 
     KPartiteGraphParOpt::set_output_limits(FloatT min_output_difference)
     {
-        for (size_t i = 0; i < nthreads_; ++i)
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            Worker& w = workers_[i];
+            Worker& w = workers_->at(i);
             std::lock_guard guard(w.mutex_);
             w.max_output0_ = std::numeric_limits<FloatT>::quiet_NaN();
             w.min_output1_ = std::numeric_limits<FloatT>::quiet_NaN();
@@ -1889,17 +1906,25 @@ namespace treeck {
     size_t
     KPartiteGraphParOpt::num_solutions() const {
         size_t sum = 0;
-        for (size_t i = 0; i < nthreads_; ++i)
-            sum += workers_[i].opt_->solutions.size();
+        for (size_t i = 0; i < num_threads(); ++i)
+            sum += workers_->at(i).opt_->solutions.size();
+        return sum;
+    }
+
+    size_t
+    KPartiteGraphParOpt::num_candidate_cliques() const {
+        size_t sum = 0;
+        for (size_t i = 0; i < num_threads(); ++i)
+            sum += workers_->at(i).opt_->num_candidate_cliques();
         return sum;
     }
 
     two_of<FloatT>
     KPartiteGraphParOpt::current_bounds() const {
-        FloatT lower, upper = 0;
-        for (size_t i = 0; i < nthreads_; ++i)
+        FloatT lower = 0, upper = 0;
+        for (size_t i = 0; i < num_threads(); ++i)
         {
-            auto p = workers_[i].opt_->current_bounds();
+            auto p = workers_->at(i).opt_->current_bounds();
             lower = std::min(lower, get0(p));
             upper = std::max(upper, get1(p));
         }
@@ -1909,12 +1934,18 @@ namespace treeck {
     std::vector<size_t>
     KPartiteGraphParOpt::current_memory() const {
         std::vector<size_t> mem;
-        mem.reserve(nthreads_);
-        for (size_t i = 0; i < nthreads_; ++i)
-        {
-            mem.push_back(workers_[i].opt_->store().get_mem_size());
-        }
+        mem.reserve(num_threads());
+        for (size_t i = 0; i < num_threads(); ++i)
+            mem.push_back(workers_->at(i).opt_->store().get_mem_size());
         return mem;
+    }
+
+    FloatT
+    KPartiteGraphParOpt::current_min_eps() const {
+        FloatT min = 1.0;
+        for (size_t i = 0; i < num_threads(); ++i)
+            min = std::min(min, workers_->at(i).opt_->get_eps());
+        return min;
     }
 
 } /* namespace treeck */
