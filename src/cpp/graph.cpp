@@ -1432,6 +1432,10 @@ namespace treeck {
                 new_eps = new_eps > 1.0 ? 1.0 : new_eps;
                 //std::cout << "ARA*: eps update: " << cmp_.eps << " -> " << new_eps << std::endl;
                 set_eps(new_eps, eps_incr_);
+
+                // push this solution clique again, if we find it again next
+                // time, we know that this is a solution with a better eps bound
+                pq_push(std::move(c));
             }
         }
         // if not a solution, extend from graph0 first, then graph1, then graph0 again...
