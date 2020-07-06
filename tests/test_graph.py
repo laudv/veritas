@@ -7,7 +7,7 @@ import timeit
 
 from treeck import *
 
-from experiments.util import get_ara_bound
+from experiments.util import get_ara_bound, filter_solutions
 
 def plot_img_solutions(imghat, solutions):
     fig, ax = plt.subplots()
@@ -471,16 +471,16 @@ class TestGraph(unittest.TestCase):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
         opt = Optimizer(maximize=at)
         opt.steps(2)
-        paropt = opt.parallel(2)
-        for i in range(paropt.num_threads()):
-            wopt = paropt.worker_opt(i)
-            print(f"worker{i}: #candidates={wopt.num_candidate_cliques()}")
 
-        paropt.steps_for(100)
-        paropt.redistribute_work()
-        paropt.join_all()
+        with opt.parallel(2) as paropt:
+            for i in range(paropt.num_threads()):
+                wopt = paropt.worker_opt(i)
+                print(f"worker{i}: #candidates={wopt.num_candidate_cliques()}")
+
+            paropt.steps_for(100)
 
         print("num_solutions", paropt.num_solutions())
+        print("num_valid_solutions", paropt.num_new_valid_solutions())
         for i in range(paropt.num_threads()):
             wopt = paropt.worker_opt(i)
             print(f"worker{i}: #sol={wopt.num_solutions()}, #steps={wopt.num_steps}")
@@ -490,83 +490,72 @@ class TestGraph(unittest.TestCase):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-hard.json")
 
         # A*
-        opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
+        opt = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
         start = timeit.default_timer()
-        opt_a.steps(100)
-        #while timeit.default_timer() - start < 20 and opt_a.opt.num_solutions() == 0:
-        #    opt_a.steps(1000)
-        #    print("opt_a", opt_a.current_bounds(), opt_a.opt.num_steps, opt_a.opt.num_box_filter_calls)
+        opt.steps(100)
+        #while timeit.default_timer() - start < 20 and opt.opt.num_solutions() == 0:
+        #    opt.steps(1000)
+        #    print("opt", opt.current_bounds(), opt.opt.num_steps, opt.opt.num_box_filter_calls)
 
-        print(opt_a.opt.num_solutions())
+        print(opt.opt.num_solutions())
         print(timeit.default_timer() - start, "sec")
 
-        opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
-        opt_a.steps(100)
-        try:
-            paropt_a = opt_a.parallel(4)
-            start = timeit.default_timer()
-            while timeit.default_timer() - start < 30 and paropt_a.num_solutions() == 0:
-                paropt_a.steps_for(1000)
-                #print("before current bound: ", paropt_a.current_bounds(), paropt_a.num_solutions())
-                #for i in range(paropt_a.num_threads()):
-                #    wopt = paropt_a.worker_opt(i)
-                #    print(f"before worker{i}: #candidates={wopt.num_candidate_cliques()}, bound={wopt.current_bounds()[1]}, eps={wopt.get_eps()}")
-                paropt_a.redistribute_work()
-                #print("after  current bound: ", paropt_a.current_bounds())
-                for i in range(paropt_a.num_threads()):
-                    wopt = paropt_a.worker_opt(i)
-                    print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_filter_calls)
-                    #print(f"after  worker{i}: #candidates={wopt.num_candidate_cliques()}, bound={wopt.current_bounds()[1]}, eps={wopt.get_eps()}")
-            print("num_sols:", paropt_a.num_solutions())
-        finally:
-            paropt_a.join_all()
+        #opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
+        #opt_a.steps(100)
+        #with opt_a.parallel(2) as paropt_a:
+        #    start = timeit.default_timer()
+        #    while timeit.default_timer() - start < 0 and paropt_a.num_solutions() == 0:
+        #        paropt_a.steps_for(1000)
+        #        for i in range(paropt_a.num_threads()):
+        #            wopt = paropt_a.worker_opt(i)
+        #            print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_filter_calls)
 
-        print(timeit.default_timer() - start, "sec")
+        #print(timeit.default_timer() - start, "sec")
 
         # ARA*
-        opt_ara = Optimizer(maximize=at, ara_eps=0.05, ara_eps_incr=0.05)
+        opt_ara = Optimizer(maximize=at, ara_eps=0.5, max_memory=1024*1024*1024*1)
         opt_ara.steps(100)
         print("opt_ara", opt_ara.opt.num_candidate_cliques(), opt_ara.num_solutions(), opt_ara.opt.get_eps())
 
+        steps_for_dur = 10
+        new_eps = opt_ara.get_eps()
         try:
-            paropt_ara = opt_ara.parallel(4)
             start = timeit.default_timer()
-            while timeit.default_timer() - start < 30 \
-                    and paropt_ara.current_min_eps() != 1.0 \
+            paropt_ara = opt_ara.parallel(6)
+            while timeit.default_timer() - start < 10 \
+                    and paropt_ara.get_eps() != 1.0 \
                     and paropt_ara.num_candidate_cliques() > 0:
-                paropt_ara.steps_for(1000)
-                #for i in range(paropt_ara.num_threads()):
-                #    wopt = paropt_ara.worker_opt(i)
-                #    num_cands = wopt.num_candidate_cliques()
-                #    num_sols = wopt.num_solutions()
-                #    eps = wopt.get_eps()
-                #    print(f"before worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
-                paropt_ara.redistribute_work()
+                if paropt_ara.num_new_valid_solutions() > 0:
+                    new_eps = round(new_eps + (1.0 - new_eps) / 10, 2)
+                    print(f"EPS: {paropt_ara.get_eps()} -> {new_eps}")
+                    paropt_ara.set_eps(new_eps)
+                    steps_for_dur = 10
+
+                paropt_ara.steps_for(steps_for_dur)
+                steps_for_dur  = min(1000, int(steps_for_dur * 1.5))
+
                 for i in range(paropt_ara.num_threads()):
                     wopt = paropt_ara.worker_opt(i)
                     num_cands = wopt.num_candidate_cliques()
                     num_sols = wopt.num_solutions()
                     eps = wopt.get_eps()
-                    print(f"after  worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
+                    print(f"worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
         finally:
             paropt_ara.join_all()
 
         print(timeit.default_timer() - start, "sec")
 
         fig, ax = plt.subplots()
-        ax.plot(paropt_a.times, [x[1] for x in paropt_a.bounds], label="upper")
-        smax = -1000
-        for i in range(paropt_ara.num_threads()):
-            wopt = paropt_ara.worker_opt(i)
-            ss = sorted(wopt.solutions, key=lambda x: x.output1, reverse=True)
-            s, e, b = get_ara_bound(wopt.epses, [x.output1 for x in wopt.solutions])
-            l, = ax.plot(wopt.times, s, label=f"ara* lower {i}")
-            print(wopt.num_solutions())
-            print(i, s[-1], ss[0].output1)
-            print(ss[0].box())
-            #ax.plot(wopt.times, b, ":", label=f"ara* upper {i}", color=l.get_color())
-            smax = max(max(s), smax)
-        ax.axhline(smax, linestyle="--", color=l.get_color(), label="ara* best")
+        #ax.plot(paropt_a.times, [x[1] for x in paropt_a.bounds], label="upper")
+        sols = filter_solutions(paropt_ara)
+        print(list(map(lambda s: round(s.output1, 2), sols)))
+        print(list(map(lambda s: round(s.eps, 2), sols)))
+        print(list(map(lambda s: round(s.output1 / s.eps, 2), sols)))
+        print(list(map(lambda s: s.is_valid, sols)))
+        t1 = [s.time for s in sols]
+        l1, = ax.plot(t1, [s.output1 for s in sols], '.', label="ara* lower")
+        l2, = ax.plot(t1, [s.output1 / s.eps for s in sols], label="ara* upper")
+        ax.axhline(max(map(lambda s: s.output1, sols)), linestyle="--", color=l1.get_color(), label="ara* best")
         ax.legend()
         plt.show()
 

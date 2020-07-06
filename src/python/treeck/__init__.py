@@ -186,15 +186,21 @@ class Optimizer:
         self.at0 = AddTree(); # dummy tree
         self.at1 = AddTree(); # dummy tree
 
-        if "minimize" in kwargs: self.at0 = kwargs["minimize"]
-        if "maximize" in kwargs: self.at1 = kwargs["maximize"]
+        if "minimize" in kwargs:
+            self.at0 = kwargs["minimize"]
+            del kwargs["minimize"]
+        if "maximize" in kwargs:
+            self.at1 = kwargs["maximize"]
+            del kwargs["maximize"]
 
         matches = set()
         match_is_reuse = True
         if "matches" in kwargs:
             matches = kwargs["matches"]
+            del kwargs["matches"]
         if "match_is_reuse" in kwargs:
             match_is_reuse = kwargs["match_is_reuse"]
+            del kwargs["match_is_reuse"]
         self.feat_info = FeatInfo(self.at0, self.at1, matches, match_is_reuse)
 
         self.g0 = KPartiteGraph(self.at0, self.feat_info, 0)
@@ -205,24 +211,27 @@ class Optimizer:
             self.max_memory = kwargs["max_memory"]
             self.g0.set_max_mem_size(self.max_memory)
             self.g1.set_max_mem_size(self.max_memory)
+            del kwargs["max_memory"]
 
         self.ara_eps = 1.0 # just A*
-        self.ara_eps_incr = 0.0
         if "ara_eps" in kwargs:
             self.ara_eps = kwargs["ara_eps"]
-        if "ara_eps_incr" in kwargs:
-            self.ara_eps_incr = kwargs["ara_eps_incr"]
+            del kwargs["ara_eps"]
 
         self.use_dyn_prog_heuristic = False
         if "use_dyn_prog_heuristic" in kwargs:
             self.use_dyn_prog_heuristic = kwargs["use_dyn_prog_heuristic"]
+            del kwargs["use_dyn_prog_heuristic"]
+
+        for k, v in kwargs.items():
+            raise RuntimeError(f"invalid argument '{k}'")
 
         self.reset_optimizer()
 
     def reset_optimizer(self):
         self.opt = KPartiteGraphOptimize(self.g0, self.g1)
         self.opt.set_max_mem_size(self.max_memory)
-        self.opt.set_eps(self.ara_eps, self.ara_eps_incr)
+        self.opt.set_eps(self.ara_eps)
         if self.use_dyn_prog_heuristic:
             self.opt.use_dyn_prog_heuristic()
         self.bounds = []
@@ -274,12 +283,14 @@ class Optimizer:
 
     def num_solutions(self): return self.opt.num_solutions()
     def solutions(self): return self.opt.solutions
-    def epses(self): return self.opt.epses
     def num_steps(self): return self.opt.num_steps
     def num_update_fails(self): return self.opt.num_update_fails
     def num_rejected(self): return self.opt.num_rejected
     def num_box_filter_calls(self): return self.opt.num_box_filter_calls
+    def num_candidate_cliques(self): return self.opt.num_candidate_cliques()
     def current_bounds(self): return self.opt.current_bounds()
+    def get_eps(self): return self.opt.get_eps()
+    def set_eps(self, new_eps): self.opt.set_eps(new_eps)
     def current_memory(self):
         return self.g0.get_mem_size() + self.g1.get_mem_size() + self.opt.get_mem_size()
 
@@ -291,6 +302,7 @@ class Optimizer:
         return value
 
     def parallel(self, num_threads):
+        """ use with with-statement """
         return ParallelOptimizer(self, num_threads)
         
 
@@ -303,14 +315,21 @@ class ParallelOptimizer:
         self.times = []
         self.start_time = timeit.default_timer()
 
+    def __enter__(self):
+        return self
+    def __exit__ (self, type, value, tb):
+        self.paropt.join_all()
+
     def num_threads(self): return self.paropt.num_threads()
     def redistribute_work(self): self.paropt.redistribute_work()
     def num_solutions(self): return self.paropt.num_solutions()
+    def num_new_valid_solutions(self): return self.paropt.num_new_valid_solutions()
     def num_candidate_cliques(self): return self.paropt.num_candidate_cliques()
     def current_bounds(self): return self.paropt.current_bounds()
     def current_memory(self): return self.paropt.current_memory()
-    def current_min_eps(self): return self.paropt.current_min_eps()
     def join_all(self): self.paropt.join_all()
+    def get_eps(self): return self.paropt.get_eps()
+    def set_eps(self, new_eps): self.paropt.set_eps(new_eps)
     def worker_opt(self, i): return self.paropt.worker_opt(i)
     def steps_for(self, millis, **kwargs):
         self.paropt.steps_for(millis, **kwargs)

@@ -925,21 +925,6 @@ namespace treeck {
     template <typename T> inline T& get1(two_of<T>& t) { return std::get<1>(t); }
     template <typename T> inline const T& get1(const two_of<T>& t) { return std::get<1>(t); }
 
-    //FloatT
-    //CliqueInstance::output_bound(FloatT eps) const
-    //{
-    //    return output + eps * heuristic;
-    //}
-
-    bool
-    CliqueMaxDiffPqCmp::operator()(const Clique& a, const Clique& b) const
-    {
-        FloatT diff_a = get1(a.instance).output_bound(eps) - get0(a.instance).output_bound(eps);
-        FloatT diff_b = get1(b.instance).output_bound(eps) - get0(b.instance).output_bound(eps);
-
-        return diff_a < diff_b;
-    }
-
     std::ostream&
     operator<<(std::ostream& s, const CliqueInstance& ci)
     {
@@ -976,15 +961,12 @@ namespace treeck {
         : graph_{g0, g1} // minimize g0, maximize g1
         , cliques_()
         , cmp_{1.0}
-        , eps_incr_{0.0}
         , heuristic_type(KPartiteGraphOptimize::RECOMPUTE)
         , num_steps{0, 0}
         , num_update_fails{0}
         , num_rejected{0}
         , num_box_filter_calls{0}
         , solutions{}
-        , epses{}
-        , times{}
         , start_time{0.0}
     {
         auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
@@ -1014,23 +996,17 @@ namespace treeck {
         : graph_{other.graph_}
         , cliques_{}
         , cmp_{other.cmp_.eps}
-        , eps_incr_{other.eps_incr_}
         , heuristic_type(other.heuristic_type)
         , num_steps{0, 0}
         , num_update_fails{0}
         , num_rejected{0}
         , num_box_filter_calls{0}
         , solutions{}
-        , epses{}
-        , times{}
-        , start_time{0.0}
+        , start_time{other.start_time}
     {
         for (size_t j = i; j < other.cliques_.size(); j += K)
             cliques_.push_back(other.cliques_[j]); // copy
         std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
-
-        start_time = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count() * 1e-3;
     }
 
     Clique 
@@ -1055,24 +1031,57 @@ namespace treeck {
         return cmp_.eps;
     }
 
-    FloatT
-    KPartiteGraphOptimize::get_eps_incr() const
-    {
-        return eps_incr_;
-    }
+    static std::mutex m;
 
     void
-    KPartiteGraphOptimize::set_eps(FloatT eps, FloatT eps_incr)
+    KPartiteGraphOptimize::set_eps(FloatT eps, bool rebuild_heap)
     {
         // we maximize diff, so h(x) must be underestimated to make the search prefer deeper solutions
+        if (eps <= 0.0) throw std::runtime_error("nonsense eps");
         if (eps > 1.0) throw std::runtime_error("nonsense eps");
-        if (eps_incr < 0.0) throw std::runtime_error("nonsense eps_incr");
 
-        eps_incr_ = eps_incr;
         if (eps != cmp_.eps)
         {
+            // re-add the best solution for the current eps so we can find it again with a better eps
+            const Solution *best_sol = nullptr;
+            for (int j = solutions.size() - 1; j >= 0; --j)
+            {
+                const Solution& sol = solutions[j];
+                if (sol.eps != cmp_.eps)
+                    break; // we're done, these are older solutions with lower epses
+                if (best_sol == nullptr || sol.output_difference() > best_sol->output_difference())
+                    best_sol = &sol;
+            }
+            if (best_sol != nullptr)
+            {
+                {
+                    std::lock_guard g(m);
+                    std::cout << "re-adding " << best_sol->output_difference()
+                        << ", is_valid=" << best_sol->is_valid
+                        << ", eps=" << best_sol->eps
+                        << std::endl;
+                }
+                cliques_.push_back({
+                    best_sol->box,
+                    {
+                        {
+                            best_sol->output0,
+                            0.0, // no heuristic value, we're in a goal state
+                            static_cast<short>(get0(graph_).sets_.size()), // indep set
+                            0, // vertex
+                        },
+                        {
+                            best_sol->output1,
+                            0.0, // no heuristic value, we're in a goal state
+                            static_cast<short>(get1(graph_).sets_.size()), // indep set
+                            0, // vertex
+                        }
+                    }
+                });
+            }
             cmp_.eps = eps;
-            std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
+            if (rebuild_heap)
+                std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
         }
         //std::cout << "ARA* EPS set to " << cmp_.eps << std::endl;
     }
@@ -1415,28 +1424,30 @@ namespace treeck {
             //std::cout << "SOLUTION added "
             //    << get0(c.instance).output << ", "
             //    << get1(c.instance).output << std::endl;
+            double t = std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch()).count() * 1e-3;
             solutions.push_back({
                 std::move(c.box),
                 get0(c.instance).output,
-                get1(c.instance).output
+                get1(c.instance).output,
+                cmp_.eps,
+                t - start_time,
+                true,
             });
-            epses.push_back(cmp_.eps);
-            double t = std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch()).count() * 1e-3;
-            times.push_back(t - start_time);
 
+            // NEW: manually increase eps
             // ARA*: decrease eps
-            if (eps_incr_ > 0.0 && cmp_.eps < 1.0)
-            {
-                FloatT new_eps = cmp_.eps + eps_incr_;
-                new_eps = new_eps > 1.0 ? 1.0 : new_eps;
-                //std::cout << "ARA*: eps update: " << cmp_.eps << " -> " << new_eps << std::endl;
-                set_eps(new_eps, eps_incr_);
+            //if (eps_incr_ > 0.0 && cmp_.eps < 1.0)
+            //{
+            //    FloatT new_eps = cmp_.eps + eps_incr_;
+            //    new_eps = new_eps > 1.0 ? 1.0 : new_eps;
+            //    //std::cout << "ARA*: eps update: " << cmp_.eps << " -> " << new_eps << std::endl;
+            //    set_eps(new_eps, eps_incr_);
 
-                // push this solution clique again, if we find it again next
-                // time, we know that this is a solution with a better eps bound
-                pq_push(std::move(c));
-            }
+            //    // push this solution clique again, if we find it again next
+            //    // time, we know that this is a solution with a better eps bound
+            //    pq_push(std::move(c));
+            //}
         }
         // if not a solution, extend from graph0 first, then graph1, then graph0 again...
         else if (!is_solution0 && (get0(c.instance).indep_set <= get1(c.instance).indep_set
@@ -1576,18 +1587,26 @@ namespace treeck {
         , work_flag_(false), stop_flag_(false)
         , redistribute_(RDIST_DISABLED)
         , num_millisecs_(0)
-        , max_output0_(std::numeric_limits<FloatT>::quiet_NaN())
-        , min_output1_(std::numeric_limits<FloatT>::quiet_NaN())
-        , min_output_difference_(std::numeric_limits<FloatT>::quiet_NaN())
+        , solution_index_(0)
+        , new_valid_solutions_(0)
         , thread_{}
         , mutex_{}
         , cv_{}
         , opt_{}
         , box_filter_{default_box_filter}
     {}
+
+    SharedWorkerInfo::SharedWorkerInfo(FloatT eps)
+        : max_output0(std::numeric_limits<FloatT>::quiet_NaN())
+        , min_output1(std::numeric_limits<FloatT>::quiet_NaN())
+        , min_output_difference(std::numeric_limits<FloatT>::quiet_NaN())
+        , best_bound(std::numeric_limits<FloatT>::quiet_NaN())
+        , new_eps(eps)
+     {}
     
     void 
-    KPartiteGraphParOpt::worker_fun(std::deque<Worker> *workers, size_t self_index)
+    KPartiteGraphParOpt::worker_fun(std::deque<Worker> *workers, const SharedWorkerInfo *info,
+            size_t self_index)
     {
         Worker *self = &workers->at(self_index);
 
@@ -1605,16 +1624,27 @@ namespace treeck {
                 using clock = std::chrono::steady_clock;
                 auto start = clock::now();
                 auto stop = start + std::chrono::milliseconds(self->num_millisecs_);
-                if (!std::isnan(self->max_output0_))
+
+                // if necessary, update eps first
+                if (info->new_eps != self->opt_->get_eps())
+                    self->opt_->set_eps(info->new_eps, false);
+
+                // heap was reconstructed during redistribute_work, make it a
+                // heap again (and maybe eps changed too)
+                std::make_heap(self->opt_->cliques_.begin(),
+                        self->opt_->cliques_.end(), self->opt_->cmp_);
+
+                if (!std::isnan(info->max_output0)) // assume min_output1 is also valid
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_filter_, self->max_output0_, self->min_output1_))
+                        if (!self->opt_->steps(100, self->box_filter_,
+                                    info->max_output0, info->min_output1))
                             break;
                 }
-                else if (!std::isnan(self->min_output_difference_))
+                else if (!std::isnan(info->min_output_difference))
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_filter_, self->min_output_difference_))
+                        if (!self->opt_->steps(100, self->box_filter_, info->min_output_difference))
                             break;
                 }
                 else
@@ -1625,11 +1655,6 @@ namespace treeck {
                 }
                 self->num_millisecs_ = 0;
             }
-            //if (self->new_eps_ != 0.0)
-            //{
-            //    self->opt_->set_eps(self->new_eps_, self->opt_->get_eps_incr());
-            //    self->new_eps_ = 0.0;
-            //}
             if (self->redistribute_ == Worker::RDIST_SETUP)
             {
                 // signal to main thread that we're in this section, we have to
@@ -1656,7 +1681,7 @@ namespace treeck {
                     min_eps = std::min(min_eps, opt->get_eps());
                 }
                 self->opt_->cmp_.eps = min_eps;
-                std::make_heap(new_cliques.begin(), new_cliques.end(), self->opt_->cmp_);
+                //std::make_heap(new_cliques.begin(), new_cliques.end(), self->opt_->cmp_);
 
                 self->redistribute_ = Worker::RDIST_DONE;
                 lock.unlock();
@@ -1668,6 +1693,18 @@ namespace treeck {
                 // == STORE NEW SEARCH CLIQUES
                 std::swap(self->opt_->cliques_, new_cliques);
                 self->redistribute_ = Worker::RDIST_DISABLED;
+
+                // mark the newly added solutions as invalid if not better than bounds of all workers
+                self->new_valid_solutions_ = 0;
+                for (size_t j = self->solution_index_; j < self->opt_->solutions.size(); ++j)
+                {
+                    Solution& sol = self->opt_->solutions[j];
+                    if (sol.output_difference() < info->best_bound)
+                        sol.is_valid = false;
+                    else
+                        self->new_valid_solutions_ += 1;
+                }
+                self->solution_index_ = self->opt_->solutions.size();
             }
 
             self->work_flag_ = false;
@@ -1679,6 +1716,7 @@ namespace treeck {
     KPartiteGraphParOpt::KPartiteGraphParOpt(size_t num_threads,
             const KPartiteGraphOptimize& opt)
         : workers_{new std::deque<Worker>(num_threads)}
+        , info_{new SharedWorkerInfo(opt.cmp_.eps)}
     {
         for (size_t i = 0; i < num_threads; ++i)
         {
@@ -1688,7 +1726,7 @@ namespace treeck {
             w.index_ = i;
             w.opt_.emplace(opt, i, num_threads);
             w.opt_->store_.set_max_mem_size(opt.store_.get_max_mem_size());
-            w.thread_ = std::thread(worker_fun, &*workers_, i);
+            w.thread_ = std::thread(worker_fun, &*workers_, &*info_, i);
         }
     }
 
@@ -1770,6 +1808,21 @@ namespace treeck {
         }
 
         // all workers are done with redistribution, tell them to swap their search states
+        // and
+        // each worker checks its solutions: A solution is "valid" when it is
+        // currently better than the bounds of all workers (changes as the
+        // search goes on)
+        FloatT best_bound = -std::numeric_limits<FloatT>::infinity();
+        for (size_t i = 0; i < num_threads(); ++i)
+        {
+            const Worker& w = workers_->at(i);
+            const auto& c = w.opt_->cliques_;
+            FloatT eps = w.opt_->cmp_.eps;
+            if (c.empty()) continue;
+            best_bound = std::max(best_bound, w.opt_->cliques_.front().output_difference(eps));
+        }
+        info_->best_bound = best_bound;
+        std::cout << "best bound: " << best_bound << ", " << (best_bound / get_eps()) << std::endl;
 
         for (size_t i = 0; i < num_threads(); ++i)
         {
@@ -1784,73 +1837,6 @@ namespace treeck {
         wait();
 
         //auto stop = std::chrono::system_clock::now();
-        //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
-        //std::cout << "redistribute_work in " << (dur * 1e-6) << std::endl;
-
-        /*
-        // update epses:
-        FloatT min_eps = 0.0;
-        size_t mean_num_cliques = 0;
-        for (size_t i = 0; i < nthreads_; ++i)
-        {
-            Worker *w = &workers_[i];
-            std::lock_guard lock(w->mutex_);
-            min_eps = std::min(min_eps, w->opt_->get_eps());
-            mean_num_cliques += w->opt_->num_candidate_cliques();
-            std::cout << "worker" << i << ": "
-                << " cliques=" << w->opt_->num_candidate_cliques()
-                << " bounds=" << get1(w->opt_->current_bounds())
-                << " num_steps=" << get1(w->opt_->num_steps)
-                << " nsols=" << w->opt_->solutions.size()
-                << std::endl;
-        }
-        mean_num_cliques = (mean_num_cliques / nthreads_) + 1;
-
-        std::cout << "min_eps " << min_eps << std::endl;
-
-        for (size_t i = 0; i < nthreads_; ++i)
-        {
-            bool do_notify = false;
-            Worker *w = &workers_[i];
-            {
-                std::lock_guard lock(w->mutex_);
-                if (w->opt_->get_eps() > min_eps)
-                {
-                    w->work_flag_ = true; 
-                    w->new_eps_ = min_eps; // run in thread
-                    do_notify = true;
-                }
-            }
-            if (do_notify)
-                w->cv_.notify_one();
-        }
-        
-        wait();
-
-        // w1 receives cliques from w2
-        for (size_t i = 0; i < nthreads_; ++i)
-        {
-            Worker *w1 = &workers_[i];
-            std::lock_guard lock1(w1->mutex_);
-            for (size_t j = 0; j < nthreads_; ++j)
-            {
-                if (i == j) continue;
-
-                Worker *w2 = &workers_[j];
-                std::lock_guard lock1(w2->mutex_);
-
-                // transfer cliques from w2 to w1
-                while (w2->opt_->num_candidate_cliques() > mean_num_cliques &&
-                       w1->opt_->num_candidate_cliques() < mean_num_cliques)
-                {
-                    Clique c = w2->opt_->pq_pop(); // from w2
-                    w1->opt_->pq_push(std::move(c)); // to w1
-                }
-            }
-        }
-        */
-
-        //auto stop = std::chrono::steady_clock::now();
         //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
         //std::cout << "redistribute_work in " << (dur * 1e-6) << std::endl;
     }
@@ -1870,9 +1856,27 @@ namespace treeck {
             w.cv_.notify_one();
         }
         wait();
+        redistribute_work();
+        
+
         //auto stop = std::chrono::steady_clock::now();
         //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
         //std::cout << "duration steps_for " << (dur * 1e-6) << std::endl;
+    }
+
+    FloatT
+    KPartiteGraphParOpt::get_eps() const
+    {
+        return info_->new_eps;
+    }
+
+    void
+    KPartiteGraphParOpt::set_eps(FloatT eps)
+    {
+        if (eps <= 0.0) throw std::runtime_error("nonsense eps");
+        if (eps > 1.0) throw std::runtime_error("nonsense eps");
+
+        info_->new_eps = eps; // will be picked up by workers in 'steps_for'
     }
 
     const KPartiteGraphOptimize&
@@ -1884,27 +1888,17 @@ namespace treeck {
     void
     KPartiteGraphParOpt::set_output_limits(FloatT max_output0, FloatT min_output1)
     {
-        for (size_t i = 0; i < num_threads(); ++i)
-        {
-            Worker& w = workers_->at(i);
-            std::lock_guard guard(w.mutex_);
-            w.max_output0_ = max_output0;
-            w.min_output1_ = min_output1;
-            w.min_output_difference_ = std::numeric_limits<FloatT>::quiet_NaN();
-        }
+        info_->max_output0 = max_output0;
+        info_->min_output1 = min_output1;
+        info_->min_output_difference = std::numeric_limits<FloatT>::quiet_NaN();
     }
 
     void 
     KPartiteGraphParOpt::set_output_limits(FloatT min_output_difference)
     {
-        for (size_t i = 0; i < num_threads(); ++i)
-        {
-            Worker& w = workers_->at(i);
-            std::lock_guard guard(w.mutex_);
-            w.max_output0_ = std::numeric_limits<FloatT>::quiet_NaN();
-            w.min_output1_ = std::numeric_limits<FloatT>::quiet_NaN();
-            w.min_output_difference_ = min_output_difference;
-        }
+        info_->max_output0 = std::numeric_limits<FloatT>::quiet_NaN();
+        info_->min_output1 = std::numeric_limits<FloatT>::quiet_NaN();
+        info_->min_output_difference = min_output_difference;
     }
 
     size_t
@@ -1912,6 +1906,14 @@ namespace treeck {
         size_t sum = 0;
         for (size_t i = 0; i < num_threads(); ++i)
             sum += workers_->at(i).opt_->solutions.size();
+        return sum;
+    }
+
+    size_t
+    KPartiteGraphParOpt::num_new_valid_solutions() const {
+        size_t sum = 0;
+        for (size_t i = 0; i < num_threads(); ++i)
+            sum += workers_->at(i).new_valid_solutions_;
         return sum;
     }
 
@@ -1942,14 +1944,6 @@ namespace treeck {
         for (size_t i = 0; i < num_threads(); ++i)
             mem.push_back(workers_->at(i).opt_->store().get_mem_size());
         return mem;
-    }
-
-    FloatT
-    KPartiteGraphParOpt::current_min_eps() const {
-        FloatT min = 1.0;
-        for (size_t i = 0; i < num_threads(); ++i)
-            min = std::min(min, workers_->at(i).opt_->get_eps());
-        return min;
     }
 
 } /* namespace treeck */

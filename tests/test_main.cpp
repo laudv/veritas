@@ -161,11 +161,10 @@ void test_unconstrained_bounds(const char *model)
 
     for (size_t i = 0; i < opt.solutions.size(); ++i)
     {
-        auto sol = opt.solutions[i].output1;
-        auto eps = opt.epses[i];
-        std::cout << sol << ", " << eps
+        auto& sol = opt.solutions[i];
+        std::cout << sol.output1 << ", " << sol.eps
             << ", " << num_steps[i]
-            << ", " << timings[i]
+            << ", " << sol.time
             << std::endl;
     }
 }
@@ -180,33 +179,46 @@ void test_parallel(const char *model)
     KPartiteGraph g1(at, finfo, 0);
     KPartiteGraphOptimize opt(g0, g1); // maximize, g0 is dummy
     opt.store().set_max_mem_size(1024*1024*50);
-    //opt.set_eps(0.02, 0.02);
+    opt.set_eps(0.1);
 
-    std::cout << "steps(100)" << std::endl;
-    auto start = std::chrono::high_resolution_clock::now();
-    opt.steps(1000);
-    auto stop = std::chrono::high_resolution_clock::now();
-    double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
-    std::cout << "steps(100) done: " << opt.num_candidate_cliques()
-        << " cliques in " << (dur * 1e-6)
-        << " bound=" << std::get<1>(opt.current_bounds())
-        << " num_steps=" << std::get<1>(opt.num_steps)
-        << std::endl;
+    //std::cout << "steps(100)" << std::endl;
+    //auto start = std::chrono::high_resolution_clock::now();
+    opt.steps(10);
+    //auto stop = std::chrono::high_resolution_clock::now();
+    //double dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
+    //std::cout << "steps(100) done: " << opt.num_candidate_cliques()
+    //    << " cliques in " << (dur * 1e-6)
+    //    << " bound=" << std::get<1>(opt.current_bounds())
+    //    << " num_steps=" << std::get<1>(opt.num_steps)
+    //    << std::endl;
 
-    KPartiteGraphParOpt paropt(4, opt);
+    KPartiteGraphParOpt paropt(6, opt);
     paropt.set_box_filter([]() { return [](const DomainBox&) { return true; }; });
-    std::cout << "parallel steps(100)" << std::endl;
-    paropt.steps_for(500);
-    std::cout << "redistribute_work" << std::endl;
-    paropt.redistribute_work();
-    //std::cout << "parallel steps(100)" << std::endl;
-    //paropt.steps_for(500);
-    //std::cout << "redistribute_work" << std::endl;
-    //paropt.redistribute_work();
+    while (paropt.get_eps() != 1.0 || paropt.num_new_valid_solutions() == 0)
+    {
+        if (paropt.num_new_valid_solutions() > 0) {
+            FloatT new_eps = std::min(1.0, paropt.get_eps() + 0.05);
+            std::cout << "increasing eps " << paropt.get_eps() << "->" << new_eps << std::endl;
+            paropt.set_eps(new_eps);
+        }
+        paropt.steps_for(50);
+    }
     std::cout << "joining..." << std::endl;
     //std::this_thread::sleep_for(std::chrono::seconds(1));
     paropt.join_all();
     std::cout << "joined!" << std::endl;
+
+    for (size_t i = 0; i < paropt.num_threads(); ++i)
+    {
+        for (auto& sol : paropt.worker_opt(i).solutions)
+        {
+            std::cout << "worker " << i << " " << sol.output1
+                << ", " << sol.eps
+                << ", " << sol.time
+                << ", " << sol.is_valid
+                << std::endl;
+        }
+    }
 }
 
 int main()

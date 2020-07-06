@@ -220,11 +220,18 @@ namespace treeck {
         DomainBox box;
 
         two_of<CliqueInstance> instance;
+
+        inline FloatT output_difference(FloatT eps = 1.0) const {
+            return std::get<1>(instance).output_bound(eps)
+                - std::get<0>(instance).output_bound(eps);
+        }
     };
 
     struct CliqueMaxDiffPqCmp {
         FloatT eps;
-        bool operator()(const Clique&, const Clique&) const;
+        inline bool operator()(const Clique& a, const Clique& b) const {
+            return a.output_difference(eps) < b.output_difference(eps);
+        }
     };
 
     std::ostream& operator<<(std::ostream& s, const CliqueInstance& ci);
@@ -235,8 +242,11 @@ namespace treeck {
     struct Solution {
         DomainBox box;
         FloatT output0, output1;
+        FloatT eps;
+        double time;
+        bool is_valid;
 
-        inline FloatT difference() { return output1 - output0; }
+        inline FloatT output_difference() const { return output1 - output0; }
     };
 
     std::ostream& operator<<(std::ostream& s, const Solution& sol);
@@ -251,7 +261,6 @@ namespace treeck {
         // a vector ordered as a pq containing "partial" cliques (no max-cliques)
         std::vector<Clique> cliques_;
         CliqueMaxDiffPqCmp cmp_;
-        FloatT eps_incr_;
 
         enum { DYN_PROG, RECOMPUTE } heuristic_type;
 
@@ -283,8 +292,6 @@ namespace treeck {
         size_t num_box_filter_calls;
 
         std::vector<Solution> solutions;
-        std::vector<FloatT> epses;
-        std::vector<double> times;
         double start_time;
 
     public:
@@ -294,8 +301,7 @@ namespace treeck {
         KPartiteGraphOptimize(const KPartiteGraphOptimize& other, size_t i, size_t K);
 
         FloatT get_eps() const;
-        FloatT get_eps_incr() const;
-        void set_eps(FloatT eps, FloatT eps_incr);
+        void set_eps(FloatT eps, bool rebuild_heap = true);
         void use_dyn_prog_heuristic();
 
         bool step();
@@ -327,9 +333,9 @@ namespace treeck {
         enum { RDIST_DISABLED, RDIST_SETUP, RDIST_READY, RDIST_GO, RDIST_DONE,
             RDIST_STORE } redistribute_;
         size_t num_millisecs_; // 0 to disable task
-        FloatT max_output0_;
-        FloatT min_output1_;
-        FloatT min_output_difference_;
+
+        size_t solution_index_;
+        size_t new_valid_solutions_; // new valid solutions since last `steps_for` call
 
         std::thread thread_;
         std::mutex mutex_;
@@ -341,19 +347,32 @@ namespace treeck {
         Worker();
     };
 
+    struct SharedWorkerInfo {
+        FloatT max_output0;
+        FloatT min_output1;
+        FloatT min_output_difference;
+        FloatT best_bound;
+        FloatT new_eps;
+        SharedWorkerInfo(FloatT eps);
+    };
+
     class KPartiteGraphParOpt {
         std::unique_ptr<std::deque<Worker>> workers_;
+        std::unique_ptr<SharedWorkerInfo> info_;
+
         void wait();
-        static void worker_fun(std::deque<Worker> *workers, size_t self_index);
+        void redistribute_work();
+        static void worker_fun(std::deque<Worker> *workers, const SharedWorkerInfo*, size_t self_index);
 
     public:
         KPartiteGraphParOpt(size_t num_threads,
                 const KPartiteGraphOptimize& opt);
 
         void join_all();
-        void redistribute_work();
 
         void steps_for(size_t num_millisecs);
+        FloatT get_eps() const;
+        void set_eps(FloatT new_eps);
 
         inline size_t num_threads() const { return workers_->size(); }
         const KPartiteGraphOptimize& worker_opt(size_t worker) const;
@@ -372,10 +391,10 @@ namespace treeck {
         void set_output_limits(FloatT min_output_difference);
 
         size_t num_solutions() const;
+        size_t num_new_valid_solutions() const; // valid solutions since last 'steps_for' call
         size_t num_candidate_cliques() const;
         two_of<FloatT> current_bounds() const;
         std::vector<size_t> current_memory() const;
-        FloatT current_min_eps() const;
     };
 
 } /* namespace treeck */

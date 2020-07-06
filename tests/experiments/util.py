@@ -76,3 +76,19 @@ def get_ara_bound(epses, sols, task="maximize"):
             assert ibest == i
     bound = [s/e for s, e in zip(solsbest, epsesbest)]
     return solsbest, epsesbest, bound
+
+def filter_solutions(paropt):
+    sols = []
+    for i in range(paropt.num_threads()):
+        #sols += paropt.worker_opt(i).solutions
+        sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
+    sols.sort(key=lambda s: s.output_difference())
+    sols.sort(key=lambda s: s.eps) # stable sort
+    fsols = [] # filtered solutions
+    prev_eps = -1
+    for s in sols:
+        if s.eps != prev_eps:
+            fsols.append(s)
+        prev_eps = s.eps
+    return fsols
+        
