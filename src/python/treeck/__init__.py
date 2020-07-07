@@ -289,6 +289,7 @@ class Optimizer:
     def num_box_filter_calls(self): return self.opt.num_box_filter_calls
     def num_candidate_cliques(self): return self.opt.num_candidate_cliques()
     def current_bounds(self): return self.opt.current_bounds()
+    def get_mem_size(self): return self.opt.get_mem_size()
     def get_eps(self): return self.opt.get_eps()
     def set_eps(self, new_eps): self.opt.set_eps(new_eps)
     def current_memory(self):

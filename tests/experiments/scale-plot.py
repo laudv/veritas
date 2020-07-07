@@ -102,10 +102,72 @@ def plot_output2(*args):
 
         plt.show()
 
+def plot_output3(*args):
+    filenames = [os.path.basename(f) for f in args]
+    jsons = []
+    for f in args:
+        with open(f) as fh:
+            jsons.append(json.load(fh))
+
+    for oos in zip(*jsons):
+        n = len(oos)
+
+        fig, axs = plt.subplots(n, 1, figsize=(8, 5*n), sharey=True)
+        if not isinstance(axs, tuple):
+            axs = (axs,)
+
+        for oo, ax, name in zip(oos, axs, filenames):
+            t0 = oo["a*"]["bounds_timings"]
+            b0 = [x[1]-x[0] for x in oo["a*"]["bounds"]]
+            s0 = oo["a*"]["solutions"]
+            t1 = oo["ara*"]["timings"]
+            s1 = oo["ara*"]["solutions"]
+            e1 = oo["ara*"]["epses"]
+            b1 = [s/e for s, e in zip(s1, e1)]
+            t2 = oo["merge"]["timings"]
+            b2 = oo["merge"]["bounds"]
+
+            print(f"== num_trees = {oo['num_trees']} ({name}) ==")
+            print("best eps:", e1[-1])
+            print("best solution ARA*", max(s1), f"({len(s1)})")
+            print("best solution A*  ", s0[0] if len(s0) > 0 else "NA", f"({len(s0)})")
+            print("best bound A*     ", min(b0))
+            print("max memory A*     ", max(oo["a*"]["memory"])/(1024*1024))
+            print("max memory ARA*   ", max(oo["ara*"]["memory"])/(1024*1024))
+            print("merge levels:", len(oo["merge"]["bounds"]))
+
+            if len(s0) > 0:
+                ax.axhline(s0[0], color="gray", linestyle=":", linewidth=1, label="Optimal")
+                b0.append(s0[0])
+                t0.append(t0[-1])
+                b0 = [x for x in b0 if x >= s0[0]]
+                t0 = [y for x, y in zip(b0, t0) if x >= s0[0]]
+            else:
+                ax.axhline(min(b0), color="gray", linestyle=":", linewidth=1, label="A* upper bound")
+                ax.axhline(max(s1), color="gray", linestyle=":", linewidth=1, label="ARA* lower bound")
+            ax.plot(t0, b0, label="A*")
+            ax.plot(t1, s1, ".", label="ARA*")
+            ax.plot(t1, b1, "-.", label="ARA* upper")
+            l, = ax.plot(t2, b2, "x-", label="merge")
+            #if True or len(oo["astar"]["solutions"]) == 0: # should actually be disabled when merge finds the solution
+            #    #t2.append(max(t0[-1], t1[-1]))
+            #    #b2.append(b2[-1])
+            #    t3 = max(t0[-1], t1[-1])
+            #    if t3 > t2[-1]:
+            #        ax.plot([t2[-1], t3], [b2[-1], b2[-1]], "-", color=l.get_color())
+            #        ax.text(t3, b2[-1], "OOT", horizontalalignment='right', verticalalignment='bottom', color=l.get_color())
+            ax.set_title(f"num_trees = {oo['num_trees']} ({name})")
+            ax.legend()
+            ax.set_xlabel("time");
+            ax.set_ylabel("model output");
+
+        plt.show()
+
 
 if __name__ == "__main__":
     #plot_output("tests/experiments/scale/output5G")
-    plot_output2("tests/experiments/scale-covtype/neww5G_merge0", "tests/experiments/scale-covtype/new5G_merge0")
+    #plot_output2("tests/experiments/scale-covtype/neww5G_merge0", "tests/experiments/scale-covtype/new5G_merge0")
     #plot_output2("tests/experiments/scale-mnist/output2_dp", "tests/experiments/scale-mnist/output2")
+    plot_output3("tests/experiments/scale/calhouse/test")
 
 

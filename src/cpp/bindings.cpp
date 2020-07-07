@@ -7,13 +7,13 @@
 #include <memory>
 #include <string>
 #include <sstream>
-#include <memory>
 #include <iostream>
 #include <cstring>
 
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 #include <pybind11/cast.h>
+#include <pybind11/functional.h>
 
 #include <z3++.h>
 
@@ -677,6 +677,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("xvar_id", &SMTSolver::xvar_id)
         .def("xvar_name", &SMTSolver::xvar_name)
         ;
+
 
 
 } /* PYBIND11_MODULE */

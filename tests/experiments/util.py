@@ -7,6 +7,7 @@ from sklearn.datasets import fetch_openml
 
 def load_openml(name, data_id, task="classification", force=False):
     """
+    calhouse: data_id=537
     mnist: data_id=554
     covtype: data_id=1596
     """
