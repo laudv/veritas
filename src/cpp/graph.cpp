@@ -1047,6 +1047,23 @@ namespace treeck {
             for (int j = solutions.size() - 1; j >= 0; --j)
             {
                 const Solution& sol = solutions[j];
+                //cliques_.push_back({ // add all solutions again, probably a waste
+                //    sol.box,
+                //    {
+                //        {
+                //            sol.output0,
+                //            0.0, // no heuristic value, we're in a goal state
+                //            static_cast<short>(get0(graph_).sets_.size()), // indep set
+                //            0, // vertex
+                //        },
+                //        {
+                //            sol.output1,
+                //            0.0, // no heuristic value, we're in a goal state
+                //            static_cast<short>(get1(graph_).sets_.size()), // indep set
+                //            0, // vertex
+                //        }
+                //    }
+                //});
                 if (sol.eps != cmp_.eps)
                     break; // we're done, these are older solutions with lower epses
                 if (best_sol == nullptr || sol.output_difference() > best_sol->output_difference())
@@ -1556,8 +1573,8 @@ namespace treeck {
         }
         const Clique& c = cliques_.front();
         return {
-            get0(c.instance).output_bound(),
-            get1(c.instance).output_bound()
+            get0(c.instance).output_bound(cmp_.eps),
+            get1(c.instance).output_bound(cmp_.eps)
         };
     }
 
@@ -1670,17 +1687,12 @@ namespace treeck {
                 // == DO REDISTRIBUTE: copy cliques from each worker
                 size_t num_threads = workers->size();
                 std::vector<Clique> new_cliques;
-                FloatT min_eps = 1.0;
                 for (size_t i = 0; i < num_threads; ++i)
                 {
                     const KPartiteGraphOptimize *opt = &*workers->at(i).opt_;
                     for (size_t j = self_index; j < opt->cliques_.size(); j += num_threads)
-                    {
                         new_cliques.push_back(opt->cliques_[j]);
-                    }
-                    min_eps = std::min(min_eps, opt->get_eps());
                 }
-                self->opt_->cmp_.eps = min_eps;
                 //std::make_heap(new_cliques.begin(), new_cliques.end(), self->opt_->cmp_);
 
                 self->redistribute_ = Worker::RDIST_DONE;
@@ -1700,9 +1712,21 @@ namespace treeck {
                 {
                     Solution& sol = self->opt_->solutions[j];
                     if (sol.output_difference() < info->best_bound)
+                    {
+                        std::lock_guard l(m);
+                        std::cout << "w" << self->index_ << ": invalid "
+                            << sol.output_difference() << " < " << info->best_bound 
+                            << " (" << self->opt_->cmp_.eps << ")" << std::endl;
                         sol.is_valid = false;
+                    }
                     else
+                    {
+                        std::lock_guard l(m);
+                        std::cout << "w" << self->index_ << ":   valid "
+                            << sol.output_difference() << " >= " << info->best_bound
+                            << " (" << self->opt_->cmp_.eps << ")" << std::endl;
                         self->new_valid_solutions_ += 1;
+                    }
                 }
                 self->solution_index_ = self->opt_->solutions.size();
             }
@@ -1810,8 +1834,7 @@ namespace treeck {
         // all workers are done with redistribution, tell them to swap their search states
         // and
         // each worker checks its solutions: A solution is "valid" when it is
-        // currently better than the bounds of all workers (changes as the
-        // search goes on)
+        // currently better than the bounds of all workers
         FloatT best_bound = -std::numeric_limits<FloatT>::infinity();
         for (size_t i = 0; i < num_threads(); ++i)
         {
@@ -1819,10 +1842,12 @@ namespace treeck {
             const auto& c = w.opt_->cliques_;
             FloatT eps = w.opt_->cmp_.eps;
             if (c.empty()) continue;
-            best_bound = std::max(best_bound, w.opt_->cliques_.front().output_difference(eps));
+            FloatT bound = w.opt_->cliques_.front().output_difference(eps);
+            std::cout << "w" << i << " eps=" << eps << ", bound=" << bound << std::endl;
+            best_bound = std::max(best_bound, bound);
         }
         info_->best_bound = best_bound;
-        std::cout << "best bound: " << best_bound << ", " << (best_bound / get_eps()) << std::endl;
+        std::cout << "best bound: " << best_bound << std::endl;
 
         for (size_t i = 0; i < num_threads(); ++i)
         {

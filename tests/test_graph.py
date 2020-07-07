@@ -486,13 +486,14 @@ class TestGraph(unittest.TestCase):
             print(f"worker{i}: #sol={wopt.num_solutions()}, #steps={wopt.num_steps}")
 
     def multithread2(self):
-        #at = AddTree.read(f"tests/models/xgb-calhouse-hard.json")
-        at = AddTree.read(f"tests/models/xgb-mnist-yis0-hard.json")
+        at = AddTree.read(f"tests/models/xgb-calhouse-hard.json")
+        #at = AddTree.read(f"tests/models/xgb-mnist-yis0-hard.json")
 
         # A*
         opt = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
+        print("num_vertices", opt.g1.num_vertices())
         start = timeit.default_timer()
-        opt.steps(100)
+        opt.steps(10)
         #while timeit.default_timer() - start < 20 and opt.opt.num_solutions() == 0:
         #    opt.steps(1000)
         #    print("opt", opt.current_bounds(), opt.opt.num_steps, opt.opt.num_box_filter_calls)
@@ -500,33 +501,38 @@ class TestGraph(unittest.TestCase):
         print(opt.opt.num_solutions())
         print(timeit.default_timer() - start, "sec")
 
-        #opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
-        #opt_a.steps(100)
-        #with opt_a.parallel(2) as paropt_a:
-        #    start = timeit.default_timer()
-        #    while timeit.default_timer() - start < 0 and paropt_a.num_solutions() == 0:
-        #        paropt_a.steps_for(1000)
-        #        for i in range(paropt_a.num_threads()):
-        #            wopt = paropt_a.worker_opt(i)
-        #            print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_filter_calls)
+        opt_a = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)
+        opt_a.steps(10)
+        steps_for_dur = 50
+        try:
+            start = timeit.default_timer()
+            paropt_a = opt_a.parallel(4)
+            while timeit.default_timer() - start < 60 and paropt_a.num_solutions() == 0:
+                paropt_a.steps_for(steps_for_dur)
+                steps_for_dur = min(1000, int(steps_for_dur * 1.5))
+                for i in range(paropt_a.num_threads()):
+                    wopt = paropt_a.worker_opt(i)
+                    print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_filter_calls)
+        finally:
+            paropt_a.join_all()
 
-        #print(timeit.default_timer() - start, "sec")
+        print(timeit.default_timer() - start, "sec", paropt_a.num_solutions())
 
         # ARA*
         opt_ara = Optimizer(maximize=at, ara_eps=0.5, max_memory=1024*1024*1024*1)
-        opt_ara.steps(100)
+        opt_ara.steps(10)
         print("opt_ara", opt_ara.opt.num_candidate_cliques(), opt_ara.num_solutions(), opt_ara.opt.get_eps())
 
         steps_for_dur = 10
         new_eps = opt_ara.get_eps()
         try:
             start = timeit.default_timer()
-            paropt_ara = opt_ara.parallel(6)
-            while timeit.default_timer() - start < 10 \
-                    and paropt_ara.get_eps() != 1.0 \
+            paropt_ara = opt_ara.parallel(4)
+            while timeit.default_timer() - start < 60 \
+                    and not (paropt_ara.get_eps() == 1.0 and paropt_ara.num_new_valid_solutions() > 0) \
                     and paropt_ara.num_candidate_cliques() > 0:
                 if paropt_ara.num_new_valid_solutions() > 0:
-                    new_eps = round(new_eps + (1.0 - new_eps) / 10, 2)
+                    new_eps = new_eps + (1.0 - new_eps) / 10 if new_eps < 0.99 else 1.0
                     print(f"EPS: {paropt_ara.get_eps()} -> {new_eps}")
                     paropt_ara.set_eps(new_eps)
                     steps_for_dur = 10
@@ -534,28 +540,45 @@ class TestGraph(unittest.TestCase):
                 paropt_ara.steps_for(steps_for_dur)
                 steps_for_dur  = min(1000, int(steps_for_dur * 1.5))
 
-                for i in range(paropt_ara.num_threads()):
-                    wopt = paropt_ara.worker_opt(i)
-                    num_cands = wopt.num_candidate_cliques()
-                    num_sols = wopt.num_solutions()
-                    eps = wopt.get_eps()
-                    print(f"worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
+                #for i in range(paropt_ara.num_threads()):
+                #    wopt = paropt_ara.worker_opt(i)
+                #    num_cands = wopt.num_candidate_cliques()
+                #    num_sols = wopt.num_solutions()
+                #    eps = wopt.get_eps()
+                #    print(f"worker{i}: #candidates={num_cands}, #sol={num_sols}, eps={eps}")
         finally:
             paropt_ara.join_all()
 
         print(timeit.default_timer() - start, "sec")
 
         fig, ax = plt.subplots()
-        #ax.plot(paropt_a.times, [x[1] for x in paropt_a.bounds], label="upper")
+
+        best = -1000
+        if paropt_a.num_solutions() > 0:
+            best = max([s.output1 for s in paropt_a.solutions()])
+            print("solution:", best)
+        print(max([x[1] for x in paropt_a.bounds]))
+        aresult = list(filter(lambda x: x[1][1] > best, zip(paropt_a.times, paropt_a.bounds)))
+        t0 = [x[0] for x in aresult]
+        s0 = [x[1][1] for x in aresult]
+        l0, = ax.plot(t0, s0, label="a* upper")
+        if paropt_a.num_solutions() > 0:
+            ax.axhline(best, linestyle="--", color=l0.get_color(), label="a* best")
         sols = filter_solutions(paropt_ara)
-        print(list(map(lambda s: round(s.output1, 2), sols)))
-        print(list(map(lambda s: round(s.eps, 2), sols)))
-        print(list(map(lambda s: round(s.output1 / s.eps, 2), sols)))
-        print(list(map(lambda s: s.is_valid, sols)))
+        print("out", list(map(lambda s: round(s.output1, 2), sols)))
+        print("eps", list(map(lambda s: round(s.eps, 2), sols)))
+        print("up ", list(map(lambda s: round(s.output1 / s.eps, 2), sols)))
+        print("valid", list(map(lambda s: s.is_valid, sols)))
         t1 = [s.time for s in sols]
         l1, = ax.plot(t1, [s.output1 for s in sols], '.', label="ara* lower")
         l2, = ax.plot(t1, [s.output1 / s.eps for s in sols], label="ara* upper")
+        ax.plot([s.time for s in paropt_ara.solutions() if s.is_valid], [s.output1 for s in paropt_ara.solutions() if s.is_valid], 'v', markersize=1.5, label="ara* valid")
+        ax.plot([s.time for s in paropt_ara.solutions() if not s.is_valid], [s.output1 for s in paropt_ara.solutions() if not s.is_valid], 'x', markersize=5, label="ara* invalid")
         ax.axhline(max(map(lambda s: s.output1, sols)), linestyle="--", color=l1.get_color(), label="ara* best")
+        araresult = list(zip(paropt_ara.times, paropt_ara.bounds))
+        t1 = [x[0] for x in araresult]
+        s1 = [x[1][1] for x in araresult]
+        ax.plot(t1, s1, ':', label="ara* bounds")
         ax.legend()
         plt.show()
 

@@ -80,9 +80,9 @@ def get_ara_bound(epses, sols, task="maximize"):
 def filter_solutions(paropt):
     sols = []
     for i in range(paropt.num_threads()):
-        #sols += paropt.worker_opt(i).solutions
-        sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
-    sols.sort(key=lambda s: s.output_difference())
+        sols += paropt.worker_opt(i).solutions
+        #sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
+    sols.sort(key=lambda s: s.output_difference(), reverse=True)
     sols.sort(key=lambda s: s.eps) # stable sort
     fsols = [] # filtered solutions
     prev_eps = -1

@@ -310,9 +310,9 @@ class ParallelOptimizer:
     def __init__(self, opt, num_threads):
         self.opt = opt
         self.paropt = self.opt.opt.parallel(num_threads)
-        self.bounds = []
-        self.memory = []
-        self.times = []
+        self.bounds = [self.paropt.current_bounds()]
+        self.memory = [self.paropt.current_memory()]
+        self.times = [0.0]
         self.start_time = timeit.default_timer()
 
     def __enter__(self):
@@ -339,16 +339,9 @@ class ParallelOptimizer:
 
     def solutions(self):
         solutions = []
-        epses = []
-        times = []
         for i in range(self.num_threads()):
             wopt = self.worker_opt(i)
             solutions += wopt.solutions
-            epses += wopt.epses
-            times += wopt.times
-        t = tuple(map(list, zip(*sorted(zip(solutions, epses, times), key=lambda p: p[2]))))
-        solutions, epses, times = t
-
-        print(len(solutions), len(epses), len(times))
-        return solutions, epses, times
+        solutions.sort(key=lambda s: s.time)
+        return solutions
 
