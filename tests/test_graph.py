@@ -486,8 +486,8 @@ class TestGraph(unittest.TestCase):
             print(f"worker{i}: #sol={wopt.num_solutions()}, #steps={wopt.num_steps}")
 
     def multithread2(self):
-        at = AddTree.read(f"tests/models/xgb-calhouse-hard.json")
-        #at = AddTree.read(f"tests/models/xgb-mnist-yis0-hard.json")
+        #at = AddTree.read(f"tests/models/xgb-calhouse-hard.json")
+        at = AddTree.read(f"tests/models/xgb-mnist-yis0-hard.json")
 
         # A*
         opt = Optimizer(maximize=at, use_dyn_prog_heuristic=False, max_memory=1024*1024*1024*1)

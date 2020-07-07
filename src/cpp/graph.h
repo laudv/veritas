@@ -334,7 +334,6 @@ namespace treeck {
             RDIST_STORE } redistribute_;
         size_t num_millisecs_; // 0 to disable task
 
-        size_t solution_index_;
         size_t new_valid_solutions_; // new valid solutions since last `steps_for` call
 
         std::thread thread_;

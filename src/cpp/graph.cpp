@@ -1031,7 +1031,7 @@ namespace treeck {
         return cmp_.eps;
     }
 
-    static std::mutex m;
+    static std::mutex stdout_mutex;
 
     void
     KPartiteGraphOptimize::set_eps(FloatT eps, bool rebuild_heap)
@@ -1071,13 +1071,13 @@ namespace treeck {
             }
             if (best_sol != nullptr)
             {
-                {
-                    std::lock_guard g(m);
-                    std::cout << "re-adding " << best_sol->output_difference()
-                        << ", is_valid=" << best_sol->is_valid
-                        << ", eps=" << best_sol->eps
-                        << std::endl;
-                }
+                //{
+                //    std::lock_guard g(stdout_mutex);
+                //    std::cout << "re-adding " << best_sol->output_difference()
+                //        << ", is_valid=" << best_sol->is_valid
+                //        << ", eps=" << best_sol->eps
+                //        << std::endl;
+                //}
                 cliques_.push_back({
                     best_sol->box,
                     {
@@ -1604,7 +1604,6 @@ namespace treeck {
         , work_flag_(false), stop_flag_(false)
         , redistribute_(RDIST_DISABLED)
         , num_millisecs_(0)
-        , solution_index_(0)
         , new_valid_solutions_(0)
         , thread_{}
         , mutex_{}
@@ -1708,29 +1707,30 @@ namespace treeck {
 
                 // mark the newly added solutions as invalid if not better than bounds of all workers
                 self->new_valid_solutions_ = 0;
-                for (size_t j = self->solution_index_; j < self->opt_->solutions.size(); ++j)
+                FloatT eps = self->opt_->cmp_.eps;
+                for (int j = self->opt_->solutions.size() - 1; j >= 0; --j)
                 {
                     Solution& sol = self->opt_->solutions[j];
+                    if (sol.eps != eps) break; // only look at the last solutions for the current eps
                     if (sol.output_difference() < info->best_bound)
                     {
-                        std::lock_guard l(m);
-                        std::cout << "w" << self->index_ << ": invalid "
-                            << sol.output_difference() << " < " << info->best_bound 
-                            << " (" << self->opt_->cmp_.eps << ")" << std::endl;
+                        //std::lock_guard l(m);
+                        //std::cout << "w" << self->index_ << ": invalid "
+                        //    << sol.output_difference() << " < " << info->best_bound 
+                        //    << " (" << self->opt_->cmp_.eps << ")" << std::endl;
                         sol.is_valid = false;
                     }
                     else
                     {
-                        std::lock_guard l(m);
-                        std::cout << "w" << self->index_ << ":   valid "
-                            << sol.output_difference() << " >= " << info->best_bound
-                            << " (" << self->opt_->cmp_.eps << ")" << std::endl;
+                        //std::lock_guard l(m);
+                        //std::cout << "w" << self->index_ << ":   valid "
+                        //    << sol.output_difference() << " >= " << info->best_bound
+                        //    << " (" << self->opt_->cmp_.eps << ")" << std::endl;
+                        sol.is_valid = true;
                         self->new_valid_solutions_ += 1;
                     }
                 }
-                self->solution_index_ = self->opt_->solutions.size();
             }
-
             self->work_flag_ = false;
             lock.unlock();
             self->cv_.notify_one();
@@ -1843,11 +1843,11 @@ namespace treeck {
             FloatT eps = w.opt_->cmp_.eps;
             if (c.empty()) continue;
             FloatT bound = w.opt_->cliques_.front().output_difference(eps);
-            std::cout << "w" << i << " eps=" << eps << ", bound=" << bound << std::endl;
+            //std::cout << "w" << i << " eps=" << eps << ", bound=" << bound << std::endl;
             best_bound = std::max(best_bound, bound);
         }
         info_->best_bound = best_bound;
-        std::cout << "best bound: " << best_bound << std::endl;
+        //std::cout << "best bound: " << best_bound << std::endl;
 
         for (size_t i = 0; i < num_threads(); ++i)
         {
