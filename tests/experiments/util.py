@@ -3,6 +3,7 @@ import numpy as np
 import scipy
 import scipy.io
 import xgboost as xgb
+import math
 from sklearn.datasets import fetch_openml
 
 def load_openml(name, data_id, task="classification", force=False):
@@ -78,18 +79,47 @@ def get_ara_bound(epses, sols, task="maximize"):
     bound = [s/e for s, e in zip(solsbest, epsesbest)]
     return solsbest, epsesbest, bound
 
-def filter_solutions(paropt):
-    sols = []
-    for i in range(paropt.num_threads()):
-        sols += paropt.worker_opt(i).solutions
-        #sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
-    sols.sort(key=lambda s: s.output_difference(), reverse=True)
-    sols.sort(key=lambda s: s.eps) # stable sort
-    fsols = [] # filtered solutions
-    prev_eps = -1
-    for s in sols:
-        if s.eps != prev_eps:
-            fsols.append(s)
-        prev_eps = s.eps
-    return fsols
-        
+def filter_solutions(*args):
+    if len(args) == 1 and isinstance(args[0], ParallelOptimizer):
+        sols = []
+        for i in range(paropt.num_threads()):
+            sols += paropt.worker_opt(i).solutions
+            #sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
+        sols.sort(key=lambda s: s.output_difference(), reverse=True)
+        sols.sort(key=lambda s: s.eps) # stable sort
+
+        fsols = [] # filtered solutions
+        prev_eps = -1
+        for s in sols:
+            if s.eps != prev_eps:
+                fsols.append(s)
+            prev_eps = s.eps
+        return fsols
+ 
+    if len(args) == 4: # (output0, output1, time, epses)
+        sols = list(zip(*args))
+        sols.sort(key=lambda x: x[1]-x[0], reverse=True)
+        sols.sort(key=lambda x: x[3]) # stable sort
+        prev_eps = -1
+        s0, s1, ts, es = [], [], [], []
+        for i in range(len(sols)):
+            if sols[i][3] != prev_eps:
+                a, b, t, e = sols[i]
+                s0.append(a)
+                s1.append(b)
+                ts.append(t)
+                es.append(e)
+            prev_eps = sols[i][3]
+        return s0, s1, ts, es
+
+def flatten_ara_upper(ss, es):
+    bs = []
+    last_b = math.inf
+    for s, e in zip(ss, es):
+        b = s/e
+        if b < last_b:
+            bs.append(b)
+            last_b = b
+        else:
+            bs.append(last_b)
+    return bs

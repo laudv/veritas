@@ -234,10 +234,10 @@ class Optimizer:
         self.opt.set_eps(self.ara_eps)
         if self.use_dyn_prog_heuristic:
             self.opt.use_dyn_prog_heuristic()
-        self.bounds = []
-        self.memory = []
-        self.times = []
         self.start_time = timeit.default_timer()
+        self.bounds = [(self.g0.basic_bound()[0], self.g1.basic_bound()[1])]
+        self.memory = [self.current_memory()]
+        self.times = [0.0]
 
     def merge(self, K):
         self.g0.merge(K)
@@ -311,10 +311,10 @@ class ParallelOptimizer:
     def __init__(self, opt, num_threads):
         self.opt = opt
         self.paropt = self.opt.opt.parallel(num_threads)
-        self.bounds = [self.paropt.current_bounds()]
-        self.memory = [self.paropt.current_memory()]
-        self.times = [0.0]
-        self.start_time = timeit.default_timer()
+        self.bounds = opt.bounds + [self.paropt.current_bounds()]
+        self.memory = opt.memory + [self.paropt.current_memory()]
+        self.start_time = opt.start_time + opt.times[-1]
+        self.times = opt.times + [opt.times[-1]]
 
     def __enter__(self):
         return self

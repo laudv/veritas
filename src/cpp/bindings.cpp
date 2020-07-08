@@ -527,6 +527,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("get_max_mem_size", [](const KPartiteGraph& o) { return o.store().get_max_mem_size(); })
         .def("get_mem_size", [](const KPartiteGraph& o) { return o.store().get_mem_size(); })
         .def("merge", &KPartiteGraph::merge)
+        .def("basic_bound", &KPartiteGraph::basic_bound)
         .def("num_independent_sets", &KPartiteGraph::num_independent_sets)
         .def("num_vertices", &KPartiteGraph::num_vertices)
         .def("num_vertices_in_set", &KPartiteGraph::num_vertices_in_set)

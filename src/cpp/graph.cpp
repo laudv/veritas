@@ -701,6 +701,27 @@ namespace treeck {
         return {min0, max0};
     }
 
+    std::tuple<FloatT, FloatT>
+    KPartiteGraph::basic_bound() const
+    {
+        if (sets_.empty())
+            return {0.0, 0.0};
+        FloatT min_bound = 0.0, max_bound = 0.0;
+        for (const auto& set : sets_)
+        {
+            FloatT min = +std::numeric_limits<FloatT>::infinity();
+            FloatT max = -std::numeric_limits<FloatT>::infinity();
+            for (const auto& v : set.vertices)
+            {
+                min = std::min(min, v.output);
+                max = std::max(max, v.output);
+            }
+            min_bound += min;
+            max_bound += max;
+        }
+        return {min_bound, max_bound};
+    }
+
     void
     KPartiteGraph::merge(int K)
     {

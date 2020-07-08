@@ -180,6 +180,7 @@ namespace treeck {
         void prune(BoxFilter filter);
 
         std::tuple<FloatT, FloatT> propagate_outputs();
+        std::tuple<FloatT, FloatT> basic_bound() const;
         void merge(int K);
         //void simplify(FloatT max_err, bool overestimate); // vertices must be in DFS order, left to right!
         void sort_asc();
