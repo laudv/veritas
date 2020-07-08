@@ -323,7 +323,7 @@ class CalhouseScaleExperiment(ScaleExperiment):
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
         return opt
 
-class CovtypScaleExperiment(ScaleExperiment):
+class CovtypeScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/covtype"
 
     def load_model(self, num_trees, depth, lr):
@@ -383,6 +383,52 @@ class CovtypScaleExperiment(ScaleExperiment):
 
         return opt
 
+class Mnist2vallScaleExperiment(ScaleExperiment):
+    result_dir = "tests/experiments/scale/mnist"
+
+    def load_model(self, num_trees, depth, lr):
+        print("\n=== NEW MODEL ===")
+        model_name = f"mnist2vall-{num_trees}-{depth}-{lr}.xgb"
+        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
+            X, y = util.load_openml("mnist", data_id=554)
+            y = (y==2)
+            num_examples, num_features = X.shape
+            Itrain, Itest = util.train_test_indices(num_examples)
+            print(f"training model learning_rate={lr}, depth={depth}, num_trees={num_trees}")
+            params = {
+                "objective": "binary:logistic",
+                "tree_method": "hist",
+                "max_depth": depth,
+                "learning_rate": lr,
+                "eval_metric": "error",
+                "seed": 53589,
+            }
+
+            dtrain = xgb.DMatrix(X[Itrain], y[Itrain], missing=None)
+            dtest = xgb.DMatrix(X[Itest], y[Itest], missing=None)
+            model = xgb.train(params, dtrain, num_boost_round=num_trees,
+                              #early_stopping_rounds=5,
+                              evals=[(dtrain, "train"), (dtest, "test")])
+            with open(os.path.join(self.result_dir, model_name), "wb") as f:
+                pickle.dump(model, f)
+            #with open(os.path.join(RESULT_DIR, "model.json"), "w") as f:
+            #    model.dump_model(f, dump_format="json")
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.result_dir, model_name), "rb") as f:
+                model = pickle.load(f)
+
+        self.model = model
+        self.at = addtree_from_xgb_model(model)
+        self.at.base_score = 0
+
+    def get_opt(self):
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
+        return opt
+
+
+
+
 def calhouse(outfile, max_memory):
     exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=60)
     exp.confirm_write_results(outfile)
@@ -397,7 +443,21 @@ def calhouse(outfile, max_memory):
     exp.write_results()
 
 def covtype(outfile, max_memory):
-    exp = CovtypScaleExperiment(max_memory=max_memory, max_time=60, num_threads=4)
+    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=60, num_threads=4)
+    exp.confirm_write_results(outfile)
+    exp.do_merge = False
+    for num_trees, depth, lr in [
+            (20, 5, 1.0),
+            (50, 5, 0.5),
+            (100, 5, 0.25),
+            (100, 6, 0.25),
+            ]:
+        exp.load_model(num_trees, depth, lr)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
+    exp.write_results()
+
+def mnist2vall(outfile, max_memory):
+    exp = Mnist2vallScaleExperiment(max_memory=max_memory, max_time=60, num_threads=4)
     exp.confirm_write_results(outfile)
     exp.do_merge = False
     for num_trees, depth, lr in [
@@ -415,5 +475,6 @@ if __name__ == "__main__":
     max_memory = 1024*1024*1024*int(sys.argv[2])
 
     #calhouse(output_file, max_memory)
-    covtype(output_file, max_memory)
+    #covtype(output_file, max_memory)
+    mnist2vall(output_file, max_memory)
 
