@@ -215,7 +215,7 @@ class ScaleExperiment:
         return data
 
     def _extract_info(self, opt, dur):
-        sols = opt.solutions()
+        sols = util.filter_solutions(opt)
         data = {
             "solutions": [(s.output0, s.output1) for s in sols],
             "bounds": opt.bounds,
@@ -443,7 +443,7 @@ def calhouse(outfile, max_memory):
     exp.write_results()
 
 def covtype(outfile, max_memory):
-    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=60, num_threads=4)
+    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = False
     for num_trees, depth, lr in [
@@ -475,6 +475,6 @@ if __name__ == "__main__":
     max_memory = 1024*1024*1024*int(sys.argv[2])
 
     #calhouse(output_file, max_memory)
-    #covtype(output_file, max_memory)
-    mnist2vall(output_file, max_memory)
+    covtype(output_file, max_memory)
+    #mnist2vall(output_file, max_memory)
 

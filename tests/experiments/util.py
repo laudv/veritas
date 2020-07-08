@@ -6,6 +6,8 @@ import xgboost as xgb
 import math
 from sklearn.datasets import fetch_openml
 
+from treeck import Optimizer, ParallelOptimizer
+
 def load_openml(name, data_id, task="classification", force=False):
     """
     calhouse: data_id=537
@@ -82,9 +84,24 @@ def get_ara_bound(epses, sols, task="maximize"):
 def filter_solutions(*args):
     if len(args) == 1 and isinstance(args[0], ParallelOptimizer):
         sols = []
+        paropt = args[0]
         for i in range(paropt.num_threads()):
             sols += paropt.worker_opt(i).solutions
             #sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
+        sols.sort(key=lambda s: s.output_difference(), reverse=True)
+        sols.sort(key=lambda s: s.eps) # stable sort
+
+        fsols = [] # filtered solutions
+        prev_eps = -1
+        for s in sols:
+            if s.eps != prev_eps:
+                fsols.append(s)
+            prev_eps = s.eps
+        return fsols
+
+    if len(args) == 1 and isinstance(args[0], Optimizer):
+        opt = args[0]
+        sols = opt.solutions()
         sols.sort(key=lambda s: s.output_difference(), reverse=True)
         sols.sort(key=lambda s: s.eps) # stable sort
 

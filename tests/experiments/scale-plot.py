@@ -189,7 +189,7 @@ if __name__ == "__main__":
     #plot_output2("tests/experiments/scale-covtype/neww5G_merge0", "tests/experiments/scale-covtype/new5G_merge0")
     #plot_output2("tests/experiments/scale-mnist/output2_dp", "tests/experiments/scale-mnist/output2")
     #plot_output3("tests/experiments/scale/calhouse/test")
-    #plot_output3("tests/experiments/scale/covtype/test", "tests/experiments/scale/covtype/test_mt")
-    plot_output3("tests/experiments/scale/mnist/test_mt")
+    plot_output3("tests/experiments/scale/covtype/test_small", "tests/experiments/scale/covtype/test_small_mt")
+    #plot_output3("tests/experiments/scale/mnist/test_mt")
 
 
