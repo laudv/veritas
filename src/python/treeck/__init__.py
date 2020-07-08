@@ -235,14 +235,15 @@ class Optimizer:
         if self.use_dyn_prog_heuristic:
             self.opt.use_dyn_prog_heuristic()
         self.start_time = timeit.default_timer()
-        self.bounds = [(self.g0.basic_bound()[0], self.g1.basic_bound()[1])]
+        self.bounds = [self.current_basic_bounds()]
         self.memory = [self.current_memory()]
         self.times = [0.0]
 
-    def merge(self, K):
+    def merge(self, K, reset_optimizer=True):
         self.g0.merge(K)
         self.g1.merge(K)
-        self.reset_optimizer()
+        if reset_optimizer:
+            self.reset_optimizer()
 
     def prune_example(self, example, delta):
         self.g0.prune_example(self.feat_info, example, delta)
@@ -289,6 +290,7 @@ class Optimizer:
     def num_box_filter_calls(self): return self.opt.num_box_filter_calls
     def num_candidate_cliques(self): return self.opt.num_candidate_cliques()
     def current_bounds(self): return self.opt.current_bounds()
+    def current_basic_bounds(self): return (self.g0.basic_bound()[0], self.g1.basic_bound()[1])
     def get_mem_size(self): return self.opt.get_mem_size()
     def get_eps(self): return self.opt.get_eps()
     def set_eps(self, new_eps): self.opt.set_eps(new_eps)

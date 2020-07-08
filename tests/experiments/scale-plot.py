@@ -118,6 +118,7 @@ def plot_output3(*args):
         except:
             axs = np.array([axs])
 
+        oot_pos = 0
         for oo, ax, name in zip(oos, axs, filenames):
             print(f"\n== {name}: num_trees {oo['num_trees']}, depth {oo['depth']} ==")
 
@@ -137,7 +138,7 @@ def plot_output3(*args):
             else:
                 print("A* best:", min(b0))
                 ax.axhline(min(b0), color="gray", linestyle=(0, (2, 4)), linewidth=1, label="A* best")
-            ax.plot(tb0, b0, label="A*")
+            ax.plot(tb0, b0, label="A* upper")
 
             # ARA*
             tb1 = oo["ara*"]["bounds_times"]
@@ -151,9 +152,12 @@ def plot_output3(*args):
             s1f = [b-a for a, b in zip(s10f, s11f)]
             b1f = util.flatten_ara_upper(s1f, e1f)
 
-            l1, = ax.plot(ts1f, s1f, ".-", label="ARA*")
+            l1, = ax.plot(ts1f, s1f, ".-", label="ARA* lower")
             ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
-            print("ARA* best:", max(s1f))
+            #ylim_lo, ylim_hi = ax.get_ylim()
+            #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
+            #ax.set_ylim(bottom=ylim_lo)
+            print("ARA* best:", max(s1f), "eps:", max(e1))
             if len(s0) == 0:
                 ax.axhline(max(s1f), color="gray", linestyle=(4, (2, 4)), linewidth=1, label="ARA* best")
 
@@ -163,13 +167,15 @@ def plot_output3(*args):
                 t2 = oo["merge"]["times"]
                 oot = oo["merge"]["oot"]
                 oom = oo["merge"]["oom"]
+                tt = oo["merge"]["total_time"]
                 mt = oo["max_time"]
+                mm = oo["max_memory"]
                 l2, = ax.plot(t2, b2, "x-", label="Merge")
                 if oot or oom:
-                    label = "OOM" if oom else "OOT"
-                    t3 = max(max(tb0), max(ts1), max(t2))
-                    ax.plot([t2[-1], t3], [b2[-1], b2[-1]], ":", color=l2.get_color())
-                    ax.text(t3, b2[-1], f"{label} ({mt}s)", horizontalalignment='right',
+                    label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
+                    oot_pos = max(oot_pos, max(tb0), max(ts1), max(t2))
+                    ax.plot([t2[-1], oot_pos], [b2[-1], b2[-1]], ":", color=l2.get_color())
+                    ax.text(oot_pos, b2[-1], label, horizontalalignment='right',
                             verticalalignment='bottom', color=l2.get_color())
 
                 print("merge best:", max(b2), "OOT:", oot, "OOM:", oom, "optimal", oo["merge"]["optimal"])
@@ -179,17 +185,15 @@ def plot_output3(*args):
             ax.legend()
             ax.set_xlabel("time");
             ax.set_ylabel("model output");
+            ax.set_ylim(top=1.1*max(b0));
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
 
         plt.show()
 
 
 if __name__ == "__main__":
-    #plot_output("tests/experiments/scale/output5G")
-    #plot_output2("tests/experiments/scale-covtype/neww5G_merge0", "tests/experiments/scale-covtype/new5G_merge0")
-    #plot_output2("tests/experiments/scale-mnist/output2_dp", "tests/experiments/scale-mnist/output2")
-    #plot_output3("tests/experiments/scale/calhouse/test")
-    plot_output3("tests/experiments/scale/covtype/test_small", "tests/experiments/scale/covtype/test_small_mt")
-    #plot_output3("tests/experiments/scale/mnist/test_mt")
+    #plot_output3("tests/experiments/scale/covtype/single_16gb", "tests/experiments/scale/covtype/multi16_4g")
+    #plot_output3("tests/experiments/scale/mnist/single_16gb", "tests/experiments/scale/mnist/multi32_4gb")
+    plot_output3("tests/experiments/scale/mnist/example_single_16gb", "tests/experiments/scale/mnist/example_multi32_2gb")
 
 
