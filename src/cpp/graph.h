@@ -34,16 +34,19 @@ namespace treeck {
     // True = [0.0, 1.0), False = [1.0, 2.0), Everything = [0.0, 2.0)
     // (like a LtSplit(_, 1.0))
     using DomainT = RealDomain;
-    const DomainT BOOL_DOMAIN{static_cast<FloatT>(0.0), static_cast<FloatT>(2.0)};
-    const DomainT TRUE_DOMAIN{static_cast<FloatT>(0.0), static_cast<FloatT>(1.0)};
-    const DomainT FALSE_DOMAIN{static_cast<FloatT>(1.0), static_cast<FloatT>(2.0)};
+    const DomainT BOOL_DOMAIN;
+    const DomainT TRUE_DOMAIN{-std::numeric_limits<FloatT>::infinity(), static_cast<FloatT>(1.0)};
+    const DomainT FALSE_DOMAIN{static_cast<FloatT>(1.0), std::numeric_limits<FloatT>::infinity()};
     using DomainPair = std::pair<int, DomainT>;
 
 
     class DomainBox;
+    class DomainStore;
 
     using BoxFilter = const std::function<bool(const DomainBox&)>&;
     using BoxFilterT = std::remove_const_t<std::remove_reference_t<BoxFilter>>;
+    using BoxAdjuster = const std::function<bool(DomainStore&)>&;
+    using BoxAdjusterT = std::remove_const_t<std::remove_reference_t<BoxAdjuster>>;
     using FeatIdMapper = const std::function<int(FeatId)>&;
 
 
@@ -96,6 +99,8 @@ namespace treeck {
         void set_max_mem_size(size_t max_mem);
 
         DomainStore();
+
+        inline std::vector<DomainPair>& workspace() { return workspace_; };
 
         /** get the workspace DomainBox. (!) don't store somewhere, pointers in DomainBox not stable */
         DomainBox get_workspace_box() const;
@@ -277,20 +282,20 @@ namespace treeck {
         template <size_t instance>
         bool update_clique(Clique& c);
 
-        template <size_t instance, typename BF, typename OF>
-        void step_instance(Clique&& c, BF box_filter, OF output_filter);
+        template <size_t instance, typename BA, typename OF>
+        void step_instance(Clique&& c, BA box_adjuster, OF output_filter);
 
-        template <size_t instance, typename BF, typename OF>
-        void expand_clique_instance(Clique&& c, BF box_filter, OF output_filter);
+        template <size_t instance, typename BA, typename OF>
+        void expand_clique_instance(Clique&& c, BA box_adjuster, OF output_filter);
 
-        template <typename BF, typename OF>
-        bool step_aux(BF bf, OF of);
+        template <typename BA, typename OF>
+        bool step_aux(BA box_adjuster, OF of);
 
     public:
         two_of<size_t> num_steps;
         size_t num_update_fails;
         size_t num_rejected;
-        size_t num_box_filter_calls;
+        size_t num_box_checks;
 
         std::vector<Solution> solutions;
         double start_time;
@@ -306,13 +311,13 @@ namespace treeck {
         void use_dyn_prog_heuristic();
 
         bool step();
-        bool step(BoxFilter bf);
-        bool step(BoxFilter bf, FloatT max_output0, FloatT min_output1);
-        bool step(BoxFilter bf, FloatT min_output_difference);
+        bool step(BoxAdjuster ba);
+        bool step(BoxAdjuster ba, FloatT max_output0, FloatT min_output1);
+        bool step(BoxAdjuster ba, FloatT min_output_difference);
         bool steps(int howmany);
-        bool steps(int howmany, BoxFilter bf);
-        bool steps(int howmany, BoxFilter bf, FloatT max_output0, FloatT min_output1);
-        bool steps(int howmany, BoxFilter bf, FloatT min_output_difference);
+        bool steps(int howmany, BoxAdjuster ba);
+        bool steps(int howmany, BoxAdjuster ba, FloatT max_output0, FloatT min_output1);
+        bool steps(int howmany, BoxAdjuster ba, FloatT min_output_difference);
 
         two_of<FloatT> current_bounds() const;
         size_t num_candidate_cliques() const;
@@ -341,7 +346,7 @@ namespace treeck {
         std::mutex mutex_;
         std::condition_variable cv_;
         std::optional<KPartiteGraphOptimize> opt_;
-        BoxFilterT box_filter_;
+        BoxAdjusterT box_adjuster_;
 
     public:
         Worker();
@@ -378,13 +383,13 @@ namespace treeck {
         const KPartiteGraphOptimize& worker_opt(size_t worker) const;
 
         template <typename F>
-        inline void set_box_filter(F f)
+        inline void set_box_adjuster(F f)
         {
             for (size_t i = 0; i < num_threads(); ++i)
             {
                 Worker& w = workers_->at(i);
                 std::lock_guard guard(w.mutex_);
-                w.box_filter_ = f();
+                w.box_adjuster_ = f();
             }
         }
         void set_output_limits(FloatT max_output0, FloatT min_output1);
@@ -395,6 +400,22 @@ namespace treeck {
         size_t num_candidate_cliques() const;
         two_of<FloatT> current_bounds() const;
         std::vector<size_t> current_memory() const;
+    };
+
+    class EasyBoxAdjuster {
+        struct OneOutOfK {
+            // if one of these features is TRUE_DOMAIN, then all others are
+            // FALSE_DOMAIN (eg. one-hot encoding)
+            std::vector<int> ids;
+        };
+        std::vector<OneOutOfK> one_out_of_ks_;
+
+        bool handle_one_out_of_k(const OneOutOfK& c,
+                std::vector<DomainPair>& workspace) const;
+
+    public:
+        bool operator()(DomainStore& store) const;
+        void add_one_out_of_k(std::vector<int> ids);
     };
 
 } /* namespace treeck */

@@ -287,7 +287,7 @@ class Optimizer:
     def num_steps(self): return self.opt.num_steps
     def num_update_fails(self): return self.opt.num_update_fails
     def num_rejected(self): return self.opt.num_rejected
-    def num_box_filter_calls(self): return self.opt.num_box_filter_calls
+    def num_box_checks(self): return self.opt.num_box_checks
     def num_candidate_cliques(self): return self.opt.num_candidate_cliques()
     def current_bounds(self): return self.opt.current_bounds()
     def current_basic_bounds(self): return (self.g0.basic_bound()[0], self.g1.basic_bound()[1])

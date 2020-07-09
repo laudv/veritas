@@ -174,8 +174,8 @@ class TestGraph(unittest.TestCase):
 
         sols0 = sorted(opt0.solutions(), key=lambda x: x.output0)
         sols1 = sorted(opt1.solutions(), key=lambda x: x.output0)
-        sols0 = sorted(sols0, key=Solution.difference) # assuming stable sort
-        sols1 = sorted(sols1, key=Solution.difference)
+        sols0 = sorted(sols0, key=Solution.output_difference) # assuming stable sort
+        sols1 = sorted(sols1, key=Solution.output_difference)
 
         for s0, s1 in zip(sols0, sols1):
             self.assertEqual(s0.output0, s1.output0)
@@ -328,7 +328,7 @@ class TestGraph(unittest.TestCase):
         #for sol in opt.solutions():
         #    print(sol)
 
-        solutions = sorted(opt.solutions(), key=Solution.difference, reverse=True)
+        solutions = sorted(opt.solutions(), key=Solution.output_difference, reverse=True)
         self.assertEqual(solutions[0].output0, 3.848149061203003)
         self.assertEqual(solutions[0].output1, 4.45944881439209)
 
@@ -467,7 +467,68 @@ class TestGraph(unittest.TestCase):
         fig.colorbar(im, ax=ax2)
         plt.show()
 
-    def multithread(self):
+    def test_one_out_of_k(self):
+        at = AddTree()
+        t = at.add_tree();
+        t.split(t.root(), 2)
+        t.split( t.left(t.root()), 1)
+        t.split(t.right(t.root()), 1)
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 3.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 4.0)
+        t = at.add_tree();
+        t.split(t.root(), 0)
+        t.set_leaf_value( t.left(t.root()), 0.0)
+        t.set_leaf_value(t.right(t.root()), 100.0)
+
+        opt = Optimizer(minimize=at)
+        eadj = EasyBoxAdjuster()
+        eadj.add_one_out_of_k([0, 1, 2])
+
+        opt.steps(50, adjuster=eadj)
+        print("\n".join([str(s.box()) for s in opt.solutions()]))
+        print("num_box_checks", opt.num_box_checks())
+
+        self.assertEqual(opt.num_solutions(), 3)
+
+    def test_one_out_of_k2(self):
+        at = AddTree()
+        t = at.add_tree();
+        t.split(t.root(), 2)
+        t.set_leaf_value( t.left(t.root()), 0.0)
+        t.set_leaf_value(t.right(t.root()), 100.0)
+        t = at.add_tree();
+        t.split(t.root(), 0)
+        t.split( t.left(t.root()), 1)
+        t.split(t.right(t.root()), 1)
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 3.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 4.0)
+        t = at.add_tree();
+        t.split(t.root(), 3)
+        t.set_leaf_value( t.left(t.root()), 0.0)
+        t.set_leaf_value(t.right(t.root()), 100.0)
+        t = at.add_tree();
+        t.split(t.root(), 4)
+        t.split( t.left(t.root()), 3)
+        t.set_leaf_value(t.right(t.root()), 100.0)
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+
+        print(at)
+
+        opt = Optimizer(minimize=at)
+        eadj = EasyBoxAdjuster()
+        eadj.add_one_out_of_k([0, 1, 2, 3, 4])
+
+        opt.steps(50, adjuster=eadj)
+        print("\n".join([str(s.box()) for s in opt.solutions()]))
+
+        self.assertEqual(opt.num_solutions(), 5)
+
+    def test_multithread(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
         opt = Optimizer(maximize=at)
         opt.steps(2)
@@ -496,7 +557,7 @@ class TestGraph(unittest.TestCase):
         opt.steps(10)
         #while timeit.default_timer() - start < 20 and opt.opt.num_solutions() == 0:
         #    opt.steps(1000)
-        #    print("opt", opt.current_bounds(), opt.opt.num_steps, opt.opt.num_box_filter_calls)
+        #    print("opt", opt.current_bounds(), opt.opt.num_steps, opt.opt.num_box_checks)
 
         print(opt.opt.num_solutions())
         print(timeit.default_timer() - start, "sec")
@@ -512,7 +573,7 @@ class TestGraph(unittest.TestCase):
                 steps_for_dur = min(1000, int(steps_for_dur * 1.5))
                 for i in range(paropt_a.num_threads()):
                     wopt = paropt_a.worker_opt(i)
-                    print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_filter_calls)
+                    print(f"worker{i}", wopt.current_bounds(), wopt.num_steps, wopt.num_box_checks)
         finally:
             paropt_a.join_all()
 

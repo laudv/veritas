@@ -28,24 +28,24 @@ void test_very_simple()
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
 
-    auto box_filter = [](const DomainBox&) {
+    auto f = [](DomainStore&) {
         return true;
     };
 
-    while (opt0.step(box_filter, 0.0001));
+    while (opt0.step(f, 0.0001));
     std::cout << "DYN_PROG:" << std::endl;
     for (auto& s : opt0.solutions)
         std::cout << s.output0 << ", " << s.output1 << " (" << s.output1 - s.output0 << ')' << "  " << s.box << std::endl;
     std::cout << "num_rejected " << opt0.num_rejected << std::endl;
-    std::cout << "num_box_filter_calls " << opt0.num_box_filter_calls << std::endl;
+    std::cout << "num_box_checks " << opt0.num_box_checks << std::endl;
     std::cout << "num_steps " << std::get<0>(opt0.num_steps) << ", " << std::get<1>(opt0.num_steps) << std::endl << std::endl;
 
-    while (opt1.step(box_filter, 0.0001));
+    while (opt1.step(f, 0.0001));
     std::cout << "RECOMPUTE:" << std::endl;
     for (auto& s : opt1.solutions)
         std::cout << s.output0 << ", " << s.output1 << " (" << s.output1 - s.output0 << ')' << "  " << s.box << std::endl;
     std::cout << "num_rejected " << opt1.num_rejected << std::endl;
-    std::cout << "num_box_filter_calls " << opt1.num_box_filter_calls << std::endl;
+    std::cout << "num_box_checks " << opt1.num_box_checks << std::endl;
     std::cout << "num_steps " << std::get<0>(opt1.num_steps) << ", " << std::get<1>(opt1.num_steps) << std::endl;
 }
 
@@ -75,11 +75,11 @@ void test_simple()
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
 
-    auto box_filter = [](const DomainBox&) {
+    auto f = [](DomainStore&) {
         return true;
     };
 
-    while (opt.step(box_filter, 0.0));
+    while (opt.step(f, 0.0));
 
     for (auto& s : opt.solutions)
     {
@@ -106,11 +106,11 @@ void test_img()
 
     std::cout << g0 << std::endl;
 
-    auto box_filter = [](const DomainBox&) {
+    auto f = [](DomainStore&) {
         return true;
     };
 
-    while (opt.step(box_filter, 50.4, 0.0))
+    while (opt.step(f, 50.4, 0.0))
     {
         std::cout << "================================ " << std::endl;
     }
@@ -193,7 +193,7 @@ void test_parallel(const char *model)
     //    << std::endl;
 
     KPartiteGraphParOpt paropt(6, opt);
-    paropt.set_box_filter([]() { return [](const DomainBox&) { return true; }; });
+    //paropt.set_box_filter([]() { return [](const DomainBox&) { return true; }; });
     while (paropt.get_eps() != 1.0 || paropt.num_new_valid_solutions() == 0)
     {
         if (paropt.num_new_valid_solutions() > 0) {

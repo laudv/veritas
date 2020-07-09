@@ -247,7 +247,7 @@ namespace treeck {
         if (it == workspace_.end())
         {
             workspace_.push_back({ id, dom });
-            for (size_t i = workspace_.size() - 1; i > 0; --i) // ids sorted
+            for (int i = workspace_.size() - 1; i > 0; --i) // ids sorted
                 if (workspace_[i-1].first > workspace_[i].first)
                     std::swap(workspace_[i-1], workspace_[i]);
             //std::sort(workspace_.begin(), workspace_.end(),
@@ -986,7 +986,7 @@ namespace treeck {
         , num_steps{0, 0}
         , num_update_fails{0}
         , num_rejected{0}
-        , num_box_filter_calls{0}
+        , num_box_checks{0}
         , solutions{}
         , start_time{0.0}
     {
@@ -1021,7 +1021,7 @@ namespace treeck {
         , num_steps{0, 0}
         , num_update_fails{0}
         , num_rejected{0}
-        , num_box_filter_calls{0}
+        , num_box_checks{0}
         , solutions{}
         , start_time{other.start_time}
     {
@@ -1212,9 +1212,9 @@ namespace treeck {
         return false; // out of compatible vertices in `indep_set`
     }
 
-    template <size_t instance, typename BF, typename OF>
+    template <size_t instance, typename BA, typename OF>
     void
-    KPartiteGraphOptimize::step_instance(Clique&& c, BF box_filter, OF output_filter)
+    KPartiteGraphOptimize::step_instance(Clique&& c, BA box_adjuster, OF output_filter)
     {
         // invariant: Clique `c` can be extended
         //
@@ -1237,10 +1237,10 @@ namespace treeck {
         const Vertex& v = graph.sets_[ci.indep_set].vertices.at(ci.vertex);
         ci.vertex += 1; // (!) mark the merged vertex as 'used' in old clique, so we dont merge it again later
 
-        // prepare `new_c`
-        DomainBox new_box = store_.combine_and_push(v.box, c.box);
+        // prepare `new_c`, we do this before update_clique(c)
+        store_.combine_in_workspace(v.box, c.box); // box of new clique in store_ workspace
         Clique new_c = {
-            new_box,
+            store_.get_workspace_box(), // temporary workspace box (for update_box), update later!
             c.instance // copy
         };
         CliqueInstance& new_ci = std::get<instance>(new_c.instance);
@@ -1273,23 +1273,23 @@ namespace treeck {
         }
 
         // == UPDATE NEW
+        ++num_box_checks;
+        bool is_valid_box = box_adjuster(store_);
         bool is_solution0 = is_instance_solution<0>(new_c);
         bool is_solution1 = is_instance_solution<1>(new_c);
 
         // check if this newly created clique is a solution
         if (is_solution0 && is_solution1)
         {
-            bool is_valid_box = box_filter(new_c.box);
             bool is_valid_output = output_filter(
                     get0(new_c.instance).output,
                     get1(new_c.instance).output);
-
-            ++num_box_filter_calls;
 
             if (is_valid_box && is_valid_output)
             {
                 //std::cout << "SOLUTION (" << solutions.size() << "): " << new_c << std::endl;
                 // push back to queue so it is 'extracted' when it actually is the optimal solution
+                new_c.box = store_.push_workspace();
                 pq_push(std::move(new_c));
             }
             else
@@ -1300,22 +1300,20 @@ namespace treeck {
         }
         else
         {
-            // update both instances of `new_c`, the new box can change
-            // `output_bound`s and `vertex`s values for both instances!
-            // (update_clique updates `output_bound` and `vertex`)
+            // update both instances of `new_c`, the new box could result in
+            // changes in `output_bound`s and `vertex`s values for both
+            // instances!  (update_clique updates `output_bound` and `vertex`)
             bool is_valid0 = is_solution0 || update_clique<0>(new_c);
             bool is_valid1 = is_solution1 || update_clique<1>(new_c);
-            bool is_valid_box = box_filter(new_c.box);
             bool is_valid_output = output_filter(
                     get0(new_c.instance).output_bound(),
                     get1(new_c.instance).output_bound());
-
-            ++num_box_filter_calls;
 
             // there is a valid extension of this clique and it is not yet a solution -> push to `cliques_`
             if (is_valid0 && is_valid1 && is_valid_box && is_valid_output)
             {
                 //std::cout << "push new: " << new_c << std::endl;
+                new_c.box = store_.push_workspace();
                 pq_push(std::move(new_c));
             }
             else
@@ -1329,16 +1327,16 @@ namespace treeck {
         std::get<instance>(num_steps)++;
     }
 
-    template <size_t instance, typename BF, typename OF>
+    template <size_t instance, typename BA, typename OF>
     void
-    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BF box_filter, OF output_filter)
+    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BA box_adjuster, OF output_filter)
     {
         // invariant: Clique `c` can be extended
         //
         // Things to do (cont. step_aux)
         // 3. find first next vertex with box that overlaps c.box
         // 4. construct combined box
-        // 5. check box_filter, if reject, continue to next vertex
+        // 5. run box_adjuster, if reject, continue to next vertex
         // 6. compute heuristic
         // 7. check output_filter, if reject, continue to next vertex
         // 8. push new clique to pq
@@ -1357,8 +1355,8 @@ namespace treeck {
             DomainBox box = store_.get_workspace_box();
 
             // do we accept this new box?
-            ++num_box_filter_calls;
-            if (!box_filter(box))
+            ++num_box_checks;
+            if (!box_adjuster(store_))
             {
                 ++num_rejected;
                 continue;
@@ -1431,9 +1429,9 @@ namespace treeck {
         std::get<instance>(num_steps)++;
     }
 
-    template <typename BF, typename OF>
+    template <typename BA, typename OF>
     bool
-    KPartiteGraphOptimize::step_aux(BF box_filter, OF output_filter)
+    KPartiteGraphOptimize::step_aux(BA box_adjuster, OF output_filter)
     {
         if (cliques_.empty())
             return false;
@@ -1446,7 +1444,7 @@ namespace treeck {
         //std::cout << "ncliques=" << cliques_.size()
         //    << ", num_steps=" << get0(num_steps) << ":" << get1(num_steps)
         //    << ", num_update_fails=" << num_update_fails
-        //    << ", num_box_filter_calls=" << num_box_filter_calls
+        //    << ", num_box_checks=" << num_box_checks
         //    << std::endl;
 
         Clique c = pq_pop();
@@ -1493,17 +1491,17 @@ namespace treeck {
         {
             //std::cout << "step(): extend graph0" << std::endl;
             if (heuristic_type == DYN_PROG)
-                step_instance<0>(std::move(c), box_filter, output_filter);
+                step_instance<0>(std::move(c), box_adjuster, output_filter);
             else
-                expand_clique_instance<0>(std::move(c), box_filter, output_filter);
+                expand_clique_instance<0>(std::move(c), box_adjuster, output_filter);
         }
         else if (!is_solution1)
         {
             //std::cout << "step(): extend graph1" << std::endl;
             if (heuristic_type == DYN_PROG)
-                step_instance<1>(std::move(c), box_filter, output_filter);
+                step_instance<1>(std::move(c), box_adjuster, output_filter);
             else
-                expand_clique_instance<1>(std::move(c), box_filter, output_filter);
+                expand_clique_instance<1>(std::move(c), box_adjuster, output_filter);
         }
         else // there's a solution in `cliques_` -> shouldn't happen
         {
@@ -1518,33 +1516,33 @@ namespace treeck {
     {
         // accept everything
         return step_aux(
-                [](const DomainBox&) { return true; },
+                [](DomainStore&) { return true; },
                 [](FloatT, FloatT) { return true; });
     }
 
     bool
-    KPartiteGraphOptimize::step(BoxFilter bf)
+    KPartiteGraphOptimize::step(BoxAdjuster ba)
     {
         return step_aux(
-                [&bf](const DomainBox& box) { return bf(box); },
+                ba,
                 [](FloatT, FloatT) { return true; }); // accept all outputs
     }
 
     bool
-    KPartiteGraphOptimize::step(BoxFilter bf, FloatT max_output0, FloatT min_output1)
+    KPartiteGraphOptimize::step(BoxAdjuster ba, FloatT max_output0, FloatT min_output1)
     {
         return step_aux(
-                [&bf](const DomainBox& box) { return bf(box); },
+                ba,
                 [max_output0, min_output1](FloatT output0, FloatT output1) {
                     return output0 <= max_output0 && output1 >= min_output1;
                 });
     }
 
     bool
-    KPartiteGraphOptimize::step(BoxFilter bf, FloatT min_output_difference)
+    KPartiteGraphOptimize::step(BoxAdjuster ba, FloatT min_output_difference)
     {
         return step_aux(
-                [&bf](const DomainBox& box) { return bf(box); },
+                ba,
                 [min_output_difference](FloatT output0, FloatT output1) {
                     return (output1 - output0) >= min_output_difference;
                 });
@@ -1559,26 +1557,26 @@ namespace treeck {
     }
 
     bool
-    KPartiteGraphOptimize::steps(int K, BoxFilter bf)
+    KPartiteGraphOptimize::steps(int K, BoxAdjuster ba)
     {
         for (int i=0; i<K; ++i)
-            if (!step(bf)) return false;
+            if (!step(ba)) return false;
         return true;
     }
 
     bool
-    KPartiteGraphOptimize::steps(int K, BoxFilter bf, FloatT max_output0, FloatT min_output1)
+    KPartiteGraphOptimize::steps(int K, BoxAdjuster ba, FloatT max_output0, FloatT min_output1)
     {
         for (int i=0; i<K; ++i)
-            if (!step(bf, max_output0, min_output1)) return false;
+            if (!step(ba, max_output0, min_output1)) return false;
         return true;
     }
 
     bool
-    KPartiteGraphOptimize::steps(int K, BoxFilter bf, FloatT min_output_difference)
+    KPartiteGraphOptimize::steps(int K, BoxAdjuster ba, FloatT min_output_difference)
     {
         for (int i=0; i<K; ++i)
-            if (!step(bf, min_output_difference)) return false;
+            if (!step(ba, min_output_difference)) return false;
         return true;
     }
 
@@ -1618,7 +1616,7 @@ namespace treeck {
 
     // PARALLEL
     
-    static bool default_box_filter(const DomainBox&) { return true; }
+    static bool DEFAULT_BOX_ADJUSTER(DomainStore&) { return true; }
 
     Worker::Worker()
         : index_(0)
@@ -1630,7 +1628,7 @@ namespace treeck {
         , mutex_{}
         , cv_{}
         , opt_{}
-        , box_filter_{default_box_filter}
+        , box_adjuster_{DEFAULT_BOX_ADJUSTER}
     {}
 
     SharedWorkerInfo::SharedWorkerInfo(FloatT eps)
@@ -1674,20 +1672,20 @@ namespace treeck {
                 if (!std::isnan(info->max_output0)) // assume min_output1 is also valid
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_filter_,
+                        if (!self->opt_->steps(100, self->box_adjuster_,
                                     info->max_output0, info->min_output1))
                             break;
                 }
                 else if (!std::isnan(info->min_output_difference))
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_filter_, info->min_output_difference))
+                        if (!self->opt_->steps(100, self->box_adjuster_, info->min_output_difference))
                             break;
                 }
                 else
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_filter_))
+                        if (!self->opt_->steps(100, self->box_adjuster_))
                             break;
                 }
                 self->num_millisecs_ = 0;
@@ -1990,6 +1988,141 @@ namespace treeck {
         for (size_t i = 0; i < num_threads(); ++i)
             mem.push_back(workers_->at(i).opt_->store().get_mem_size());
         return mem;
+    }
+
+
+
+    // ------------------------------------------------------------------------
+
+    bool
+    EasyBoxAdjuster::handle_one_out_of_k(const OneOutOfK& c,
+                std::vector<DomainPair>& workspace) const
+    {
+        // check if there's a TRUE feature, if so, we need to make all others FALSE
+        auto it1 = c.ids.begin();
+        int true_id = -1;
+        int unset_id = -1;
+        bool unset_in_box = false;
+        size_t num_false = 0;
+        std::cout << "EasyBoxAdjuster: " << DomainBox(&*workspace.begin(), &*workspace.end()) << std::endl;
+        for (size_t i = 0; i < workspace.size() && it1 != c.ids.end();)
+        {
+            if (workspace[i].first == *it1)
+            {
+                if (!workspace[i].second.overlaps(FALSE_DOMAIN)) // not FALSE domain, assume TRUE domain
+                {                                                // -> set all other to false
+                    if (true_id != -1)
+                    {
+                        std::cout << "EasyBoxAdjuster: more than one true, REJECT!" << std::endl;
+                        return false; // two TRUE features, and there can only be one
+                    }
+                    true_id = *it1;
+                }
+                else if (!workspace[i].second.overlaps(TRUE_DOMAIN)) // not TRUE, so must be FALSE
+                    ++num_false;
+                else { unset_id = *it1; unset_in_box = true; } // not not FALSE and not not TRUE, so must be anything
+                ++i; ++it1;
+            }
+            else if (workspace[i].first > *it1) { unset_id = *it1; ++it1; }
+            else ++i;
+        }
+
+        std::cout << "EasyBoxAdjuster: num_false: " << num_false << std::endl;
+
+        int num_added = 0;
+
+        // CASE 0: everything is FALSE, that's invalid
+        if (num_false == c.ids.size())
+        {
+            std::cout << "EasyBoxAdjuster: all false, REJECT!" << std::endl;
+            return false;
+        }
+
+        // CASE 1: everything except one is set to FALSE -> write TRUE in the one
+        else if (true_id == -1 && num_false + 1 == c.ids.size())
+        {
+            if (it1 == c.ids.end() - 1) unset_id = *(c.ids.end() - 1);
+            if (unset_id == -1) throw std::runtime_error("assertion error");
+
+            if (unset_in_box)
+            {
+                for (auto&& [id, dom] : workspace)
+                {
+                    if (id == unset_id)
+                    {
+                        dom = TRUE_DOMAIN;
+                        std::cout << "EasyBoxAdjuster: " << id << " set to TRUE" << std::endl;
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                std::cout << "EasyBoxAdjuster: " << unset_id << " set to TRUE (added)" << std::endl;
+                workspace.push_back({ unset_id, TRUE_DOMAIN });
+                for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
+                    if (workspace[i-1].first > workspace[i].first)
+                        std::swap(workspace[i-1], workspace[i]);
+            }
+        }
+
+        // CASE 2: we found one TRUE -> write FALSE in all others
+        else if (true_id != -1)
+        {
+            it1 = c.ids.begin();
+            size_t end = workspace.size();
+            for (size_t i = 0; i < end && it1 != c.ids.end();)
+            {
+                if (workspace[i].first == *it1)
+                {
+                    if (workspace[i].first != true_id)
+                        workspace[i].second = FALSE_DOMAIN;
+                    ++i; ++it1;
+                }
+                else if (workspace[i].first > *it1) // we skipped over *it1, so it's not in the box -> add it
+                {
+                    workspace.push_back({*it1, FALSE_DOMAIN});
+                    std::cout << "EasyBoxAdjuster: setting " << *it1 << " to FALSE" << std::endl;
+                    ++it1;
+                    ++num_added;
+                }
+                else ++i;
+            }
+        }
+
+        // CASE 3: anything in between: we can't do much, no unit propagation possible
+        else {}
+
+        // make sure all newly added ids are in sorted order
+        if (num_added > 0)
+        {
+            std::sort(workspace.begin(), workspace.end(),
+                    [](const DomainPair& a, const DomainPair& b) {
+                        return a.first < b.first;
+                    });
+        }
+
+        return true;
+    }
+
+    bool
+    EasyBoxAdjuster::operator()(DomainStore& store) const
+    {
+        auto& workspace = store.workspace();
+        for (const OneOutOfK& c : one_out_of_ks_)
+        {
+            if (!handle_one_out_of_k(c, workspace))
+                return false;
+        }
+
+        return true; // accept the box in the store's workspace
+    }
+
+    void
+    EasyBoxAdjuster::add_one_out_of_k(std::vector<int> ids)
+    {
+        std::sort(ids.begin(), ids.end());
+        one_out_of_ks_.push_back({ids});
     }
 
 } /* namespace treeck */

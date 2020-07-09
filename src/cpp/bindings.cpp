@@ -598,7 +598,7 @@ PYBIND11_MODULE(pytreeck, m) {
         .def_readonly("num_steps", &KPartiteGraphOptimize::num_steps)
         .def_readonly("num_update_fails", &KPartiteGraphOptimize::num_update_fails)
         .def_readonly("num_rejected", &KPartiteGraphOptimize::num_rejected)
-        .def_readonly("num_box_filter_calls", &KPartiteGraphOptimize::num_box_filter_calls)
+        .def_readonly("num_box_checks", &KPartiteGraphOptimize::num_box_checks)
         .def_readonly("solutions", &KPartiteGraphOptimize::solutions)
         .def_readonly("start_time", &KPartiteGraphOptimize::start_time)
         .def("num_solutions", [](const KPartiteGraphOptimize& o) { return o.solutions.size(); })
@@ -616,13 +616,16 @@ PYBIND11_MODULE(pytreeck, m) {
             //    //std::cout << opt.solver->get_z3() << std::endl;
             //    return res;
             //};
-            auto f_noz3 = [](const DomainBox&) { return true; };
+            EasyBoxAdjuster eadj;
+            if (kwargs.contains("adjuster"))
+                eadj = kwargs["adjuster"].cast<EasyBoxAdjuster>();
+
             if (kwargs.contains("min_output_difference"))
             {
                 FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
                 //if (opt.solver)
                 //    return opt.opt->steps(nsteps, f, min_output_difference);
-                return opt.steps(nsteps, f_noz3, min_output_difference);
+                return opt.steps(nsteps, eadj, min_output_difference);
             }
             else
             {
@@ -634,7 +637,7 @@ PYBIND11_MODULE(pytreeck, m) {
                     min_output1 = kwargs["min_output"].cast<FloatT>();
                 //if (opt.solver)
                 //    return opt.opt->steps(nsteps, f, max_output0, min_output1);
-                return opt.steps(nsteps, f_noz3, max_output0, min_output1);
+                return opt.steps(nsteps, eadj, max_output0, min_output1);
             }
         })
         .def("parallel", [](const KPartiteGraphOptimize& opt, size_t num_threads) {
@@ -679,6 +682,11 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("xvar_name", &SMTSolver::xvar_name)
         ;
 
+
+    py::class_<EasyBoxAdjuster>(m, "EasyBoxAdjuster")
+        .def(py::init<>())
+        .def("add_one_out_of_k", &EasyBoxAdjuster::add_one_out_of_k)
+        ;
 
 
 } /* PYBIND11_MODULE */
