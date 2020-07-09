@@ -4,6 +4,11 @@ import pickle
 import multiprocessing as mp
 
 import xgboost as xgb
+import pandas as pd
+import numpy as np
+
+from sklearn.metrics import accuracy_score, mean_absolute_error
+from scipy.special import logit, expit as logistic
 
 from treeck import *
 from treeck.xgb import addtree_from_xgb_model
@@ -219,8 +224,10 @@ class ScaleExperiment:
 
     def _extract_info(self, opt, dur):
         sols = util.filter_solutions(opt)
+        best_sol = max(sols, key=lambda s: s.output_difference())
         data = {
             "solutions": [(s.output0, s.output1) for s in sols],
+            "best_solution_box": {i: (d.lo, d.hi) for i, d in best_sol.box().items()},
             "bounds": opt.bounds,
             "bounds_times": opt.times,
             "memory": opt.memory,
@@ -440,6 +447,99 @@ class Mnist2vallScaleExperiment(ScaleExperiment):
         return opt
 
 
+class SoccerScaleExperiment(ScaleExperiment):
+    result_dir = "tests/experiments/scale/soccer"
+
+    def load_data(self):
+        soccer_data_path = os.environ["SOCCER_DATA"]
+        X = pd.read_hdf(soccer_data_path, "features")
+        X["goalscore_team"] = X["goalscore_team"].astype(np.float32)
+        X["goalscore_opponent"] = X["goalscore_opponent"].astype(np.float32)
+        X["goalscore_diff"] = X["goalscore_diff"].astype(np.float32)
+        y = pd.read_hdf(soccer_data_path, "labels").astype(np.float32)["scores"]
+
+        X = X.drop(columns=["dist_to_goal_a0", "dist_to_goal_a1",
+            "angle_to_goal_a0", "angle_to_goal_a1"])
+        X = X.drop(columns=["time_seconds_a0", "time_seconds_a1"])
+        X = X.drop(columns=["dx_a0", "dy_a0", "dx_a1", "dy_a1"])
+        X = X.drop(columns=["period_id_a0", "period_id_a1", "time_delta_1"])
+        X = X.drop(columns=["goalscore_opponent"])
+        X = X.drop(columns=["time_seconds_overall_a1"])
+
+        return X, y
+
+    def load_model(self, num_trees, depth, lr):
+        print("\n=== NEW MODEL ===")
+        model_name = f"soccer-{num_trees}-{depth}-{lr}.xgb"
+        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
+            print(f"training model learning_rate={lr}, depth={depth}, num_trees={num_trees}")
+            X, y = self.load_data()
+
+            num_examples, num_features = X.shape
+            Itrain, Itest = util.train_test_indices(num_examples, seed=1)
+            Xtrain = X.iloc[Itrain]
+            ytrain = y.to_numpy()[Itrain]
+            Xtest = X.iloc[Itest]
+            ytest = y.to_numpy()[Itest]
+            dtrain = xgb.DMatrix(Xtrain, label=ytrain, missing=None)
+            dtest = xgb.DMatrix(Xtest, label=ytest, missing=None)
+            ybar = ytrain.mean()
+            base_score = 0.5*np.log((1.0+ybar) / (1.0-ybar))
+
+            params = {
+                "learning_rate": lr,
+                "max_depth": depth,
+                "objective": "binary:logistic",
+                "base_score": base_score,
+                "eval_metric": "auc",
+                "tree_method": "hist",
+                "colsample_bytree": 1.0,
+                "subsample": 1.0,
+                "seed": 1
+            }
+            model = xgb.train(params, dtrain, num_trees, [(dtrain, "train"), (dtest, "test")])
+                    #early_stopping_rounds=10)
+            ytest_hat = model.predict(dtest)
+
+            self.feat2id_dict = dict([(v, i) for i, v in enumerate(X.columns)])
+            self.feat2id = lambda x: self.feat2id_dict[x]
+            self.id2feat = lambda i: X.columns[i]
+
+            self.at = addtree_from_xgb_model(model, self.feat2id)
+            self.at.base_score = 0.0
+
+            pred = model.predict(dtest, output_margin=True)
+            pred_at = np.array(self.at.predict(Xtest[:1000]))
+
+            brier_score = sum((logistic(pred) - ytest)**2) / len(pred)
+            print("brier score", brier_score)
+
+            mae = mean_absolute_error(pred[:1000], pred_at)
+            print(f"mae model difference {mae} before base_score")
+
+            self.at.base_score = -mae
+            pred_at = np.array(self.at.predict(Xtest[:1000].to_numpy()))
+            mae = mean_absolute_error(pred[:1000], pred_at)
+            print(f"mae model difference {mae}")
+
+            with open(os.path.join(self.result_dir, model_name), "wb") as f:
+                pickle.dump(model, f)
+            self.at.write(os.path.join(self.result_dir, f"{model_name}.at"))
+
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.result_dir, model_name), "rb") as f:
+                model = pickle.load(f)
+            self.at = AddTree.read(os.path.join(self.result_dir, f"{model_name}.at"))
+
+        #print(num_examples, num_features)
+
+    def get_opt(self):
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
+        print("num_vertices", opt.g1.num_vertices())
+        return opt
+
+
 
 
 def calhouse(outfile, max_memory):
@@ -486,11 +586,24 @@ def mnist2vall(outfile, max_memory):
         exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
     exp.write_results()
 
+def soccer(outfile, max_memory):
+    exp = SoccerScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
+    exp.confirm_write_results(outfile)
+    exp.do_merge = False
+    for num_trees, depth, lr in [
+            (10, 5, 1.0),
+            #(50, 5, 0.35)
+            ]:
+        exp.load_model(num_trees, depth, lr)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
+    exp.write_results()
+
 if __name__ == "__main__":
     output_file = sys.argv[1]
     max_memory = 1024*1024*1024*int(sys.argv[2])
 
     #calhouse(output_file, max_memory)
     #covtype(output_file, max_memory)
-    mnist2vall(output_file, max_memory)
+    #mnist2vall(output_file, max_memory)
+    soccer(output_file, max_memory)
 

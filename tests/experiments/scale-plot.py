@@ -178,7 +178,7 @@ def plot_output3(*args):
                     ax.text(oot_pos, b2[-1], label, horizontalalignment='right',
                             verticalalignment='bottom', color=l2.get_color())
 
-                print("merge best:", max(b2), "OOT:", oot, "OOM:", oom, "optimal", oo["merge"]["optimal"])
+                print("merge best:", min(b2), "OOT:", oot, "OOM:", oom, "optimal", oo["merge"]["optimal"])
 
             # plot details
             ax.set_title(f"num_trees={oo['num_trees']}, depth={oo['depth']} ({name})")
@@ -194,6 +194,10 @@ def plot_output3(*args):
 if __name__ == "__main__":
     #plot_output3("tests/experiments/scale/covtype/single_16gb", "tests/experiments/scale/covtype/multi16_4g")
     #plot_output3("tests/experiments/scale/mnist/single_16gb", "tests/experiments/scale/mnist/multi32_4gb")
-    plot_output3("tests/experiments/scale/mnist/example_single_16gb", "tests/experiments/scale/mnist/example_multi32_2gb")
+    #plot_output3("tests/experiments/scale/mnist/example_single_16gb", "tests/experiments/scale/mnist/example_multi32_2gb")
+    #plot_output3("tests/experiments/scale/mnist/example6_1_16g",
+    #        "tests/experiments/scale/mnist/example6_1_32g",
+    #        "tests/experiments/scale/mnist/example6_32_3g")
 
+    plot_output3("tests/experiments/scale/soccer/test_small")
 
