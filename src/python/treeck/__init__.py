@@ -193,6 +193,8 @@ class Optimizer:
             self.at1 = kwargs["maximize"]
             del kwargs["maximize"]
 
+        self.adjuster = EasyBoxAdjuster()
+
         matches = set()
         match_is_reuse = True
         if "matches" in kwargs:
@@ -298,7 +300,7 @@ class Optimizer:
         return self.g0.get_mem_size() + self.g1.get_mem_size() + self.opt.get_mem_size()
 
     def steps(self, num_steps, **kwargs):
-        value = self.opt.steps(num_steps, **kwargs)
+        value = self.opt.steps(num_steps, adjuster=self.adjuster, **kwargs)
         self.bounds.append(self.current_bounds())
         self.memory.append(self.current_memory())
         self.times.append(timeit.default_timer() - self.start_time)
@@ -313,6 +315,7 @@ class ParallelOptimizer:
     def __init__(self, opt, num_threads):
         self.opt = opt
         self.paropt = self.opt.opt.parallel(num_threads)
+        self.paropt.set_box_adjuster(self.opt.adjuster)
         self.bounds = opt.bounds + [self.paropt.current_bounds()]
         self.memory = opt.memory + [self.paropt.current_memory()]
         self.start_time = opt.start_time + opt.times[-1]

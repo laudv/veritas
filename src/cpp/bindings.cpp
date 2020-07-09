@@ -656,6 +656,9 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("set_eps", &KPartiteGraphParOpt::set_eps)
         .def("join_all", &KPartiteGraphParOpt::join_all)
         .def("worker_opt", &KPartiteGraphParOpt::worker_opt)
+        .def("set_box_adjuster", [](KPartiteGraphParOpt& paropt, EasyBoxAdjuster adj) {
+            paropt.set_box_adjuster([adj]() { return adj; }); // copy
+        })
         .def("steps_for", [](KPartiteGraphParOpt& opt, size_t num_millisecs, py::kwargs kwargs) {
             if (kwargs.contains("min_output_difference"))
             {

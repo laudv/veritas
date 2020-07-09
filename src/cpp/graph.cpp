@@ -2004,7 +2004,7 @@ namespace treeck {
         int unset_id = -1;
         bool unset_in_box = false;
         size_t num_false = 0;
-        std::cout << "EasyBoxAdjuster: " << DomainBox(&*workspace.begin(), &*workspace.end()) << std::endl;
+        //std::cout << "EasyBoxAdjuster: " << DomainBox(&*workspace.begin(), &*workspace.end()) << std::endl;
         for (size_t i = 0; i < workspace.size() && it1 != c.ids.end();)
         {
             if (workspace[i].first == *it1)
@@ -2027,7 +2027,7 @@ namespace treeck {
             else ++i;
         }
 
-        std::cout << "EasyBoxAdjuster: num_false: " << num_false << std::endl;
+        //std::cout << "EasyBoxAdjuster: num_false: " << num_false << std::endl;
 
         int num_added = 0;
 
@@ -2121,8 +2121,11 @@ namespace treeck {
     void
     EasyBoxAdjuster::add_one_out_of_k(std::vector<int> ids)
     {
-        std::sort(ids.begin(), ids.end());
-        one_out_of_ks_.push_back({ids});
+        if (!ids.empty())
+        {
+            std::sort(ids.begin(), ids.end());
+            one_out_of_ks_.push_back({ids});
+        }
     }
 
 } /* namespace treeck */

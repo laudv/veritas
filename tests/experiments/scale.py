@@ -48,12 +48,12 @@ class ScaleExperiment:
         stop = start + self.max_time
         while not done and opt.num_solutions() == 0 \
                 and timeit.default_timer() < stop:
-            try:
-                done = not opt.steps(num_steps)
-                num_steps = min(self.max_num_steps, num_steps * 2)
-            except:
-                print("A* OUT OF MEMORY")
-                done = True
+            #try:
+            done = not opt.steps(num_steps)
+            num_steps = min(self.max_num_steps, num_steps * 2)
+            #except:
+            #    print("A* OUT OF MEMORY")
+            #    done = True
         dur = timeit.default_timer() - start
         return opt, dur
 
@@ -450,6 +450,33 @@ class Mnist2vallScaleExperiment(ScaleExperiment):
 class SoccerScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/soccer"
 
+    action0 = ['type_pass_a0', 'type_cross_a0', 'type_throw_in_a0',
+            'type_freekick_crossed_a0', 'type_freekick_short_a0',
+            'type_corner_crossed_a0', 'type_corner_short_a0',
+            'type_take_on_a0', 'type_foul_a0', 'type_tackle_a0',
+            'type_interception_a0', 'type_shot_a0', 'type_shot_penalty_a0',
+            'type_shot_freekick_a0', 'type_keeper_save_a0',
+            'type_keeper_claim_a0', 'type_keeper_punch_a0',
+            'type_keeper_pick_up_a0', 'type_clearance_a0',
+            'type_bad_touch_a0', 'type_non_action_a0', 'type_dribble_a0',
+            'type_goalkick_a0', 'type_receival_a0', 'type_out_a0',
+            'type_offside_a0', 'type_goal_a0', 'type_owngoal_a0',
+            'type_yellow_card_a0', 'type_red_card_a0']
+    action1 = ['type_pass_a1', 'type_cross_a1', 'type_throw_in_a1',
+            'type_freekick_crossed_a1', 'type_freekick_short_a1',
+            'type_corner_crossed_a1', 'type_corner_short_a1',
+            'type_take_on_a1', 'type_foul_a1', 'type_tackle_a1',
+            'type_interception_a1', 'type_shot_a1', 'type_shot_penalty_a1',
+            'type_shot_freekick_a1', 'type_keeper_save_a1',
+            'type_keeper_claim_a1', 'type_keeper_punch_a1',
+            'type_keeper_pick_up_a1', 'type_clearance_a1',
+            'type_bad_touch_a1', 'type_non_action_a1', 'type_dribble_a1',
+            'type_goalkick_a1', 'type_receival_a1', 'type_out_a1',
+            'type_offside_a1', 'type_goal_a1', 'type_owngoal_a1',
+            'type_yellow_card_a1', 'type_red_card_a1']
+    bodypart0 = ['bodypart_foot_a0', 'bodypart_head_a0', 'bodypart_other_a0']
+    bodypart1 = ['bodypart_foot_a1', 'bodypart_head_a1', 'bodypart_other_a1']
+
     def load_data(self):
         soccer_data_path = os.environ["SOCCER_DATA"]
         X = pd.read_hdf(soccer_data_path, "features")
@@ -497,18 +524,18 @@ class SoccerScaleExperiment(ScaleExperiment):
                 "subsample": 1.0,
                 "seed": 1
             }
-            model = xgb.train(params, dtrain, num_trees, [(dtrain, "train"), (dtest, "test")])
+            self.model = xgb.train(params, dtrain, num_trees, [(dtrain, "train"), (dtest, "test")])
                     #early_stopping_rounds=10)
-            ytest_hat = model.predict(dtest)
+            ytest_hat = self.model.predict(dtest)
 
             self.feat2id_dict = dict([(v, i) for i, v in enumerate(X.columns)])
             self.feat2id = lambda x: self.feat2id_dict[x]
             self.id2feat = lambda i: X.columns[i]
 
-            self.at = addtree_from_xgb_model(model, self.feat2id)
+            self.at = addtree_from_xgb_model(self.model, self.feat2id)
             self.at.base_score = 0.0
 
-            pred = model.predict(dtest, output_margin=True)
+            pred = self.model.predict(dtest, output_margin=True)
             pred_at = np.array(self.at.predict(Xtest[:1000]))
 
             brier_score = sum((logistic(pred) - ytest)**2) / len(pred)
@@ -523,19 +550,39 @@ class SoccerScaleExperiment(ScaleExperiment):
             print(f"mae model difference {mae}")
 
             with open(os.path.join(self.result_dir, model_name), "wb") as f:
-                pickle.dump(model, f)
+                pickle.dump(self.model, f)
             self.at.write(os.path.join(self.result_dir, f"{model_name}.at"))
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "wb") as f:
+                pickle.dump({"feat2id": self.feat2id_dict}, f)
 
         else:
             print(f"loading model from file: {model_name}")
             with open(os.path.join(self.result_dir, model_name), "rb") as f:
-                model = pickle.load(f)
+                self.model = pickle.load(f)
             self.at = AddTree.read(os.path.join(self.result_dir, f"{model_name}.at"))
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "rb") as f:
+                self.meta = pickle.load(f)
 
         #print(num_examples, num_features)
 
     def get_opt(self):
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
+        u = lambda n: self.meta["feat2id"][n]
+        used_ids1 = set(opt.feat_info.feat_ids1())
+        action0_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.action0]
+        action0_ids = list(list(used_ids1.intersection(action0_ids)))
+        action1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.action1]
+        action1_ids = list(list(used_ids1.intersection(action1_ids)))
+        bodypart0_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart0]
+        bodypart0_ids = list(list(used_ids1.intersection(bodypart0_ids)))
+        bodypart1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart1]
+        bodypart1_ids = list(list(used_ids1.intersection(bodypart1_ids)))
+
+        opt.adjuster.add_one_out_of_k(action0_ids)
+        opt.adjuster.add_one_out_of_k(action1_ids)
+        opt.adjuster.add_one_out_of_k(bodypart0_ids)
+        opt.adjuster.add_one_out_of_k(bodypart1_ids)
+
         print("num_vertices", opt.g1.num_vertices())
         return opt
 
@@ -595,6 +642,7 @@ def soccer(outfile, max_memory):
             #(50, 5, 0.35)
             ]:
         exp.load_model(num_trees, depth, lr)
+        print("meta", exp.meta)
         exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
     exp.write_results()
 
