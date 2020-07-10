@@ -199,6 +199,6 @@ if __name__ == "__main__":
     #plot_output3("tests/experiments/scale/mnist/example6_1_16g",
     #        "tests/experiments/scale/mnist/example6_1_32g",
     #        "tests/experiments/scale/mnist/example6_32_3g")
-    plot_output3("tests/experiments/scale/soccer/test")
+    plot_output3("tests/experiments/scale/soccer/testabc")
     #plot_output3("tests/experiments/scale/soccer/test50_no_single", "tests/experiments/scale/soccer/test50_no_4thr")
 

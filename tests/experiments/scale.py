@@ -581,10 +581,10 @@ class SoccerScaleExperiment(ScaleExperiment):
         bodypart1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart1]
         bodypart1_ids = list(list(used_ids1.intersection(bodypart1_ids)))
 
-        #opt.adjuster.add_one_out_of_k(action0_ids)
-        #opt.adjuster.add_one_out_of_k(action1_ids)
-        #opt.adjuster.add_one_out_of_k(bodypart0_ids)
-        #opt.adjuster.add_one_out_of_k(bodypart1_ids)
+        opt.adjuster.add_one_out_of_k(action0_ids)
+        opt.adjuster.add_one_out_of_k(action1_ids)
+        opt.adjuster.add_one_out_of_k(bodypart0_ids)
+        opt.adjuster.add_one_out_of_k(bodypart1_ids)
 
         print("num_vertices", opt.g1.num_vertices())
         return opt
@@ -642,6 +642,8 @@ def soccer(outfile, max_memory):
     exp.do_merge = False
     for num_trees, depth, lr in [
             #(10, 5, 1.0),
+            #(20, 5, 0.8),
+            #(30, 5, 0.5),
             (50, 5, 0.35)
             ]:
         exp.load_model(num_trees, depth, lr)

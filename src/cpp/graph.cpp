@@ -998,9 +998,6 @@ namespace treeck {
             // use dynamic programming algorithm for the first bound
             output_bound0 = get0(g0.propagate_outputs()); // min output bound of first clique
             output_bound1 = get1(g1.propagate_outputs()); // max output bound of first clique
-
-            g0.sort_bound_asc(); // choose vertex with smaller `output` first
-            g1.sort_bound_desc(); // choose vertex with larger `output` first
         }
         else
         {
@@ -1008,6 +1005,9 @@ namespace treeck {
             output_bound0 = get0(g0.basic_bound());
             output_bound1 = get1(g1.basic_bound());
         }
+
+        g0.sort_bound_asc(); // choose vertex with smaller `output` first
+        g1.sort_bound_desc(); // choose vertex with larger `output` first
 
         bool unsat = std::isinf(output_bound0) || std::isinf(output_bound1); // some empty indep set
         if (!unsat && (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0))
@@ -1354,8 +1354,6 @@ namespace treeck {
         const KPartiteGraph& graph = std::get<instance>(graph_);
         const auto& next_set = graph.sets_[ci.indep_set];
 
-        static int count = 0; // TODO remove
-
         for (const Vertex& v : next_set.vertices)
         {
             if (!c.box.overlaps(v.box))
@@ -1363,7 +1361,6 @@ namespace treeck {
 
             store_.clear_workspace();
             store_.combine_in_workspace(c.box, v.box);
-            DomainBox box = store_.get_workspace_box();
 
             // do we accept this new box?
             ++num_box_checks;
@@ -1372,6 +1369,8 @@ namespace treeck {
                 ++num_rejected;
                 continue;
             }
+
+            DomainBox box = store_.get_workspace_box(); // box_adjuster can modify begin_ and end_
 
             // recompute heuristic for `instance`
             FloatT heuristic0 = 0.0;
@@ -1389,18 +1388,17 @@ namespace treeck {
             // recompute heuristic for `other_instance`
             FloatT heuristic1 = 0.0;
             constexpr size_t plusone1 = instance == 1 ? 1 : 0;
-            std::cout << "   HEUR: ";
             for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + plusone1;
                     it < get1(graph_).sets_.cend() && !std::isinf(heuristic1); ++it)
             {
                 FloatT max = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
                 for (const Vertex& w : it->vertices)
+                {
                     if (box.overlaps(w.box))
                         max = std::max(w.output, max);
+                }
                 heuristic1 += max;
-                std::cout << "+" << max;
             }
-            std::cout << std::endl;
 
             // some set where none of the vertices overlap box -> don't add to pq
             if (std::isinf(heuristic0) || std::isinf(heuristic1))
@@ -1421,13 +1419,39 @@ namespace treeck {
             new_ci.output += v.output;
             new_ci.indep_set += 1;
             // new_ci.vertex is unused
-            new_ci.vertex = ++count; // TODO remove
 
             // update heuristics
             get0(new_c.instance).heuristic = heuristic0;
             get1(new_c.instance).heuristic = heuristic1;
 
             //std::cout << "new_c " << new_c << std::endl;
+
+            if (new_c.output_difference() > c.output_difference() + 10)
+            {
+                std::cout << "greater "
+                    << new_c.output_difference()
+                    << " > "
+                    << c.output_difference()
+                    << std::endl;
+                std::cout << new_c << std::endl;
+                std::cout << c << std::endl;
+                constexpr size_t plusone1 = instance == 1 ? 1 : 0;
+                for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + plusone1;
+                        it < get1(graph_).sets_.cend() && !std::isinf(heuristic1); ++it)
+                {
+                    FloatT max0 = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
+                    FloatT max1 = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
+                    for (const Vertex& w : it->vertices)
+                    {
+                        if (w.box.overlaps(c.box))
+                            max0 = std::max(max0, w.output);
+                        if (w.box.overlaps(box))
+                            max1 = std::max(max1, w.output);
+                    }
+                    std::cout << max0 << ", " << max1 << std::endl;
+                }
+                //throw std::runtime_error("woops");
+            }
 
             // do we accept these output bounds?
             if (!output_filter(
@@ -1438,11 +1462,6 @@ namespace treeck {
                 continue;
             }
 
-            std::cout << "   ADDED id " << count
-                << " output: " << new_ci.output << ", bound "
-                << new_c.output_difference(cmp_.eps) << ", "
-                << (new_c.output_difference(cmp_.eps)-c.output_difference(cmp_.eps))
-                << std::endl;
             pq_push(std::move(new_c));
         }
 
@@ -1469,17 +1488,17 @@ namespace treeck {
 
         Clique c = pq_pop();
         FloatT current_bound = c.output_difference(cmp_.eps);
-        std::cout << "clique: " << get0(c.instance).indep_set << ", " << get1(c.instance).indep_set
-            << ", bound: " << current_bound
-            << ", last bound: " << last_bound_
-            << ", diff: " << (current_bound - last_bound_)
-            << ", reldiff: " << (current_bound - last_bound_)/last_bound_
-            << ", id: " << get0(c.instance).vertex << ", " << get1(c.instance).vertex
-            << std::endl;
         
         // allow for some floating point errors
         if (cmp_.eps == 1.0 && (current_bound - last_bound_)/std::abs(last_bound_) > 1e-5)
-            throw std::runtime_error("assertion error: bound increased for same eps");
+        {
+            std::cout << "!!! current " << current_bound << ",  previous " << last_bound_ << std::endl;
+            std::cout << get1(c.instance).indep_set
+                << ", " << get1(c.instance).output
+                << ", " << get1(c.instance).heuristic
+                << std::endl;
+            //throw std::runtime_error("assertion error: bound increased for same eps");
+        }
         last_bound_ = current_bound;
 
         bool is_solution0 = is_instance_solution<0>(c);
@@ -2046,7 +2065,7 @@ namespace treeck {
                 {                                                // -> set all other to false
                     if (true_id != -1)
                     {
-                        std::cout << "EasyBoxAdjuster: more than one true, REJECT!" << std::endl;
+                        //std::cout << "EasyBoxAdjuster: more than one true, REJECT!" << std::endl;
                         return false; // two TRUE features, and there can only be one
                     }
                     true_id = *it1;
@@ -2067,7 +2086,7 @@ namespace treeck {
         // CASE 0: everything is FALSE, that's invalid
         if (num_false == c.ids.size())
         {
-            std::cout << "EasyBoxAdjuster: all false, REJECT!" << std::endl;
+            //std::cout << "EasyBoxAdjuster: all false, REJECT!" << std::endl;
             return false;
         }
 
@@ -2084,14 +2103,14 @@ namespace treeck {
                     if (id == unset_id)
                     {
                         dom = TRUE_DOMAIN;
-                        std::cout << "EasyBoxAdjuster: " << id << " set to TRUE" << std::endl;
+                        //std::cout << "EasyBoxAdjuster: " << id << " set to TRUE" << std::endl;
                         break;
                     }
                 }
             }
             else
             {
-                std::cout << "EasyBoxAdjuster: " << unset_id << " set to TRUE (added)" << std::endl;
+                //std::cout << "EasyBoxAdjuster: " << unset_id << " set to TRUE (added)" << std::endl;
                 workspace.push_back({ unset_id, TRUE_DOMAIN });
                 for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
                     if (workspace[i-1].first > workspace[i].first)
@@ -2115,7 +2134,7 @@ namespace treeck {
                 else if (workspace[i].first > *it1) // we skipped over *it1, so it's not in the box -> add it
                 {
                     workspace.push_back({*it1, FALSE_DOMAIN});
-                    std::cout << "EasyBoxAdjuster: setting " << *it1 << " to FALSE" << std::endl;
+                    //std::cout << "EasyBoxAdjuster: setting " << *it1 << " to FALSE" << std::endl;
                     ++it1;
                     ++num_added;
                 }
