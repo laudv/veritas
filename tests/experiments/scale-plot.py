@@ -142,24 +142,25 @@ def plot_output3(*args):
 
             # ARA*
             tb1 = oo["ara*"]["bounds_times"]
-            b1  = [x[1]-x[0] for x in oo["ara*"]["bounds"]]
-            ts1 = oo["ara*"]["sol_times"]
-            s10  = [x[0] for x in oo["ara*"]["solutions"]]
-            s11  = [x[1] for x in oo["ara*"]["solutions"]]
-            e1  = oo["ara*"]["epses"]
-            d1 = oo["ara*"]["total_time"]
-            s10f, s11f, ts1f, e1f = util.filter_solutions(s10, s11, ts1, e1)
-            s1f = [b-a for a, b in zip(s10f, s11f)]
-            b1f = util.flatten_ara_upper(s1f, e1f)
+            if len(oo["ara*"]["solutions"]) > 0:
+                b1  = [x[1]-x[0] for x in oo["ara*"]["bounds"]]
+                ts1 = oo["ara*"]["sol_times"]
+                s10  = [x[0] for x in oo["ara*"]["solutions"]]
+                s11  = [x[1] for x in oo["ara*"]["solutions"]]
+                e1  = oo["ara*"]["epses"]
+                d1 = oo["ara*"]["total_time"]
+                s10f, s11f, ts1f, e1f = util.filter_solutions(s10, s11, ts1, e1)
+                s1f = [b-a for a, b in zip(s10f, s11f)]
+                b1f = util.flatten_ara_upper(s1f, e1f)
 
-            l1, = ax.plot(ts1f, s1f, ".-", label="ARA* lower")
-            ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
-            #ylim_lo, ylim_hi = ax.get_ylim()
-            #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
-            #ax.set_ylim(bottom=ylim_lo)
-            print("ARA* best:", max(s1f), "eps:", max(e1))
-            if len(s0) == 0:
-                ax.axhline(max(s1f), color="gray", linestyle=(4, (2, 4)), linewidth=1, label="ARA* best")
+                l1, = ax.plot(ts1f, s1f, ".-", label="ARA* lower")
+                ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
+                #ylim_lo, ylim_hi = ax.get_ylim()
+                #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
+                #ax.set_ylim(bottom=ylim_lo)
+                print("ARA* best:", max(s1f), "eps:", max(e1))
+                if len(s0) == 0:
+                    ax.axhline(max(s1f), color="gray", ls=(4, (2, 4)), lw=1, label="ARA* best")
 
             # merge
             if "merge" in oo:
@@ -173,7 +174,7 @@ def plot_output3(*args):
                 l2, = ax.plot(t2, b2, "x-", label="Merge")
                 if oot or oom:
                     label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
-                    oot_pos = max(oot_pos, max(tb0), max(ts1), max(t2))
+                    oot_pos = max(oot_pos, max(tb0), max(tb1), max(t2))
                     ax.plot([t2[-1], oot_pos], [b2[-1], b2[-1]], ":", color=l2.get_color())
                     ax.text(oot_pos, b2[-1], label, horizontalalignment='right',
                             verticalalignment='bottom', color=l2.get_color())
@@ -198,6 +199,6 @@ if __name__ == "__main__":
     #plot_output3("tests/experiments/scale/mnist/example6_1_16g",
     #        "tests/experiments/scale/mnist/example6_1_32g",
     #        "tests/experiments/scale/mnist/example6_32_3g")
-
-    plot_output3("tests/experiments/scale/soccer/test_small", "tests/experiments/scale/soccer/test123")
+    plot_output3("tests/experiments/scale/soccer/test")
+    #plot_output3("tests/experiments/scale/soccer/test50_no_single", "tests/experiments/scale/soccer/test50_no_4thr")
 

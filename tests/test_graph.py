@@ -46,7 +46,7 @@ class TestGraph(unittest.TestCase):
         print(g0)
         g1 = KPartiteGraph(at, finfo, 1)
         print(g1)
-        opt = KPartiteGraphOptimize(g0, g1)
+        opt = KPartiteGraphOptimize(g0, g1, KPartiteGraphOptimizeHeuristic.RECOMPUTE)
         notdone = opt.steps(100, min_output=3.5)
         self.assertFalse(notdone)
         self.assertEqual(opt.num_solutions(), 2)
@@ -129,6 +129,28 @@ class TestGraph(unittest.TestCase):
         opt.prune_example([1.2, 10.0, True], 0.5)
         self.assertEqual(opt.g0.num_vertices_in_set(0), 2)
         self.assertEqual(opt.g0.num_vertices_in_set(1), 1)
+
+    def test_neg_leafs(self):
+        at = AddTree()
+        t = at.add_tree();
+        t.split(t.root(), 1)
+        t.set_leaf_value( t.left(t.root()), 1)
+        t.set_leaf_value(t.right(t.root()), 1)
+        t = at.add_tree();
+        t.split(t.root(), 0)
+        t.set_leaf_value( t.left(t.root()), 1)
+        t.set_leaf_value(t.right(t.root()), 1)
+        t = at.add_tree();
+        t.split(t.root(), 0)
+        t.set_leaf_value( t.left(t.root()), -10)
+        t.set_leaf_value(t.right(t.root()), -20)
+        t = at.add_tree()
+        t.split(t.root(), 2)
+        t.set_leaf_value( t.left(t.root()), 1)
+        t.set_leaf_value(t.right(t.root()), 1)
+
+        opt = Optimizer(maximize=at)
+        opt.steps(100) # should not fail because "assertion error: bound increase for same eps"
         
     def test_three_trees_dynprog(self):
         at = AddTree()
@@ -244,7 +266,7 @@ class TestGraph(unittest.TestCase):
         m, M = min(ys), max(ys)
         #img = np.array(ys).reshape((100, 100))
 
-        opt = Optimizer(maximize=at)
+        opt = Optimizer(maximize=at, use_dyn_prog_heuristic=False)
         opt.prune_smt("""
 (assert (>= {g0} 50))
 (assert (< {g0} 60))
@@ -314,6 +336,37 @@ class TestGraph(unittest.TestCase):
         solutions = opt.solutions();
         print(solutions)
         plot_img_solutions(imghat, solutions[0:1]);
+
+
+    def test_img_ara(self): # with two instances
+        with open("tests/models/xgb-img-easy-values.json") as f:
+            ys = json.load(f)
+        imghat = np.array(ys).reshape((100, 100))
+        img = imageio.imread("tests/data/img.png")
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+
+        opt = Optimizer(maximize=at)#, use_dyn_prog_heuristic=True)
+
+        opt.set_eps(0.1)
+        while opt.num_solutions() == 0:
+            if not opt.steps(1):
+                print("no solution")
+                break
+        opt.set_eps(0.5)
+        while opt.num_solutions() == 1:
+            if not opt.steps(1):
+                print("no solution")
+                break
+        opt.set_eps(1.0)
+        while opt.num_solutions() == 2:
+            if not opt.steps(1):
+                print("no solution")
+                break
+
+        sols = opt.solutions()
+        self.assertTrue(sols[0].output_difference() <= sols[1].output_difference())
+        self.assertTrue(sols[1].output_difference() <= sols[2].output_difference())
+        plot_img_solutions(imghat, sols);
 
     def test_calhouse(self):
         at = AddTree.read("tests/models/xgb-calhouse-easy.json")
@@ -483,10 +536,9 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.root()), 100.0)
 
         opt = Optimizer(minimize=at)
-        eadj = EasyBoxAdjuster()
-        eadj.add_one_out_of_k([0, 1, 2])
+        opt.adjuster.add_one_out_of_k([0, 1, 2])
 
-        opt.steps(50, adjuster=eadj)
+        opt.steps(50)
         print("\n".join([str(s.box()) for s in opt.solutions()]))
         print("num_box_checks", opt.num_box_checks())
 
@@ -520,15 +572,14 @@ class TestGraph(unittest.TestCase):
         print(at)
 
         opt = Optimizer(minimize=at)
-        eadj = EasyBoxAdjuster()
-        eadj.add_one_out_of_k([0, 1, 2, 3, 4])
+        opt.adjuster.add_one_out_of_k([0, 1, 2, 3, 4])
 
-        opt.steps(50, adjuster=eadj)
+        opt.steps(50)
         print("\n".join([str(s.box()) for s in opt.solutions()]))
 
         self.assertEqual(opt.num_solutions(), 5)
 
-    def test_multithread(self):
+    def multithread(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
         opt = Optimizer(maximize=at)
         opt.steps(2)

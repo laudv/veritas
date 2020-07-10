@@ -220,9 +220,10 @@ class Optimizer:
             self.ara_eps = kwargs["ara_eps"]
             del kwargs["ara_eps"]
 
-        self.use_dyn_prog_heuristic = False
+        self.heuristic = KPartiteGraphOptimizeHeuristic.RECOMPUTE
         if "use_dyn_prog_heuristic" in kwargs:
-            self.use_dyn_prog_heuristic = kwargs["use_dyn_prog_heuristic"]
+            if kwargs["use_dyn_prog_heuristic"]:
+                self.heuristic = KPartiteGraphOptimizeHeuristic.DYN_PROG
             del kwargs["use_dyn_prog_heuristic"]
 
         for k, v in kwargs.items():
@@ -231,11 +232,9 @@ class Optimizer:
         self.reset_optimizer()
 
     def reset_optimizer(self):
-        self.opt = KPartiteGraphOptimize(self.g0, self.g1)
+        self.opt = KPartiteGraphOptimize(self.g0, self.g1, self.heuristic)
         self.opt.set_max_mem_size(self.max_memory)
         self.opt.set_eps(self.ara_eps)
-        if self.use_dyn_prog_heuristic:
-            self.opt.use_dyn_prog_heuristic()
         self.start_time = timeit.default_timer()
         self.bounds = [self.current_basic_bounds()]
         self.memory = [self.current_memory()]

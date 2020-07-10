@@ -22,8 +22,7 @@ void test_very_simple()
     KPartiteGraph g0(at, finfo, 0);
     KPartiteGraph g1(at, finfo, 1);
 
-    KPartiteGraphOptimize opt0(g0, g1);
-    opt0.use_dyn_prog_heuristic();
+    KPartiteGraphOptimize opt0(g0, g1, KPartiteGraphOptimize::Heuristic::DYN_PROG);
     KPartiteGraphOptimize opt1(g0, g1);
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
@@ -71,7 +70,6 @@ void test_simple()
     KPartiteGraph g0(at, finfo, 0);
     KPartiteGraph g1(at, finfo, 1);
     KPartiteGraphOptimize opt(g0, g1);
-    //opt.use_dyn_prog_heuristic();
     std::cout << g0 << std::endl;
     std::cout << g1 << std::endl;
 
@@ -102,7 +100,6 @@ void test_img()
     KPartiteGraph g0(at, finfo, 0);
     KPartiteGraph dummyg;
     KPartiteGraphOptimize opt(g0, dummyg);
-    //opt.use_dyn_prog_heuristic();
 
     std::cout << g0 << std::endl;
 

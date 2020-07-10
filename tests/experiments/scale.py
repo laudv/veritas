@@ -224,10 +224,8 @@ class ScaleExperiment:
 
     def _extract_info(self, opt, dur):
         sols = util.filter_solutions(opt)
-        best_sol = max(sols, key=lambda s: s.output_difference())
         data = {
             "solutions": [(s.output0, s.output1) for s in sols],
-            "best_solution_box": {i: (d.lo, d.hi) for i, d in best_sol.box().items()},
             "bounds": opt.bounds,
             "bounds_times": opt.times,
             "memory": opt.memory,
@@ -235,6 +233,9 @@ class ScaleExperiment:
             "epses": [s.eps for s in sols],
             "total_time": dur,
         }
+        if len(sols) > 0:
+            best_sol = max(sols, key=lambda s: s.output_difference())
+            data["best_solution_box"] = {i: (d.lo, d.hi) for i, d in best_sol.box().items()},
         if isinstance(opt, Optimizer):
             data["num_vertices0"] = opt.g0.num_vertices()
             data["num_vertices1"] = opt.g1.num_vertices()
@@ -552,8 +553,9 @@ class SoccerScaleExperiment(ScaleExperiment):
             with open(os.path.join(self.result_dir, model_name), "wb") as f:
                 pickle.dump(self.model, f)
             self.at.write(os.path.join(self.result_dir, f"{model_name}.at"))
+            self.meta = {"feat2id": self.feat2id_dict}
             with open(os.path.join(self.result_dir, f"{model_name}.meta"), "wb") as f:
-                pickle.dump({"feat2id": self.feat2id_dict}, f)
+                pickle.dump(self.meta, f)
 
         else:
             print(f"loading model from file: {model_name}")
@@ -566,7 +568,8 @@ class SoccerScaleExperiment(ScaleExperiment):
         #print(num_examples, num_features)
 
     def get_opt(self):
-        opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory, use_dyn_prog_heuristic=False)
+
         u = lambda n: self.meta["feat2id"][n]
         used_ids1 = set(opt.feat_info.feat_ids1())
         action0_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.action0]
@@ -578,10 +581,10 @@ class SoccerScaleExperiment(ScaleExperiment):
         bodypart1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart1]
         bodypart1_ids = list(list(used_ids1.intersection(bodypart1_ids)))
 
-        opt.adjuster.add_one_out_of_k(action0_ids)
-        opt.adjuster.add_one_out_of_k(action1_ids)
-        opt.adjuster.add_one_out_of_k(bodypart0_ids)
-        opt.adjuster.add_one_out_of_k(bodypart1_ids)
+        #opt.adjuster.add_one_out_of_k(action0_ids)
+        #opt.adjuster.add_one_out_of_k(action1_ids)
+        #opt.adjuster.add_one_out_of_k(bodypart0_ids)
+        #opt.adjuster.add_one_out_of_k(bodypart1_ids)
 
         print("num_vertices", opt.g1.num_vertices())
         return opt
@@ -617,7 +620,7 @@ def covtype(outfile, max_memory):
     exp.write_results()
 
 def mnist2vall(outfile, max_memory):
-    exp = Mnist2vallScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
+    exp = Mnist2vallScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
     for num_trees, depth, lr in [
@@ -634,16 +637,15 @@ def mnist2vall(outfile, max_memory):
     exp.write_results()
 
 def soccer(outfile, max_memory):
-    exp = SoccerScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
+    exp = SoccerScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = False
     for num_trees, depth, lr in [
-            (10, 5, 1.0),
-            #(50, 5, 0.35)
+            #(10, 5, 1.0),
+            (50, 5, 0.35)
             ]:
         exp.load_model(num_trees, depth, lr)
-        print("meta", exp.meta)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr}, start_eps=0.01)
     exp.write_results()
 
 if __name__ == "__main__":

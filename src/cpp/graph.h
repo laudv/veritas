@@ -266,9 +266,14 @@ namespace treeck {
 
         // a vector ordered as a pq containing "partial" cliques (no max-cliques)
         std::vector<Clique> cliques_;
+        FloatT last_bound_;
         CliqueMaxDiffPqCmp cmp_;
 
-        enum { DYN_PROG, RECOMPUTE } heuristic_type;
+    public:
+        enum Heuristic { DYN_PROG, RECOMPUTE };
+
+    private:
+        Heuristic heuristic_;
 
     private:
         Clique pq_pop();
@@ -301,14 +306,13 @@ namespace treeck {
         double start_time;
 
     public:
-        KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1);
+        KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1, Heuristic heur = RECOMPUTE);
 
         /** copy states i, i+K, i+2K,... from `other` */
         KPartiteGraphOptimize(const KPartiteGraphOptimize& other, size_t i, size_t K);
 
         FloatT get_eps() const;
         void set_eps(FloatT eps, bool rebuild_heap = true);
-        void use_dyn_prog_heuristic();
 
         bool step();
         bool step(BoxAdjuster ba);

@@ -590,8 +590,14 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("__str__", [](const Solution& s) { return tostr(s); })
         ;
 
+    py::enum_<KPartiteGraphOptimize::Heuristic>(m, "KPartiteGraphOptimizeHeuristic")
+        .value("DYN_PROG", KPartiteGraphOptimize::Heuristic::DYN_PROG)
+        .value("RECOMPUTE", KPartiteGraphOptimize::Heuristic::RECOMPUTE)
+        .export_values();
+
     py::class_<KPartiteGraphOptimize>(m, "KPartiteGraphOptimize")
-        .def(py::init<KPartiteGraph&, KPartiteGraph&>(), py::keep_alive<1, 2>(), py::keep_alive<1, 3>())
+        .def(py::init<KPartiteGraph&, KPartiteGraph&, KPartiteGraphOptimize::Heuristic>(),
+                py::keep_alive<1, 2>(), py::keep_alive<1, 3>())
         .def("set_max_mem_size", [](KPartiteGraphOptimize& o, size_t m) { o.store().set_max_mem_size(m); })
         .def("get_max_mem_size", [](const KPartiteGraphOptimize& o) { return o.store().get_max_mem_size(); })
         .def("get_mem_size", [](const KPartiteGraphOptimize& o) { return o.store().get_mem_size(); })
@@ -606,7 +612,6 @@ PYBIND11_MODULE(pytreeck, m) {
         .def("num_candidate_cliques", &KPartiteGraphOptimize::num_candidate_cliques)
         .def("get_eps", &KPartiteGraphOptimize::get_eps)
         .def("set_eps", [](KPartiteGraphOptimize& o, FloatT eps) { o.set_eps(eps); })
-        .def("use_dyn_prog_heuristic", &KPartiteGraphOptimize::use_dyn_prog_heuristic)
         //.def("__str__", [](const KPartiteGraphOptimize& o) { return tostr(o); })
         .def("steps", [](KPartiteGraphOptimize& opt, int nsteps, py::kwargs kwargs) {
             //auto f = [opt](const DomainBox& box) {

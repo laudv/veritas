@@ -978,11 +978,13 @@ namespace treeck {
             << '}';
     }
 
-    KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1)
+    KPartiteGraphOptimize::KPartiteGraphOptimize(KPartiteGraph& g0, KPartiteGraph& g1,
+            Heuristic heur)
         : graph_{g0, g1} // minimize g0, maximize g1
         , cliques_()
+        , last_bound_(std::numeric_limits<FloatT>::infinity())
         , cmp_{1.0}
-        , heuristic_type(KPartiteGraphOptimize::RECOMPUTE)
+        , heuristic_(heur)
         , num_steps{0, 0}
         , num_update_fails{0}
         , num_rejected{0}
@@ -990,11 +992,22 @@ namespace treeck {
         , solutions{}
         , start_time{0.0}
     {
-        auto&& [output_bound0, max0] = g0.propagate_outputs(); // min output bound of first clique
-        auto&& [min1, output_bound1] = g1.propagate_outputs(); // max output bound of first clique
+        FloatT output_bound0, output_bound1;
+        if (heuristic_ == DYN_PROG)
+        {
+            // use dynamic programming algorithm for the first bound
+            output_bound0 = get0(g0.propagate_outputs()); // min output bound of first clique
+            output_bound1 = get1(g1.propagate_outputs()); // max output bound of first clique
 
-        g0.sort_bound_asc(); // choose vertex with smaller `output` first
-        g1.sort_bound_desc(); // choose vertex with larger `output` first
+            g0.sort_bound_asc(); // choose vertex with smaller `output` first
+            g1.sort_bound_desc(); // choose vertex with larger `output` first
+        }
+        else
+        {
+            // use a simple, basic min/max per indep.set algorithm for RECOMPUTE
+            output_bound0 = get0(g0.basic_bound());
+            output_bound1 = get1(g1.basic_bound());
+        }
 
         bool unsat = std::isinf(output_bound0) || std::isinf(output_bound1); // some empty indep set
         if (!unsat && (g0.num_independent_sets() > 0 || g1.num_independent_sets() > 0))
@@ -1017,7 +1030,7 @@ namespace treeck {
         : graph_{other.graph_}
         , cliques_{}
         , cmp_{other.cmp_.eps}
-        , heuristic_type(other.heuristic_type)
+        , heuristic_(other.heuristic_)
         , num_steps{0, 0}
         , num_update_fails{0}
         , num_rejected{0}
@@ -1063,6 +1076,8 @@ namespace treeck {
 
         if (eps != cmp_.eps)
         {
+            last_bound_ = std::numeric_limits<FloatT>::infinity(); // a jump in bounds can happen
+
             // re-add the best solution for the current eps so we can find it again with a better eps
             const Solution *best_sol = nullptr;
             for (int j = solutions.size() - 1; j >= 0; --j)
@@ -1122,14 +1137,6 @@ namespace treeck {
                 std::make_heap(cliques_.begin(), cliques_.end(), cmp_);
         }
         //std::cout << "ARA* EPS set to " << cmp_.eps << std::endl;
-    }
-
-    void
-    KPartiteGraphOptimize::use_dyn_prog_heuristic()
-    {
-        if (get0(num_steps) + get1(num_steps) != 0)
-            throw std::runtime_error("cannot change heuristic mid optimization");
-        heuristic_type = DYN_PROG;
     }
 
     bool
@@ -1295,6 +1302,7 @@ namespace treeck {
             else
             {
                 //std::cout << "discarding invalid solution" << std::endl;
+                store_.clear_workspace();
                 ++num_rejected;
             }
         }
@@ -1320,6 +1328,7 @@ namespace treeck {
             {
                 //std::cout << "reject: " << is_valid0 << is_valid1
                 //    << is_valid_box << is_valid_output << std::endl;
+                store_.clear_workspace();
                 ++num_rejected;
             }
         }
@@ -1344,6 +1353,8 @@ namespace treeck {
         const CliqueInstance& ci = std::get<instance>(c.instance);
         const KPartiteGraph& graph = std::get<instance>(graph_);
         const auto& next_set = graph.sets_[ci.indep_set];
+
+        static int count = 0; // TODO remove
 
         for (const Vertex& v : next_set.vertices)
         {
@@ -1378,6 +1389,7 @@ namespace treeck {
             // recompute heuristic for `other_instance`
             FloatT heuristic1 = 0.0;
             constexpr size_t plusone1 = instance == 1 ? 1 : 0;
+            std::cout << "   HEUR: ";
             for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + plusone1;
                     it < get1(graph_).sets_.cend() && !std::isinf(heuristic1); ++it)
             {
@@ -1386,7 +1398,9 @@ namespace treeck {
                     if (box.overlaps(w.box))
                         max = std::max(w.output, max);
                 heuristic1 += max;
+                std::cout << "+" << max;
             }
+            std::cout << std::endl;
 
             // some set where none of the vertices overlap box -> don't add to pq
             if (std::isinf(heuristic0) || std::isinf(heuristic1))
@@ -1407,6 +1421,7 @@ namespace treeck {
             new_ci.output += v.output;
             new_ci.indep_set += 1;
             // new_ci.vertex is unused
+            new_ci.vertex = ++count; // TODO remove
 
             // update heuristics
             get0(new_c.instance).heuristic = heuristic0;
@@ -1423,6 +1438,11 @@ namespace treeck {
                 continue;
             }
 
+            std::cout << "   ADDED id " << count
+                << " output: " << new_ci.output << ", bound "
+                << new_c.output_difference(cmp_.eps) << ", "
+                << (new_c.output_difference(cmp_.eps)-c.output_difference(cmp_.eps))
+                << std::endl;
             pq_push(std::move(new_c));
         }
 
@@ -1448,6 +1468,19 @@ namespace treeck {
         //    << std::endl;
 
         Clique c = pq_pop();
+        FloatT current_bound = c.output_difference(cmp_.eps);
+        std::cout << "clique: " << get0(c.instance).indep_set << ", " << get1(c.instance).indep_set
+            << ", bound: " << current_bound
+            << ", last bound: " << last_bound_
+            << ", diff: " << (current_bound - last_bound_)
+            << ", reldiff: " << (current_bound - last_bound_)/last_bound_
+            << ", id: " << get0(c.instance).vertex << ", " << get1(c.instance).vertex
+            << std::endl;
+        
+        // allow for some floating point errors
+        if (cmp_.eps == 1.0 && (current_bound - last_bound_)/std::abs(last_bound_) > 1e-5)
+            throw std::runtime_error("assertion error: bound increased for same eps");
+        last_bound_ = current_bound;
 
         bool is_solution0 = is_instance_solution<0>(c);
         bool is_solution1 = is_instance_solution<1>(c);
@@ -1490,7 +1523,7 @@ namespace treeck {
                     || is_solution1))
         {
             //std::cout << "step(): extend graph0" << std::endl;
-            if (heuristic_type == DYN_PROG)
+            if (heuristic_ == DYN_PROG)
                 step_instance<0>(std::move(c), box_adjuster, output_filter);
             else
                 expand_clique_instance<0>(std::move(c), box_adjuster, output_filter);
@@ -1498,7 +1531,7 @@ namespace treeck {
         else if (!is_solution1)
         {
             //std::cout << "step(): extend graph1" << std::endl;
-            if (heuristic_type == DYN_PROG)
+            if (heuristic_ == DYN_PROG)
                 step_instance<1>(std::move(c), box_adjuster, output_filter);
             else
                 expand_clique_instance<1>(std::move(c), box_adjuster, output_filter);
