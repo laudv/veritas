@@ -1424,35 +1424,6 @@ namespace treeck {
             get0(new_c.instance).heuristic = heuristic0;
             get1(new_c.instance).heuristic = heuristic1;
 
-            //std::cout << "new_c " << new_c << std::endl;
-
-            if (new_c.output_difference() > c.output_difference() + 10)
-            {
-                std::cout << "greater "
-                    << new_c.output_difference()
-                    << " > "
-                    << c.output_difference()
-                    << std::endl;
-                std::cout << new_c << std::endl;
-                std::cout << c << std::endl;
-                constexpr size_t plusone1 = instance == 1 ? 1 : 0;
-                for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + plusone1;
-                        it < get1(graph_).sets_.cend() && !std::isinf(heuristic1); ++it)
-                {
-                    FloatT max0 = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
-                    FloatT max1 = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
-                    for (const Vertex& w : it->vertices)
-                    {
-                        if (w.box.overlaps(c.box))
-                            max0 = std::max(max0, w.output);
-                        if (w.box.overlaps(box))
-                            max1 = std::max(max1, w.output);
-                    }
-                    std::cout << max0 << ", " << max1 << std::endl;
-                }
-                //throw std::runtime_error("woops");
-            }
-
             // do we accept these output bounds?
             if (!output_filter(
                     get0(new_c.instance).output_bound(),
@@ -1490,13 +1461,16 @@ namespace treeck {
         FloatT current_bound = c.output_difference(cmp_.eps);
         
         // allow for some floating point errors
-        if (cmp_.eps == 1.0 && (current_bound - last_bound_)/std::abs(last_bound_) > 1e-5)
+        // last_bound_'s difference to optimal solution was at most eps; scale
+        // down current_bound before comparing;
+        // with A*, eps == 1.0, so no scaling occurs
+        if ((current_bound*cmp_.eps - last_bound_)/std::abs(last_bound_) > 1e-5)
         {
-            std::cout << "!!! current " << current_bound << ",  previous " << last_bound_ << std::endl;
-            std::cout << get1(c.instance).indep_set
-                << ", " << get1(c.instance).output
-                << ", " << get1(c.instance).heuristic
-                << std::endl;
+            std::cout << "!! WARNING !! current bound " << current_bound
+                << ", " << current_bound*cmp_.eps << "(scaled)"
+                << ", previous bound " << last_bound_ 
+                << " in step " << get0(num_steps) << ", " << get1(num_steps)
+                << " with eps " << cmp_.eps << std::endl;
             //throw std::runtime_error("assertion error: bound increased for same eps");
         }
         last_bound_ = current_bound;

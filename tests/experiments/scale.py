@@ -639,7 +639,7 @@ def mnist2vall(outfile, max_memory):
 def soccer(outfile, max_memory):
     exp = SoccerScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
     exp.confirm_write_results(outfile)
-    exp.do_merge = False
+    exp.do_merge = True
     for num_trees, depth, lr in [
             #(10, 5, 1.0),
             #(20, 5, 0.8),

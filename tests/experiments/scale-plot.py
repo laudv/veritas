@@ -139,6 +139,8 @@ def plot_output3(*args):
                 print("A* best:", min(b0))
                 ax.axhline(min(b0), color="gray", linestyle=(0, (2, 4)), linewidth=1, label="A* best")
             ax.plot(tb0, b0, label="A* upper")
+            if "best_solution_box" in oo["a*"]:
+                print("A* sol: ", oo["a*"]["best_solution_box"])
 
             # ARA*
             tb1 = oo["ara*"]["bounds_times"]
@@ -159,6 +161,8 @@ def plot_output3(*args):
                 #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
                 #ax.set_ylim(bottom=ylim_lo)
                 print("ARA* best:", max(s1f), "eps:", max(e1))
+                if "best_solution_box" in oo["ara*"]:
+                    print("ARA* sol: ", oo["ara*"]["best_solution_box"])
                 if len(s0) == 0:
                     ax.axhline(max(s1f), color="gray", ls=(4, (2, 4)), lw=1, label="ARA* best")
 
@@ -199,6 +203,6 @@ if __name__ == "__main__":
     #plot_output3("tests/experiments/scale/mnist/example6_1_16g",
     #        "tests/experiments/scale/mnist/example6_1_32g",
     #        "tests/experiments/scale/mnist/example6_32_3g")
-    plot_output3("tests/experiments/scale/soccer/testabc")
+    plot_output3("tests/experiments/scale/soccer/testabc", "tests/experiments/scale/soccer/testabcd")
     #plot_output3("tests/experiments/scale/soccer/test50_no_single", "tests/experiments/scale/soccer/test50_no_4thr")
 
