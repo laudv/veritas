@@ -411,6 +411,11 @@ namespace treeck {
             // if one of these features is TRUE_DOMAIN, then all others are
             // FALSE_DOMAIN (eg. one-hot encoding)
             std::vector<int> ids;
+
+            // if strict, enforce that, if all others FALSE, the one remaining is TRUE
+            // this is not always desired, e.g. when one of the features is not
+            // used in the model
+            bool strict;
         };
         std::vector<OneOutOfK> one_out_of_ks_;
 
@@ -419,7 +424,7 @@ namespace treeck {
 
     public:
         bool operator()(DomainStore& store) const;
-        void add_one_out_of_k(std::vector<int> ids);
+        void add_one_out_of_k(std::vector<int> ids, bool strict);
     };
 
 } /* namespace treeck */

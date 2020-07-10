@@ -1029,6 +1029,7 @@ namespace treeck {
             const KPartiteGraphOptimize& other, size_t i, size_t K)
         : graph_{other.graph_}
         , cliques_{}
+        , last_bound_(other.last_bound_)
         , cmp_{other.cmp_.eps}
         , heuristic_(other.heuristic_)
         , num_steps{0, 0}
@@ -2057,15 +2058,12 @@ namespace treeck {
 
         int num_added = 0;
 
-        // CASE 0: everything is FALSE, that's invalid
-        if (num_false == c.ids.size())
-        {
-            //std::cout << "EasyBoxAdjuster: all false, REJECT!" << std::endl;
+        // CASE 0: everything is FALSE, that's invalid (strict only)
+        if (c.strict && num_false == c.ids.size())
             return false;
-        }
 
-        // CASE 1: everything except one is set to FALSE -> write TRUE in the one
-        else if (true_id == -1 && num_false + 1 == c.ids.size())
+        // CASE 1: everything except one is set to FALSE -> write TRUE in the one (strict only)
+        if (c.strict && true_id == -1 && num_false + 1 == c.ids.size())
         {
             if (it1 == c.ids.end() - 1) unset_id = *(c.ids.end() - 1);
             if (unset_id == -1) throw std::runtime_error("assertion error");
@@ -2093,7 +2091,7 @@ namespace treeck {
         }
 
         // CASE 2: we found one TRUE -> write FALSE in all others
-        else if (true_id != -1)
+        if (true_id != -1)
         {
             it1 = c.ids.begin();
             size_t end = workspace.size();
@@ -2115,9 +2113,6 @@ namespace treeck {
                 else ++i;
             }
         }
-
-        // CASE 3: anything in between: we can't do much, no unit propagation possible
-        else {}
 
         // make sure all newly added ids are in sorted order
         if (num_added > 0)
@@ -2145,12 +2140,13 @@ namespace treeck {
     }
 
     void
-    EasyBoxAdjuster::add_one_out_of_k(std::vector<int> ids)
+    EasyBoxAdjuster::add_one_out_of_k(std::vector<int> ids, bool strict)
     {
         if (!ids.empty())
         {
             std::sort(ids.begin(), ids.end());
-            one_out_of_ks_.push_back({ids});
+            std::cout << "add_one_out_of_k strict=" << strict << std::endl;
+            one_out_of_ks_.push_back({ids, strict});
         }
     }
 

@@ -536,7 +536,7 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.root()), 100.0)
 
         opt = Optimizer(minimize=at)
-        opt.adjuster.add_one_out_of_k([0, 1, 2])
+        opt.adjuster.add_one_out_of_k([0, 1, 2], True)
 
         opt.steps(50)
         print("\n".join([str(s.box()) for s in opt.solutions()]))
@@ -572,14 +572,14 @@ class TestGraph(unittest.TestCase):
         print(at)
 
         opt = Optimizer(minimize=at)
-        opt.adjuster.add_one_out_of_k([0, 1, 2, 3, 4])
+        opt.adjuster.add_one_out_of_k([0, 1, 2, 3, 4], True)
 
         opt.steps(50)
         print("\n".join([str(s.box()) for s in opt.solutions()]))
 
         self.assertEqual(opt.num_solutions(), 5)
 
-    def multithread(self):
+    def test_multithread(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
         opt = Optimizer(maximize=at)
         opt.steps(2)

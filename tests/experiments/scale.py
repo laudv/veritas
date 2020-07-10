@@ -581,10 +581,10 @@ class SoccerScaleExperiment(ScaleExperiment):
         bodypart1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart1]
         bodypart1_ids = list(list(used_ids1.intersection(bodypart1_ids)))
 
-        opt.adjuster.add_one_out_of_k(action0_ids)
-        opt.adjuster.add_one_out_of_k(action1_ids)
-        opt.adjuster.add_one_out_of_k(bodypart0_ids)
-        opt.adjuster.add_one_out_of_k(bodypart1_ids)
+        opt.adjuster.add_one_out_of_k(action0_ids, len(action0_ids) == len(SoccerScaleExperiment.action0))
+        opt.adjuster.add_one_out_of_k(action1_ids, len(action1_ids) == len(SoccerScaleExperiment.action1))
+        opt.adjuster.add_one_out_of_k(bodypart0_ids, len(bodypart0_ids) == len(SoccerScaleExperiment.bodypart0))
+        opt.adjuster.add_one_out_of_k(bodypart1_ids, len(bodypart1_ids) == len(SoccerScaleExperiment.bodypart1))
 
         print("num_vertices", opt.g1.num_vertices())
         return opt
