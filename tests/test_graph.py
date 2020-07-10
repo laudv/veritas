@@ -579,6 +579,61 @@ class TestGraph(unittest.TestCase):
 
         self.assertEqual(opt.num_solutions(), 5)
 
+    def test_less_than(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 0, 10.0) # X0 < 10.0
+        t.split(t.left(t.root()), 1, 10.0) # X1 < 1.0
+        t.split(t.right(t.root()), 1, 10.0) # X1 < 1.0
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 3.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 4.0)
+
+        opt = Optimizer(minimize=at)
+        opt.adjuster.add_less_than(0, 1)
+
+        opt.steps(50)
+        sols = opt.solutions()
+        print("\n".join([str((s.box(), s.output0)) for s in sols]))
+
+        self.assertEqual(opt.num_solutions(), 3)
+        self.assertEqual(sols[0].output0, 1.0)
+        self.assertEqual(sols[1].output0, 2.0)
+        self.assertEqual(sols[2].output0, 4.0) # skip 3
+
+    def test_less_than2(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 0, 10.0)
+        t.set_leaf_value(t.left( t.root()), 1.0) # X0 <  10.0
+        t.set_leaf_value(t.right(t.root()), 2.0) # X0 >= 10.0
+        t = at.add_tree()
+        t.split(t.root(), 1, 10.0)
+        t.set_leaf_value(t.left( t.root()), 10.0) # X1 <  10.0
+        t.set_leaf_value(t.right(t.root()), 20.0) # X1 >= 10.0
+        t = at.add_tree()
+        t.split(t.root(), 1, 1.0)
+        t.set_leaf_value(t.left( t.root()), 0.2) # X1 <  1.0
+        t.set_leaf_value(t.right(t.root()), 0.4) # X1 >= 1.0
+
+        opt = Optimizer(minimize=at)
+        opt.adjuster.add_less_than(0, 1)
+        opt.steps(50)
+        sols = opt.solutions()
+        print("\n".join([str((s.box(), s.output0)) for s in sols]))
+
+        self.assertEqual(opt.num_solutions(), 4)
+
+        opt = Optimizer(minimize=at)
+        opt.adjuster.add_less_than(1, 0)
+        opt.steps(50)
+        sols = opt.solutions()
+        print("\n".join([str((s.box(), s.output0)) for s in sols]))
+        self.assertEqual(opt.num_solutions(), 5)
+
+
+
     def test_multithread(self):
         at = AddTree.read(f"tests/models/xgb-mnist-yis0-easy.json")
         opt = Optimizer(maximize=at)

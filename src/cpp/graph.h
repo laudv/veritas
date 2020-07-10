@@ -417,14 +417,24 @@ namespace treeck {
             // used in the model
             bool strict;
         };
+        struct LessThan {
+            // id0 < id1
+            int id0;
+            int id1;
+        };
         std::vector<OneOutOfK> one_out_of_ks_;
+        std::vector<LessThan> less_thans_;
 
         bool handle_one_out_of_k(const OneOutOfK& c,
+                std::vector<DomainPair>& workspace) const;
+
+        bool handle_less_than(const LessThan& c,
                 std::vector<DomainPair>& workspace) const;
 
     public:
         bool operator()(DomainStore& store) const;
         void add_one_out_of_k(std::vector<int> ids, bool strict);
+        void add_less_than(int id0, int id1);
     };
 
 } /* namespace treeck */

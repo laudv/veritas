@@ -694,6 +694,7 @@ PYBIND11_MODULE(pytreeck, m) {
     py::class_<EasyBoxAdjuster>(m, "EasyBoxAdjuster")
         .def(py::init<>())
         .def("add_one_out_of_k", &EasyBoxAdjuster::add_one_out_of_k)
+        .def("add_less_than", &EasyBoxAdjuster::add_less_than)
         ;
 
 

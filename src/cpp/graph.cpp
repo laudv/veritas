@@ -2126,10 +2126,74 @@ namespace treeck {
         return true;
     }
 
+    bool 
+    EasyBoxAdjuster::handle_less_than(const LessThan& c,
+            std::vector<DomainPair>& workspace) const
+    {
+        DomainT *p0 = nullptr;
+        DomainT *p1 = nullptr;
+
+        for (size_t i = 0; i < workspace.size(); ++i)
+        {
+            DomainPair *p = &workspace[i];
+            if (p->first == c.id0)
+                p0 = &p->second;
+            if (p->first == c.id1)
+                p1 = &p->second;
+        }
+
+        if (p0 != nullptr && p1 != nullptr)
+        {
+            //  lo1    hi1
+            //  [  ..  )
+            //            [ .. )
+            //            lo0  hi0
+            if (p0->lo >= p1->hi) // impossible that x0 < x1, reject
+                return false;
+            if (p1->lo < p0->lo) // x1 cannot be less than x0
+            {
+                std::cout << "EasyBoxAdjuster: p1->lo: " << p1->lo << " -> " << p0->lo << std::endl;
+                p1->lo = p0->lo;
+            }
+            if (p0->hi > p1->hi) // x0 cannot be larger than x1
+            {
+                std::cout << "EasyBoxAdjuster: p0->hi: " << p0->hi << " -> " << p1->hi << std::endl;
+                p0->hi = p1->hi;
+            }
+        }
+        else if (p1 != nullptr && !std::isinf(p1->hi)) // add domain for id0
+        {
+            RealDomain dom;
+            dom.hi = p1->hi; // x0 cannot be larger than x1
+            std::cout << "EasyBoxAdjuster: inserting dom0 for " << c.id0 << ": " << dom << std::endl;
+            workspace.push_back({ c.id0, dom });
+            for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
+                if (workspace[i-1].first > workspace[i].first)
+                    std::swap(workspace[i-1], workspace[i]);
+        }
+        else if (p0 != nullptr && !std::isinf(p0->lo)) // add domain for id1
+        {
+            RealDomain dom;
+            dom.lo = p0->lo; // x0 cannot be larger than x1
+            std::cout << "EasyBoxAdjuster: inserting dom1 for " << c.id1 << ": " << dom << std::endl;
+            workspace.push_back({ c.id1, dom });
+            for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
+                if (workspace[i-1].first > workspace[i].first)
+                    std::swap(workspace[i-1], workspace[i]);
+        }
+
+        return true;
+    }
+
     bool
     EasyBoxAdjuster::operator()(DomainStore& store) const
     {
         auto& workspace = store.workspace();
+        for (const LessThan& c : less_thans_)
+        {
+            if (!handle_less_than(c, workspace))
+                return false;
+        }
         for (const OneOutOfK& c : one_out_of_ks_)
         {
             if (!handle_one_out_of_k(c, workspace))
@@ -2148,6 +2212,13 @@ namespace treeck {
             std::cout << "add_one_out_of_k strict=" << strict << std::endl;
             one_out_of_ks_.push_back({ids, strict});
         }
+    }
+
+    void
+    EasyBoxAdjuster::add_less_than(int id0, int id1)
+    {
+        std::cout << "add_less_than X" << id0 << " < " << "X" << id1 << std::endl;
+        less_thans_.push_back({id0, id1});
     }
 
 } /* namespace treeck */
