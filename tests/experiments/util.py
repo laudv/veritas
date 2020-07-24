@@ -46,6 +46,45 @@ def train_test_indices(num_examples, seed=82394188):
 
     return Itrain, Itest
 
+def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
+    num_examples, num_features = X.shape
+    Itrain, Itest = train_test_indices(num_examples, seed=seed)
+    ytest = y.iloc[Itest]
+    dtrain = xgb.DMatrix(X.iloc[Itrain], y.iloc[Itrain], missing=None)
+    dtest = xgb.DMatrix(X.iloc[Itest], ytest, missing=None)
+
+    best_metric = -np.inf
+    best_model = None
+    best_lr = 0.0
+
+    for lr in np.linspace(0, 1, 11)[1:]:
+        print("(1) LEARNING_RATE =", lr)
+        params["learning_rate"] = lr
+        model = xgb.train(params, dtrain, num_boost_round=num_trees,
+                          evals=[(dtrain, "train"), (dtest, "test")])
+        m = metric(ytest, model.predict(dtest, output_margin=True))
+        if m > best_metric:
+            print("(1) NEW BEST LEARNING_RATE", best_lr, "->", lr)
+            best_metric = m
+            best_model = model
+            best_lr = lr
+
+    for lr in np.linspace(best_lr - 0.1, best_lr + 0.1, 11)[1:-1]:
+        print("(2) LEARNING_RATE =", lr)
+        params["learning_rate"] = lr
+        model = xgb.train(params, dtrain, num_boost_round=num_trees,
+                          evals=[(dtrain, "train"), (dtest, "test")])
+        m = metric(ytest, model.predict(dtest, output_margin=True))
+        if m > best_metric:
+            print("(2) NEW BEST LEARNING_RATE", best_lr, "->", lr)
+            best_metric = m
+            best_model = model
+            best_lr = lr
+
+    print("(3) BEST LEARNING_RATE =", best_lr, best_metric)
+
+    return model, best_lr, best_metric
+
 def double_check_at_output(model, at, X):
     max_diff = 0.0
     tmp = model.predict(xgb.DMatrix(X, missing=None), output_margin=True)

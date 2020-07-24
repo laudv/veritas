@@ -479,7 +479,7 @@ class SoccerScaleExperiment(ScaleExperiment):
     bodypart1 = ['bodypart_foot_a1', 'bodypart_head_a1', 'bodypart_other_a1']
 
     def load_data(self):
-        soccer_data_path = os.environ["SOCCER_DATA"]
+        soccer_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "soccerdata.h5")
         X = pd.read_hdf(soccer_data_path, "features")
         X["goalscore_team"] = X["goalscore_team"].astype(np.float32)
         X["goalscore_opponent"] = X["goalscore_opponent"].astype(np.float32)
@@ -589,7 +589,63 @@ class SoccerScaleExperiment(ScaleExperiment):
         print("num_vertices", opt.g1.num_vertices())
         return opt
 
+class HiggsScaleExperiment(ScaleExperiment):
+    result_dir = "tests/experiments/scale/higgs"
 
+    def load_data(self):
+        higs_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "higgs.h5")
+        X = pd.read_hdf(higs_data_path, "X")
+        y = pd.read_hdf(higs_data_path, "y")
+        return X, y
+
+    def load_model(self, num_trees, depth):
+        print("\n=== NEW HIGGS MODEL ===")
+        model_name = f"higgs-{num_trees}-{depth}.xgb"
+        meta_name = f"higgs-{num_trees}-{depth}.meta"
+        at_name = f"higgs-{num_trees}-{depth}.at"
+
+        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
+            print(f"training model: {model_name}")
+            X, y = self.load_data()
+
+            #def optimize_learning_rate(X, y, params, num_trees, metric):
+            params = {
+                "max_depth": depth,
+                "objective": "binary:logistic",
+                #"base_score": base_score,
+                "eval_metric": "error",
+                "tree_method": "hist",
+                "seed": 1
+            }
+
+            def metric(y, raw_yhat):
+                return accuracy_score(y, raw_yhat > 0)
+
+            self.model, lr, metric_value = util.optimize_learning_rate(X, y,
+                    params, num_trees, metric)
+
+            self.meta = {}
+            self.meta["feat2id"] = dict([(v, i) for i, v in enumerate(X.columns)])
+            self.meta["lr"] = lr
+            self.at = addtree_from_xgb_model(self.model, lambda x: self.meta["feat2id"][x])
+
+            with open(os.path.join(self.result_dir, model_name), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.result_dir, meta_name), "w") as f:
+                json.dump(self.meta, f)
+            self.at.write(os.path.join(self.result_dir, at_name))
+
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.result_dir, model_name), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.result_dir, meta_name), "r") as f:
+                self.meta = json.load(f)
+            self.at = AddTree.read(os.path.join(self.result_dir, at_name))
+
+    def get_opt(self):
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory, use_dyn_prog_heuristic=False)
+        return opt
 
 
 def calhouse(outfile, max_memory):
@@ -650,6 +706,16 @@ def soccer(outfile, max_memory):
         exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr}, start_eps=0.01)
     exp.write_results()
 
+def higgs(outfile, max_memory):
+    exp = HiggsScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
+    exp.confirm_write_results(outfile)
+    exp.do_merge = False
+    num_trees = 100
+    depth = 5
+    exp.load_model(num_trees, depth)
+    exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
+    exp.write_results()
+
 if __name__ == "__main__":
     output_file = sys.argv[1]
     max_memory = 1024*1024*1024*int(sys.argv[2])
@@ -657,5 +723,8 @@ if __name__ == "__main__":
     #calhouse(output_file, max_memory)
     #covtype(output_file, max_memory)
     #mnist2vall(output_file, max_memory)
-    soccer(output_file, max_memory)
+    #soccer(output_file, max_memory)
+    higgs(output_file, max_memory)
+
+
 
