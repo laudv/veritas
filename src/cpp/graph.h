@@ -95,6 +95,7 @@ namespace treeck {
 
     public:
         size_t get_mem_size() const;
+        size_t get_used_mem_size() const;
         size_t get_max_mem_size() const;
         void set_max_mem_size(size_t max_mem);
 

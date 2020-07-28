@@ -210,6 +210,15 @@ namespace treeck {
         return mem;
     }
 
+    size_t
+    DomainStore::get_used_mem_size() const
+    {
+        size_t mem = 0;
+        for (const Block& b : store_)
+            mem += b.size() * sizeof(Block::value_type);
+        return mem;
+    }
+
     void
     DomainStore::set_max_mem_size(size_t mem)
     {

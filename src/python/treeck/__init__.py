@@ -238,6 +238,7 @@ class Optimizer:
         self.start_time = timeit.default_timer()
         self.bounds = [self.current_basic_bounds()]
         self.memory = [self.current_memory()]
+        self.clique_count = [self.num_candidate_cliques()]
         self.times = [0.0]
 
     def merge(self, K, reset_optimizer=True):
@@ -293,15 +294,17 @@ class Optimizer:
     def current_bounds(self): return self.opt.current_bounds()
     def current_basic_bounds(self): return (self.g0.basic_bound()[0], self.g1.basic_bound()[1])
     def get_mem_size(self): return self.opt.get_mem_size()
+    def get_used_mem_size(self): return self.opt.get_used_mem_size()
     def get_eps(self): return self.opt.get_eps()
     def set_eps(self, new_eps): self.opt.set_eps(new_eps)
     def current_memory(self):
-        return self.g0.get_mem_size() + self.g1.get_mem_size() + self.opt.get_mem_size()
+        return self.g0.get_used_mem_size() + self.g1.get_used_mem_size() + self.opt.get_used_mem_size()
 
     def steps(self, num_steps, **kwargs):
         value = self.opt.steps(num_steps, adjuster=self.adjuster, **kwargs)
         self.bounds.append(self.current_bounds())
         self.memory.append(self.current_memory())
+        self.clique_count.append(self.num_candidate_cliques())
         self.times.append(timeit.default_timer() - self.start_time)
         return value
 
@@ -317,6 +320,7 @@ class ParallelOptimizer:
         self.paropt.set_box_adjuster(self.opt.adjuster)
         self.bounds = opt.bounds + [self.paropt.current_bounds()]
         self.memory = opt.memory + [self.paropt.current_memory()]
+        self.clique_count = opt.clique_count + [self.num_candidate_cliques]
         self.start_time = opt.start_time + opt.times[-1]
         self.times = opt.times + [opt.times[-1]]
 
