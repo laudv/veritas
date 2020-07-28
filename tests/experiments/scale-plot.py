@@ -159,6 +159,7 @@ def plot_output2(f, i):
         mt = oo["max_time"]
         mm = oo["max_memory"]
         l2, = ax.plot(t2, b2, "x-", label="Merge")
+        oot_pos = 0
         if oot or oom:
             label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
             oot_pos = max(oot_pos, max(tb0), max(tb1), max(t2))
@@ -178,6 +179,9 @@ def plot_output2(f, i):
     plt.show()
 
 if __name__ == "__main__":
+    plot_output1("tests/experiments/scale/calhouse/depth5_2g_1thr")
+    #plot_output2("tests/experiments/scale/calhouse/test", 1)
     #plot_output2("tests/experiments/scale/soccer/testabc", 0)
-    plot_output2("tests/experiments/scale/higgs/test100", 0)
+    #plot_output2("tests/experiments/scale/higgs/test100", 0)
 
+    plot_output1("tests/experiments/scale/mnist/test")

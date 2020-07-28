@@ -7,7 +7,7 @@ import xgboost as xgb
 import pandas as pd
 import numpy as np
 
-from sklearn.metrics import accuracy_score, mean_absolute_error
+import sklearn.metrics as metrics
 from scipy.special import logit, expit as logistic
 
 from treeck import *
@@ -28,7 +28,7 @@ class ScaleExperiment:
 
         self.min_num_steps = 10
         self.max_num_steps = 10000
-        self.min_time_per_step = 100
+        self.min_time_per_step = 50
         self.max_time_per_step = 2000
         self.do_merge = True
 
@@ -148,7 +148,7 @@ class ScaleExperiment:
         opt = self.get_opt()
         t = 0.0
         b = opt.current_basic_bounds()
-        m = opt.get_mem_size()
+        m = opt.current_memory()
         v = opt.g0.num_vertices() + opt.g1.num_vertices()
         conn.send(("point", t, b, m, v))
         start = timeit.default_timer()
@@ -160,12 +160,13 @@ class ScaleExperiment:
                     opt.merge(2, reset_optimizer=False) # dyn prog. algorithm is quadratic, basic bound is linear
                 except:
                     print("MERGE worker: OUT OF MEMORY")
-                    conn.send(("oom",))
+                    m = opt.current_memory()
+                    conn.send(("oom", m))
                     break
 
                 t = timeit.default_timer() - start
                 b = opt.current_basic_bounds()
-                m = opt.get_mem_size()
+                m = opt.current_memory()
                 v = opt.g0.num_vertices() + opt.g1.num_vertices()
                 conn.send(("point", t, b, m, v))
 
@@ -199,8 +200,10 @@ class ScaleExperiment:
                     print("MERGE host: optimal found")
                     data["optimal"] = True
                 elif msg[0] == "oom":
-                    print("MERGE host: oom")
+                    m = msg[1]
+                    print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
                     data["oom"] = True
+                    data["oom_value"] = m
             elif p.exitcode is not None:
                 data["oot"] = False
                 break
@@ -229,6 +232,7 @@ class ScaleExperiment:
             "bounds": opt.bounds,
             "bounds_times": opt.times,
             "memory": opt.memory,
+            "cliques": opt.clique_count,
             "sol_times": [s.time for s in sols],
             "epses": [s.eps for s in sols],
             "total_time": dur,
@@ -296,38 +300,39 @@ class ScaleExperiment:
 class CalhouseScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/calhouse"
 
-    def load_model(self, num_trees, depth, lr):
-        print("\n=== NEW MODEL ===")
-        model_name = f"calhouse-{num_trees}-{depth}-{lr}.xgb"
-        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
+    def load_model(self, num_trees, depth):
+        print("\n=== NEW CALHOUSE MODEL ===")
+        model_name = f"calhouse-{num_trees}-{depth}"
+        if not os.path.isfile(os.path.join(self.result_dir, f"{model_name}.xgb")):
             X, y = util.load_openml("calhouse", data_id=537)
-            num_examples, num_features = X.shape
-            Itrain, Itest = util.train_test_indices(num_examples)
-            print(f"training model learning_rate={lr}, depth={depth}, num_trees={num_trees}")
+            print(f"training model depth={depth}, num_trees={num_trees}")
             params = {
                 "objective": "reg:squarederror",
                 "tree_method": "hist",
                 "max_depth": depth,
-                "learning_rate": lr,
                 "seed": 14,
             }
 
-            dtrain = xgb.DMatrix(X[Itrain], y[Itrain], missing=None)
-            dtest = xgb.DMatrix(X[Itest], y[Itest], missing=None)
-            model = xgb.train(params, dtrain, num_boost_round=num_trees,
-                              #early_stopping_rounds=5,
-                              evals=[(dtrain, "train"), (dtest, "test")])
-            with open(os.path.join(self.result_dir, model_name), "wb") as f:
-                pickle.dump(model, f)
-            #with open(os.path.join(RESULT_DIR, "model.json"), "w") as f:
-            #    model.dump_model(f, dump_format="json")
+            def metric(y, raw_yhat): #maximized
+                return -metrics.mean_squared_error(y, raw_yhat)
+
+            self.model, lr, metric_value = util.optimize_learning_rate(X, y,
+                    params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value}
+
+            with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
         else:
             print(f"loading model from file: {model_name}")
-            with open(os.path.join(self.result_dir, model_name), "rb") as f:
-                model = pickle.load(f)
+            with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
 
-        self.model = model
-        self.at = addtree_from_xgb_model(model)
+        self.at = addtree_from_xgb_model(self.model)
         self.at.base_score = 0
 
     def get_opt(self):
@@ -337,42 +342,48 @@ class CalhouseScaleExperiment(ScaleExperiment):
 class CovtypeScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/covtype"
 
-    def load_model(self, num_trees, depth, lr):
-        print("\n=== NEW MODEL ===")
-        model_name = f"covtype-{num_trees}-{depth}-{lr}.xgb"
-        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
+    def load_model(self, num_trees, depth):
+        print("\n=== NEW COVTYPE MODEL ===")
+        model_name = f"covtype-{num_trees}-{depth}"
+        if not os.path.isfile(os.path.join(self.result_dir, f"{model_name}.xgb")):
             X, y = util.load_openml("covtype", data_id=1596)
             y = (y==2)
-            num_examples, num_features = X.shape
-            Itrain, Itest = util.train_test_indices(num_examples)
-            print(f"training model learning_rate={lr}, depth={depth}, num_trees={num_trees}")
+            print(f"training model depth={depth}, num_trees={num_trees}")
             params = {
                 "objective": "binary:logistic",
                 "tree_method": "hist",
                 "max_depth": depth,
-                "learning_rate": lr,
                 "eval_metric": "error",
                 "seed": 235,
             }
 
-            dtrain = xgb.DMatrix(X[Itrain], y[Itrain], missing=None)
-            dtest = xgb.DMatrix(X[Itest], y[Itest], missing=None)
-            model = xgb.train(params, dtrain, num_boost_round=num_trees,
-                              #early_stopping_rounds=5,
-                              evals=[(dtrain, "train"), (dtest, "test")])
-            with open(os.path.join(self.result_dir, model_name), "wb") as f:
-                pickle.dump(model, f)
-            #with open(os.path.join(RESULT_DIR, "model.json"), "w") as f:
-            #    model.dump_model(f, dump_format="json")
+            def metric(y, raw_yhat):
+                return metrics.accuracy_score(y, raw_yhat > 0)
+
+            self.model, lr, metric_value = util.optimize_learning_rate(X, y,
+                    params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value}
+
+            with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
         else:
             print(f"loading model from file: {model_name}")
-            with open(os.path.join(self.result_dir, model_name), "rb") as f:
-                model = pickle.load(f)
+            with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
 
-        self.model = model
-        self.at = addtree_from_xgb_model(model)
+        self.at = addtree_from_xgb_model(self.model)
         self.at.base_score = 0
 
+    def get_opt(self):
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
+        return opt
+
+class ConstrainedCovtypeScaleExperiment1(CovtypeScaleExperiment):
     def get_opt(self):
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
         feat_ids = opt.feat_info.feat_ids1()
@@ -394,59 +405,68 @@ class CovtypeScaleExperiment(ScaleExperiment):
 
         return opt
 
-class Mnist2vallScaleExperiment(ScaleExperiment):
+class MnistXvallScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/mnist"
 
-    def load_model(self, num_trees, depth, lr, delta):
-        print("\n=== NEW MODEL ===")
-        model_name = f"mnist2vall-{num_trees}-{depth}-{lr}.xgb"
-        X, y = util.load_openml("mnist", data_id=554)
-        old_y = y
-        y = (y==2)
-        num_examples, num_features = X.shape
-        Itrain, Itest = util.train_test_indices(num_examples)
-        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
-            print(f"training model learning_rate={lr}, depth={depth}, num_trees={num_trees}")
+    def load_model(self, num_trees, depth, label, X=None, y=None):
+        print("\n=== NEW MNIST MODEL ===")
+        model_name = f"mnist-{label}vall-{num_trees}-{depth}"
+        if X is None:
+            X, y = util.load_openml("mnist", data_id=554)
+        ybin = (y==int(label))
+        self.label = label # {label} vs all
+        if not os.path.isfile(os.path.join(self.result_dir, f"{model_name}.xgb")):
+            print(f"training model depth={depth}, num_trees={num_trees}, label={label}")
             params = {
                 "objective": "binary:logistic",
                 "tree_method": "hist",
                 "max_depth": depth,
-                "learning_rate": lr,
                 "eval_metric": "error",
                 "seed": 53589,
             }
 
-            dtrain = xgb.DMatrix(X[Itrain], y[Itrain], missing=None)
-            dtest = xgb.DMatrix(X[Itest], y[Itest], missing=None)
-            model = xgb.train(params, dtrain, num_boost_round=num_trees,
-                              #early_stopping_rounds=5,
-                              evals=[(dtrain, "train"), (dtest, "test")])
-            with open(os.path.join(self.result_dir, model_name), "wb") as f:
-                pickle.dump(model, f)
-            #with open(os.path.join(RESULT_DIR, "model.json"), "w") as f:
-            #    model.dump_model(f, dump_format="json")
+            def metric(y, raw_yhat): #maximized
+                return metrics.accuracy_score(y, raw_yhat > 0)
+            
+            print(ybin)
+            self.model, lr, metric_value = util.optimize_learning_rate(X, ybin,
+                    params, num_trees, metric)
+            self.meta = {"lr": lr, "metric": metric_value}
+
+            with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
         else:
             print(f"loading model from file: {model_name}")
-            with open(os.path.join(self.result_dir, model_name), "rb") as f:
-                model = pickle.load(f)
+            with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
 
-        self.model = model
-        self.at = addtree_from_xgb_model(model)
+        self.at = addtree_from_xgb_model(self.model)
         self.at.base_score = 0
-        self.example = X[Itest[15]]
-        self.label = old_y[Itest[15]]
-        self.delta = delta
-
-        print(list(self.example))
-        print(self.label)
 
     def get_opt(self):
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
-        print("before num_vertices", opt.g1.num_vertices())
-        opt.prune_example(list(self.example), self.delta)
-        print("after num_vertices", opt.g1.num_vertices())
         return opt
 
+class MnistXvallPrunedScaleExperiment(MnistXvallScaleExperiment):
+
+    def load_model(self, num_trees, depth, label, example_i, delta):
+        X, y = util.load_openml("mnist", data_id=554)
+        super().load_model(num_trees, depth, label, X=X, y=y)
+
+        self.example = X[example_i]
+        self.example_label = y[example_i]
+        self.delta = delta
+
+    def get_opt(self):
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
+        print("MNIST before num_vertices", opt.g1.num_vertices())
+        opt.prune_example(list(self.example), self.delta)
+        print("MNIST after num_vertices", opt.g1.num_vertices())
+        return opt
 
 class SoccerScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/soccer"
@@ -542,12 +562,12 @@ class SoccerScaleExperiment(ScaleExperiment):
             brier_score = sum((logistic(pred) - ytest)**2) / len(pred)
             print("brier score", brier_score)
 
-            mae = mean_absolute_error(pred[:1000], pred_at)
+            mae = metrics.mean_absolute_error(pred[:1000], pred_at)
             print(f"mae model difference {mae} before base_score")
 
             self.at.base_score = -mae
             pred_at = np.array(self.at.predict(Xtest[:1000].to_numpy()))
-            mae = mean_absolute_error(pred[:1000], pred_at)
+            mae = metrics.mean_absolute_error(pred[:1000], pred_at)
             print(f"mae model difference {mae}")
 
             with open(os.path.join(self.result_dir, model_name), "wb") as f:
@@ -619,7 +639,7 @@ class HiggsScaleExperiment(ScaleExperiment):
             }
 
             def metric(y, raw_yhat):
-                return accuracy_score(y, raw_yhat > 0)
+                return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.model, lr, metric_value = util.optimize_learning_rate(X, y,
                     params, num_trees, metric)
@@ -651,45 +671,51 @@ class HiggsScaleExperiment(ScaleExperiment):
 def calhouse(outfile, max_memory):
     exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=60)
     exp.confirm_write_results(outfile)
-    for num_trees, depth, lr in [
-            (20, 5, 1.0),
-            (50, 5, 0.5),
-            (100, 5, 0.25),
-            (100, 6, 0.25),
+    for num_trees, depth in [
+            (25, 5),
+            (50, 5),
+            #(75, 5),
+            #(100, 5),
+            #(150, 5),
+            #(200, 5),
+            #(300, 5),
+            #(400, 5),
+            #(500, 5),
             ]:
-        exp.load_model(num_trees, depth, lr)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
+        exp.load_model(num_trees, depth)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]}, start_eps=0.01)
     exp.write_results()
 
 def covtype(outfile, max_memory):
-    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=60, num_threads=4)
-    exp.confirm_write_results(outfile)
-    exp.do_merge = False
-    for num_trees, depth, lr in [
-            (20, 5, 1.0),
-            (50, 5, 0.5),
-            (100, 5, 0.25),
-            (100, 6, 0.25),
-            ]:
-        exp.load_model(num_trees, depth, lr)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
-    exp.write_results()
-
-def mnist2vall(outfile, max_memory):
-    exp = Mnist2vallScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
+    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    for num_trees, depth, lr in [
-            #(20, 5, 1.0),
-            #(50, 5, 0.5),
-            #(100, 5, 0.25),
-            #(100, 6, 0.25),
-            #(150, 5, 0.20),
-            (150, 6, 0.20),
-            #(200, 6, 0.10)
+    for num_trees, depth in [
+            #(10, 4),
+            (25, 5),
+            #(50, 5),
+            #(100, 5),
+            #(100, 6),
             ]:
-        exp.load_model(num_trees, depth, lr, 10)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr})
+        exp.load_model(num_trees, depth)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
+    exp.write_results()
+
+def mnistXvall(outfile, max_memory, label):
+    exp = MnistXvallScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
+    exp.confirm_write_results(outfile)
+    exp.do_merge = True
+    for num_trees, depth in [
+            (20, 4),
+            #(50, 5),
+            #(100, 5),
+            #(100, 6),
+            #(150, 5),
+            #(150, 6),
+            #(200, 6)
+            ]:
+        exp.load_model(num_trees, depth, label)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
     exp.write_results()
 
 def soccer(outfile, max_memory):
@@ -710,21 +736,24 @@ def higgs(outfile, max_memory):
     exp = HiggsScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = False
-    num_trees = 100
-    depth = 5
+    num_trees = 10
+    depth = 4
     exp.load_model(num_trees, depth)
     exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
     exp.write_results()
 
 if __name__ == "__main__":
-    output_file = sys.argv[1]
-    max_memory = 1024*1024*1024*int(sys.argv[2])
+    output_file = sys.argv[2]
+    max_memory = 1024*1024*1024*int(sys.argv[3])
 
-    #calhouse(output_file, max_memory)
-    #covtype(output_file, max_memory)
-    #mnist2vall(output_file, max_memory)
+    exp = sys.argv[1]
+    if exp == "calhouse":
+        calhouse(output_file, max_memory)
+    if exp == "covtype":
+        covtype(output_file, max_memory)
+    if exp == "mnist":
+        mnistXvall(output_file, max_memory, sys.argv[4])
+
     #soccer(output_file, max_memory)
-    higgs(output_file, max_memory)
-
-
-
+    if exp == "higgs":
+        higgs(output_file, max_memory)

@@ -1,5 +1,6 @@
 import os
 import numpy as np
+import pandas as pd
 import scipy
 import scipy.io
 import xgboost as xgb
@@ -49,9 +50,14 @@ def train_test_indices(num_examples, seed=82394188):
 def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
     num_examples, num_features = X.shape
     Itrain, Itest = train_test_indices(num_examples, seed=seed)
-    ytest = y.iloc[Itest]
-    dtrain = xgb.DMatrix(X.iloc[Itrain], y.iloc[Itrain], missing=None)
-    dtest = xgb.DMatrix(X.iloc[Itest], ytest, missing=None)
+    if isinstance(X, pd.DataFrame):
+        ytest = y.iloc[Itest]
+        dtrain = xgb.DMatrix(X.iloc[Itrain], y.iloc[Itrain], missing=None)
+        dtest = xgb.DMatrix(X.iloc[Itest], ytest, missing=None)
+    else:
+        ytest = y[Itest]
+        dtrain = xgb.DMatrix(X[Itrain], y[Itrain], missing=None)
+        dtest = xgb.DMatrix(X[Itest], ytest, missing=None)
 
     best_metric = -np.inf
     best_model = None
@@ -70,6 +76,7 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
             best_lr = lr
 
     for lr in np.linspace(best_lr - 0.1, best_lr + 0.1, 11)[1:-1]:
+        if lr <= 0.0 or lr > 1.0: continue
         print("(2) LEARNING_RATE =", lr)
         params["learning_rate"] = lr
         model = xgb.train(params, dtrain, num_boost_round=num_trees,
