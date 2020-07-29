@@ -565,6 +565,21 @@ PYBIND11_MODULE(pytreeck, m) {
             });
             g.store().clear_workspace();
         })
+        .def("prune_box", [](KPartiteGraph& g, const FeatInfo& finfo,
+                    const py::list box, int instance) {
+            for (FeatId fid : instance == 0 ? finfo.feat_ids0() : finfo.feat_ids1())
+            {
+                RealDomain d = box[fid].cast<RealDomain>();
+                auto f = [=](FeatId i) { return finfo.get_id(instance, i); };
+                g.store().refine_workspace(LtSplit(fid, d.lo), false, f);
+                g.store().refine_workspace(LtSplit(fid, d.hi), true, f);
+            }
+            DomainBox b = g.store().get_workspace_box();
+            g.prune([b](const DomainBox& box) {
+                return box.overlaps(b);
+            });
+            g.store().clear_workspace();
+        })
         .def("prune_smt", [](KPartiteGraph& g, SMTSolver& solver) {
             g.prune([&solver](const DomainBox& box) {
                 z3::expr e = solver.domains_to_z3(box);

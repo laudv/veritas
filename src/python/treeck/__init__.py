@@ -252,6 +252,14 @@ class Optimizer:
         self.g1.prune_example(self.feat_info, example, delta)
         self.reset_optimizer()
 
+    def prune_box(self, box, instance):
+        if instance == 0:
+            self.g0.prune_box(self.feat_info, box, 0)
+        elif instance == 1:
+            self.g1.prune_box(self.feat_info, box, 1)
+        else: raise RuntimeError("invalid instance")
+        self.reset_optimizer()
+
     def prune_smt(self, smt, var_prefix0="f", var_prefix1="g"): # (assert (< {<var_prefix><feat_id> ...}))
         solver = SMTSolver(self.feat_info, self.at0, self.at1)
         #print("before", smt)
