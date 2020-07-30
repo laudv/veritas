@@ -191,11 +191,15 @@ def get_best_astar(A, task="maximize"):
     if task == "maximize":
         if len(A["solutions"]) > 0:
             return A["solutions"][0][1]
-        return min(map(lambda b: b[1], A["bounds"]))
-    else:
+        return A["bounds"][-1][1]
+    elif task == "minimize":
         if len(A["solutions"]) > 0:
             return A["solutions"][0][0]
-        return max(map(lambda b: b[0], A["bounds"])) # maximum lower bound
+        return A["bounds"][-1][0]
+    else:
+        if len(A["solutions"]) > 0:
+            return A["solutions"][0]
+        return A["bounds"][-1]
 
 def generate_random_constraints(X, num_constraints, seed):
     K = X.shape[1]

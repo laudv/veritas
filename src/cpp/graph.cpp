@@ -1468,22 +1468,23 @@ namespace treeck {
         //    << std::endl;
 
         Clique c = pq_pop();
-        FloatT current_bound = c.output_difference(cmp_.eps);
-        
-        // allow for some floating point errors
-        // last_bound_'s difference to optimal solution was at most eps; scale
-        // down current_bound before comparing;
-        // with A*, eps == 1.0, so no scaling occurs
-        if ((current_bound*cmp_.eps - last_bound_)/std::abs(last_bound_) > 1e-5)
-        {
-            std::cout << "!! WARNING !! current bound " << current_bound
-                << ", " << current_bound*cmp_.eps << "(scaled)"
-                << ", previous bound " << last_bound_ 
-                << " in step " << get0(num_steps) << ", " << get1(num_steps)
-                << " with eps " << cmp_.eps << std::endl;
-            //throw std::runtime_error("assertion error: bound increased for same eps");
-        }
-        last_bound_ = current_bound;
+
+        //FloatT current_bound = c.output_difference(cmp_.eps);
+        //// allow for some floating point errors
+        //// last_bound_'s difference to optimal solution was at most eps; scale
+        //// down current_bound before comparing;
+        //// with A*, eps == 1.0, so no scaling occurs
+        //if ((current_bound*cmp_.eps - last_bound_)/last_bound_ > 1e-5)
+        //{
+        //    std::cout << "!! WARNING !! current bound " << current_bound
+        //        << ", " << current_bound*cmp_.eps << "(scaled)"
+        //        << ", previous bound " << last_bound_ 
+        //        << ", ratio " << (current_bound*cmp_.eps - last_bound_)/std::abs(last_bound_) 
+        //        << " in step " << get0(num_steps) << ", " << get1(num_steps)
+        //        << " with eps " << cmp_.eps << std::endl;
+        //    //throw std::runtime_error("assertion error: bound increased for same eps");
+        //}
+        //last_bound_ = current_bound;
 
         bool is_solution0 = is_instance_solution<0>(c);
         bool is_solution1 = is_instance_solution<1>(c);

@@ -32,6 +32,8 @@ class ScaleExperiment:
         self.max_time_per_step = 2000
         self.do_merge = True
 
+        self.steps_kwargs = {}
+
         self.results = {}
 
     def load_model(self):
@@ -43,19 +45,21 @@ class ScaleExperiment:
     def astar_single(self):
         opt = self.get_opt()
         done = False
+        oom = False
         num_steps = self.min_num_steps
         start = timeit.default_timer()
         stop = start + self.max_time
         while not done and opt.num_solutions() == 0 \
                 and timeit.default_timer() < stop:
-            #try:
-            done = not opt.steps(num_steps)
-            num_steps = min(self.max_num_steps, num_steps * 2)
-            #except:
-            #    print("A* OUT OF MEMORY")
-            #    done = True
+            try:
+                done = not opt.steps(num_steps, **self.steps_kwargs)
+                num_steps = min(self.max_num_steps, num_steps * 2)
+            except Exception as e:
+                print("A* OUT OF MEMORY", type(e))
+                done = True
+                oom = True
         dur = timeit.default_timer() - start
-        return opt, dur
+        return opt, dur, oom
 
     def astar_parallel(self):
         opt = self.get_opt()
@@ -63,31 +67,34 @@ class ScaleExperiment:
         time_per_step = self.min_time_per_step
         start = timeit.default_timer()
         stop = start + self.max_time
+        oom = False
 
         # just a few steps so we have some work to share between workers
-        opt.steps(self.min_num_steps)
+        opt.steps(self.min_num_steps, **self.steps_kwargs)
 
         try:
             paropt = opt.parallel(self.num_threads)
             while paropt.num_solutions() == 0 \
                     and not paropt.num_candidate_cliques() == 0 \
                     and timeit.default_timer() < stop:
-                #try:
-                paropt.steps_for(time_per_step)
-                time_per_step = min(self.max_time_per_step, int(time_per_step * 1.5))
-                #except:
-                #    print("A* OUT OF MEMORY")
-                #    break
+                try:
+                    paropt.steps_for(time_per_step, **self.steps_kwargs)
+                    time_per_step = min(self.max_time_per_step, int(time_per_step * 1.5))
+                except Exception as e:
+                    print("A* OUT OF MEMORY", type(e))
+                    oom = True
+                    break
         finally:
             paropt.join_all()
 
         dur = timeit.default_timer() - start
-        return paropt, opt, dur
+        return paropt, opt, dur, oom
 
     def arastar_single(self, start_eps, incr_eps_fun):
         opt = self.get_opt()
         opt.set_eps(start_eps)
         done = False
+        oom = False
         num_steps = self.min_num_steps
         start = timeit.default_timer()
         stop = start + self.max_time
@@ -102,14 +109,15 @@ class ScaleExperiment:
                 print(f"ARA* eps: {eps} -> {opt.get_eps()}")
                 solution_count = opt.num_solutions()
                 num_steps = self.min_num_steps
-            #try:
-            done = not opt.steps(num_steps)
-            num_steps = min(self.max_num_steps, num_steps * 2)
-            #except:
-            #    print("ARA* OUT OF MEMORY")
-            #    done = True
+            try:
+                done = not opt.steps(num_steps, **self.steps_kwargs)
+                num_steps = min(self.max_num_steps, num_steps * 2)
+            except Exception as e:
+                print("ARA* OUT OF MEMORY", type(e))
+                done = True
+                oom = True
         dur = timeit.default_timer() - start
-        return opt, dur
+        return opt, dur, oom
     
     def arastar_parallel(self, start_eps, incr_eps_fun):
         opt = self.get_opt()
@@ -118,9 +126,10 @@ class ScaleExperiment:
         time_per_step = self.min_time_per_step
         start = timeit.default_timer()
         stop = start + self.max_time
+        oom = False
 
         # just a few steps so we have some work to share between workers
-        opt.steps(self.min_num_steps)
+        opt.steps(self.min_num_steps, **self.steps_kwargs)
         try:
             paropt = opt.parallel(self.num_threads)
             while not paropt.num_candidate_cliques() == 0 \
@@ -132,17 +141,18 @@ class ScaleExperiment:
                     paropt.set_eps(incr_eps_fun(eps))
                     print(f"ARA* eps: {eps} -> {paropt.get_eps()}")
                     time_per_step = self.min_time_per_step
-                #try:
-                paropt.steps_for(time_per_step)
-                time_per_step = min(self.max_time_per_step, int(time_per_step * 1.5))
-                #except:
-                #    print("ARA* OUT OF MEMORY")
-                #    break
+                try:
+                    paropt.steps_for(time_per_step, **self.steps_kwargs)
+                    time_per_step = min(self.max_time_per_step, int(time_per_step * 1.5))
+                except Exception as e:
+                    print("ARA* OUT OF MEMORY", type(e))
+                    oom = True
+                    break
         finally:
             paropt.join_all()
 
         dur = timeit.default_timer() - start
-        return paropt, opt, dur
+        return paropt, opt, dur, oom
 
     def merge_worker_fun(self, conn):
         opt = self.get_opt()
@@ -158,8 +168,8 @@ class ScaleExperiment:
                     print("MERGE worker: num_independent_sets:", opt.g1.num_independent_sets())
                     opt.merge(2, reset_optimizer=False) # dyn prog. algorithm is quadratic, basic bound is linear
                 except:
-                    print("MERGE worker: OUT OF MEMORY")
                     m = opt.current_memory()
+                    print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB")
                     conn.send(("oom", m))
                     break
 
@@ -227,7 +237,7 @@ class ScaleExperiment:
 
         return data
 
-    def _extract_info(self, opt, dur):
+    def _extract_info(self, opt, dur, oom):
         sols = util.filter_solutions(opt)
         data = {
             "solutions": [(s.output0, s.output1) for s in sols],
@@ -238,10 +248,11 @@ class ScaleExperiment:
             "sol_times": [s.time for s in sols],
             "epses": [s.eps for s in sols],
             "total_time": dur,
+            "oom": oom,
         }
         if len(sols) > 0:
             best_sol = max(sols, key=lambda s: s.output_difference())
-            data["best_solution_box"] = {i: (d.lo, d.hi) for i, d in best_sol.box().items()},
+            data["best_solution_box"] = {i: (d.lo, d.hi) for i, d in best_sol.box().items()}
         if isinstance(opt, Optimizer):
             data["num_vertices0"] = opt.g0.num_vertices()
             data["num_vertices1"] = opt.g1.num_vertices()
@@ -252,19 +263,19 @@ class ScaleExperiment:
 
     def astar(self):
         if self.num_threads == 1:
-            opt, dur = self.astar_single()
-            return self._extract_info(opt, dur)
+            opt, dur, oom = self.astar_single()
+            return self._extract_info(opt, dur, oom)
         else:
-            paropt, opt, dur = self.astar_parallel()
-            return self._extract_info(paropt, dur)
+            paropt, opt, dur, oom = self.astar_parallel()
+            return self._extract_info(paropt, dur, oom)
 
     def arastar(self, start_eps, eps_incr):
         if self.num_threads == 1:
-            opt, dur = self.arastar_single(start_eps, eps_incr)
-            return self._extract_info(opt, dur)
+            opt, dur, oom = self.arastar_single(start_eps, eps_incr)
+            return self._extract_info(opt, dur, oom)
         else:
-            paropt, opt, dur = self.arastar_parallel(start_eps, eps_incr)
-            return self._extract_info(paropt, dur)
+            paropt, opt, dur, oom = self.arastar_parallel(start_eps, eps_incr)
+            return self._extract_info(paropt, dur, oom)
 
     def run(self, name, data={}, start_eps=0.5):
         def eps_incr(eps):
@@ -451,7 +462,10 @@ class MnistXvallScaleExperiment(ScaleExperiment):
     def load_model(self, num_trees, depth, label):
         print("\n=== NEW MNIST MODEL ===")
         model_name = f"mnist-{label}vall-{num_trees}-{depth}"
-        X, y = util.load_openml("mnist", data_id=554)
+        if not hasattr(self, "X"):
+            X, y = util.load_openml("mnist", data_id=554)
+        else:
+            X, y = self.X, self.y
         ybin = (y==int(label))
         self.label = label # {label} vs all
         if not os.path.isfile(os.path.join(self.result_dir, f"{model_name}.xgb")):
@@ -462,7 +476,7 @@ class MnistXvallScaleExperiment(ScaleExperiment):
                 "max_depth": depth,
                 "eval_metric": "error",
                 "seed": 53589,
-                "nthread": 4,
+                #"nthread": 4,
             }
 
             def metric(y, raw_yhat): #maximized
@@ -867,25 +881,113 @@ def mnistXvall(outfile, max_memory, label):
         #break
     exp.write_results()
 
-def mnist_robust(outfile, max_memory):
-    exp = MnistXvallPrunedScaleExperiment(max_memory=max_memory, max_time=30, num_threads=1)
+def mnist_robust(outfile, max_memory, follow_astar, N, seed):
+    exp = MnistXvallPrunedScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
+    exp.steps_kwargs["min_output_difference"] = 0.0
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    depth = 3
-    num_trees = 10
+    depth = 5
+    num_trees = 50
+    start_delta = 20.1 # avoid integer values
 
-    exp.load_example(1, 10)
-    for target_label in range(10):
-        if target_label == exp.example_label: continue
-        print(f"{exp.example_label} vs {target_label}")
-        exp.load_model(num_trees, depth, target_label)
-        exp.target_at = exp.at
-        exp.load_model(num_trees, depth, exp.example_label)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
-            exp.meta["lr"], "example_i": int(exp.example_i), "example_label":
-            int(exp.example_label), "example": list(exp.example),
-            "target_label": target_label})
-        exp.write_results()
+    rng = np.random.RandomState(seed)
+
+    for example_i in rng.randint(exp.X.shape[0], size=N):
+        exp.load_example(example_i, start_delta)
+        for target_label in range(10):
+            if target_label == exp.example_label: continue
+            print(f"source {exp.example_label} vs target {target_label}")
+
+            upper = start_delta
+            exp.delta = start_delta
+            lower = 0.0
+
+            for step in range(10):
+                exp.load_model(num_trees, depth, target_label)
+                exp.target_at = exp.at
+                exp.load_model(num_trees, depth, exp.example_label)
+                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                    exp.meta["lr"], "example_i": int(exp.example_i), "example_label":
+                    int(exp.example_label), "example": list(exp.example),
+                    "target_label": target_label, "delta": exp.delta,
+                    "binsearch_step": step, "binsearch_upper": upper,
+                    "binsearch_lower": lower, "example_seed": seed},
+                    start_eps=0.01)
+
+                data = exp.results[output_file][-1]
+                if follow_astar:
+                    lo, up = util.get_best_astar(data["a*"], task="both")
+
+                    if len(data["ara*"]["solutions"]) > 0:
+                        aralo, araup = max(data["ara*"]["solutions"], key=lambda p: p[1]-p[0])
+                        print("ara* best bounds", aralo, araup)
+                        if up-lo < araup-aralo:
+                            lo, up = aralo, araup
+                            print("using ARA* bounds")
+                else:
+                    lo, up = data["merge"]["bounds"][-1]
+
+                # check whether result actually makes sense
+                delta_update = exp.delta
+                if "best_solution_box" in data["a*"] and follow_astar:
+                    box = dict(data["a*"]["best_solution_box"])
+                    feat_info = FeatInfo(exp.at, exp.target_at, set(), False)
+                    xvar_id_map = get_xvar_id_map(feat_info)
+                    x = get_closest_example(xvar_id_map, exp.example, box)
+                    pred_target = exp.target_at.predict_single(x)
+                    pred_source = exp.at.predict_single(x)
+                    data["a*_source_error"] = pred_source-lo
+                    data["a*_target_error"] = pred_target-up
+                    print(f"a* target {pred_target:.6f}, ({up:.6f}, {pred_target-up:.3g})")
+                    print(f"a* source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
+                    example_delta = max(abs(x - exp.example))
+                    data["a*_example_delta"] = example_delta
+                    delta_update = min(delta_update, example_delta)
+                    print("a* example_delta", example_delta)
+
+                if "best_solution_box" in data["ara*"] and follow_astar:
+                    box = dict(data["ara*"]["best_solution_box"])
+                    feat_info = FeatInfo(exp.at, exp.target_at, set(), False)
+                    xvar_id_map = get_xvar_id_map(feat_info)
+                    x = get_closest_example(xvar_id_map, exp.example, box)
+                    pred_target = exp.target_at.predict_single(x)
+                    pred_source = exp.at.predict_single(x)
+                    data["ara*_source_error"] = pred_source-lo
+                    data["ara*_target_error"] = pred_target-up
+                    print(f"ara* target {pred_target:.6f}, ({up:.6f}, {pred_target-up:.3g})")
+                    print(f"ara* source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
+                    example_delta = max(abs(x - exp.example))
+                    data["ara*_example_delta"] = example_delta
+                    delta_update = min(delta_update, example_delta)
+                    print("ara* example_delta", example_delta)
+
+                print("lo", lo, "up", up, "delta", exp.delta)
+                old_delta = exp.delta
+
+                # either we found an adversarial example, or we could not prove that one does not exist
+                if up-lo >= 0.0:
+                    upper = delta_update
+                    exp.delta = delta_update - 0.5 * (upper - lower)
+                    print(f"maybe SAT delta update: {old_delta:.3f}/{delta_update:.3f}",
+                          f"-> {exp.delta:.3f} [{lower:.3f}, {upper:.3f}]")
+                # we showed that no adversarial example exists for this delta
+                else:
+                    if exp.delta == upper:
+                        lower = exp.delta
+                        exp.delta = 2.0 * exp.delta
+                        upper = exp.delta
+                    else:
+                        lower = exp.delta
+                        exp.delta = exp.delta + 0.5 * (upper - lower)
+                    print(f"UNSAT delta update: {old_delta:.3f}/{delta_update:.3f}"
+                          f"-> {exp.delta:.3f} [{lower:.3f}, {upper:.3f}]")
+
+                # there's no difference between delta=1.5 and delta=1.75, pixels are int values
+                if np.floor(upper) == np.floor(lower):
+                    print("we're done early")
+                    data["done_early"] = True
+                    break
+    exp.write_results()
 
 def allstate(outfile, max_memory):
     exp = AllstateScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
@@ -963,22 +1065,23 @@ if __name__ == "__main__":
     if exp == "calhouse":
         calhouse(output_file, max_memory)
     if exp == "calhouse_random":
-        calhouse_random(output_file, max_memory, int(sys.argv[4]), int(sys.argv[5]))
+        calhouse_random(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
     if exp == "covtype":
         covtype(output_file, max_memory)
     if exp == "covtype_random":
-        covtype_random(output_file, max_memory, int(sys.argv[4]), int(sys.argv[5]))
+        covtype_random(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
     if exp == "mnist":
         mnistXvall(output_file, max_memory, sys.argv[4])
     if exp == "mnist_robust":
-        mnist_robust(output_file, max_memory)
+        mnist_robust(output_file, max_memory, follow_astar=sys.argv[4].lower()=="a*",
+                N=int(sys.argv[5]), seed=int(sys.argv[6]))
     if exp == "allstate":
         allstate(output_file, max_memory)
     if exp == "allstate_random":
-        allstate_random(output_file, max_memory, int(sys.argv[4]), int(sys.argv[5]))
+        allstate_random(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
     if exp == "soccer":
         soccer(output_file, max_memory)
     if exp == "higgs":
         higgs(output_file, max_memory)
     if exp == "higgs_random":
-        higgs_random(output_file, max_memory, int(sys.argv[4]), int(sys.argv[5]))
+        higgs_random(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))

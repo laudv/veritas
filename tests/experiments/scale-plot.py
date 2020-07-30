@@ -1,7 +1,10 @@
-import sys, os, json
+import sys, os, json, glob
 import numpy as np
+import pandas as pd
 import matplotlib.pyplot as plt
 import util
+
+#import seaborn as sns
 
 RESULT_DIR = "tests/experiments/scale"
 
@@ -249,6 +252,97 @@ def plot_output4(file, depth):
     plt.legend()
     plt.show()
 
+def plot_output5(pattern):
+    oo = []
+    for f in glob.glob(f"tests/experiments/scale/{pattern}"):
+        with open(f) as fh:
+            oo += json.load(fh)
+    print(len(oo), "records")
+    
+    fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
+
+    print(list(oo[0]["a*"].keys()))
+    print(list(oo[0]["ara*"].keys()))
+
+    num_vertices = [o["a*"]["num_vertices0"] + o["a*"]["num_vertices1"] for o in oo]
+    A = [util.get_best_astar(o["a*"]) for o in oo]
+    ARA = [max(map(lambda b: b[1]-b[0], o["ara*"]["solutions"]))
+            if len(o["ara*"]["solutions"]) > 0
+            else -np.inf
+            for o in oo]
+    merge = [min(map(lambda b: b[1], o["merge"]["bounds"])) for o in oo]
+
+    A, ARA, merge = np.array(A), np.array(ARA), np.array(merge)
+
+    l0, = ax.plot(num_vertices, [a-ara for a, ara in zip(A, ARA)], ".", alpha=0.05, zorder=-1, markersize=20)
+    l1, = ax.plot(num_vertices, [m-a for a, m in zip(A, merge)], ".", alpha=0.05, zorder=-1, markersize=20)
+
+    bins = np.linspace(min(num_vertices), max(num_vertices), 20)
+    bin_width = bins[1]-bins[0]
+    assignments = np.digitize(num_vertices, bins)
+
+    meanA = [np.mean(merge[assignments==int(bin)]-A[assignments==int(bin)]) for bin in range(len(bins))]
+    stdA = [np.std(merge[assignments==int(bin)]-A[assignments==int(bin)]) for bin in range(len(bins))]
+
+    ax.bar(bins, meanA, 0.45*bin_width, yerr=stdA, color=l1.get_color())
+
+    #for x, a, ara in zip(num_vertices, A, ARA):
+    #    ax.plot([x, x], [a, ara], ".-b", alpha=0.25)
+    #for x, a, m in zip(num_vertices, A, merge):
+    #    ax.plot([x, x], [a, m], "-b", alpha=0.25)
+
+    plt.show()
+
+def time_to_beat_merge(o):
+    A = [b[1]-b[0] for b in o["a*"]["bounds"]]
+    At = o["a*"]["bounds_times"]
+    merge = o["merge"]["bounds"][-1]
+    merge = merge[1] - merge[0]
+
+    print(A)
+    print(At)
+    print(merge)
+
+    return [at for a, at in zip(A, At) if a < merge][0]
+
+def plot_output6(pattern):
+    oo = []
+    for f in glob.glob(f"tests/experiments/scale/{pattern}"):
+        with open(f) as fh:
+            oo += json.load(fh)
+    print(len(oo), "records")
+
+    fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
+
+    num_vertices = [o["a*"]["num_vertices0"] + o["a*"]["num_vertices1"] for o in oo]
+    At = [util.get_best_astar(o["a*"]) for o in oo]
+    mt = [o["merge"]["times"][-1] for o in oo]
+    Ab = [time_to_beat_merge(o) for o in oo]
+
+    ratio = np.array([m/a for a, m in zip(Ab, mt)])
+
+    #l0, = ax.plot(num_vertices, ratio, ".")
+
+    bins = np.linspace(min(num_vertices), max(num_vertices), 10)
+    bin_width = bins[1]-bins[0]
+    assignments = np.digitize(num_vertices, bins)
+
+    meanA = [np.mean(ratio[assignments==int(bin)]) for bin in range(len(bins))]
+    #stdA = [np.std(ratio[assignments==int(bin)]) for bin in range(len(bins))]
+
+    #for b in range(5, len(bins)):
+    #    data = ratio[assignments==int(b)]
+    #    print(data)
+    #    ax.boxplot(data)
+    #    break
+
+    ax.bar(bins, meanA, 0.45*bin_width)
+
+    #sns.set(style="whitegrid", palette="pastel", color_codes=True)
+    #data = pd.DataFrame({"bin": assignments, "value": ratio})
+    #sns.violinplot(x="bin", y="value", data=data)
+    plt.show()
+
 if __name__ == "__main__":
     if int(sys.argv[1]) == 1:
         plot_output1(os.path.join("tests/experiments/scale", sys.argv[2]))
@@ -258,3 +352,7 @@ if __name__ == "__main__":
         plot_output3(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
     if int(sys.argv[1]) == 4:
         plot_output4(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
+    if int(sys.argv[1]) == 5:
+        plot_output5(sys.argv[2])
+    if int(sys.argv[1]) == 6:
+        plot_output6(sys.argv[2])
