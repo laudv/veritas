@@ -1,4 +1,4 @@
-import os, json
+import sys, os, json
 import numpy as np
 import matplotlib.pyplot as plt
 import util
@@ -178,10 +178,83 @@ def plot_output2(f, i):
     ax.xaxis.set_tick_params(which='both', labelbottom=True)
     plt.show()
 
-if __name__ == "__main__":
-    plot_output1("tests/experiments/scale/calhouse/depth5_2g_1thr")
-    #plot_output2("tests/experiments/scale/calhouse/test", 1)
-    #plot_output2("tests/experiments/scale/soccer/testabc", 0)
-    #plot_output2("tests/experiments/scale/higgs/test100", 0)
+def plot_output3(file, depth):
+    fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
+    with open(file) as fh:
+        oo = json.load(fh)
+    oo = [o for o in oo if o["depth"] == depth]
 
-    plot_output1("tests/experiments/scale/mnist/test")
+    print(len(oo))
+
+    x = [o["num_trees"] for o in oo]
+    A = [util.get_best_astar(o["a*"]) for o in oo]
+    ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"])) for o in oo]
+    merge = [min(map(lambda b: b[1], o["merge"]["bounds"])) for o in oo]
+
+    relA = [1.0 for a in A]
+    relARA = [ara/a for a, ara in zip(A, ARA)]
+    relmerge = [m/a for a, m in zip(A, merge)]
+
+    ax.fill_between(x, relA, relARA)
+    ax.semilogx(x, relA, label="A*")
+    ax.semilogx(x, relARA, label="ARA*")
+    ax.semilogx(x, relmerge, label="merge")
+
+    ax.set_xticks(x)
+    ax.set_xticks(x, minor=True)
+    ax.set_xticklabels([str(s) for s in x])
+
+    ax.legend()
+    plt.show()
+
+def plot_output4(file, depth):
+    fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
+    with open(file) as fh:
+        oo = json.load(fh)
+    oo = [o for o in oo if o["depth"] == depth]
+
+    x = [o["num_trees"] for o in oo]
+    #A = [max(o["a*"]["cliques"]) for o in oo]
+    #ARA = [max(o["ara*"]["cliques"]) for o in oo]
+    #merge = [max(o["merge"]["vertices"]) for o in oo]
+
+    A = [max(o["a*"]["memory"]) / (1024*1024) for o in oo]
+    ARA = [max(o["ara*"]["memory"]) / (1024*1024) for o in oo]
+    merge = [max(o["merge"]["memory"]) / (1024*1024) for o in oo]
+
+    At = [max(o["a*"]["bounds_times"]) for o in oo]
+    ARAt = [max(o["ara*"]["bounds_times"]) for o in oo]
+    merget = [max(o["merge"]["times"]) for o in oo]
+    Apt = [a/t for a, t in zip(A, At)]
+    ARApt = [a/t for a, t in zip(ARA, ARAt)]
+    mergept = [a/t for a, t in zip(merge, merget)]
+
+    print(Apt)
+    print(mergept)
+
+    #ax.semilogx(x, A, label="A*")
+    #ax.semilogx(x, ARA, label="ARA*")
+    #ax.semilogx(x, merge, label="merge")
+    ax.loglog(x, Apt, label="A*")
+    ax.loglog(x, ARApt, label="ARA*")
+    ax.loglog(x, mergept, label="merge")
+
+    ax.set_xticks(x)
+    ax.set_xticks(x, minor=True)
+    ax.set_xticklabels([str(s) for s in x])
+    
+    ax.set_xlabel("#trees")
+    ax.set_ylabel("states per sec.")
+
+    plt.legend()
+    plt.show()
+
+if __name__ == "__main__":
+    if int(sys.argv[1]) == 1:
+        plot_output1(os.path.join("tests/experiments/scale", sys.argv[2]))
+    if int(sys.argv[1]) == 2:
+        plot_output2(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
+    if int(sys.argv[1]) == 3:
+        plot_output3(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
+    if int(sys.argv[1]) == 4:
+        plot_output4(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))

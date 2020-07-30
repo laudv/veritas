@@ -7,7 +7,7 @@ import xgboost as xgb
 import math
 from sklearn.datasets import fetch_openml
 
-from treeck import Optimizer, ParallelOptimizer
+from treeck import Optimizer, ParallelOptimizer, RealDomain
 
 def load_openml(name, data_id, task="classification", force=False):
     """
@@ -186,3 +186,49 @@ def flatten_ara_upper(ss, es):
         else:
             bs.append(last_b)
     return bs
+
+def get_best_astar(A, task="maximize"):
+    if task == "maximize":
+        if len(A["solutions"]) > 0:
+            return A["solutions"][0][1]
+        return min(map(lambda b: b[1], A["bounds"]))
+    else:
+        if len(A["solutions"]) > 0:
+            return A["solutions"][0][0]
+        return max(map(lambda b: b[0], A["bounds"])) # maximum lower bound
+
+def generate_random_constraints(X, num_constraints, seed):
+    K = X.shape[1]
+    m = X.min(axis=0)
+    M = X.max(axis=0)
+
+    rng = np.random.RandomState(seed)
+
+    constraints = [RealDomain(m, M) for m, M in zip(m, M)]
+
+    maybe_binary = [m == 0.0 and M == 1.0 for m, M in zip(m, M)]
+    binary = [False for _ in range(K)]
+    for k in range(K):
+        if not maybe_binary[k]: continue
+        if len(np.unique(X[0:100, k])) > 2: continue
+        if len(np.unique(X[:, k])) == 2: binary[k] = True
+
+    for k in rng.randint(0, K, num_constraints):
+        if binary[k]:
+            if rng.rand() < 0.5:
+                constraints[k] = RealDomain(0.0, 0.5)
+            else:
+                constraints[k] = RealDomain(0.5, 1.0)
+        else:
+            c = constraints[k]
+            split = c.lo + rng.rand() * (c.hi - c.lo)
+            try:
+                l, r = constraints[k].split(split)
+            except:
+                continue
+            constraints[k] = l if rng.rand() < 0.5 else r
+            #print(f"{c} -> {constraints[k]}")
+
+    return constraints
+
+
