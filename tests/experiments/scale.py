@@ -942,7 +942,7 @@ def mnist_robust(outfile, max_memory, follow_astar, N, seed):
                     print(f"a* source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
                     example_delta = max(abs(x - exp.example))
                     data["a*_example_delta"] = example_delta
-                    delta_update = min(delta_update, example_delta)
+                    delta_update = min(delta_update, example_delta + 0.1) # !!
                     print("a* example_delta", example_delta)
 
                 if "best_solution_box" in data["ara*"] and follow_astar:
@@ -958,7 +958,7 @@ def mnist_robust(outfile, max_memory, follow_astar, N, seed):
                     print(f"ara* source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
                     example_delta = max(abs(x - exp.example))
                     data["ara*_example_delta"] = example_delta
-                    delta_update = min(delta_update, example_delta)
+                    delta_update = min(delta_update, example_delta + 0.1) # !!
                     print("ara* example_delta", example_delta)
 
                 print("lo", lo, "up", up, "delta", exp.delta)

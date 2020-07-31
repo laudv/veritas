@@ -1,4 +1,4 @@
-import sys, os, json, glob
+import sys, os, json, glob, gzip
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
@@ -12,8 +12,12 @@ def plot_output1(*args):
     filenames = [os.path.basename(f) for f in args]
     jsons = []
     for f in args:
-        with open(f) as fh:
-            jsons.append(json.load(fh))
+        if f.endswith(".gz"):
+            with gzip.open(f, "r") as fh:
+                jsons.append(json.load(fh))
+        else:
+            with open(f) as fh:
+                jsons.append(json.load(fh))
 
     for oos in zip(*jsons):
         n = len(oos)
@@ -274,23 +278,27 @@ def plot_output5(pattern):
 
     A, ARA, merge = np.array(A), np.array(ARA), np.array(merge)
 
-    l0, = ax.plot(num_vertices, [a-ara for a, ara in zip(A, ARA)], ".", alpha=0.05, zorder=-1, markersize=20)
-    l1, = ax.plot(num_vertices, [m-a for a, m in zip(A, merge)], ".", alpha=0.05, zorder=-1, markersize=20)
+    #l0, = ax.plot(num_vertices, [(a-ara)/a for a, ara in zip(A, ARA)], ".", alpha=0.2, zorder=-1, markersize=5)
+    l1, = ax.plot(num_vertices, [(m-a) for a, m in zip(A, merge)], ".", alpha=0.5, zorder=-1, markersize=5)
+    #l0, = ax.plot(num_vertices, [a-ara for a, ara in zip(A, ARA)], ".", alpha=0.05, zorder=-1, markersize=20)
+    #l1, = ax.plot(num_vertices, [m-a for a, m in zip(A, merge)], ".", alpha=0.05, zorder=-1, markersize=20)
 
-    bins = np.linspace(min(num_vertices), max(num_vertices), 20)
-    bin_width = bins[1]-bins[0]
-    assignments = np.digitize(num_vertices, bins)
+    #bins = np.linspace(min(num_vertices), max(num_vertices), 20)
+    #bin_width = bins[1]-bins[0]
+    #assignments = np.digitize(num_vertices, bins)
+    #meanA = [np.mean(merge[assignments==int(bin)]-A[assignments==int(bin)]) for bin in range(len(bins))]
+    #stdA = [np.std(merge[assignments==int(bin)]-A[assignments==int(bin)]) for bin in range(len(bins))]
 
-    meanA = [np.mean(merge[assignments==int(bin)]-A[assignments==int(bin)]) for bin in range(len(bins))]
-    stdA = [np.std(merge[assignments==int(bin)]-A[assignments==int(bin)]) for bin in range(len(bins))]
-
-    ax.bar(bins, meanA, 0.45*bin_width, yerr=stdA, color=l1.get_color())
+    #ax.bar(bins, meanA, 0.45*bin_width, yerr=stdA, color=l1.get_color())
 
     #for x, a, ara in zip(num_vertices, A, ARA):
     #    ax.plot([x, x], [a, ara], ".-b", alpha=0.25)
     #for x, a, m in zip(num_vertices, A, merge):
     #    ax.plot([x, x], [a, m], "-b", alpha=0.25)
 
+    ax.set_xlabel("number of reachable leafs")
+    ax.set_ylabel("(merge - A*) bounds (> 0 means A* wins)")
+    ax.set_title("merge vs A*: how do upper bounds compare")
     plt.show()
 
 def time_to_beat_merge(o):
@@ -299,11 +307,14 @@ def time_to_beat_merge(o):
     merge = o["merge"]["bounds"][-1]
     merge = merge[1] - merge[0]
 
-    print(A)
-    print(At)
-    print(merge)
+    #print(A)
+    #print(At)
+    #print(merge)
 
-    return [at for a, at in zip(A, At) if a < merge][0]
+    try:
+        return [at for a, at in zip(A, At) if a < merge][0]
+    except:
+        return np.inf
 
 def plot_output6(pattern):
     oo = []
@@ -312,22 +323,30 @@ def plot_output6(pattern):
             oo += json.load(fh)
     print(len(oo), "records")
 
-    fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
+    fig, (ax, ax2) = plt.subplots(2, 1, sharex=True,
+            gridspec_kw={"height_ratios": [4, 1]})#, figsize=(4, 2.5))
 
     num_vertices = [o["a*"]["num_vertices0"] + o["a*"]["num_vertices1"] for o in oo]
     At = [util.get_best_astar(o["a*"]) for o in oo]
     mt = [o["merge"]["times"][-1] for o in oo]
+    ms = [o["merge"]["vertices"][-1] for o in oo]
     Ab = [time_to_beat_merge(o) for o in oo]
 
-    ratio = np.array([m/a for a, m in zip(Ab, mt)])
+    print("mean time to beat time", np.mean(Ab))
 
-    #l0, = ax.plot(num_vertices, ratio, ".")
+    ratio = np.array([m-a for a, m in zip(Ab, mt)])
 
-    bins = np.linspace(min(num_vertices), max(num_vertices), 10)
-    bin_width = bins[1]-bins[0]
-    assignments = np.digitize(num_vertices, bins)
+    l0, = ax.plot(num_vertices, ratio, ".", alpha=0.5, zorder=20, markersize=5)
+    ax.plot(num_vertices, Ab, ".", alpha=0.5, zorder=20, markersize=5)
+    ax2.plot(num_vertices, [len(o["merge"]["bounds"]) for o in oo], ".", markersize=5,
+            color="gray", zorder=10, alpha=0.5)
 
-    meanA = [np.mean(ratio[assignments==int(bin)]) for bin in range(len(bins))]
+    #bins = np.linspace(min(num_vertices), max(num_vertices), 10)
+    #bin_width = bins[1]-bins[0]
+    #assignments = np.digitize(num_vertices, bins)
+
+    #meanA = [np.mean(ratio[assignments==int(bin)]) for bin in range(len(bins))]
+    #meanA = [sum(assignments==int(bin)) for bin in range(len(bins))]
     #stdA = [np.std(ratio[assignments==int(bin)]) for bin in range(len(bins))]
 
     #for b in range(5, len(bins)):
@@ -336,12 +355,87 @@ def plot_output6(pattern):
     #    ax.boxplot(data)
     #    break
 
-    ax.bar(bins, meanA, 0.45*bin_width)
+    #ax.bar(bins, meanA, 0.45*bin_width)
 
     #sns.set(style="whitegrid", palette="pastel", color_codes=True)
     #data = pd.DataFrame({"bin": assignments, "value": ratio})
     #sns.violinplot(x="bin", y="value", data=data)
+    ax2.set_xlabel("number of reachable leafs")
+    ax.set_ylabel("(merge - A*) time (> 0 means A* wins)")
+    ax2.set_ylabel("merge level")
+    ax2.set_yticks(range(4, 9))
+    ax.set_title("merge vs A*: time for A* to get to best bound of merge")
     plt.show()
+
+def plot_robust(pattern):
+    cache_file = f"/tmp/temporary_mnist_glob_cache_{pattern}.h5"
+
+    if not os.path.exists(cache_file):
+        oo = []
+        for f in glob.glob(f"tests/experiments/scale/mnist/{pattern}"):
+            with gzip.open(f, "r") as fh:
+                oo += json.load(fh)
+
+        print(len(oo))
+        print(list(oo[0].keys()))
+
+        data = {}
+
+        A = [util.get_best_astar(o["a*"], task="both") for o in oo]
+        data["A0"] = [a[0] for a in A]
+        data["A1"] = [a[1] for a in A]
+        ARA = [max(o["ara*"]["solutions"], key=lambda b: b[1]-b[0])
+                if len(o["ara*"]["solutions"]) > 0
+                else (np.inf, -np.inf)
+                for o in oo]
+        data["ARA0"] = [ara[0] for ara in ARA]
+        data["ARA1"] = [ara[1] for ara in ARA]
+        data["ARAeps"] = [max(o["ara*"]["epses"])
+                if len(o["ara*"]["epses"]) > 0
+                else 0.0
+                for o in oo]
+        merge = [o["merge"]["bounds"][-1] for o in oo]
+        data["merge0"] = [m[0] for m in merge]
+        data["merge1"] = [m[1] for m in merge]
+        data["merge_time"] = [o["merge"]["times"][-1] for o in oo]
+        data["time_to_beat_merge"] = [time_to_beat_merge(o) for o in oo]
+        data["example_seed"] = [o["example_seed"] for o in oo]
+        data["example_i"] = [o["example_i"] for o in oo]
+        data["delta"] = [o["delta"] for o in oo]
+        data["source"] = [o["example_label"] for o in oo]
+        data["target"] = [o["target_label"] for o in oo]
+        data["Aissol"] = [len(o["a*"]["solutions"]) > 0 for o in oo]
+        data["mergeissol"] = [o["merge"]["bounds"][0]==o["merge"]["bounds"][1] for o in oo]
+        data["binsearch_step"] = [o["binsearch_step"] for o in oo]
+        data["done_early"] = ["done_early" in o for o in oo]
+        data["a_unsat"] = [a[0] > a[1] for a in A]
+        data["merge_unsat"] = [m[0] > m[1] for m in merge]
+        data["up"] = [o["binsearch_upper"] for o in oo]
+        data["lo"] = [o["binsearch_lower"] for o in oo]
+
+
+        df = pd.DataFrame(data)
+        df["a_unsat_merge"] = [a[0]> a[1] and m[0]<=m[1] for a, m in zip(A, merge)]
+        df["a_merge_unsat"] = [a[0]<=a[1] and m[0]> m[1] for a, m in zip(A, merge)]
+
+        df.to_hdf(cache_file, key="data")
+    else:
+        df = pd.read_hdf(cache_file)
+
+    #print(df)
+
+
+    dfg = df.groupby(["example_seed", "example_i", "source", "target"])
+    x = dfg["a_unsat_merge"].any() # was at any point in the search A* better than merge?
+    #print(dfg.get_group((2, 11323, 4, 5)))
+
+    for b, i in zip(x, x.index):
+        if not b: continue
+        print(i)
+        g = dfg.get_group(i)
+        print(g)
+        #break
+
 
 if __name__ == "__main__":
     if int(sys.argv[1]) == 1:
@@ -356,3 +450,5 @@ if __name__ == "__main__":
         plot_output5(sys.argv[2])
     if int(sys.argv[1]) == 6:
         plot_output6(sys.argv[2])
+    if int(sys.argv[1]) == 7:
+        plot_robust(sys.argv[2])
