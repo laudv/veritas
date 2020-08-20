@@ -247,7 +247,8 @@ class Optimizer:
         self.opt.set_max_mem_size(self.max_memory)
         self.opt.set_eps(self.ara_eps)
         self.start_time = timeit.default_timer()
-        self.bounds = [self.current_basic_bounds()]
+        bb = self.current_basic_bounds()
+        self.bounds = [(bb[0][0], bb[1][1])]
         self.memory = [self.current_memory()]
         self.clique_count = [self.num_candidate_cliques()]
         self.times = [0.0]
