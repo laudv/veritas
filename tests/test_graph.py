@@ -749,6 +749,21 @@ class TestGraph(unittest.TestCase):
         ax.legend()
         plt.show()
 
+    def merge_basic_bound(self):
+        at = AddTree.read(f"tests/models/xgb-calhouse-easy.json")
+        opt0 = Optimizer(minimize=at)
+        opt1 = Optimizer(maximize=at)
+
+        opt0.merge(3, reset_optimizer=False)
+        opt1.merge(3, reset_optimizer=False)
+
+        print(opt0.g0.num_independent_sets())
+        print(opt1.g1.num_independent_sets())
+
+        print(opt0.current_basic_bounds())
+        print(opt1.current_basic_bounds())
+
+
     #def test_simplify(self):
     #    at = AddTree()
     #    t = at.add_tree();

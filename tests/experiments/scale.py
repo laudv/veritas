@@ -812,11 +812,11 @@ class HiggsRandomScaleExperiment(HiggsScaleExperiment):
         return opt
 
 def calhouse(outfile, max_memory):
-    exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=120)
+    exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=60)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
     for depth in [3, 4, 5, 6, 7, 8]:
-        for num_trees in [25, 50, 75, 100, 150, 200, 250, 500, 750, 1000]:
+        for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
             exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
                 exp.meta["lr"]}, start_eps=0.01)
@@ -841,11 +841,11 @@ def calhouse_random(outfile, max_memory, N, seed):
     exp.write_results()
 
 def covtype(outfile, max_memory):
-    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
+    exp = CovtypeScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
     for depth in [3, 4, 5, 6, 7, 8]:
-        for num_trees in [25, 50, 75, 100, 150, 200, 250, 500, 750, 1000]:
+        for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
             exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
                 exp.meta["lr"]}, start_eps=0.01)
@@ -990,11 +990,11 @@ def mnist_robust(outfile, max_memory, follow_astar, N, seed):
     exp.write_results()
 
 def allstate(outfile, max_memory):
-    exp = AllstateScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
+    exp = AllstateScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    for depth in [4, 6, 8]:
-        for num_trees in [25, 50, 75, 100, 150, 200, 250, 500]:
+    for depth in [3, 4, 5, 6, 7, 8]:
+        for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
             exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
             #break
@@ -1035,10 +1035,10 @@ def higgs(outfile, max_memory):
     exp = HiggsScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = False
-    num_trees = 10
-    depth = 4
-    exp.load_model(num_trees, depth)
-    exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
+    for depth in [3, 4, 5, 6, 7, 8]:
+        for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
+            exp.load_model(num_trees, depth)
+            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
     exp.write_results()
 
 def higgs_random(outfile, max_memory, N, seed):

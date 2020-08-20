@@ -311,7 +311,7 @@ class Optimizer:
     def num_box_checks(self): return self.opt.num_box_checks
     def num_candidate_cliques(self): return self.opt.num_candidate_cliques()
     def current_bounds(self): return self.opt.current_bounds()
-    def current_basic_bounds(self): return (self.g0.basic_bound()[0], self.g1.basic_bound()[1])
+    def current_basic_bounds(self): return (self.g0.basic_bound(), self.g1.basic_bound())
     def get_mem_size(self): return self.opt.get_mem_size()
     def get_used_mem_size(self): return self.opt.get_used_mem_size()
     def get_eps(self): return self.opt.get_eps()

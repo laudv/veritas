@@ -196,20 +196,33 @@ def plot_output3(file, depth):
     x = [o["num_trees"] for o in oo]
     A = [util.get_best_astar(o["a*"]) for o in oo]
     ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"])) for o in oo]
-    merge = [min(map(lambda b: b[1], o["merge"]["bounds"])) for o in oo]
+    ARAeps = [o["ara*"]["epses"][-1] for o in oo]
+    mergelo = [o["merge"]["bounds"][-1][1][0] for o in oo]
+    mergehi = [o["merge"]["bounds"][-1][1][1] for o in oo]
+
+    print("test", [o["merge"]["bounds"][-1] for o in oo])
 
     relA = [1.0 for a in A]
     relARA = [ara/a for a, ara in zip(A, ARA)]
-    relmerge = [m/a for a, m in zip(A, merge)]
+    relmerge = [m/a for a, m in zip(A, mergehi)]
 
-    ax.fill_between(x, relA, relARA)
-    ax.semilogx(x, relA, label="A*")
-    ax.semilogx(x, relARA, label="ARA*")
-    ax.semilogx(x, relmerge, label="merge")
+    #ax.fill_between(x, relA, relARA, color="lightgray")
+    #ax.semilogx(x, relA, label="A*")
+    #ax.semilogx(x, relARA, label="ARA*")
+    #ax.semilogx(x, relmerge, label="merge")
+    #ax.semilogx(x, ARAeps, label="ARA* eps", color="black", ls="--")
+    ax.semilogx(x, A, label="A")
+    ax.semilogx(x, ARA, label="ARA")
+    ax.semilogx(x, mergelo, label="merge lower")
+    ax.semilogx(x, mergehi, label="merge higher")
 
     ax.set_xticks(x)
     ax.set_xticks(x, minor=True)
     ax.set_xticklabels([str(s) for s in x])
+
+    ax.set_xlabel("#trees")
+    ax.set_ylabel("relative gap wrt A*")
+    #ax.set_title("")
 
     ax.legend()
     plt.show()
@@ -251,7 +264,8 @@ def plot_output4(file, depth):
     ax.set_xticklabels([str(s) for s in x])
     
     ax.set_xlabel("#trees")
-    ax.set_ylabel("states per sec.")
+    ax.set_ylabel("Mb per sec.")
+    ax.set_title("memory consumption per second")
 
     plt.legend()
     plt.show()
@@ -439,13 +453,13 @@ def plot_robust(pattern):
 
 if __name__ == "__main__":
     if int(sys.argv[1]) == 1:
-        plot_output1(os.path.join("tests/experiments/scale", sys.argv[2]))
+        plot_output1(sys.argv[2])
     if int(sys.argv[1]) == 2:
-        plot_output2(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
+        plot_output2(sys.argv[2], int(sys.argv[3]))
     if int(sys.argv[1]) == 3:
-        plot_output3(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
+        plot_output3(sys.argv[2], int(sys.argv[3]))
     if int(sys.argv[1]) == 4:
-        plot_output4(os.path.join("tests/experiments/scale", sys.argv[2]), int(sys.argv[3]))
+        plot_output4(sys.argv[2], int(sys.argv[3]))
     if int(sys.argv[1]) == 5:
         plot_output5(sys.argv[2])
     if int(sys.argv[1]) == 6:
