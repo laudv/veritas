@@ -235,4 +235,31 @@ def generate_random_constraints(X, num_constraints, seed):
 
     return constraints
 
+def randomly_prune_opt(X, opt, seed):
+    K = X.shape[1]
+    m = X.min(axis=0)
+    M = X.max(axis=0)
 
+    rng = np.random.RandomState(seed)
+    box = [RealDomain(m, M) for m, M in zip(m, M)]
+    num_tries = 0
+
+    fraction = max(0.05, rng.rand())
+    num_vertices_goal = fraction * (opt.g0.num_vertices() + opt.g1.num_vertices())
+
+    print("prune start:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
+    
+    while opt.g0.num_vertices() + opt.g1.num_vertices() > num_vertices_goal and num_tries < 100:
+        num_tries += 1
+        for k in rng.randint(0, K, 10):
+            c = box[k]
+            split = c.lo + rng.rand() * (c.hi - c.lo)
+            try:
+                l, r = box[k].split(split)
+            except:
+                continue
+            box[k] = l if rng.rand() < 0.5 else r
+        opt.prune_box(box, 0)
+        opt.prune_box(box, 1)
+
+        print("prune progress:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))

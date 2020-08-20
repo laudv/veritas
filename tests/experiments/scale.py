@@ -324,7 +324,7 @@ class CalhouseScaleExperiment(ScaleExperiment):
                 "tree_method": "hist",
                 "max_depth": depth,
                 "seed": 14,
-                "nthread": 4,
+                "nthread": 1,
             }
 
             def metric(y, raw_yhat): #maximized
@@ -354,21 +354,11 @@ class CalhouseScaleExperiment(ScaleExperiment):
         return opt
 
 class CalhouseRandomScaleExperiment(CalhouseScaleExperiment):
-    def __init__(self, *args, **kwargs):
-        self.num_constraints = kwargs["num_constraints"]
-        #self.constraint_seed = 0
-        del kwargs["num_constraints"]
-        super().__init__(*args, **kwargs)
-
     def get_opt(self):
-        X, y = util.load_openml("calhouse", data_id=537)
-        box = util.generate_random_constraints(X, self.num_constraints,
-                seed=self.constraint_seed)
+        if not hasattr(self, "X"):
+            self.X, self.y = util.load_openml("calhouse", data_id=537)
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
-        # prune
-        print("before num_vertices", opt.g1.num_vertices())
-        opt.prune_box(box, 1)
-        print("after num_vertices", opt.g1.num_vertices())
+        util.randomly_prune_opt(self.X, opt, seed=self.constraint_seed)
         return opt
 
 class CovtypeScaleExperiment(ScaleExperiment):
@@ -387,7 +377,7 @@ class CovtypeScaleExperiment(ScaleExperiment):
                 "max_depth": depth,
                 "eval_metric": "error",
                 "seed": 235,
-                "nthread": 4,
+                "nthread": 1,
             }
 
             def metric(y, raw_yhat):
@@ -417,21 +407,11 @@ class CovtypeScaleExperiment(ScaleExperiment):
         return opt
 
 class CovtypeRandomScaleExperiment(CovtypeScaleExperiment):
-    def __init__(self, *args, **kwargs):
-        self.num_constraints = kwargs["num_constraints"]
-        #self.constraint_seed = 0
-        del kwargs["num_constraints"]
-        super().__init__(*args, **kwargs)
-
     def get_opt(self):
-        X, y = util.load_openml("covtype", data_id=1596)
-        box = util.generate_random_constraints(X, self.num_constraints,
-                seed=self.constraint_seed)
+        if not hasattr(self, "X"):
+            self.X, self.y = util.load_openml("covtype", data_id=1596)
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
-        # prune
-        print("before num_vertices", opt.g1.num_vertices())
-        opt.prune_box(box, 1)
-        print("after num_vertices", opt.g1.num_vertices())
+        util.randomly_prune_opt(self.X, opt, seed=self.constraint_seed)
         return opt
 
 class ConstrainedCovtypeScaleExperiment1(CovtypeScaleExperiment):
@@ -476,7 +456,7 @@ class MnistXvallScaleExperiment(ScaleExperiment):
                 "max_depth": depth,
                 "eval_metric": "error",
                 "seed": 53589,
-                #"nthread": 4,
+                "nthread": 1,
             }
 
             def metric(y, raw_yhat): #maximized
@@ -551,7 +531,7 @@ class AllstateScaleExperiment(ScaleExperiment):
                 "tree_method": "hist",
                 "max_depth": depth,
                 "seed": 14,
-                "nthread": 4,
+                "nthread": 1,
             }
 
             def metric(y, raw_yhat): #maximized
@@ -579,21 +559,11 @@ class AllstateScaleExperiment(ScaleExperiment):
         return opt
 
 class AllstateRandomScaleExperiment(AllstateScaleExperiment):
-    def __init__(self, *args, **kwargs):
-        self.num_constraints = kwargs["num_constraints"]
-        #self.constraint_seed = 0 # set before running
-        del kwargs["num_constraints"]
-        super().__init__(*args, **kwargs)
-
     def get_opt(self):
-        X, y = self.load_data()
-        box = util.generate_random_constraints(X, self.num_constraints,
-                seed=self.constraint_seed)
+        if not hasattr(self, "X"):
+            self.X, self.y = self.load_data()
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
-        # prune
-        print("before num_vertices", opt.g1.num_vertices())
-        opt.prune_box(box, 1)
-        print("after num_vertices", opt.g1.num_vertices())
+        util.randomly_prune_opt(self.X, opt, seed=self.constraint_seed)
         return opt
 
 class SoccerScaleExperiment(ScaleExperiment):
@@ -671,7 +641,8 @@ class SoccerScaleExperiment(ScaleExperiment):
                 "tree_method": "hist",
                 "colsample_bytree": 1.0,
                 "subsample": 1.0,
-                "seed": 1
+                "seed": 1,
+                "nthread": 1,
             }
             self.model = xgb.train(params, dtrain, num_trees, [(dtrain, "train"), (dtest, "test")])
                     #early_stopping_rounds=10)
@@ -763,7 +734,8 @@ class HiggsScaleExperiment(ScaleExperiment):
                 #"base_score": base_score,
                 "eval_metric": "error",
                 "tree_method": "hist",
-                "seed": 1
+                "seed": 1,
+                "nthread": 1,
             }
 
             def metric(y, raw_yhat):
@@ -794,25 +766,15 @@ class HiggsScaleExperiment(ScaleExperiment):
         return opt
 
 class HiggsRandomScaleExperiment(HiggsScaleExperiment):
-    def __init__(self, *args, **kwargs):
-        self.num_constraints = kwargs["num_constraints"]
-        #self.constraint_seed = 0 # set before running
-        del kwargs["num_constraints"]
-        super().__init__(*args, **kwargs)
-
     def get_opt(self):
-        X, y = self.load_data()
-        box = util.generate_random_constraints(X, self.num_constraints,
-                seed=self.constraint_seed)
+        if not hasattr(self, "X"):
+            self.X, self.y = self.load_data()
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory)
-        # prune
-        print("before num_vertices", opt.g1.num_vertices())
-        opt.prune_box(box, 1)
-        print("after num_vertices", opt.g1.num_vertices())
+        util.randomly_prune_opt(self.X, opt, seed=self.constraint_seed)
         return opt
 
 def calhouse(outfile, max_memory):
-    exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=60)
+    exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
     for depth in [3, 4, 5, 6, 7, 8]:
@@ -825,19 +787,18 @@ def calhouse(outfile, max_memory):
     exp.write_results()
 
 def calhouse_random(outfile, max_memory, N, seed):
-    exp = CalhouseRandomScaleExperiment(max_memory=max_memory, max_time=30,
-            num_threads=1, num_constraints=12)
+    exp = CalhouseRandomScaleExperiment(max_memory=max_memory, max_time=30, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    depth = 6
-    num_trees = 100
     rng = np.random.RandomState(seed)
-    for i in range(N):
-        exp.constraint_seed = rng.randint(2**31)
-        exp.load_model(num_trees, depth)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
-            exp.meta["lr"], "constraint_seed": exp.constraint_seed},
-            start_eps=0.01)
+    for depth in [3, 4, 5, 6, 7, 8]:
+        for num_trees in [25, 50, 75, 100, 150, 200]:
+            for i in range(N):
+                exp.constraint_seed = rng.randint(2**31)
+                exp.load_model(num_trees, depth)
+                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                    exp.meta["lr"], "constraint_seed": exp.constraint_seed},
+                    start_eps=0.01)
     exp.write_results()
 
 def covtype(outfile, max_memory):
@@ -854,19 +815,18 @@ def covtype(outfile, max_memory):
     exp.write_results()
 
 def covtype_random(outfile, max_memory, N, seed):
-    exp = CovtypeRandomScaleExperiment(max_memory=max_memory, max_time=30,
-            num_threads=1, num_constraints=100)
+    exp = CovtypeRandomScaleExperiment(max_memory=max_memory, max_time=30, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    depth = 6
-    num_trees = 100
     rng = np.random.RandomState(seed)
-    for i in range(N):
-        exp.constraint_seed = rng.randint(2**31)
-        exp.load_model(num_trees, depth)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
-            exp.meta["lr"], "constraint_seed": exp.constraint_seed},
-            start_eps=0.01)
+    for depth in [3, 4, 5, 6, 7, 8]:
+        for num_trees in [25, 50, 75, 100, 150, 200]:
+            for i in range(N):
+                exp.constraint_seed = rng.randint(2**31)
+                exp.load_model(num_trees, depth)
+                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                    exp.meta["lr"], "constraint_seed": exp.constraint_seed},
+                    start_eps=0.01)
     exp.write_results()
 
 def mnistXvall(outfile, max_memory, label):
@@ -1002,19 +962,18 @@ def allstate(outfile, max_memory):
     exp.write_results()
 
 def allstate_random(outfile, max_memory, N, seed):
-    exp = AllstateRandomScaleExperiment(max_memory=max_memory, max_time=30,
-            num_threads=1, num_constraints=300)
+    exp = AllstateRandomScaleExperiment(max_memory=max_memory, max_time=30, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    depth = 6
-    num_trees = 100
     rng = np.random.RandomState(seed)
-    for i in range(N):
-        exp.constraint_seed = rng.randint(2**31)
-        exp.load_model(num_trees, depth)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
-            exp.meta["lr"], "constraint_seed": exp.constraint_seed},
-            start_eps=0.01)
+    for depth in [3, 4, 5, 6, 7, 8]:
+        for num_trees in [25, 50, 75, 100, 150, 200]:
+            for i in range(N):
+                exp.constraint_seed = rng.randint(2**31)
+                exp.load_model(num_trees, depth)
+                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                    exp.meta["lr"], "constraint_seed": exp.constraint_seed},
+                    start_eps=0.01)
     exp.write_results()
 
 def soccer(outfile, max_memory):
@@ -1032,7 +991,7 @@ def soccer(outfile, max_memory):
     exp.write_results()
 
 def higgs(outfile, max_memory):
-    exp = HiggsScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
+    exp = HiggsScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = False
     for depth in [3, 4, 5, 6, 7, 8]:
@@ -1042,19 +1001,18 @@ def higgs(outfile, max_memory):
     exp.write_results()
 
 def higgs_random(outfile, max_memory, N, seed):
-    exp = HiggsRandomScaleExperiment(max_memory=max_memory, max_time=30,
-            num_threads=1, num_constraints=75)
+    exp = HiggsRandomScaleExperiment(max_memory=max_memory, max_time=30, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    depth = 6
-    num_trees = 100
     rng = np.random.RandomState(seed)
-    for i in range(N):
-        exp.constraint_seed = rng.randint(2**31)
-        exp.load_model(num_trees, depth)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
-            exp.meta["lr"], "constraint_seed": exp.constraint_seed},
-            start_eps=0.01)
+    for depth in [3, 4, 5, 6, 7, 8]:
+        for num_trees in [25, 50, 75, 100, 150, 200]:
+            for i in range(N):
+                exp.constraint_seed = rng.randint(2**31)
+                exp.load_model(num_trees, depth)
+                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                    exp.meta["lr"], "constraint_seed": exp.constraint_seed},
+                    start_eps=0.01)
     exp.write_results()
 
 if __name__ == "__main__":

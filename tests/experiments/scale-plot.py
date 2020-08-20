@@ -78,7 +78,7 @@ def plot_output1(*args):
 
             # merge
             if "merge" in oo:
-                b2 = [x[1]-x[0] for x in oo["merge"]["bounds"]]
+                b2 = [x[1][1]-x[0][0] for x in oo["merge"]["bounds"]]
                 t2 = oo["merge"]["times"]
                 oot = oo["merge"]["oot"]
                 oom = oo["merge"]["oom"]
