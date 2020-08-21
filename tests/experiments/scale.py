@@ -956,7 +956,8 @@ def allstate(outfile, max_memory):
     for depth in [3, 4, 5, 6, 7, 8]:
         for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
+            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]},
+                    start_eps=0.01)
             #break
         #break
     exp.write_results()

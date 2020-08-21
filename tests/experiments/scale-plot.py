@@ -195,12 +195,14 @@ def plot_output3(file, depth):
 
     x = [o["num_trees"] for o in oo]
     A = [util.get_best_astar(o["a*"]) for o in oo]
-    ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"])) for o in oo]
-    ARAeps = [o["ara*"]["epses"][-1] for o in oo]
+    ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"]))
+            if len(o["ara*"]["solutions"]) > 0 else -np.inf
+            for o in oo]
+    ARAeps = [o["ara*"]["epses"][-1]
+            if len(o["ara*"]["epses"]) > 0 else 0.0
+            for o in oo]
     mergelo = [o["merge"]["bounds"][-1][1][0] for o in oo]
     mergehi = [o["merge"]["bounds"][-1][1][1] for o in oo]
-
-    print("test", [o["merge"]["bounds"][-1] for o in oo])
 
     relA = [1.0 for a in A]
     relARA = [ara/a for a, ara in zip(A, ARA)]
