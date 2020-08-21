@@ -994,11 +994,12 @@ def soccer(outfile, max_memory):
 def higgs(outfile, max_memory):
     exp = HiggsScaleExperiment(max_memory=max_memory, max_time=60, num_threads=1)
     exp.confirm_write_results(outfile)
-    exp.do_merge = False
+    exp.do_merge = True
     for depth in [3, 4, 5, 6, 7, 8]:
         for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
+            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]},
+                    start_eps=0.01)
     exp.write_results()
 
 def higgs_random(outfile, max_memory, N, seed):
