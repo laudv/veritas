@@ -2,6 +2,7 @@ import sys, os, json, glob, gzip
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import util
 
 #import seaborn as sns
@@ -57,24 +58,25 @@ def plot_output1(*args):
             if len(oo["ara*"]["solutions"]) > 0:
                 b1  = [x[1]-x[0] for x in oo["ara*"]["bounds"]]
                 ts1 = oo["ara*"]["sol_times"]
+                s  = [x[1]-x[0] for x in oo["ara*"]["solutions"]]
                 s10  = [x[0] for x in oo["ara*"]["solutions"]]
                 s11  = [x[1] for x in oo["ara*"]["solutions"]]
                 e1  = oo["ara*"]["epses"]
                 d1 = oo["ara*"]["total_time"]
-                s10f, s11f, ts1f, e1f = util.filter_solutions(s10, s11, ts1, e1)
-                s1f = [b-a for a, b in zip(s10f, s11f)]
-                b1f = util.flatten_ara_upper(s1f, e1f)
+                #s10f, s11f, ts1f, e1f = util.filter_solutions(s10, s11, ts1, e1)
+                #s1f = [b-a for a, b in zip(s10f, s11f)]
+                #b1f = util.flatten_ara_upper(s1f, e1f)
 
-                l1, = ax.plot(ts1f, s1f, ".-", label="ARA* lower")
-                ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
+                l1, = ax.plot(ts1, s, ".-", label="ARA* lower")
+                #ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
                 #ylim_lo, ylim_hi = ax.get_ylim()
                 #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
                 #ax.set_ylim(bottom=ylim_lo)
-                print("ARA* best:", max(s1f), "eps:", max(e1))
+                print("ARA* best:", max(s), "eps:", max(e1))
                 if "best_solution_box" in oo["ara*"]:
                     print("ARA* sol: ", oo["ara*"]["best_solution_box"])
                 if len(s0) == 0:
-                    ax.axhline(max(s1f), color="gray", ls=(4, (2, 4)), lw=1, label="ARA* best")
+                    ax.axhline(max(s), color="gray", ls=(4, (2, 4)), lw=1, label="ARA* best")
 
             # merge
             if "merge" in oo:
@@ -185,48 +187,93 @@ def plot_output2(f, i):
     ax.xaxis.set_tick_params(which='both', labelbottom=True)
     plt.show()
 
-def plot_output3(file, depth):
-    fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
+def plot_output3(file):
     with open(file) as fh:
         oo = json.load(fh)
-    oo = [o for o in oo if o["depth"] == depth]
 
-    print(len(oo))
+    depths = {}
+    for depth in [3,4,6,8]:#range(4, 9, 2):
+        ooo = [o for o in oo if o["depth"] == depth]
+        if len(oo) == 0: continue
+        depths[depth] = ooo
 
-    x = [o["num_trees"] for o in oo]
-    A = [util.get_best_astar(o["a*"]) for o in oo]
-    ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"]))
-            if len(o["ara*"]["solutions"]) > 0 else -np.inf
-            for o in oo]
-    ARAeps = [o["ara*"]["epses"][-1]
-            if len(o["ara*"]["epses"]) > 0 else 0.0
-            for o in oo]
-    mergelo = [o["merge"]["bounds"][-1][1][0] for o in oo]
-    mergehi = [o["merge"]["bounds"][-1][1][1] for o in oo]
+    fig, axs = plt.subplots(1, len(depths), sharey=True)#, figsize=(4, 2.5))
 
-    relA = [1.0 for a in A]
-    relARA = [ara/a for a, ara in zip(A, ARA)]
-    relmerge = [m/a for a, m in zip(A, mergehi)]
+    for i, ((depth, oo), ax) in enumerate(zip(depths.items(), axs)):
+        xs = [o["num_trees"] for o in oo]
+        A = [util.get_best_astar(o["a*"]) for o in oo]
+        ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"]))
+                if len(o["ara*"]["solutions"]) > 0 else -np.inf
+                for o in oo]
+        ARAeps = [o["ara*"]["epses"][-1]
+                if len(o["ara*"]["epses"]) > 0 else 0.0
+                for o in oo]
+        mergelo = [o["merge"]["bounds"][-1][1][0] for o in oo]
+        mergehi = [o["merge"]["bounds"][-1][1][1] for o in oo]
 
-    #ax.fill_between(x, relA, relARA, color="lightgray")
-    #ax.semilogx(x, relA, label="A*")
-    #ax.semilogx(x, relARA, label="ARA*")
-    #ax.semilogx(x, relmerge, label="merge")
-    #ax.semilogx(x, ARAeps, label="ARA* eps", color="black", ls="--")
-    ax.semilogx(x, A, label="A")
-    ax.semilogx(x, ARA, label="ARA")
-    ax.semilogx(x, mergelo, label="merge lower")
-    ax.semilogx(x, mergehi, label="merge higher")
+        relA = [1.0 for a in A]
+        relARA = [ara/a for a, ara in zip(A, ARA)]
+        relmlo = [m/a for a, m in zip(A, mergelo)]
+        relmhi = [m/a for a, m in zip(A, mergehi)]
 
-    ax.set_xticks(x)
-    ax.set_xticks(x, minor=True)
-    ax.set_xticklabels([str(s) for s in x])
+        #ax.fill_between(x, relA, relARA, color="lightgray")
+        #ax.semilogx(x, relA, label="A*")
+        #ax.semilogx(x, relARA, label="ARA*")
+        #ax.semilogx(x, relmerge, label="merge")
+        #ax.semilogx(x, ARAeps, label="ARA* eps", color="black", ls="--")
+        #ax.semilogx(x, A, label="A")
+        #ax.semilogx(x, ARA, label="ARA")
+        #ax.semilogx(x, mergelo, label="merge lower")
+        #ax.semilogx(x, mergehi, label="merge higher")
 
-    ax.set_xlabel("#trees")
-    ax.set_ylabel("relative gap wrt A*")
-    #ax.set_title("")
+        xxs = np.arange(len(xs))# + i/len(depths)
+        #ours = ax.bar(xx,
+        #        [hi-lo for lo, hi in zip(ARA, A)], bottom=ARA,
+        #        zorder=9, width=0.8/len(depths), color="blue")
+        #theirs = ax.bar(xx,
+        #        [hi-lo for lo, hi in zip(mergelo, mergehi)], bottom=mergelo,
+        #        zorder=1, width=0.8/len(depths), color="red")
+        #ours = ax.bar(xx,
+        #        [hi-lo for lo, hi in zip(relARA, relA)], bottom=relARA,
+        #        zorder=9, align="edge", width=0.8/len(depths), color="blue")
+        #theirs = ax.bar(xx,
+        #        [hi-lo for lo, hi in zip(relmlo, relmhi)], bottom=relmlo,
+        #        zorder=1, align="edge", width=0.8/len(depths), color="red")
 
-    ax.legend()
+        def interval(ax, x, lo, hi, lw=1, label=None):
+            ax.vlines(x, lo+0.1, hi-0.1, lw=lw)
+            ax.hlines(lo+0.1, x-0.2, x+0.2, lw=lw)
+            ax.hlines(hi-0.1, x-0.2, x+0.2, lw=lw)
+            #if label is not None:
+            #    ax.text(x, hi, label, horizontalalignment="center")
+
+        def interval_dashed(ax, x, lo, hi, lw=1):
+            ax.vlines(x, lo, hi, lw=lw, linestyles ="dashed")
+            ax.hlines(lo, x-0.1, x+0.1, lw=lw)
+            ax.hlines(hi, x-0.1, x+0.1, lw=lw)
+
+        for x, lo, hi in zip(xxs, ARA, A):
+            interval(ax, x, lo, hi, lw=2.0)
+
+        for x, lo, hi in zip(xxs, mergelo, mergehi):
+            interval_dashed(ax, x, lo, hi, lw=1.0)
+
+        ax.set_xlabel("#trees")
+        ax.set_title(f"depth {depth}")
+
+        ax.set_xticks(xxs)
+        ax.set_xticks(xxs, minor=True)
+        ax.set_xticklabels([str(s) for s in xs], rotation=90)
+
+    axs[0].set_ylabel("model output")
+    axs[0].legend([
+            Line2D([0], [0], color="black", lw=2),
+            Line2D([0], [0], ls="--", color="black", lw=1)
+        ], ["ours", "merge"],
+        bbox_to_anchor=(0.2, 1.15, 4.3, 0.0), loc='lower left', ncol=2,
+        mode="expand", borderaxespad=0.0, frameon=False)
+    #plt.tight_layout()
+    plt.subplots_adjust(top=0.8, bottom=0.2, left=0.15, right=0.95)
     plt.show()
 
 def plot_output4(file, depth):
@@ -459,7 +506,7 @@ if __name__ == "__main__":
     if int(sys.argv[1]) == 2:
         plot_output2(sys.argv[2], int(sys.argv[3]))
     if int(sys.argv[1]) == 3:
-        plot_output3(sys.argv[2], int(sys.argv[3]))
+        plot_output3(sys.argv[2])
     if int(sys.argv[1]) == 4:
         plot_output4(sys.argv[2], int(sys.argv[3]))
     if int(sys.argv[1]) == 5:
