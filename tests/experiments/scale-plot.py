@@ -5,6 +5,16 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import util
 
+plt.rcParams['svg.fonttype'] = 'none'
+plt.rcParams['text.usetex'] = False
+plt.rcParams['font.size'] = 13
+plt.rcParams['axes.linewidth'] = 0.5
+plt.rcParams['xtick.major.width'] = 0.5
+plt.rcParams['ytick.major.width'] = 0.5
+plt.rcParams['xtick.minor.width'] = 0.5
+plt.rcParams['ytick.minor.width'] = 0.5
+plt.rcParams['axes.unicode_minus'] = False
+
 #import seaborn as sns
 
 RESULT_DIR = "tests/experiments/scale"
@@ -192,12 +202,12 @@ def plot_output3(file):
         oo = json.load(fh)
 
     depths = {}
-    for depth in [3,4,6,8]:#range(4, 9, 2):
+    for depth in [4,6,8]:#range(4, 9, 2):
         ooo = [o for o in oo if o["depth"] == depth]
         if len(oo) == 0: continue
         depths[depth] = ooo
 
-    fig, axs = plt.subplots(1, len(depths), sharey=True)#, figsize=(4, 2.5))
+    fig, axs = plt.subplots(1, len(depths), sharey=True, figsize=(3, 1.5))
 
     for i, ((depth, oo), ax) in enumerate(zip(depths.items(), axs)):
         xs = [o["num_trees"] for o in oo]
@@ -240,12 +250,10 @@ def plot_output3(file):
         #        [hi-lo for lo, hi in zip(relmlo, relmhi)], bottom=relmlo,
         #        zorder=1, align="edge", width=0.8/len(depths), color="red")
 
-        def interval(ax, x, lo, hi, lw=1, label=None):
+        def interval(ax, x, lo, hi, lw=1):
             ax.vlines(x, lo+0.1, hi-0.1, lw=lw)
             ax.hlines(lo+0.1, x-0.2, x+0.2, lw=lw)
             ax.hlines(hi-0.1, x-0.2, x+0.2, lw=lw)
-            #if label is not None:
-            #    ax.text(x, hi, label, horizontalalignment="center")
 
         def interval_dashed(ax, x, lo, hi, lw=1):
             ax.vlines(x, lo, hi, lw=lw, linestyles ="dashed")
@@ -258,7 +266,7 @@ def plot_output3(file):
         for x, lo, hi in zip(xxs, mergelo, mergehi):
             interval_dashed(ax, x, lo, hi, lw=1.0)
 
-        ax.set_xlabel("#trees")
+        ax.set_xlabel("trees")
         ax.set_title(f"depth {depth}")
 
         ax.set_xticks(xxs)
@@ -270,10 +278,11 @@ def plot_output3(file):
             Line2D([0], [0], color="black", lw=2),
             Line2D([0], [0], ls="--", color="black", lw=1)
         ], ["ours", "merge"],
-        bbox_to_anchor=(0.2, 1.15, 4.3, 0.0), loc='lower left', ncol=2,
+        bbox_to_anchor=(0.2, 1.15, len(depths)*1.08, 0.0), loc='lower left', ncol=2,
         mode="expand", borderaxespad=0.0, frameon=False)
     #plt.tight_layout()
     plt.subplots_adjust(top=0.8, bottom=0.2, left=0.15, right=0.95)
+    plt.savefig("/tmp/unconstrained.svg")
     plt.show()
 
 def plot_output4(file, depth):
@@ -312,7 +321,7 @@ def plot_output4(file, depth):
     ax.set_xticks(x, minor=True)
     ax.set_xticklabels([str(s) for s in x])
     
-    ax.set_xlabel("#trees")
+    ax.set_xlabel("trees")
     ax.set_ylabel("Mb per sec.")
     ax.set_title("memory consumption per second")
 

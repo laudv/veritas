@@ -85,24 +85,25 @@ def random():
         ttb = [time_to_beat_merge(o) for o in oo]
         ttb = [o["merge"]["times"][-1] / ta if ta > 0.0 else 9999 for ta, o in zip(ttb, oo)]
 
-        print(ttb)
+        #print(ttb)
 
         cols["dataset"].append(k)
         cols["num_experiments"].append(num_experiments)
-        cols["exact_ours"].append(sum(exact_ours) / num_experiments)
-        cols["exact_merge"].append(sum(exact_merge) / num_experiments)
-        cols["better_upper"].append(sum(better_upper) / num_experiments)
-        cols["better_lower"].append(sum(better_lower) / num_experiments)
-        cols["gap10"].append(sum(g < 0.1 for g in gap_ours) / num_experiments)
-        cols["gap50"].append(sum(g < 0.5 for g in gap_ours) / num_experiments)
-        cols["ttb1000"].append(sum(t >= 1000.0 for t in ttb) / num_experiments)
+        cols["exact_ours"].append(sum(exact_ours) / num_experiments * 100)
+        cols["exact_merge"].append(sum(exact_merge) / num_experiments * 100)
+        cols["better_upper"].append(sum(better_upper) / num_experiments * 100)
+        cols["better_lower"].append(sum(better_lower) / num_experiments * 100)
+        cols["gap10"].append(sum(g < 0.1 for g in gap_ours) / num_experiments * 100)
+        cols["gap50"].append(sum(g < 0.5 for g in gap_ours) / num_experiments * 100)
+        cols["ttb1000"].append(sum(t >= 1000.0 for t in ttb) / num_experiments * 100)
         #cols["ttb100"].append(sum(t >= 100.0 for t in ttb) / num_experiments)
-        cols["ttb10"].append(sum(t >= 10.0 for t in ttb) / num_experiments)
+        cols["ttb10"].append(sum(t >= 10.0 for t in ttb) / num_experiments * 100)
 
     print(cols)
 
     df = pd.DataFrame(cols)
-    df.round(2)
+    df = df.round(1)
     print(df)
+    print(df.to_latex(index=False))
 
 random()
