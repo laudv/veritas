@@ -31,6 +31,7 @@ def plot_output1(*args):
             with open(f) as fh:
                 jsons.append(json.load(fh))
 
+    k = 0
     for oos in zip(*jsons):
         n = len(oos)
 
@@ -61,8 +62,8 @@ def plot_output1(*args):
                 print("A* best:", min(b0))
                 ax.axhline(min(b0), color="gray", linestyle=(0, (2, 4)), linewidth=1, label="A* best")
             ax.plot(tb0, b0, label="A* upper")
-            if "best_solution_box" in oo["a*"]:
-                print("A* sol: ", oo["a*"]["best_solution_box"])
+            #if "best_solution_box" in oo["a*"]:
+            #    print("A* sol: ", oo["a*"]["best_solution_box"])
 
             # ARA*
             tb1 = oo["ara*"]["bounds_times"]
@@ -84,8 +85,8 @@ def plot_output1(*args):
                 #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
                 #ax.set_ylim(bottom=ylim_lo)
                 print("ARA* best:", max(s), "eps:", max(e1))
-                if "best_solution_box" in oo["ara*"]:
-                    print("ARA* sol: ", oo["ara*"]["best_solution_box"])
+                #if "best_solution_box" in oo["ara*"]:
+                #    print("ARA* sol: ", oo["ara*"]["best_solution_box"])
                 if len(s0) == 0:
                     ax.axhline(max(s), color="gray", ls=(4, (2, 4)), lw=1, label="ARA* best")
 
@@ -109,12 +110,14 @@ def plot_output1(*args):
                 print("merge best:", min(b2), "OOT:", oot, "OOM:", oom, "optimal", oo["merge"]["optimal"])
 
             # plot details
-            ax.set_title(f"num_trees={oo['num_trees']}, depth={oo['depth']} ({name})")
+            ax.set_title(f"num_trees={oo['num_trees']}, depth={oo['depth']} ({name}, {k})")
             ax.legend()
             ax.set_xlabel("time");
             ax.set_ylabel("model output");
             ax.set_ylim(top=1.1*max(b0));
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
+
+            k+=1
 
         plt.show()
 
@@ -159,7 +162,7 @@ def plot_output2(f, i):
         b1f = util.flatten_ara_upper(s1f, e1f)
 
         l1, = ax.plot(ts1f, s1f, ".-", label="ARA* lower")
-        ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
+        #ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
         #ylim_lo, ylim_hi = ax.get_ylim()
         #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
         #ax.set_ylim(bottom=ylim_lo)
@@ -171,7 +174,7 @@ def plot_output2(f, i):
 
     # merge
     if "merge" in oo:
-        b2 = [x[1]-x[0] for x in oo["merge"]["bounds"]]
+        b2 = [x[1][1]-x[0][0] for x in oo["merge"]["bounds"]]
         t2 = oo["merge"]["times"]
         oot = oo["merge"]["oot"]
         oom = oo["merge"]["oom"]
@@ -208,7 +211,7 @@ def plot_output3(file):
         if len(oo) == 0: continue
         depths[depth] = ooo
 
-    fig, axs = plt.subplots(1, len(depths), sharey=True, figsize=(3.0, 1.3))
+    fig, axs = plt.subplots(1, len(depths), sharey=True, figsize=(3.0, 1.4))
 
     for i, ((depth, oo), ax) in enumerate(zip(depths.items(), axs)):
         xs = [o["num_trees"] for o in oo]
@@ -285,13 +288,15 @@ def plot_output3(file):
             Line2D([0], [0], color="black", lw=1),
             Line2D([0], [0], ls="-", color="black", lw=0.5)
         ], ["ours", "merge"],
-        bbox_to_anchor=(0.8, 1.15, len(depths)*1.08-0.5, 0.0), loc='lower left', ncol=2,
+        bbox_to_anchor=(0.8, 1.20, len(depths)*1.08-0.5, 0.0), loc='lower left', ncol=2,
         mode="expand", borderaxespad=0.0, frameon=False)
     plt.figtext(-0.08, 0.87, "model")
     plt.figtext(-0.08, 0.8, "output")
     #plt.tight_layout()
     plt.subplots_adjust(top=0.8, bottom=0.2, left=0.05, right=0.95)
     plt.savefig("/tmp/unconstrained.svg")
+    if "IMG_OUTPUT" in os.environ:
+        plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "unconstrained.svg"))
     plt.show()
 
 def plot_output4(file, depth):
@@ -518,6 +523,103 @@ def plot_robust(pattern):
         #break
 
 
+def plot_examples():
+    lw=0.7
+    examples = [
+            #("tests/experiments/scale/covtype/all4g120s", 9),
+            ("tests/experiments/scale/covtype/rnd4g30s10N_1", 152),
+            ("tests/experiments/scale/covtype/rnd4g30s10N_1", 165)
+            ]
+    fig, axs = plt.subplots(1, len(examples), figsize=(3.5, 1.2), sharey=False, sharex=False)
+    oo = []
+    for f, i in examples:
+        with open(f) as fh:
+            o = json.load(fh)[i]
+            oo.append(o)
+
+    for o, ax in zip(oo, axs):
+        # A*
+        tb0 = o["a*"]["bounds_times"]
+        b0  = [x[1]-x[0] for x in o["a*"]["bounds"]]
+        ts0 = o["a*"]["sol_times"]
+        s0  = [x[1]-x[0] for x in o["a*"]["solutions"]]
+
+        if len(s0) > 0:
+            print("A* optimal:", s0[0])
+            ax.axhline(s0[0], color="gray", linestyle=":", linewidth=lw, label="Solution")
+            b0.append(s0[0])
+            tb0.append(ts0[0])
+            b0 = [x for x in b0 if x >= s0[0]]
+            tb0 = [y for x, y in zip(b0, tb0) if x >= s0[0]]
+        else:
+            print("A* best:", min(b0))
+            ax.axhline(min(b0), color="gray", linestyle=":", linewidth=lw, label="A* best")
+        l0, = ax.plot(tb0, b0, lw=lw, label="A* upper")
+        #if "best_solution_box" in o["a*"]:
+        #    print("A* sol: ", o["a*"]["best_solution_box"])
+
+        # ARA*
+        tb1 = o["ara*"]["bounds_times"]
+        if len(o["ara*"]["solutions"]) > 0:
+            b1  = [x[1]-x[0] for x in o["ara*"]["bounds"]]
+            ts1 = o["ara*"]["sol_times"]
+            s10  = [x[0] for x in o["ara*"]["solutions"]]
+            s11  = [x[1] for x in o["ara*"]["solutions"]]
+            e1  = o["ara*"]["epses"]
+            d1 = o["ara*"]["total_time"]
+            s10f, s11f, ts1f, e1f = util.filter_solutions(s10, s11, ts1, e1)
+            s1f = [b-a for a, b in zip(s10f, s11f)]
+            b1f = util.flatten_ara_upper(s1f, e1f)
+
+            l1, = ax.plot(ts1f, s1f, ".-", lw=lw, ms=2.0, label="ARA* lower")
+            #ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
+            #ylim_lo, ylim_hi = ax.get_ylim()
+            #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
+            #ax.set_ylim(bottom=ylim_lo)
+            print("ARA* best:", max(s1f), "eps:", max(e1))
+            #if "best_solution_box" in o["ara*"]:
+            #    print("ARA* sol: ", o["ara*"]["best_solution_box"])
+            if len(s0) == 0:
+                ax.axhline(max(s1f), color="gray", ls=":", lw=lw, label="ARA* best")
+
+        # merge
+        if "merge" in o:
+            b2 = [x[1][1]-x[0][0] for x in o["merge"]["bounds"]]
+            t2 = o["merge"]["times"]
+            oot = o["merge"]["oot"]
+            oom = o["merge"]["oom"]
+            tt = o["merge"]["total_time"]
+            mt = o["max_time"]
+            mm = o["max_memory"]
+            l2, = ax.plot(t2, b2, "x-", lw=lw, ms=3.0, label="Merge")
+            oot_pos = 0
+            if oot or oom:
+                label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
+                oot_pos = max(oot_pos, max(tb0), max(tb1), max(t2))
+                ax.plot([t2[-1], oot_pos], [b2[-1], b2[-1]], ":", color=l2.get_color(), lw=lw)
+                ax.text(oot_pos, b2[-1]*1.1, label, horizontalalignment='right',
+                        verticalalignment='bottom', color=l2.get_color())
+
+            print("merge best:", min(b2), "OOT:", oot, "OOM:", oom, "optimal", o["merge"]["optimal"])
+
+    # plot details
+    #ax.set_title(f"num_trees={o['num_trees']}, depth={o['depth']} ({os.path.basename(f)})")
+    #ax.legend()
+    #ax.set_xlabel("time");
+    #ax.set_ylabel("model output");
+    ##ax.set_ylim(bottom=min(b1), top=1.1*max(b0));
+    #ax.xaxis.set_tick_params(which='both', labelbottom=True)
+    plt.subplots_adjust(top=0.8, bottom=0.16, left=0.15, right=0.95,wspace=0.4)
+    axs[0].legend([l0, l1, l2], ["up", "lo", "merge"],
+        bbox_to_anchor=(0.4, 1.0, 2.0, 1.0), loc='lower left',
+        ncol=3, mode="expand", borderaxespad=0.0, frameon=False)
+    plt.figtext(0.0, 0, "Time [s]")
+    plt.figtext(0.0, 0.85, "Output")
+    plt.savefig("/tmp/examples.svg")
+    if "IMG_OUTPUT" in os.environ:
+        plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "examples.svg"))
+    plt.show()
+
 if __name__ == "__main__":
     if int(sys.argv[1]) == 1:
         plot_output1(sys.argv[2])
@@ -533,3 +635,5 @@ if __name__ == "__main__":
         plot_output6(sys.argv[2])
     if int(sys.argv[1]) == 7:
         plot_robust(sys.argv[2])
+    if int(sys.argv[1]) == 8:
+        plot_examples()

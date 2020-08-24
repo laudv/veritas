@@ -31,6 +31,7 @@ class ScaleExperiment:
         self.min_time_per_step = 25
         self.max_time_per_step = 2000
         self.do_merge = True
+        self.merge_only = False
 
         self.steps_kwargs = {}
 
@@ -289,17 +290,19 @@ class ScaleExperiment:
         data["max_memory"] = self.max_memory
         data["max_time"] = self.max_time
 
-        print(f"\n -- A* {time.ctime()} --")
-        data["a*"] = self.astar()
-        print(f"\n -- ARA* {time.ctime()} --")
-        data["ara*"] = self.arastar(start_eps, eps_incr)
-        if self.do_merge:
+        if not self.merge_only:
+            print(f"\n -- A* {time.ctime()} --")
+            data["a*"] = self.astar()
+            print(f"\n -- ARA* {time.ctime()} --")
+            data["ara*"] = self.arastar(start_eps, eps_incr)
+        if self.do_merge or self.merge_only:
             print(f"\n -- MERGE {time.ctime()} --")
             data["merge"] = self.merge()
 
     def confirm_write_results(self, name):
         filename = os.path.join(self.result_dir, name)
-        print("writing output to", filename)
+        exists = os.path.exists(filename)
+        print("writing output to", filename, "(file exists!)" if exists else "")
         if input("OK? ") != "y":
             sys.exit()
 
@@ -841,113 +844,116 @@ def mnistXvall(outfile, max_memory, label):
         #break
     exp.write_results()
 
-def mnist_robust(outfile, max_memory, follow_astar, N, seed):
+def mnist_robust(outfile, max_memory, N, seed):
     exp = MnistXvallPrunedScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
     exp.steps_kwargs["min_output_difference"] = 0.0
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    depth = 5
-    num_trees = 50
-    start_delta = 20.1 # avoid integer values
 
     rng = np.random.RandomState(seed)
+    start_delta = 20.1 # avoid floating point issues (robustness for mnist is an integer anyway!)
 
     for example_i in rng.randint(exp.X.shape[0], size=N):
         exp.load_example(example_i, start_delta)
         for target_label in range(10):
             if target_label == exp.example_label: continue
-            print(f"source {exp.example_label} vs target {target_label}")
+            print(f"source {exp.example_label} vs target {target_label} FOLLOW ASTAR")
+            mnist_robust_search(exp, example_i, target_label, True, start_delta, seed)
+            print(f"source {exp.example_label} vs target {target_label} FOLLOW MERGE")
+            mnist_robust_search(exp, example_i, target_label, False, start_delta, seed)
 
-            upper = start_delta
-            exp.delta = start_delta
-            lower = 0.0
-
-            for step in range(10):
-                exp.load_model(num_trees, depth, target_label)
-                exp.target_at = exp.at
-                exp.load_model(num_trees, depth, exp.example_label)
-                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
-                    exp.meta["lr"], "example_i": int(exp.example_i), "example_label":
-                    int(exp.example_label), "example": list(exp.example),
-                    "target_label": target_label, "delta": exp.delta,
-                    "binsearch_step": step, "binsearch_upper": upper,
-                    "binsearch_lower": lower, "example_seed": seed},
-                    start_eps=0.01)
-
-                data = exp.results[output_file][-1]
-                if follow_astar:
-                    lo, up = util.get_best_astar(data["a*"], task="both")
-
-                    if len(data["ara*"]["solutions"]) > 0:
-                        aralo, araup = max(data["ara*"]["solutions"], key=lambda p: p[1]-p[0])
-                        print("ara* best bounds", aralo, araup)
-                        if up-lo < araup-aralo:
-                            lo, up = aralo, araup
-                            print("using ARA* bounds")
-                else:
-                    lo, up = data["merge"]["bounds"][-1]
-
-                # check whether result actually makes sense
-                delta_update = exp.delta
-                if "best_solution_box" in data["a*"] and follow_astar:
-                    box = dict(data["a*"]["best_solution_box"])
-                    feat_info = FeatInfo(exp.at, exp.target_at, set(), False)
-                    xvar_id_map = get_xvar_id_map(feat_info)
-                    x = get_closest_example(xvar_id_map, exp.example, box)
-                    pred_target = exp.target_at.predict_single(x)
-                    pred_source = exp.at.predict_single(x)
-                    data["a*_source_error"] = pred_source-lo
-                    data["a*_target_error"] = pred_target-up
-                    print(f"a* target {pred_target:.6f}, ({up:.6f}, {pred_target-up:.3g})")
-                    print(f"a* source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
-                    example_delta = max(abs(x - exp.example))
-                    data["a*_example_delta"] = example_delta
-                    delta_update = min(delta_update, example_delta + 0.1) # !!
-                    print("a* example_delta", example_delta)
-
-                if "best_solution_box" in data["ara*"] and follow_astar:
-                    box = dict(data["ara*"]["best_solution_box"])
-                    feat_info = FeatInfo(exp.at, exp.target_at, set(), False)
-                    xvar_id_map = get_xvar_id_map(feat_info)
-                    x = get_closest_example(xvar_id_map, exp.example, box)
-                    pred_target = exp.target_at.predict_single(x)
-                    pred_source = exp.at.predict_single(x)
-                    data["ara*_source_error"] = pred_source-lo
-                    data["ara*_target_error"] = pred_target-up
-                    print(f"ara* target {pred_target:.6f}, ({up:.6f}, {pred_target-up:.3g})")
-                    print(f"ara* source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
-                    example_delta = max(abs(x - exp.example))
-                    data["ara*_example_delta"] = example_delta
-                    delta_update = min(delta_update, example_delta + 0.1) # !!
-                    print("ara* example_delta", example_delta)
-
-                print("lo", lo, "up", up, "delta", exp.delta)
-                old_delta = exp.delta
-
-                # either we found an adversarial example, or we could not prove that one does not exist
-                if up-lo >= 0.0:
-                    upper = delta_update
-                    exp.delta = delta_update - 0.5 * (upper - lower)
-                    print(f"maybe SAT delta update: {old_delta:.3f}/{delta_update:.3f}",
-                          f"-> {exp.delta:.3f} [{lower:.3f}, {upper:.3f}]")
-                # we showed that no adversarial example exists for this delta
-                else:
-                    if exp.delta == upper:
-                        lower = exp.delta
-                        exp.delta = 2.0 * exp.delta
-                        upper = exp.delta
-                    else:
-                        lower = exp.delta
-                        exp.delta = exp.delta + 0.5 * (upper - lower)
-                    print(f"UNSAT delta update: {old_delta:.3f}/{delta_update:.3f}"
-                          f"-> {exp.delta:.3f} [{lower:.3f}, {upper:.3f}]")
-
-                # there's no difference between delta=1.5 and delta=1.75, pixels are int values
-                if np.floor(upper) == np.floor(lower):
-                    print("we're done early")
-                    data["done_early"] = True
-                    break
     exp.write_results()
+
+def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta, seed):
+    depth = 5
+    num_trees = 50
+
+    upper = start_delta
+    exp.delta = start_delta
+    lower = 0.0
+
+    def calc_example_delta(exp, box):
+        feat_info = FeatInfo(exp.at, exp.target_at, set(), False)
+        xvar_id_map = get_xvar_id_map(feat_info)
+        x = get_closest_example(xvar_id_map, exp.example, box)
+        pred_target = exp.target_at.predict_single(x)
+        pred_source = exp.at.predict_single(x)
+        print(f"Adv.example target {pred_target:.6f}, ({up:.6f}, {pred_target-up:.3g})")
+        print(f"Adv.example source {pred_source:.6f}, ({lo:.6f}, {pred_source-lo:.3g})")
+        example_delta = max(abs(x - exp.example))
+        print(f"Adv.example delta", example_delta)
+        return example_delta
+
+    for step in range(10):
+        exp.load_model(num_trees, depth, target_label)
+        exp.target_at = exp.at
+        exp.load_model(num_trees, depth, exp.example_label)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+            exp.meta["lr"], "example_i": int(exp.example_i), "example_label":
+            int(exp.example_label), "example": list(exp.example),
+            "target_label": target_label, "delta": exp.delta,
+            "binsearch_step": step, "binsearch_upper": upper,
+            "binsearch_lower": lower, "example_seed": seed,
+            "follow_astar": follow_astar},
+            start_eps=0.01)
+
+        data = exp.results[output_file][-1]
+        if follow_astar:
+            lo, up = util.get_best_astar(data["a*"], task="both")
+
+            if len(data["ara*"]["solutions"]) > 0:
+                aralo, araup = max(data["ara*"]["solutions"], key=lambda p: p[1]-p[0])
+                print("ara* best bounds", aralo, araup)
+                if up-lo < araup-aralo:
+                    lo, up = aralo, araup
+                    print("using ARA* bounds")
+        else: # follow merge
+            lo = data["merge"]["bounds"][-1][0][0] # min of at0
+            up = data["merge"]["bounds"][-1][1][1] # max of at1
+
+        # if follow_astar, check if we generated examples, if so, update delta
+        delta_update = exp.delta
+        example_delta = delta_update
+        solution_box = None
+
+        if "best_solution_box" in data["a*"] and follow_astar:
+            solution_box = dict(data["a*"]["best_solution_box"])
+            example_delta = calc_example_delta(exp, solution_box) + 0.1 # !! avoid floating point issues
+            print("A* example delta", example_delta)
+
+        if "best_solution_box" in data["ara*"] and follow_astar:
+            solution_box = dict(data["ara*"]["best_solution_box"])
+            example_delta = calc_example_delta(exp, solution_box) + 0.1 # !! avoid floating point issues
+            print("ARA* example delta", example_delta)
+
+        delta_update = min(delta_update, example_delta) # !! avoid floating point rounding issues
+
+        print("STEP:", "lo", lo, "up", up, "delta", exp.delta)
+        old_delta = exp.delta
+
+        # either we found an adversarial example, or we could not prove that one does not exist
+        if up-lo >= 0.0:
+            upper = delta_update
+            exp.delta = delta_update - 0.5 * (upper - lower)
+            print(f"maybe SAT delta update: {old_delta:.3f}/{delta_update:.3f}",
+                  f"-> {exp.delta:.3f} [{lower:.3f}, {upper:.3f}]")
+        # we showed that no adversarial example exists for this delta
+        else:
+            if exp.delta == upper:
+                lower = exp.delta
+                exp.delta = 2.0 * exp.delta
+                upper = exp.delta
+            else:
+                lower = exp.delta
+                exp.delta = exp.delta + 0.5 * (upper - lower)
+            print(f"UNSAT delta update: {old_delta:.3f}/{delta_update:.3f}"
+                  f"-> {exp.delta:.3f} [{lower:.3f}, {upper:.3f}]")
+
+        # there's no difference between delta=1.5 and delta=1.75, pixels are int values
+        if np.floor(upper) == np.floor(lower):
+            print("we're done early")
+            data["done_early"] = True
+            break
 
 def allstate(outfile, max_memory):
     exp = AllstateScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
@@ -1033,8 +1039,7 @@ if __name__ == "__main__":
     if exp == "mnist":
         mnistXvall(output_file, max_memory, sys.argv[4])
     if exp == "mnist_robust":
-        mnist_robust(output_file, max_memory, follow_astar=sys.argv[4].lower()=="a*",
-                N=int(sys.argv[5]), seed=int(sys.argv[6]))
+        mnist_robust(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
     if exp == "allstate":
         allstate(output_file, max_memory)
     if exp == "allstate_random":
