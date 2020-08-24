@@ -3,11 +3,12 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.ticker import FixedLocator, FormatStrFormatter
 import util
 
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['text.usetex'] = False
-plt.rcParams['font.size'] = 13
+plt.rcParams['font.size'] = 9
 plt.rcParams['axes.linewidth'] = 0.5
 plt.rcParams['xtick.major.width'] = 0.5
 plt.rcParams['ytick.major.width'] = 0.5
@@ -203,11 +204,11 @@ def plot_output3(file):
 
     depths = {}
     for depth in [4,6,8]:#range(4, 9, 2):
-        ooo = [o for o in oo if o["depth"] == depth]
+        ooo = [o for o in oo if o["depth"] == depth and o["num_trees"] < 300]
         if len(oo) == 0: continue
         depths[depth] = ooo
 
-    fig, axs = plt.subplots(1, len(depths), sharey=True, figsize=(3, 1.5))
+    fig, axs = plt.subplots(1, len(depths), sharey=True, figsize=(3.0, 1.3))
 
     for i, ((depth, oo), ax) in enumerate(zip(depths.items(), axs)):
         xs = [o["num_trees"] for o in oo]
@@ -256,32 +257,40 @@ def plot_output3(file):
             ax.hlines(hi-0.1, x-0.2, x+0.2, lw=lw)
 
         def interval_dashed(ax, x, lo, hi, lw=1):
-            ax.vlines(x, lo, hi, lw=lw, linestyles ="dashed")
+            ax.vlines(x, lo, hi, lw=lw)#, linestyles="dashed")
             ax.hlines(lo, x-0.1, x+0.1, lw=lw)
             ax.hlines(hi, x-0.1, x+0.1, lw=lw)
 
         for x, lo, hi in zip(xxs, ARA, A):
-            interval(ax, x, lo, hi, lw=2.0)
+            interval(ax, x, lo, hi, lw=1.0)
 
         for x, lo, hi in zip(xxs, mergelo, mergehi):
-            interval_dashed(ax, x, lo, hi, lw=1.0)
+            interval_dashed(ax, x, lo, hi, lw=0.5)
 
-        ax.set_xlabel("trees")
+        #ax.set_xlabel("trees")
         ax.set_title(f"depth {depth}")
 
-        ax.set_xticks(xxs)
-        ax.set_xticks(xxs, minor=True)
-        ax.set_xticklabels([str(s) for s in xs], rotation=90)
+        #ax.set_xticks(xxs)
+        #ax.set_xticks(xxs, minor=True)
 
-    axs[0].set_ylabel("model output")
+        ax.xaxis.set_major_locator(FixedLocator(range(1, len(xs), 2)))
+        ax.xaxis.set_minor_locator(FixedLocator(range(0, len(xs), 2)))
+        ax.xaxis.set_minor_formatter(FormatStrFormatter("%d"))
+        ax.tick_params(which='major', pad=12, axis='x')
+        ax.set_xticklabels([str(s) for i, s in enumerate(xs) if i%2==1])
+        ax.set_xticklabels([str(s) for i, s in enumerate(xs) if i%2==0], minor="True")
+
+    #axs[0].set_ylabel("model output")
     axs[0].legend([
-            Line2D([0], [0], color="black", lw=2),
-            Line2D([0], [0], ls="--", color="black", lw=1)
+            Line2D([0], [0], color="black", lw=1),
+            Line2D([0], [0], ls="-", color="black", lw=0.5)
         ], ["ours", "merge"],
-        bbox_to_anchor=(0.2, 1.15, len(depths)*1.08, 0.0), loc='lower left', ncol=2,
+        bbox_to_anchor=(0.8, 1.15, len(depths)*1.08-0.5, 0.0), loc='lower left', ncol=2,
         mode="expand", borderaxespad=0.0, frameon=False)
+    plt.figtext(-0.08, 0.87, "model")
+    plt.figtext(-0.08, 0.8, "output")
     #plt.tight_layout()
-    plt.subplots_adjust(top=0.8, bottom=0.2, left=0.15, right=0.95)
+    plt.subplots_adjust(top=0.8, bottom=0.2, left=0.05, right=0.95)
     plt.savefig("/tmp/unconstrained.svg")
     plt.show()
 
