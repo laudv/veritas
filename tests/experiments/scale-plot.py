@@ -391,7 +391,7 @@ def time_to_beat_merge(o):
     A = [b[1]-b[0] for b in o["a*"]["bounds"]]
     At = o["a*"]["bounds_times"]
     merge = o["merge"]["bounds"][-1]
-    merge = merge[1] - merge[0]
+    merge = merge[1][1] - merge[0][0]
 
     #print(A)
     #print(At)
@@ -453,75 +453,65 @@ def plot_output6(pattern):
     ax.set_title("merge vs A*: time for A* to get to best bound of merge")
     plt.show()
 
-def plot_robust(pattern):
-    cache_file = f"/tmp/temporary_mnist_glob_cache_{pattern}.h5"
+def plot_robust():
+    cache_file = f"/tmp/temporary_mnist_robust_cache.h5"
+    df = pd.read_hdf(cache_file) # created by scale-table.py
 
-    if not os.path.exists(cache_file):
-        oo = []
-        for f in glob.glob(f"tests/experiments/scale/mnist/{pattern}"):
-            with gzip.open(f, "r") as fh:
-                oo += json.load(fh)
+    dfg = df.groupby(["example_seed", "example_i", "source", "follow_a*", "target"])
+    index = list(dfg.indices.keys())
+    np.random.shuffle(index)
 
-        print(len(oo))
-        print(list(oo[0].keys()))
+    def plotit(dfg, i0, ax=None):
+        lw=0.7
+        i1 = (i0[0], i0[1], i0[2], False, i0[4]) # follow merge
+        g0 = dfg.get_group(i0)
+        g1 = dfg.get_group(i1)
 
-        data = {}
+        n = len(g0)
 
-        A = [util.get_best_astar(o["a*"], task="both") for o in oo]
-        data["A0"] = [a[0] for a in A]
-        data["A1"] = [a[1] for a in A]
-        ARA = [max(o["ara*"]["solutions"], key=lambda b: b[1]-b[0])
-                if len(o["ara*"]["solutions"]) > 0
-                else (np.inf, -np.inf)
-                for o in oo]
-        data["ARA0"] = [ara[0] for ara in ARA]
-        data["ARA1"] = [ara[1] for ara in ARA]
-        data["ARAeps"] = [max(o["ara*"]["epses"])
-                if len(o["ara*"]["epses"]) > 0
-                else 0.0
-                for o in oo]
-        merge = [o["merge"]["bounds"][-1] for o in oo]
-        data["merge0"] = [m[0] for m in merge]
-        data["merge1"] = [m[1] for m in merge]
-        data["merge_time"] = [o["merge"]["times"][-1] for o in oo]
-        data["time_to_beat_merge"] = [time_to_beat_merge(o) for o in oo]
-        data["example_seed"] = [o["example_seed"] for o in oo]
-        data["example_i"] = [o["example_i"] for o in oo]
-        data["delta"] = [o["delta"] for o in oo]
-        data["source"] = [o["example_label"] for o in oo]
-        data["target"] = [o["target_label"] for o in oo]
-        data["Aissol"] = [len(o["a*"]["solutions"]) > 0 for o in oo]
-        data["mergeissol"] = [o["merge"]["bounds"][0]==o["merge"]["bounds"][1] for o in oo]
-        data["binsearch_step"] = [o["binsearch_step"] for o in oo]
-        data["done_early"] = ["done_early" in o for o in oo]
-        data["a_unsat"] = [a[0] > a[1] for a in A]
-        data["merge_unsat"] = [m[0] > m[1] for m in merge]
-        data["up"] = [o["binsearch_upper"] for o in oo]
-        data["lo"] = [o["binsearch_lower"] for o in oo]
+        if ax is None:
+            fig, ax = plt.subplots(1, 1)
 
+        l0, = ax.plot(g0["delta"].values, label="ours", lw=lw, zorder=5)
+        #ax.plot(g0["up"].values, ":", c=l0.get_color(), lw=1)
+        #ax.plot(g0["lo"].values, ":", c=l0.get_color(), lw=1)
+        ax.fill_between(range(n), g0["lo"].values, g0["up"].values, color=l0.get_color(), alpha=0.2, linewidth=0)
 
-        df = pd.DataFrame(data)
-        df["a_unsat_merge"] = [a[0]> a[1] and m[0]<=m[1] for a, m in zip(A, merge)]
-        df["a_merge_unsat"] = [a[0]<=a[1] and m[0]> m[1] for a, m in zip(A, merge)]
+        l1, = ax.plot(g1["delta"].values, label="merge", lw=lw, zorder=2)
+        #ax.plot(g1["up"].values, ":", c=l1.get_color(), lw=1)
+        #ax.plot(g1["lo"].values, ":", c=l1.get_color(), lw=1)
+        ax.fill_between(range(n), g1["lo"].values, g1["up"].values, color=l1.get_color(), alpha=0.2, linewidth=0)
 
-        df.to_hdf(cache_file, key="data")
-    else:
-        df = pd.read_hdf(cache_file)
+        ax.set_title(f"{i0[2]} vs. {i0[4]}")
+        ax.set_yticks(range(0, 21, 5))
+        ax.set_xticks(range(0, n, 2))
+        ax.set_xticks(range(0, n, 1), minor=True)
 
-    #print(df)
+#    for i0 in index:
+#        if not i0[3]: continue # only follow a*
+#        print(i0)
+#        plotit(dfg, i0)
+#        plt.show()
 
+    interesting = [
+            #(11, 10137, 3, True, 0),
+            #(11, 49735, 2, True, 1),
+            (34, 40466, 8, True, 6),
+            (34, 38435, 2, True, 1),
+            ]
 
-    dfg = df.groupby(["example_seed", "example_i", "source", "target"])
-    x = dfg["a_unsat_merge"].any() # was at any point in the search A* better than merge?
-    #print(dfg.get_group((2, 11323, 4, 5)))
-
-    for b, i in zip(x, x.index):
-        if not b: continue
-        print(i)
-        g = dfg.get_group(i)
-        print(g)
-        #break
-
+    # interesting ones
+    fig, axs = plt.subplots(1, len(interesting), figsize=(3.5, 1.2), sharey=True)
+    plt.subplots_adjust(top=0.8, bottom=0.28, left=0.1, right=0.95, wspace=0.1)
+    for i0, ax in zip(interesting, axs):
+        print(i0)
+        plotit(dfg, i0, ax)
+    plt.figtext(0.05, 0.85, "\$\\delta\$")
+    plt.figtext(0.5, 0.00, "binary search step", horizontalalignment="center")
+    axs[0].legend(frameon=False)
+    if "IMG_OUTPUT" in os.environ:
+        plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "robust.svg"))
+    plt.show()
 
 def plot_examples():
     lw=0.7
@@ -530,7 +520,7 @@ def plot_examples():
             ("tests/experiments/scale/covtype/rnd4g30s10N_1", 152),
             ("tests/experiments/scale/covtype/rnd4g30s10N_1", 165)
             ]
-    fig, axs = plt.subplots(1, len(examples), figsize=(3.5, 1.2), sharey=False, sharex=False)
+    fig, axs = plt.subplots(1, len(examples), figsize=(3.4, 1.2), sharey=False, sharex=False)
     oo = []
     for f, i in examples:
         with open(f) as fh:
@@ -634,6 +624,6 @@ if __name__ == "__main__":
     if int(sys.argv[1]) == 6:
         plot_output6(sys.argv[2])
     if int(sys.argv[1]) == 7:
-        plot_robust(sys.argv[2])
+        plot_robust()
     if int(sys.argv[1]) == 8:
         plot_examples()
