@@ -205,16 +205,19 @@ def plot_output3(file):
     with open(file) as fh:
         oo = json.load(fh)
 
-    depths = {}
-    for depth in [4,6,8]:#range(4, 9, 2):
-        ooo = [o for o in oo if o["depth"] == depth and o["num_trees"] < 300]
+    c1 = (0.122, 0.467, 0.706)
+    c2 = (0.173, 0.627, 0.173)
+
+    m = {}
+    for num_trees in [50, 100, 200, 400]:
+        ooo = [o for o in oo if o["depth"] in [4, 6, 8] and o["num_trees"] == num_trees]
         if len(oo) == 0: continue
-        depths[depth] = ooo
+        m[num_trees] = ooo
 
-    fig, axs = plt.subplots(1, len(depths), sharey=True, figsize=(3.0, 1.4))
+    fig, axs = plt.subplots(1, len(m), sharey=True, figsize=(3.4, 1.4))
 
-    for i, ((depth, oo), ax) in enumerate(zip(depths.items(), axs)):
-        xs = [o["num_trees"] for o in oo]
+    for i, ((num_trees, oo), ax) in enumerate(zip(m.items(), axs)):
+        xs = [o["depth"] for o in oo]
         A = [util.get_best_astar(o["a*"]) for o in oo]
         ARA = [max(map(lambda b: b[1], o["ara*"]["solutions"]))
                 if len(o["ara*"]["solutions"]) > 0 else -np.inf
@@ -230,73 +233,55 @@ def plot_output3(file):
         relmlo = [m/a for a, m in zip(A, mergelo)]
         relmhi = [m/a for a, m in zip(A, mergehi)]
 
-        #ax.fill_between(x, relA, relARA, color="lightgray")
-        #ax.semilogx(x, relA, label="A*")
-        #ax.semilogx(x, relARA, label="ARA*")
-        #ax.semilogx(x, relmerge, label="merge")
-        #ax.semilogx(x, ARAeps, label="ARA* eps", color="black", ls="--")
-        #ax.semilogx(x, A, label="A")
-        #ax.semilogx(x, ARA, label="ARA")
-        #ax.semilogx(x, mergelo, label="merge lower")
-        #ax.semilogx(x, mergehi, label="merge higher")
+        xxs = np.arange(len(xs))
 
-        xxs = np.arange(len(xs))# + i/len(depths)
-        #ours = ax.bar(xx,
-        #        [hi-lo for lo, hi in zip(ARA, A)], bottom=ARA,
-        #        zorder=9, width=0.8/len(depths), color="blue")
-        #theirs = ax.bar(xx,
-        #        [hi-lo for lo, hi in zip(mergelo, mergehi)], bottom=mergelo,
-        #        zorder=1, width=0.8/len(depths), color="red")
-        #ours = ax.bar(xx,
-        #        [hi-lo for lo, hi in zip(relARA, relA)], bottom=relARA,
-        #        zorder=9, align="edge", width=0.8/len(depths), color="blue")
-        #theirs = ax.bar(xx,
-        #        [hi-lo for lo, hi in zip(relmlo, relmhi)], bottom=relmlo,
-        #        zorder=1, align="edge", width=0.8/len(depths), color="red")
+        def interval_ours(ax, x, lo, hi, lw=1):
+            ax.vlines(x, lo, hi, lw=lw, color=c1)
+            ax.hlines(lo, x-0.1, x+0.1, lw=lw, color=c1)
+            ax.hlines(hi, x-0.1, x+0.1, lw=lw, color=c1)
 
-        def interval(ax, x, lo, hi, lw=1):
-            ax.vlines(x, lo+0.1, hi-0.1, lw=lw)
-            ax.hlines(lo+0.1, x-0.2, x+0.2, lw=lw)
-            ax.hlines(hi-0.1, x-0.2, x+0.2, lw=lw)
-
-        def interval_dashed(ax, x, lo, hi, lw=1):
-            ax.vlines(x, lo, hi, lw=lw)#, linestyles="dashed")
-            ax.hlines(lo, x-0.1, x+0.1, lw=lw)
-            ax.hlines(hi, x-0.1, x+0.1, lw=lw)
+        def interval_merge(ax, x, lo, hi, lw=1):
+            ax.vlines(x, lo, hi, lw=lw, color=c2, linestyles="dotted")
+            ax.hlines(lo, x-0.1, x+0.1, lw=lw, color=c2)
+            ax.hlines(hi, x-0.1, x+0.1, lw=lw, color=c2)
 
         for x, lo, hi in zip(xxs, ARA, A):
-            interval(ax, x, lo, hi, lw=1.0)
+            interval_ours(ax, x-0.1, lo, hi, lw=0.8)
 
         for x, lo, hi in zip(xxs, mergelo, mergehi):
-            interval_dashed(ax, x, lo, hi, lw=0.5)
+            interval_merge(ax, x+0.1, lo, hi, lw=0.8)
 
         #ax.set_xlabel("trees")
-        ax.set_title(f"depth {depth}")
+        ax.set_title(f"M = {num_trees}")
 
-        #ax.set_xticks(xxs)
+        ax.set_xticks(xxs)
+        ax.set_yticks([-900, 0, 900])
         #ax.set_xticks(xxs, minor=True)
 
-        ax.xaxis.set_major_locator(FixedLocator(range(1, len(xs), 2)))
-        ax.xaxis.set_minor_locator(FixedLocator(range(0, len(xs), 2)))
-        ax.xaxis.set_minor_formatter(FormatStrFormatter("%d"))
-        ax.tick_params(which='major', pad=12, axis='x')
-        ax.set_xticklabels([str(s) for i, s in enumerate(xs) if i%2==1])
-        ax.set_xticklabels([str(s) for i, s in enumerate(xs) if i%2==0], minor="True")
+        #ax.xaxis.set_major_locator(FixedLocator(range(1, len(xs), 2)))
+        #ax.xaxis.set_minor_locator(FixedLocator(range(0, len(xs), 2)))
+        #ax.xaxis.set_minor_formatter(FormatStrFormatter("%d"))
+        #ax.tick_params(which='major', pad=12, axis='x')
+        ax.set_xticklabels([str(s) for i, s in enumerate(xs)])
+        #ax.set_xticklabels([str(s) for i, s in enumerate(xs) if i%2==1])
+        #ax.set_xticklabels([str(s) for i, s in enumerate(xs) if i%2==0], minor="True")
 
     #axs[0].set_ylabel("model output")
     axs[0].legend([
-            Line2D([0], [0], color="black", lw=1),
-            Line2D([0], [0], ls="-", color="black", lw=0.5)
-        ], ["ours", "merge"],
-        bbox_to_anchor=(0.8, 1.20, len(depths)*1.08-0.5, 0.0), loc='lower left', ncol=2,
+            Line2D([0], [0], color=c1, lw=1),
+            Line2D([0], [0], ls=":", color=c2, lw=1.0)
+        ], ["\\ouralg{}", "\\merge{}"],
+        bbox_to_anchor=(0.8, 1.20, len(m)*1.08-0.5, 0.0), loc='lower left', ncol=2,
         mode="expand", borderaxespad=0.0, frameon=False)
-    plt.figtext(-0.08, 0.87, "model")
-    plt.figtext(-0.08, 0.8, "output")
+    plt.figtext(0.01, 0.85, "model")
+    plt.figtext(0.01, 0.78, "output")
+    plt.figtext(0.5, 0.0, "tree depth", horizontalalignment="center")
     #plt.tight_layout()
-    plt.subplots_adjust(top=0.8, bottom=0.2, left=0.05, right=0.95)
+    plt.subplots_adjust(top=0.75, bottom=0.22, left=0.15, right=0.95)
     plt.savefig("/tmp/unconstrained.svg")
     if "IMG_OUTPUT" in os.environ:
         plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "unconstrained.svg"))
+        print(f"wrote svg to {os.environ['IMG_OUTPUT']}")
     plt.show()
 
 def plot_output4(file, depth):
