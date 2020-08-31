@@ -9,6 +9,36 @@ import matplotlib.pyplot as plt
 
 RESULT_DIR = "tests/experiments/scale"
 
+def tikzhist(plotname, data, bins):
+    #bins = [-0.1, 1.0, 10, 100, 1000, 10000000]
+    N = len(data)
+    hist = np.histogram(data, bins=bins)
+    print("histogram", plotname, hist[0], hist[1])
+    c = "mygreen" if "gap" in plotname else "myred"
+
+    def lf(l):
+        return f"\\tiny {l}"
+
+    s = StringIO()
+    print( f"\\newcommand{{\\{plotname}}}[1]{{", file=s)
+    print(  "\\begin{tikzpicture}", file=s)
+    print("""\\begin{axis}[
+    width=2.5cm,height=2.4cm,axis lines=left,
+    ymin=-0.03,ymax=1.1,xmin=-1.0,xmax=5.5,
+    xmajorgrids=false,ymajorgrids=true,yminorgrids=true,xmajorticks=false,""", file=s)
+    #print( f"    xtick={{{','.join(map(str, range(len(bins))))}}},", file=s)
+    #print( f"    xticklabels={{{','.join(map(lf, labels))}}},", file=s)
+    #print(  "    xticklabels={,,},", file=s)
+    print(  "    ytick={0,1},yticklabels={\\tiny $0.0$,\\tiny $1.0$},minor y tick num=4,", file=s)
+    print(  "    every axis plot/.append style={ybar,bar width=.6,bar shift=0,fill}", file=s)
+    print(  "]", file=s)
+    print(f"\\addplot[{c}] coordinates {{({0}, {hist[0][0]/N:.2f})}};", file=s)
+    for i, v in enumerate(hist[0][1:]):
+        print(f"\\addplot[black] coordinates {{({i+1}, {v/N:.2f})}};", file=s)
+    print("\end{axis}", file=s)
+    print("\end{tikzpicture}}", file=s)
+    return s.getvalue()
+
 def time_to_beat_merge(o):
     A = [b[1] for b in o["a*"]["bounds"]]
     At = o["a*"]["bounds_times"]
@@ -27,10 +57,10 @@ def random():
     data = dict()
 
     for k, g in [
-            ("allstate", "tests/experiments/scale/allstate/rnd4g30s10N_*"),
-            ("calhouse", "tests/experiments/scale/calhouse/rnd4g30s10N_*"),
-            ("covtype", "tests/experiments/scale/covtype/rnd4g30s10N_*"),
-            ("higgs", "tests/experiments/scale/higgs/rnd4g30s10N_*")]:
+            ("A", "tests/experiments/scale/allstate/rnd4g30s10N_*"),
+            ("CH", "tests/experiments/scale/calhouse/rnd4g30s10N_*"),
+            ("CT", "tests/experiments/scale/covtype/rnd4g30s10N_*"),
+            ("H", "tests/experiments/scale/higgs/rnd4g30s10N_*")]:
         oo = []
         for f in glob.glob(g):
             with open(f) as fh:
@@ -45,15 +75,14 @@ def random():
         "exact_merge": [],
         "better_upper": [],
         "better_lower": [],
-        "gap10": [],
-        "gap50": [],
-        "ttb1000": [],
-        #"ttb100": [],
-        "ttb10": [],
+        "gap": [],
+        "ttb": [],
     }
 
+    s = StringIO()
+
     for k, oo in data.items():
-        print(k)
+        print("%", k)
         A = [util.get_best_astar(o["a*"], task="both") for o in oo]
         ARA = [max(o["ara*"]["solutions"], key=lambda b: b[1]-b[0])
                 if len(o["ara*"]["solutions"]) > 0
@@ -86,7 +115,7 @@ def random():
 
 
         ttb = [time_to_beat_merge(o) for o in oo]
-        ttb = [o["merge"]["times"][-1] / ta if ta > 0.0 else 9999 for ta, o in zip(ttb, oo)]
+        ttb_ratio = [o["merge"]["times"][-1]/(t0+1e-5) for t0,o in zip(ttb, oo)]
 
         #print(ttb)
 
@@ -96,17 +125,32 @@ def random():
         cols["exact_merge"].append(sum(exact_merge) / num_experiments * 100)
         cols["better_upper"].append(sum(better_upper) / num_experiments * 100)
         cols["better_lower"].append(sum(better_lower) / num_experiments * 100)
-        cols["gap10"].append(sum(g < 0.1 for g in gap_ours) / num_experiments * 100)
-        cols["gap50"].append(sum(g < 0.5 for g in gap_ours) / num_experiments * 100)
-        cols["ttb1000"].append(sum(t >= 1000.0 for t in ttb) / num_experiments * 100)
+        cols["gap"].append(f"\\figrndgap{k}{{}}")
+        cols["ttb"].append(f"\\figrndttb{k}{{}}")
+        #cols["gap10"].append(sum(g < 0.1 for g in gap_ours) / num_experiments * 100)
+        #cols["gap50"].append(sum(g < 0.5 for g in gap_ours) / num_experiments * 100)
+        #cols["ttb1000"].append(sum(t >= 1000.0 for t in ttb) / num_experiments * 100)
         #cols["ttb100"].append(sum(t >= 100.0 for t in ttb) / num_experiments)
-        cols["ttb10"].append(sum(t >= 10.0 for t in ttb) / num_experiments * 100)
+        #cols["ttb10"].append(sum(t >= 10.0 for t in ttb) / num_experiments * 100)
 
-    print(cols)
+        print(tikzhist(f"figrndgap{k}", gap_ours, bins=[-0.1, 0.01, 0.2, 0.4, 0.8, 10000000]), file=s)
+        print(tikzhist(f"figrndttb{k}", ttb_ratio, bins=[-0.1, 0.99999, 10, 100, 1000, 10000000]), file=s)
 
-    df = pd.DataFrame(cols)
+    print("num_experiments", cols["num_experiments"])
+    print("better_upper", cols["better_upper"])
+    print("better_lower", cols["better_lower"])
+    #print(cols)
+
+    df = pd.DataFrame({k:v for k,v in cols.items() 
+        if k in ["dataset", "exact_ours", "exact_merge", "gap", "ttb"]})
+    df.columns = ["Data", "\\ouralg{} exact", "\\merge{} exact", "Gap", "TTB"]
     #print(df)
-    print(df.to_latex(index=False, float_format="%.1f"))
+    print(df.to_latex(index=False, float_format="%.1f", escape=False))
+    if "IMG_OUTPUT" in os.environ:
+        with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random.tex"), "w") as f:
+            print(s.getvalue(), file=f)
+            df.to_latex(f, index=False, float_format="%.1f\%%", escape=False, column_format="m{0.4cm}m{1.2cm}m{1cm}m{1.5cm}m{1.5cm}")
+        print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 def robust():
     cache_file = f"/tmp/temporary_mnist_robust_cache.h5"
@@ -150,7 +194,7 @@ def robust():
         data["source"] = [o["example_label"] for o in oo]
         data["target"] = [o["target_label"] for o in oo]
         data["Aissol"] = [len(o["a*"]["solutions"]) > 0 for o in oo]
-        data["mergeissol"] = [o["merge"]["bounds"][0]==o["merge"]["bounds"][1] for o in oo]
+        data["mergeissol"] = [o["merge"]["optimal"] for o in oo]
         data["binsearch_step"] = [o["binsearch_step"] for o in oo]
         data["done_early"] = ["done_early" in o for o in oo]
         data["a_unsat"] = [a[0] > a[1] for a in A]
@@ -257,24 +301,32 @@ def robust():
     dfagg = dfagg.drop(columns=["games", "win", "total"])
     #print(dfagg)
 
-    f = StringIO()
-    scale = 3.0
-    print("\\newcommand{\\slrobust}[0]{", file=f)
-    print("\\definecolor{sparkspikecolor}{named}{red}%", file=f)
-    print("\\begin{sparkline}{0.5}", file=f)
-    print(f"    \\sparkspike 0.0 {scale*hist[0][0]/len(ttb_ratio):.3f}", file=f)
-    print("\\end{sparkline}%", file=f)
-    print("\\definecolor{sparkspikecolor}{named}{black}%", file=f)
-    print(f"\\begin{{sparkline}}{{{len(hist[0])}}}", file=f)
-    for i, v in enumerate(hist[0][1:]):
-        print(f"    \\sparkspike {i*0.167+0.083:.3f} {scale*v/len(ttb_ratio):.3f}", file=f)
-    print("\\end{sparkline}", file=f)
-    print("}", file=f)
+    #f = StringIO()
+    #scale = 3.0
+    #print("\\newcommand{\\slrobust}[0]{", file=f)
+    #print("\\definecolor{sparkspikecolor}{named}{red}%", file=f)
+    #print("\\begin{sparkline}{0.5}", file=f)
+    #print(f"    \\sparkspike 0.0 {scale*hist[0][0]/len(ttb_ratio):.3f}", file=f)
+    #print("\\end{sparkline}%", file=f)
+    #print("\\definecolor{sparkspikecolor}{named}{black}%", file=f)
+    #print(f"\\begin{{sparkline}}{{{len(hist[0])}}}", file=f)
+    #for i, v in enumerate(hist[0][1:]):
+    #    print(f"    \\sparkspike {i*0.167+0.083:.3f} {scale*v/len(ttb_ratio):.3f}", file=f)
+    #print("\\end{sparkline}", file=f)
+    #print("}", file=f)
 
-    dfagg["hist"] = "\\slrobust{}"
-    dfagg.columns = ["equal $\\ubar{\\delta}$", "better $\\ubar{\\delta}$", "ours exact", "merge exact", "speed"]
-    print(f.getvalue())
-    print(dfagg.to_latex(index=False, float_format="%.1f\%%", escape=False))
+    hist = tikzhist(f"figrobustttb", ttb_ratio, bins=[-0.1, 1.0, 10, 100, 1000, 10000000])
+
+    dfagg["hist"] = "\\figrobustttb{}"
+    dfagg.columns = ["equal $\\ubar{\\delta}$", "better $\\ubar{\\delta}$", "\\ouralg{} exact", "\\merge{} exact", "TTB"]
+    #print(f.getvalue())
+    print(dfagg.to_latex(index=False, float_format="%.1f\%%", escape=False, column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}"))
+
+    if "IMG_OUTPUT" in os.environ:
+        with open(os.path.join(os.environ["IMG_OUTPUT"], "table_robust.tex"), "w") as f:
+            print(hist, file=f)
+            dfagg.to_latex(f, index=False, float_format="%.1f\%%", escape=False, column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}")
+        print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 
 if __name__ == "__main__":
