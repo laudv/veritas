@@ -776,6 +776,68 @@ class HiggsRandomScaleExperiment(HiggsScaleExperiment):
         util.randomly_prune_opt(self.X, opt, seed=self.constraint_seed)
         return opt
 
+class YouTubeScaleExperiment(ScaleExperiment):
+    result_dir = "tests/experiments/scale/youtube"
+
+    def load_data(self):
+        higgs_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "youtube.h5")
+        data = pd.read_hdf(higgs_data_path)
+        y = data["viewslg"].to_numpy(dtype=float)
+        dropcolumns = [c for c in data.columns if c.count("_") > 1 and c.startswith("txt_")]
+        dropcolumns += [c for c in data.columns if not c.startswith("txt_")]
+        data = data.drop(columns=dropcolumns)
+        print("YouTube columns:", data.columns)
+        X = data.to_numpy(dtype=float)
+        return X, y
+
+    def load_model(self, num_trees, depth):
+        print("\n=== NEW YOUTUBE MODEL ===")
+        model_name = f"youtube-{num_trees}-{depth}.xgb"
+        meta_name = f"youtube-{num_trees}-{depth}.meta"
+        at_name = f"youtube-{num_trees}-{depth}.at"
+
+        if not os.path.isfile(os.path.join(self.result_dir, model_name)):
+            print(f"training model: {model_name}")
+            X, y = self.load_data()
+
+            #def optimize_learning_rate(X, y, params, num_trees, metric):
+            params = {
+                "max_depth": depth,
+                "objective": "reg:squarederror",
+                #"base_score": base_score,
+                "eval_metric": "mae",
+                "tree_method": "hist",
+                "seed": 1,
+                "nthread": 1,
+            }
+
+            def metric(y, raw_yhat): #maximized
+                return -metrics.mean_squared_error(y, raw_yhat)
+
+            self.model, lr, metric_value = util.optimize_learning_rate(X, y,
+                    params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value}
+
+            with open(os.path.join(self.result_dir, model_name), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.result_dir, meta_name), "w") as f:
+                json.dump(self.meta, f)
+
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.result_dir, model_name), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.result_dir, meta_name), "r") as f:
+                self.meta = json.load(f)
+
+        self.at = addtree_from_xgb_model(self.model)
+        self.at.base_score = 0
+
+    def get_opt(self):
+        opt = Optimizer(maximize=self.at, max_memory=self.max_memory, use_dyn_prog_heuristic=False)
+        return opt
+
 def calhouse(outfile, max_memory):
     exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
     exp.confirm_write_results(outfile)
@@ -1023,6 +1085,18 @@ def higgs_random(outfile, max_memory, N, seed):
                     start_eps=0.01)
     exp.write_results()
 
+def youtube(outfile, max_memory):
+    exp = YouTubeScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
+    exp.confirm_write_results(outfile)
+    exp.do_merge = True
+    num_trees = 50
+    depth = 7
+    exp.load_model(num_trees, depth)
+    exp.run(output_file, {"num_trees": num_trees, "depth": depth,
+        "lr": exp.meta["lr"]},
+        start_eps=0.01)
+    exp.write_results()
+
 if __name__ == "__main__":
     output_file = sys.argv[2]
     max_memory = 1024*1024*1024*int(sys.argv[3])
@@ -1050,3 +1124,5 @@ if __name__ == "__main__":
         higgs(output_file, max_memory)
     if exp == "higgs_random":
         higgs_random(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
+    if exp == "youtube":
+        youtube(output_file, max_memory)
