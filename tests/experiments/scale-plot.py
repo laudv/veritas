@@ -1,10 +1,13 @@
-import sys, os, json, glob, gzip
+import sys, os, json, glob, gzip, pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
 import util
+
+from treeck import *
+from treeck.xgb import addtree_from_xgb_model
 
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['text.usetex'] = False
@@ -595,20 +598,69 @@ def plot_examples():
         plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "examples.svg"))
     plt.show()
 
+def youtube(file):
+    result_dir = "tests/experiments/scale/youtube"
+    with open(os.path.join(result_dir, file)) as f:
+        oo = json.load(f)
+
+    for i, o in enumerate(oo):
+        num_trees, depth = o["num_trees"], o["depth"]
+        model_name = f"youtube-{num_trees}-{depth}.xgb"
+        meta_name = f"youtube-{num_trees}-{depth}.meta"
+        with open(os.path.join(result_dir, model_name), "rb") as f:
+            model = pickle.load(f)
+        with open(os.path.join(result_dir, meta_name), "r") as f:
+            meta = json.load(f)
+
+        columns = meta["columns"]
+        at = addtree_from_xgb_model(model)
+        #print("at", at)
+        #print("splits", at.get_splits())
+        at.base_score = 0.0
+        feat2id_dict = {v: i for i, v in enumerate(columns)}
+        feat2id = lambda x: feat2id_dict[x]
+        id2feat = lambda i: columns[i]
+        featinfo = FeatInfo(AddTree(), at, set(), True)
+        fixed_feat_ids = [feat2id(w) for w in o["fixed_words"]]
+        fixed_ids = [featinfo.get_id(1, i) for i in fixed_feat_ids]
+
+        used_feat_ids = featinfo.feat_ids1()
+        asol = {int(k) : v for k, v in o["ara*"]["best_solution_box"].items()}
+        for i in set(fixed_ids).difference(set(asol.keys())):
+            asol[i] = (1.0, np.inf)
+        asol = [used_feat_ids[i] for i, v in asol.items() if v[0] == 1.0]
+        asol_txt = [columns[i] for i in asol]
+
+        example = [0.0 for x in columns]
+        for i in asol:
+            example[i] = 1.0
+        example0 = example.copy()
+        for i in set(asol).difference(fixed_feat_ids):
+            example0[i] = 0.0
+        print(at.predict_single(example), util.get_best_astar(o["a*"]), o["ara*"]["solutions"][-1][1])
+        print(at.predict_single(example0))
+
+        print(asol_txt)
+    
+
+
+
 if __name__ == "__main__":
-    if int(sys.argv[1]) == 1:
+    if sys.argv[1] == "1":
         plot_output1(sys.argv[2])
-    if int(sys.argv[1]) == 2:
+    if sys.argv[1] == "2":
         plot_output2(sys.argv[2], int(sys.argv[3]))
-    if int(sys.argv[1]) == 3:
+    if sys.argv[1] == "bounds":
         plot_output3(sys.argv[2])
-    if int(sys.argv[1]) == 4:
+    if sys.argv[1] == "4":
         plot_output4(sys.argv[2], int(sys.argv[3]))
-    if int(sys.argv[1]) == 5:
+    if sys.argv[1] == "5":
         plot_output5(sys.argv[2])
-    if int(sys.argv[1]) == 6:
+    if sys.argv[1] == "6":
         plot_output6(sys.argv[2])
-    if int(sys.argv[1]) == 7:
+    if sys.argv[1] == "robust":
         plot_robust()
-    if int(sys.argv[1]) == 8:
+    if sys.argv[1] == "examples":
         plot_examples()
+    if sys.argv[1] == "youtube":
+        youtube(sys.argv[2])

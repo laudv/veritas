@@ -779,16 +779,24 @@ class HiggsRandomScaleExperiment(HiggsScaleExperiment):
 class YouTubeScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/youtube"
 
+    def __init__(self, *args, **kwargs):
+        if "fixed_words" in kwargs:
+            self.fixed_words = kwargs["fixed_words"]
+            del kwargs["fixed_words"]
+        else:
+            self.fixed_words = []
+        self.at_most_k = 2
+        super().__init__(*args, **kwargs)
+
     def load_data(self):
-        higgs_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "youtube.h5")
-        data = pd.read_hdf(higgs_data_path)
+        yt_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "youtube.h5")
+        data = pd.read_hdf(yt_data_path)
         y = data["viewslg"].to_numpy(dtype=float)
         dropcolumns = [c for c in data.columns if c.count("_") > 1 and c.startswith("txt_")]
         dropcolumns += [c for c in data.columns if not c.startswith("txt_")]
         data = data.drop(columns=dropcolumns)
-        print("YouTube columns:", data.columns)
-        X = data.to_numpy(dtype=float)
-        return X, y
+        X = data.to_numpy(dtype=bool)
+        return X, y, list(data.columns)
 
     def load_model(self, num_trees, depth):
         print("\n=== NEW YOUTUBE MODEL ===")
@@ -798,7 +806,7 @@ class YouTubeScaleExperiment(ScaleExperiment):
 
         if not os.path.isfile(os.path.join(self.result_dir, model_name)):
             print(f"training model: {model_name}")
-            X, y = self.load_data()
+            X, y, columns = self.load_data()
 
             #def optimize_learning_rate(X, y, params, num_trees, metric):
             params = {
@@ -808,7 +816,7 @@ class YouTubeScaleExperiment(ScaleExperiment):
                 "eval_metric": "mae",
                 "tree_method": "hist",
                 "seed": 1,
-                "nthread": 1,
+                "nthread": 4,
             }
 
             def metric(y, raw_yhat): #maximized
@@ -817,7 +825,7 @@ class YouTubeScaleExperiment(ScaleExperiment):
             self.model, lr, metric_value = util.optimize_learning_rate(X, y,
                     params, num_trees, metric)
 
-            self.meta = {"lr": lr, "metric": metric_value}
+            self.meta = {"lr": lr, "metric": metric_value, "columns": columns}
 
             with open(os.path.join(self.result_dir, model_name), "wb") as f:
                 pickle.dump(self.model, f)
@@ -833,9 +841,30 @@ class YouTubeScaleExperiment(ScaleExperiment):
 
         self.at = addtree_from_xgb_model(self.model)
         self.at.base_score = 0
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.id2feat = lambda i: self.meta["columns"][i]
 
     def get_opt(self):
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory, use_dyn_prog_heuristic=False)
+        used_feat_ids = set(opt.feat_info.feat_ids1())
+        self.fixed_word_feat_ids = set([self.feat2id(x) for x in self.fixed_words])
+        #print("used", [self.meta["columns"][i] for i in used_feat_ids])
+        #print("fixed", self.fixed_word_feat_ids.intersection(used_feat_ids))
+        box = [RealDomain() for i in range(len(self.meta["columns"]))]
+        for w, feat_id in zip(self.fixed_words, self.fixed_word_feat_ids):
+            id = opt.feat_info.get_id(1, feat_id)
+            print(w, ":", feat_id, "->", id)
+            box[feat_id] = RealDomain(1.0, np.inf)
+        for w in ["txt_la", "txt_de", "txt_mv", "txt_2017", "txt_2018", "txt_no", "txt_12"]:
+            box[self.feat2id(w)] = RealDomain(-np.inf, 1.0)
+        print("before prune", opt.g1.num_vertices())
+        opt.prune_box(box, 1)
+        print("after prune", opt.g1.num_vertices())
+        other_feat_ids = used_feat_ids.difference(self.fixed_word_feat_ids)
+        other_ids = [opt.feat_info.get_id(1, fid) for fid in other_feat_ids]
+        #opt.adjuster.add_one_out_of_k(other_ids, True)
+        opt.adjuster.add_at_most_k(other_ids, self.at_most_k)
         return opt
 
 def calhouse(outfile, max_memory):
@@ -1086,15 +1115,23 @@ def higgs_random(outfile, max_memory, N, seed):
     exp.write_results()
 
 def youtube(outfile, max_memory):
-    exp = YouTubeScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
+    exp = YouTubeScaleExperiment(max_memory=max_memory, max_time=30, num_threads=4)
     exp.confirm_write_results(outfile)
-    exp.do_merge = True
-    num_trees = 50
-    depth = 7
-    exp.load_model(num_trees, depth)
-    exp.run(output_file, {"num_trees": num_trees, "depth": depth,
-        "lr": exp.meta["lr"]},
-        start_eps=0.01)
+    exp.do_merge = False
+    exp.at_most_k = 3
+    num_trees = 100
+    depth = 10
+    for fixed_words in [
+                #[],
+                #["txt_music", "txt_pop", "txt_video", "txt_album"],
+                ["txt_epic", "txt_challenge"],
+                #["txt_breaking", "txt_news", "txt_live", "txt_war"],
+            ]:
+        exp.fixed_words = fixed_words
+        exp.load_model(num_trees, depth)
+        exp.run(output_file, {"num_trees": num_trees, "depth": depth,
+            "lr": exp.meta["lr"], "fixed_words": fixed_words},
+            start_eps=0.01)
     exp.write_results()
 
 if __name__ == "__main__":
