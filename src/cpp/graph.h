@@ -35,8 +35,8 @@ namespace treeck {
     // (like a LtSplit(_, 1.0))
     using DomainT = RealDomain;
     const DomainT BOOL_DOMAIN;
-    const DomainT TRUE_DOMAIN{-std::numeric_limits<FloatT>::infinity(), static_cast<FloatT>(1.0)};
-    const DomainT FALSE_DOMAIN{static_cast<FloatT>(1.0), std::numeric_limits<FloatT>::infinity()};
+    const DomainT FALSE_DOMAIN{-std::numeric_limits<FloatT>::infinity(), static_cast<FloatT>(1.0)};
+    const DomainT TRUE_DOMAIN{static_cast<FloatT>(1.0), std::numeric_limits<FloatT>::infinity()};
     using DomainPair = std::pair<int, DomainT>;
 
 
@@ -418,15 +418,24 @@ namespace treeck {
             // used in the model
             bool strict;
         };
+        struct AtMostK {
+            // if k of these are TRUE_DOMAIN, then all others are FALSE_DOMAIN
+            std::vector<int> ids;
+            int k;
+        };
         struct LessThan {
             // id0 < id1
             int id0;
             int id1;
         };
         std::vector<OneOutOfK> one_out_of_ks_;
+        std::vector<AtMostK> at_most_ks_;
         std::vector<LessThan> less_thans_;
 
         bool handle_one_out_of_k(const OneOutOfK& c,
+                std::vector<DomainPair>& workspace) const;
+
+        bool handle_at_most_k(const AtMostK& c,
                 std::vector<DomainPair>& workspace) const;
 
         bool handle_less_than(const LessThan& c,
@@ -435,6 +444,7 @@ namespace treeck {
     public:
         bool operator()(DomainStore& store) const;
         void add_one_out_of_k(std::vector<int> ids, bool strict);
+        void add_at_most_k(std::vector<int> ids, int k);
         void add_less_than(int id0, int id1);
     };
 

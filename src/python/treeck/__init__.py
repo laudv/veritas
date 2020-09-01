@@ -340,7 +340,7 @@ class ParallelOptimizer:
         self.paropt.set_box_adjuster(self.opt.adjuster)
         self.bounds = opt.bounds + [self.paropt.current_bounds()]
         self.memory = opt.memory + [self.paropt.current_memory()]
-        self.clique_count = opt.clique_count + [self.num_candidate_cliques]
+        self.clique_count = opt.clique_count + [self.num_candidate_cliques()]
         self.start_time = opt.start_time + opt.times[-1]
         self.times = opt.times + [opt.times[-1]]
 

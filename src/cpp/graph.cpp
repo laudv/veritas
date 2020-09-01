@@ -2136,6 +2136,68 @@ namespace treeck {
         return true;
     }
 
+    bool
+    EasyBoxAdjuster::handle_at_most_k(const AtMostK& c,
+            std::vector<DomainPair>& workspace) const
+    {
+        auto it1 = c.ids.begin();
+        int true_count = 0;
+        for (size_t i = 0; i < workspace.size() && it1 != c.ids.end();)
+        {
+            if (workspace[i].first == *it1)
+            {
+                if (!workspace[i].second.overlaps(FALSE_DOMAIN)) // not FALSE, so must be TRUE
+                    ++true_count;
+                ++i; ++it1;
+            }
+            else if (workspace[i].first > *it1) { ++it1; }
+            else ++i;
+        }
+        if (true_count > c.k)
+            return false;
+        if (true_count < c.k)
+            return true;
+
+        // false propagation: we have k TRUEs, set others to FALSE
+        it1 = c.ids.begin();
+        size_t end = workspace.size();
+        int num_added = 0;
+        int num_false_prop = 0;
+        for (size_t i = 0; i < end && it1 != c.ids.end();)
+        {
+            if (workspace[i].first == *it1)
+            {
+                if (workspace[i].second.overlaps(TRUE_DOMAIN)
+                        && workspace[i].second.overlaps(FALSE_DOMAIN)) // write FALSE in it
+                {
+                    workspace[i].second = FALSE_DOMAIN;
+                    ++num_false_prop;
+                }
+                ++i; ++it1;
+            }
+            else if (workspace[i].first > *it1) // we skipped over *it1, so it's not in the box -> add it
+            {
+                workspace.push_back({*it1, FALSE_DOMAIN});
+                ++it1;
+                ++num_added;
+            }
+            else ++i;
+        }
+        // make sure all newly added ids are in sorted order
+        if (num_added > 0)
+        {
+            std::sort(workspace.begin(), workspace.end(),
+                    [](const DomainPair& a, const DomainPair& b) {
+                        return a.first < b.first;
+                    });
+        }
+
+        //std::cout << "atmostk: false prop, " << num_false_prop << " set to false, "
+        //    << num_added << " FALSES added" << std::endl;
+
+        return true;
+    }
+
     bool 
     EasyBoxAdjuster::handle_less_than(const LessThan& c,
             std::vector<DomainPair>& workspace) const
@@ -2209,6 +2271,11 @@ namespace treeck {
             if (!handle_one_out_of_k(c, workspace))
                 return false;
         }
+        for (const AtMostK& c : at_most_ks_)
+        {
+            if (!handle_at_most_k(c, workspace))
+                return false;
+        }
 
         return true; // accept the box in the store's workspace
     }
@@ -2221,6 +2288,17 @@ namespace treeck {
             std::sort(ids.begin(), ids.end());
             std::cout << "add_one_out_of_k strict=" << strict << std::endl;
             one_out_of_ks_.push_back({ids, strict});
+        }
+    }
+
+    void
+    EasyBoxAdjuster::add_at_most_k(std::vector<int> ids, int k)
+    {
+        if (!ids.empty())
+        {
+            std::sort(ids.begin(), ids.end());
+            std::cout << "add_at_most_k with k=" << k << std::endl;
+            at_most_ks_.push_back({ids, k});
         }
     }
 
