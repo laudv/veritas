@@ -29,7 +29,10 @@ def tikzhist(plotname, data, bins):
     #print( f"    xtick={{{','.join(map(str, range(len(bins))))}}},", file=s)
     #print( f"    xticklabels={{{','.join(map(lf, labels))}}},", file=s)
     #print(  "    xticklabels={,,},", file=s)
-    print(  "    ytick={0,1},yticklabels={\\tiny $0.0$,\\tiny $1.0$},minor y tick num=4,", file=s)
+    if "gapm" in plotname or "rndttb" in plotname:
+        print(  "    ytick={0,1},yticklabel style={xshift=10pt},ylabel near ticks,yticklabels={,,},minor y tick num=4,", file=s)
+    else:
+        print(  "    ytick={0,1},yticklabel style={xshift=2pt},yticklabels={\\tiny 0,\\tiny 1},minor y tick num=4,", file=s)
     print(  "    every axis plot/.append style={ybar,bar width=.6,bar shift=0,fill}", file=s)
     print(  "]", file=s)
     print(f"\\addplot[{c}] coordinates {{({0}, {hist[0][0]/N:.2f})}};", file=s)
@@ -76,6 +79,7 @@ def random():
         "better_upper": [],
         "better_lower": [],
         "gap": [],
+        "gapm": [],
         "ttb": [],
     }
 
@@ -108,7 +112,7 @@ def random():
         #gap_ours = [2*abs((a[1]-ara[1])/(a[1]+ara[1])) for a, ara in zip(A, ARA)]
         #gap_ours = [ara[1]/a[1] for a, ara in zip(A, ARA)]
         gap_ours = [abs((a[1]-ara[1])/a[1]) for a, ara in zip(A, ARA)]
-        #gap_merge = [2*abs((m[1][1]-m[1][0])/(m[1][1]+m[1][0])) for m in merge]
+        gap_merge = [abs((m[1][1]-m[1][0])/m[1][1]) for m in merge]
         #for m, exact in zip(merge, exact_merge):
         #    if exact:
         #        print(m)
@@ -126,6 +130,7 @@ def random():
         cols["better_upper"].append(sum(better_upper) / num_experiments * 100)
         cols["better_lower"].append(sum(better_lower) / num_experiments * 100)
         cols["gap"].append(f"\\figrndgap{k}{{}}")
+        cols["gapm"].append(f"\\figrndgapm{k}{{}}")
         cols["ttb"].append(f"\\figrndttb{k}{{}}")
         #cols["gap10"].append(sum(g < 0.1 for g in gap_ours) / num_experiments * 100)
         #cols["gap50"].append(sum(g < 0.5 for g in gap_ours) / num_experiments * 100)
@@ -133,7 +138,10 @@ def random():
         #cols["ttb100"].append(sum(t >= 100.0 for t in ttb) / num_experiments)
         #cols["ttb10"].append(sum(t >= 10.0 for t in ttb) / num_experiments * 100)
 
-        print(tikzhist(f"figrndgap{k}", gap_ours, bins=[-0.1, 0.01, 0.2, 0.4, 0.8, 10000000]), file=s)
+        gapbins = [-0.1, 0.01, 0.2, 0.5, 1.0, 10000000]
+
+        print(tikzhist(f"figrndgap{k}", gap_ours, bins=gapbins), file=s)
+        print(tikzhist(f"figrndgapm{k}", gap_merge, bins=gapbins), file=s)
         print(tikzhist(f"figrndttb{k}", ttb_ratio, bins=[-0.1, 0.99999, 10, 100, 1000, 10000000]), file=s)
 
     print("num_experiments", cols["num_experiments"])
@@ -142,14 +150,14 @@ def random():
     #print(cols)
 
     df = pd.DataFrame({k:v for k,v in cols.items() 
-        if k in ["dataset", "exact_ours", "exact_merge", "gap", "ttb"]})
-    df.columns = ["Data", "\\ouralg{} exact", "\\merge{} exact", "Gap", "TTB"]
+        if k in ["dataset", "exact_ours", "exact_merge", "gap", "gapm", "ttb"]})
+    df.columns = ["Data", "\\ouralg{} exact", "\\merge{} exact", "\\ouralg{} gap", "\\merge{} gap", "TTB"]
     #print(df)
     print(df.to_latex(index=False, float_format="%.1f", escape=False))
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random.tex"), "w") as f:
             print(s.getvalue(), file=f)
-            df.to_latex(f, index=False, float_format="%.1f\%%", escape=False, column_format="m{0.4cm}m{1.2cm}m{1cm}m{1.5cm}m{1.5cm}")
+            df.to_latex(f, index=False, float_format="%.1f\%%", escape=False, column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
         print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 def robust():
