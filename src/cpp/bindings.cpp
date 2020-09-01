@@ -571,8 +571,10 @@ PYBIND11_MODULE(pytreeck, m) {
             {
                 RealDomain d = box[fid].cast<RealDomain>();
                 auto f = [=](FeatId i) { return finfo.get_id(instance, i); };
-                g.store().refine_workspace(LtSplit(fid, d.lo), false, f);
-                g.store().refine_workspace(LtSplit(fid, d.hi), true, f);
+                if (!std::isinf(d.lo))
+                    g.store().refine_workspace(LtSplit(fid, d.lo), false, f);
+                if (!std::isinf(d.hi))
+                    g.store().refine_workspace(LtSplit(fid, d.hi), true, f);
             }
             DomainBox b = g.store().get_workspace_box();
             g.prune([b](const DomainBox& box) {
