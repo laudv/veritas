@@ -1413,7 +1413,7 @@ namespace treeck {
             // some set where none of the vertices overlap box -> don't add to pq
             if (std::isinf(heuristic0) || std::isinf(heuristic1))
             {
-                std::cout << "inf heuristic" << std::endl;
+                //std::cout << "inf heuristic" << std::endl;
                 continue;
             }
 
@@ -2224,12 +2224,12 @@ namespace treeck {
                 return false;
             if (p1->lo < p0->lo) // x1 cannot be less than x0
             {
-                std::cout << "EasyBoxAdjuster: p1->lo: " << p1->lo << " -> " << p0->lo << std::endl;
+                //std::cout << "EasyBoxAdjuster: p1->lo: " << p1->lo << " -> " << p0->lo << std::endl;
                 p1->lo = p0->lo;
             }
             if (p0->hi > p1->hi) // x0 cannot be larger than x1
             {
-                std::cout << "EasyBoxAdjuster: p0->hi: " << p0->hi << " -> " << p1->hi << std::endl;
+                //std::cout << "EasyBoxAdjuster: p0->hi: " << p0->hi << " -> " << p1->hi << std::endl;
                 p0->hi = p1->hi;
             }
         }
@@ -2237,7 +2237,7 @@ namespace treeck {
         {
             RealDomain dom;
             dom.hi = p1->hi; // x0 cannot be larger than x1
-            std::cout << "EasyBoxAdjuster: inserting dom0 for " << c.id0 << ": " << dom << std::endl;
+            //std::cout << "EasyBoxAdjuster: inserting dom0 for " << c.id0 << ": " << dom << std::endl;
             workspace.push_back({ c.id0, dom });
             for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
                 if (workspace[i-1].first > workspace[i].first)
@@ -2247,7 +2247,7 @@ namespace treeck {
         {
             RealDomain dom;
             dom.lo = p0->lo; // x0 cannot be larger than x1
-            std::cout << "EasyBoxAdjuster: inserting dom1 for " << c.id1 << ": " << dom << std::endl;
+            //std::cout << "EasyBoxAdjuster: inserting dom1 for " << c.id1 << ": " << dom << std::endl;
             workspace.push_back({ c.id1, dom });
             for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
                 if (workspace[i-1].first > workspace[i].first)
