@@ -157,7 +157,8 @@ def random():
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random.tex"), "w") as f:
             print(s.getvalue(), file=f)
-            df.to_latex(f, index=False, float_format="%.1f\%%", escape=False, column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
+            df.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+                    column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
         print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 def robust():
@@ -333,8 +334,10 @@ def robust():
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_robust.tex"), "w") as f:
             print(hist, file=f)
-            dfagg.to_latex(f, index=False, float_format="%.1f\%%", escape=False, column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}")
+            dfagg.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+                    column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}")
         print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
+
 
 
 if __name__ == "__main__":

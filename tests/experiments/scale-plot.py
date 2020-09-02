@@ -2,8 +2,10 @@ import sys, os, json, glob, gzip, pickle
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
+import matplotsoccer
 import util
 
 from treeck import *
@@ -20,6 +22,10 @@ plt.rcParams['ytick.minor.width'] = 0.5
 plt.rcParams['axes.unicode_minus'] = False
 
 #import seaborn as sns
+
+c1 = (0.122, 0.467, 0.706)
+c2 = (0.173, 0.627, 0.173)
+
 
 RESULT_DIR = "tests/experiments/scale"
 
@@ -207,9 +213,6 @@ def plot_output2(f, i):
 def plot_output3(file):
     with open(file) as fh:
         oo = json.load(fh)
-
-    c1 = (0.122, 0.467, 0.706)
-    c2 = (0.173, 0.627, 0.173)
 
     m = {}
     for num_trees in [50, 100, 200, 400]:
@@ -642,8 +645,115 @@ def youtube(file):
 
         print(asol_txt)
     
+def soccer(file):
+    result_dir = "tests/experiments/scale/soccer/"
+    with open(os.path.join(result_dir, file), 'r') as f:
+        oo = json.load(f)
 
+    for i, o in enumerate(oo):
+        num_trees, depth, lr = o["num_trees"], o["depth"], o["lr"]
+        model_name = f"soccer-{num_trees}-{depth}-{lr}.xgb"
+        meta_name = f"soccer-{num_trees}-{depth}-{lr}.meta"
+        at_name = f"soccer-{num_trees}-{depth}-{lr}.at"
+        with open(os.path.join(result_dir, model_name), "rb") as f:
+            model = pickle.load(f)
+        at = AddTree.read(os.path.join(result_dir, at_name))
+        with open(os.path.join(result_dir, meta_name), "r") as f:
+            meta = json.load(f)
 
+        columns = meta["columns"]
+        feat2id_dict = dict([(v, i) for i, v in enumerate(columns)])
+        feat2id = lambda x: feat2id_dict[x]
+        featinfo = FeatInfo(AddTree(), at, set(), True)
+
+        used_feat_ids = featinfo.feat_ids1()
+        sols = [o["ara*"]["best_solution_box"]]
+        sol_bounds = [o["ara*"]["solutions"][-1]]
+        sols += o["ara*"]["ara_solution_boxes"]
+        sol_bounds += o["ara*"]["ara_solutions"]
+
+        print(len(sols), len(sol_bounds))
+
+        for i, (s, (b0, b1)) in enumerate(zip(sols, sol_bounds)):
+            print(f"\n== {i} ======================================================")
+            asol = {used_feat_ids[int(k)] : v for k, v in s.items()}
+            asol_txt = {columns[i] : v
+                    if not columns[i].startswith("type_") and not columns[i].startswith("bodypart_")
+                    else int(v[0]==1.0)
+                    for i, v in asol.items()}
+
+            example = [0.0 for x in columns]
+            for name, v in asol_txt.items():
+                example[feat2id(name)] = v[0]+0.01 if isinstance(v, list) else v
+
+            print(at.predict_single(example), b1, o["ara*"]["solutions"][-1][1])
+            for (k, v), (kk, vv) in zip(asol_txt.items(), asol.items()):
+                if v:
+                    print(k, v)
+
+            ax = matplotsoccer.field(show=False)
+            x0, y0 = example[feat2id("x_a0")], example[feat2id("y_a0")]
+            x1, y1 = example[feat2id("x_a1")], example[feat2id("y_a1")]
+            ax.arrow(x1, y1, x0-x1, y0-y1, head_width=2)
+            plt.show()
+
+def soccer2():
+    result_dir = "tests/experiments/scale/soccer/"
+
+    with open(os.path.join(result_dir, "opt"), 'r') as f:
+        o = json.load(f)[0]
+        opt = o["ara*"]["best_solution_box"]
+    with open(os.path.join(result_dir, "backward"), 'r') as f:
+        bw = json.load(f)[0]["ara*"]["best_solution_box"]
+
+    num_trees, depth, lr = o["num_trees"], o["depth"], o["lr"]
+    meta_name = f"soccer-{num_trees}-{depth}-{lr}.meta"
+    at_name = f"soccer-{num_trees}-{depth}-{lr}.at"
+    with open(os.path.join(result_dir, meta_name), "r") as f:
+        meta = json.load(f)
+    at = AddTree.read(os.path.join(result_dir, at_name))
+
+    columns = meta["columns"]
+    feat2id_dict = dict([(v, i) for i, v in enumerate(columns)])
+    feat2id = lambda x: feat2id_dict[x]
+    featinfo = FeatInfo(AddTree(), at, set(), True)
+
+    used_feat_ids = featinfo.feat_ids1()
+    def sol(s, used_feat_ids):
+        sol = {used_feat_ids[int(k)] : v for k, v in s.items()}
+        return {columns[i] : v
+                if not columns[i].startswith("type_") and not columns[i].startswith("bodypart_")
+                else int(v[0]==1.0)
+                for i, v in sol.items()}
+    def point(x):
+        return x[0] + 0.5*(x[1]-x[0])
+
+    opt = sol(opt, used_feat_ids)
+    bw = sol(bw, used_feat_ids)
+
+    ox0, oy0 = point(opt["x_a0"]), point(opt["y_a0"])
+    ox1, oy1 = point(opt["x_a1"]), point(opt["y_a1"])
+    bx0, by0 = point(bw["x_a0"]),  point(bw["y_a0"])
+    bx1, by1 = point(bw["x_a1"]),  point(bw["y_a1"])
+
+    ax = matplotsoccer.field(show=False, figsize=1.2)
+    fig = ax.get_figure()
+    fig.subplots_adjust(left=0, right=1, top=1, bottom=0)
+    lw = 0.6
+    for l in ax.get_lines():
+        l.set_linewidth(lw)
+    for p in ax.patches:
+        if isinstance(p, patches.Circle):
+            p.set_linewidth(lw)
+        if isinstance(p, patches.Arc):
+            p.set_linewidth(lw)
+
+    ax.arrow(ox1, oy1, ox0-ox1, oy0-oy1, head_width=2, color=c1)
+    ax.arrow(bx1, by1, bx0-bx1, by0-by1, head_width=2, color=c2)
+    if "IMG_OUTPUT" in os.environ:
+        plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "soccer.svg"))
+        print(f"wrote svg to {os.environ['IMG_OUTPUT']}")
+    plt.show()
 
 if __name__ == "__main__":
     if sys.argv[1] == "1":
@@ -664,3 +774,7 @@ if __name__ == "__main__":
         plot_examples()
     if sys.argv[1] == "youtube":
         youtube(sys.argv[2])
+    if sys.argv[1] == "soccer":
+        soccer(sys.argv[2])
+    if sys.argv[1] == "soccer2":
+        soccer2()

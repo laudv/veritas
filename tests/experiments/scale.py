@@ -119,6 +119,43 @@ class ScaleExperiment:
                 oom = True
         dur = timeit.default_timer() - start
         return opt, dur, oom
+
+    def arastar_single_multiple_solutions(self, start_eps, incr_eps_fun, num_solutions):
+        opt, dur, oom = self.arastar_single(start_eps, incr_eps_fun)
+        if opt.get_eps() != 1.0:
+            # we found one solution for the previous eps, not certain we will
+            # also be able to do that for the current eps
+            opt.set_eps(opt.get_eps() - 0.05)
+
+        done = False
+        if oom:
+            done = True
+
+        num_steps = self.min_num_steps * 4
+        current_num_solutions = opt.num_solutions()
+        start = timeit.default_timer()
+        stop = start + self.max_time
+        while not done \
+                and opt.num_solutions() - current_num_solutions < num_solutions \
+                and timeit.default_timer() < stop:
+            print("generating more solutions...", opt.num_solutions())
+            try:
+                opt.steps(num_steps, **self.steps_kwargs)
+                num_steps = min(self.max_num_steps, num_steps * 2)
+            except Exception as e:
+                print("ARA* OUT OF MEMORY", type(e))
+                done = True
+                oom = True
+        print("done generating more solutions", opt.num_solutions())
+
+        dur += timeit.default_timer() - start
+
+        info = self._extract_info(opt, dur, oom)
+        sols = opt.solutions()[current_num_solutions:]
+        info["ara_solutions"] = [(s.output0, s.output1) for s in sols]
+        info["ara_solution_boxes"] = [{i: (d.lo, d.hi) for i, d in s.box().items()}
+                                                       for s in sols]
+        return info
     
     def arastar_parallel(self, start_eps, incr_eps_fun):
         opt = self.get_opt()
@@ -599,37 +636,80 @@ class SoccerScaleExperiment(ScaleExperiment):
     bodypart0 = ['bodypart_foot_a0', 'bodypart_head_a0', 'bodypart_other_a0']
     bodypart1 = ['bodypart_foot_a1', 'bodypart_head_a1', 'bodypart_other_a1']
 
+    # cannot be TRUE at the same time (at-most-1)
+    bodypart_constraints = [
+            ['type_tackle_a0', 'bodypart_head_a0'],
+            ['type_tackle_a0', 'bodypart_other_a0'],
+            ['type_tackle_a1', 'bodypart_head_a1'],
+            ['type_tackle_a1', 'bodypart_other_a1'],
+            ['type_throw_in_a0', 'bodypart_foot_a0'],
+            ['type_throw_in_a0', 'bodypart_head_a0'],
+            ['type_throw_in_a1', 'bodypart_foot_a1'],
+            ['type_throw_in_a1', 'bodypart_head_a1'],
+            ['type_shot_penalty_a0', 'bodypart_other_a0'],
+            ['type_shot_penalty_a0', 'bodypart_head_a0'],
+            ['type_shot_penalty_a1', 'bodypart_other_a1'],
+            ['type_shot_penalty_a1', 'bodypart_head_a1'],
+            ['type_freekick_crossed_a0', 'bodypart_other_a0'],
+            ['type_freekick_crossed_a0', 'bodypart_head_a0'],
+            ['type_freekick_crossed_a1', 'bodypart_other_a1'],
+            ['type_freekick_crossed_a1', 'bodypart_head_a1'],
+            ['type_freekick_short_a0', 'bodypart_other_a0'],
+            ['type_freekick_short_a0', 'bodypart_head_a0'],
+            ['type_freekick_short_a1', 'bodypart_other_a1'],
+            ['type_freekick_short_a1', 'bodypart_head_a1'],
+            ['type_corner_crossed_a0', 'bodypart_other_a0'],
+            ['type_corner_crossed_a0', 'bodypart_head_a0'],
+            ['type_corner_crossed_a1', 'bodypart_other_a1'],
+            ['type_corner_crossed_a1', 'bodypart_head_a1'],
+            ['type_corner_short_a0', 'bodypart_other_a0'],
+            ['type_corner_short_a0', 'bodypart_head_a0'],
+            ['type_corner_short_a1', 'bodypart_other_a1'],
+            ['type_corner_short_a1', 'bodypart_head_a1'],
+            ['type_dribble_a0', 'bodypart_other_a0'],
+            ['type_dribble_a0', 'bodypart_head_a0'],
+            ['type_dribble_a1', 'bodypart_other_a1'],
+            ['type_dribble_a1', 'bodypart_head_a1'],
+        ]
+
     def load_data(self):
         soccer_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "soccerdata.h5")
         X = pd.read_hdf(soccer_data_path, "features")
-        X["goalscore_team"] = X["goalscore_team"].astype(np.float32)
-        X["goalscore_opponent"] = X["goalscore_opponent"].astype(np.float32)
-        X["goalscore_diff"] = X["goalscore_diff"].astype(np.float32)
+        #X["goalscore_team"] = X["goalscore_team"].astype(np.float32)
+        #X["goalscore_opponent"] = X["goalscore_opponent"].astype(np.float32)
+        #X["goalscore_diff"] = X["goalscore_diff"].astype(np.float32)
         y = pd.read_hdf(soccer_data_path, "labels").astype(np.float32)["scores"]
 
-        X = X.drop(columns=["dist_to_goal_a0", "dist_to_goal_a1",
+        X = X.drop(columns=["team_1", "dist_to_goal_a0", "dist_to_goal_a1",
             "angle_to_goal_a0", "angle_to_goal_a1"])
         X = X.drop(columns=["time_seconds_a0", "time_seconds_a1"])
         X = X.drop(columns=["dx_a0", "dy_a0", "dx_a1", "dy_a1"])
         X = X.drop(columns=["period_id_a0", "period_id_a1", "time_delta_1"])
-        X = X.drop(columns=["goalscore_opponent"])
+        X = X.drop(columns=["goalscore_opponent", "goalscore_diff", "goalscore_team"])
         X = X.drop(columns=["time_seconds_overall_a1"])
 
-        return X, y
+        columns = list(X.columns)
+
+        y = y.to_numpy(dtype=np.float32)
+        X = X.to_numpy(dtype=np.float32)
+
+        return X, y, columns
 
     def load_model(self, num_trees, depth, lr):
         print("\n=== NEW MODEL ===")
         model_name = f"soccer-{num_trees}-{depth}-{lr}.xgb"
+        meta_name = f"soccer-{num_trees}-{depth}-{lr}.meta"
+        at_name = f"soccer-{num_trees}-{depth}-{lr}.at"
         if not os.path.isfile(os.path.join(self.result_dir, model_name)):
             print(f"training model learning_rate={lr}, depth={depth}, num_trees={num_trees}")
-            X, y = self.load_data()
+            X, y, columns = self.load_data()
 
             num_examples, num_features = X.shape
             Itrain, Itest = util.train_test_indices(num_examples, seed=1)
-            Xtrain = X.iloc[Itrain]
-            ytrain = y.to_numpy()[Itrain]
-            Xtest = X.iloc[Itest]
-            ytest = y.to_numpy()[Itest]
+            Xtrain = X[Itrain, :]
+            ytrain = y[Itrain]
+            Xtest = X[Itest, :]
+            ytest = y[Itest]
             dtrain = xgb.DMatrix(Xtrain, label=ytrain, missing=None)
             dtest = xgb.DMatrix(Xtest, label=ytest, missing=None)
             ybar = ytrain.mean()
@@ -645,17 +725,17 @@ class SoccerScaleExperiment(ScaleExperiment):
                 "colsample_bytree": 1.0,
                 "subsample": 1.0,
                 "seed": 1,
-                "nthread": 1,
+                "nthread": 4,
             }
-            self.model = xgb.train(params, dtrain, num_trees, [(dtrain, "train"), (dtest, "test")])
-                    #early_stopping_rounds=10)
+            self.model = xgb.train(params, dtrain, num_trees, [(dtrain, "train"), (dtest, "test")],
+                    early_stopping_rounds=10)
             ytest_hat = self.model.predict(dtest)
 
-            self.feat2id_dict = dict([(v, i) for i, v in enumerate(X.columns)])
+            self.feat2id_dict = dict([(v, i) for i, v in enumerate(columns)])
             self.feat2id = lambda x: self.feat2id_dict[x]
-            self.id2feat = lambda i: X.columns[i]
+            self.id2feat = lambda i: columns[i]
 
-            self.at = addtree_from_xgb_model(self.model, self.feat2id)
+            self.at = addtree_from_xgb_model(self.model)
             self.at.base_score = 0.0
 
             pred = self.model.predict(dtest, output_margin=True)
@@ -668,47 +748,155 @@ class SoccerScaleExperiment(ScaleExperiment):
             print(f"mae model difference {mae} before base_score")
 
             self.at.base_score = -mae
-            pred_at = np.array(self.at.predict(Xtest[:1000].to_numpy()))
+            pred_at = np.array(self.at.predict(Xtest[:1000, :]))
             mae = metrics.mean_absolute_error(pred[:1000], pred_at)
             print(f"mae model difference {mae}")
 
             with open(os.path.join(self.result_dir, model_name), "wb") as f:
                 pickle.dump(self.model, f)
-            self.at.write(os.path.join(self.result_dir, f"{model_name}.at"))
-            self.meta = {"feat2id": self.feat2id_dict}
-            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "wb") as f:
-                pickle.dump(self.meta, f)
+            self.at.write(os.path.join(self.result_dir, at_name))
+            self.meta = {"columns": columns}
+            with open(os.path.join(self.result_dir, meta_name), "w") as f:
+                json.dump(self.meta, f)
 
         else:
             print(f"loading model from file: {model_name}")
             with open(os.path.join(self.result_dir, model_name), "rb") as f:
                 self.model = pickle.load(f)
-            self.at = AddTree.read(os.path.join(self.result_dir, f"{model_name}.at"))
-            with open(os.path.join(self.result_dir, f"{model_name}.meta"), "rb") as f:
-                self.meta = pickle.load(f)
+            self.at = AddTree.read(os.path.join(self.result_dir, at_name))
+            with open(os.path.join(self.result_dir, meta_name), "r") as f:
+                self.meta = json.load(f)
+
+        self.feat2id_dict = dict([(v, i) for i, v in enumerate(self.meta["columns"])])
+        self.feat2id = lambda x: self.feat2id_dict[x]
+        self.id2feat = lambda i: self.meta["columns"][i]
 
         #print(num_examples, num_features)
 
     def get_opt(self):
         opt = Optimizer(maximize=self.at, max_memory=self.max_memory, use_dyn_prog_heuristic=False)
 
-        u = lambda n: self.meta["feat2id"][n]
-        used_ids1 = set(opt.feat_info.feat_ids1())
-        action0_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.action0]
-        action0_ids = list(list(used_ids1.intersection(action0_ids)))
-        action1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.action1]
-        action1_ids = list(list(used_ids1.intersection(action1_ids)))
-        bodypart0_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart0]
-        bodypart0_ids = list(list(used_ids1.intersection(bodypart0_ids)))
-        bodypart1_ids = [opt.feat_info.get_id(1, u(name)) for name in SoccerScaleExperiment.bodypart1]
-        bodypart1_ids = list(list(used_ids1.intersection(bodypart1_ids)))
+        u = self.feat2id
+        w = lambda x: opt.feat_info.get_id(1, u(x))
+        action0_ids = [w(name) for name in SoccerScaleExperiment.action0 if w(name) != -1]
+        action1_ids = [w(name) for name in SoccerScaleExperiment.action1 if w(name) != -1]
+        bodypart0_ids = [w(name) for name in SoccerScaleExperiment.bodypart0 if w(name) != -1]
+        bodypart1_ids = [w(name) for name in SoccerScaleExperiment.bodypart1 if w(name) != -1]
+
+        print(action0_ids)
+        print(action1_ids)
+        print(bodypart0_ids)
+        print(bodypart1_ids)
 
         opt.adjuster.add_one_out_of_k(action0_ids, len(action0_ids) == len(SoccerScaleExperiment.action0))
         opt.adjuster.add_one_out_of_k(action1_ids, len(action1_ids) == len(SoccerScaleExperiment.action1))
         opt.adjuster.add_one_out_of_k(bodypart0_ids, len(bodypart0_ids) == len(SoccerScaleExperiment.bodypart0))
         opt.adjuster.add_one_out_of_k(bodypart1_ids, len(bodypart1_ids) == len(SoccerScaleExperiment.bodypart1))
 
-        print("num_vertices", opt.g1.num_vertices())
+        for c in SoccerScaleExperiment.bodypart_constraints:
+            ids = [w(name) for name in c]
+            opt.adjuster.add_at_most_k(ids, 1)
+
+        #opt.adjuster.add_at_most_k(action0_ids, 1)
+        #opt.adjuster.add_at_most_k(action1_ids, 1)
+        #opt.adjuster.add_at_most_k(bodypart0_ids, 1)
+        #opt.adjuster.add_at_most_k(bodypart1_ids, 1)
+
+        box = [RealDomain() for i in range(len(self.meta["columns"]))]
+        box[u("type_goal_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_goal_a1")] = RealDomain(-np.inf, 1.0)
+        box[u("type_foul_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_foul_a1")] = RealDomain(-np.inf, 1.0)
+        box[u("type_keeper_claim_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_keeper_claim_a1")] = RealDomain(-np.inf, 1.0)
+        box[u("type_keeper_save_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_keeper_save_a1")] = RealDomain(-np.inf, 1.0)
+        box[u("type_yellow_card_a1")] = RealDomain(-np.inf, 1.0)
+        box[u("time_seconds_overall_a0")] = RealDomain(600.0, 1200.0)
+        print("before prune", opt.g1.num_vertices())
+        opt.prune_box(box, 1)
+        print("after prune", opt.g1.num_vertices())
+        return opt
+
+class SoccerScaleExperiment_Backwards(SoccerScaleExperiment):
+    def get_opt(self):
+        opt = super().get_opt()
+        u = self.feat2id
+        w = lambda x: opt.feat_info.get_id(1, u(x))
+        opt.adjuster.add_less_than(w("x_a0"), w("x_a1"))
+        box = [RealDomain() for i in range(len(self.meta["columns"]))]
+        box[u("x_a0")] = RealDomain(50, 80)
+        box[u("x_a1")] = RealDomain(95, 100)
+        box[u("y_a0")] = RealDomain(5, 63)
+        box[u("y_a1")] = RealDomain(5, 63)
+
+        # a0 is shot
+        for a in SoccerScaleExperiment.action0:
+            if a == "type_shot_a0":
+                box[u(a)] = RealDomain(1.0, np.inf)
+            else:
+                box[u(a)] = RealDomain(-np.inf, 1.0)
+
+        # a1 is pass
+        for a in SoccerScaleExperiment.action1:
+            if a == "type_pass_a1":
+                box[u(a)] = RealDomain(1.0, np.inf)
+            else:
+                box[u(a)] = RealDomain(-np.inf, 1.0)
+
+        # a0 is foot
+        for a in SoccerScaleExperiment.bodypart0:
+            if a == "bodypart_foot_a0":
+                box[u(a)] = RealDomain(1.0, np.inf)
+            else:
+                box[u(a)] = RealDomain(-np.inf, 1.0)
+
+        # a1 is foot
+        for a in SoccerScaleExperiment.bodypart1:
+            if a == "bodypart_foot_a1":
+                box[u(a)] = RealDomain(1.0, np.inf)
+            else:
+                box[u(a)] = RealDomain(-np.inf, 1.0)
+
+        print("before prune", opt.g1.num_vertices())
+        opt.prune_box(box, 1)
+        print("after prune", opt.g1.num_vertices())
+        return opt
+
+class SoccerScaleExperiment_Optimize(SoccerScaleExperiment):
+    def get_opt(self):
+        opt = super().get_opt()
+        u = self.feat2id
+        box = [RealDomain() for i in range(len(self.meta["columns"]))]
+        #box[u("x_a0")] = RealDomain(80, 90)
+        box[u("y_a0")] = RealDomain(20, 25)
+        box[u("x_a1")] = RealDomain(50, 55)
+        box[u("y_a1")] = RealDomain(5, 10)
+
+        box[u("type_shot_penalty_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_corner_short_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_corner_crossed_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_freekick_short_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_freekick_crossed_a0")] = RealDomain(-np.inf, 1.0)
+        box[u("type_shot_freekick_a0")] = RealDomain(-np.inf, 1.0)
+
+        # a1 is pass
+        for a in SoccerScaleExperiment.action1:
+            if a == "type_pass_a1":
+                box[u(a)] = RealDomain(1.0, np.inf)
+            else:
+                box[u(a)] = RealDomain(-np.inf, 1.0)
+
+        # a1 is foot
+        for a in SoccerScaleExperiment.bodypart1:
+            if a == "bodypart_foot_a1":
+                box[u(a)] = RealDomain(1.0, np.inf)
+            else:
+                box[u(a)] = RealDomain(-np.inf, 1.0)
+
+        print("before prune", opt.g1.num_vertices())
+        opt.prune_box(box, 1)
+        print("after prune", opt.g1.num_vertices())
         return opt
 
 class HiggsScaleExperiment(ScaleExperiment):
@@ -1074,18 +1262,17 @@ def allstate_random(outfile, max_memory, N, seed):
                     start_eps=0.01)
     exp.write_results()
 
-def soccer(outfile, max_memory):
-    exp = SoccerScaleExperiment(max_memory=max_memory, max_time=10, num_threads=1)
+def soccer(outfile, max_memory, exp_type):
+    exp = exp_type(max_memory=max_memory, max_time=10, num_threads=1)
     exp.confirm_write_results(outfile)
-    exp.do_merge = True
-    for num_trees, depth, lr in [
-            #(10, 5, 1.0),
-            #(20, 5, 0.8),
-            #(30, 5, 0.5),
-            (50, 5, 0.35)
-            ]:
-        exp.load_model(num_trees, depth, lr)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr}, start_eps=0.01)
+    num_trees, depth, lr = 200, 10, 0.25
+    exp.load_model(num_trees, depth, lr)
+    #exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr}, start_eps=0.01)
+    def incr_eps_fun(eps):
+        return min(1.0, eps+0.05)
+    exp.results[output_file] = [{"num_trees": num_trees, "depth": depth, "lr": lr}]
+    info = exp.arastar_single_multiple_solutions(0.05, incr_eps_fun, 10)
+    exp.results[output_file][0]["ara*"] = info
     exp.write_results()
 
 def higgs(outfile, max_memory):
@@ -1155,8 +1342,10 @@ if __name__ == "__main__":
         allstate(output_file, max_memory)
     if exp == "allstate_random":
         allstate_random(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
-    if exp == "soccer":
-        soccer(output_file, max_memory)
+    if exp == "soccer_backward":
+        soccer(output_file, max_memory, SoccerScaleExperiment_Backwards)
+    if exp == "soccer_optimize":
+        soccer(output_file, max_memory, SoccerScaleExperiment_Optimize)
     if exp == "higgs":
         higgs(output_file, max_memory)
     if exp == "higgs_random":
