@@ -2,7 +2,7 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit
+import timeit, gzip
 from io import StringIO
 
 from .pytreeck import *
@@ -86,14 +86,14 @@ def __addtree_predict(self, examples):
     return predictions
 
 def __addtree_write(self, f):
-    with open(f, "w") as fh:
+    with gzip.open(f, "wb") as fh:
         json = self.to_json()
-        fh.write(json)
+        fh.write(json.encode("utf-8"))
 
 def __addtree_read(f):
-    with open(f, "r") as fh:
+    with gzip.open(f, "rb") as fh:
         json = fh.read()
-        return AddTree.from_json(json)
+        return AddTree.from_json(json.decode("utf-8"))
 
 AddTree.__iter__ = __addtree_iter
 AddTree.predict_single = __addtree_predict_single
