@@ -5,7 +5,10 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 from matplotlib.lines import Line2D
 from matplotlib.ticker import FixedLocator, FormatStrFormatter
-import matplotsoccer
+try:
+    import matplotsoccer
+except:
+    pass
 import util
 
 from treeck import *
@@ -14,17 +17,21 @@ from treeck.xgb import addtree_from_xgb_model
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['text.usetex'] = False
 plt.rcParams['font.size'] = 9
-plt.rcParams['axes.linewidth'] = 0.5
-plt.rcParams['xtick.major.width'] = 0.5
-plt.rcParams['ytick.major.width'] = 0.5
-plt.rcParams['xtick.minor.width'] = 0.5
-plt.rcParams['ytick.minor.width'] = 0.5
+plt.rcParams['axes.linewidth'] = 0.4
+plt.rcParams['xtick.major.width'] = 0.4
+plt.rcParams['ytick.major.width'] = 0.4
+plt.rcParams['xtick.minor.width'] = 0.4
+plt.rcParams['ytick.minor.width'] = 0.4
 plt.rcParams['axes.unicode_minus'] = False
 
 #import seaborn as sns
 
+def RBG(*args):
+    return [x/255.0 for x in args]
+
 c1 = (0.122, 0.467, 0.706)
-c2 = (0.173, 0.627, 0.173)
+c2 = RBG(224, 123, 57)
+c3 = (0.173, 0.627, 0.173)
 
 
 RESULT_DIR = "tests/experiments/scale"
@@ -210,17 +217,18 @@ def plot_output2(f, i):
     ax.xaxis.set_tick_params(which='both', labelbottom=True)
     plt.show()
 
-def plot_output3(file):
+def plot_bounds(file):
     with open(file) as fh:
         oo = json.load(fh)
 
+    lw = 0.6
     m = {}
     for num_trees in [50, 100, 200, 400]:
         ooo = [o for o in oo if o["depth"] in [4, 6, 8] and o["num_trees"] == num_trees]
         if len(oo) == 0: continue
         m[num_trees] = ooo
 
-    fig, axs = plt.subplots(1, len(m), sharey=True, figsize=(3.4, 1.4))
+    fig, axs = plt.subplots(1, len(m), sharey=True, figsize=(3.4, 1.2))
 
     for i, ((num_trees, oo), ax) in enumerate(zip(m.items(), axs)):
         xs = [o["depth"] for o in oo]
@@ -247,15 +255,15 @@ def plot_output3(file):
             ax.hlines(hi, x-0.1, x+0.1, lw=lw, color=c1)
 
         def interval_merge(ax, x, lo, hi, lw=1):
-            ax.vlines(x, lo, hi, lw=lw, color=c2, linestyles="dotted")
+            ax.vlines(x, lo, hi, lw=lw, color=c2, linestyles="dashed")
             ax.hlines(lo, x-0.1, x+0.1, lw=lw, color=c2)
             ax.hlines(hi, x-0.1, x+0.1, lw=lw, color=c2)
 
         for x, lo, hi in zip(xxs, ARA, A):
-            interval_ours(ax, x-0.1, lo, hi, lw=0.8)
+            interval_ours(ax, x-0.1, lo, hi, lw=lw)
 
         for x, lo, hi in zip(xxs, mergelo, mergehi):
-            interval_merge(ax, x+0.1, lo, hi, lw=0.8)
+            interval_merge(ax, x+0.1, lo, hi, lw=lw)
 
         #ax.set_xlabel("trees")
         ax.set_title(f"M = {num_trees}")
@@ -274,16 +282,16 @@ def plot_output3(file):
 
     #axs[0].set_ylabel("model output")
     axs[0].legend([
-            Line2D([0], [0], color=c1, lw=1),
-            Line2D([0], [0], ls=":", color=c2, lw=1.0)
+            Line2D([0], [0], color=c1, lw=lw),
+            Line2D([0], [0], ls="--", color=c2, lw=lw)
         ], ["\\ouralg{}", "\\merge{}"],
         bbox_to_anchor=(0.8, 1.20, len(m)*1.08-0.5, 0.0), loc='lower left', ncol=2,
         mode="expand", borderaxespad=0.0, frameon=False)
-    plt.figtext(0.01, 0.85, "model")
-    plt.figtext(0.01, 0.78, "output")
-    plt.figtext(0.5, 0.0, "tree depth", horizontalalignment="center")
+    plt.figtext(0.01, 0.88, "model")
+    plt.figtext(0.01, 0.80, "output")
+    plt.figtext(0.00, 0.0, "tree depth", horizontalalignment="left")
     #plt.tight_layout()
-    plt.subplots_adjust(top=0.75, bottom=0.22, left=0.15, right=0.95)
+    plt.subplots_adjust(top=0.75, bottom=0.15, left=0.18, right=0.95)
     plt.savefig("/tmp/unconstrained.svg")
     if "IMG_OUTPUT" in os.environ:
         plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "unconstrained.svg"))
@@ -453,7 +461,7 @@ def plot_robust():
     np.random.shuffle(index)
 
     def plotit(dfg, i0, ax=None):
-        lw=0.7
+        lw=0.6
         i1 = (i0[0], i0[1], i0[2], False, i0[4]) # follow merge
         g0 = dfg.get_group(i0)
         g1 = dfg.get_group(i1)
@@ -463,12 +471,12 @@ def plot_robust():
         if ax is None:
             fig, ax = plt.subplots(1, 1)
 
-        l0, = ax.plot(g0["delta"].values, label="ours", lw=lw, zorder=5)
+        l0, = ax.plot(g0["delta"].values, label="\\ouralg{}", lw=lw, c=c1, zorder=5)
         #ax.plot(g0["up"].values, ":", c=l0.get_color(), lw=1)
         #ax.plot(g0["lo"].values, ":", c=l0.get_color(), lw=1)
         ax.fill_between(range(n), g0["lo"].values, g0["up"].values, color=l0.get_color(), alpha=0.2, linewidth=0)
 
-        l1, = ax.plot(g1["delta"].values, label="merge", lw=lw, zorder=2)
+        l1, = ax.plot(g1["delta"].values, label="\\merge{}", lw=lw, c=c2, zorder=2)
         #ax.plot(g1["up"].values, ":", c=l1.get_color(), lw=1)
         #ax.plot(g1["lo"].values, ":", c=l1.get_color(), lw=1)
         ax.fill_between(range(n), g1["lo"].values, g1["up"].values, color=l1.get_color(), alpha=0.2, linewidth=0)
@@ -492,24 +500,26 @@ def plot_robust():
             ]
 
     # interesting ones
-    fig, axs = plt.subplots(1, len(interesting), figsize=(3.5, 1.2), sharey=True)
-    plt.subplots_adjust(top=0.8, bottom=0.28, left=0.1, right=0.95, wspace=0.1)
+    fig, axs = plt.subplots(1, len(interesting), figsize=(3.5, 1.0), sharey=True)
+    plt.subplots_adjust(top=0.8, bottom=0.18, left=0.1, right=0.95, wspace=0.1)
     for i0, ax in zip(interesting, axs):
         print(i0)
         plotit(dfg, i0, ax)
     plt.figtext(0.05, 0.85, "\$\\delta\$")
-    plt.figtext(0.5, 0.00, "binary search step", horizontalalignment="center")
+    #plt.figtext(0.5, 0.00, "binary search step", horizontalalignment="center")
+    plt.figtext(0.02, 0.00, "step", horizontalalignment="left")
     axs[0].legend(frameon=False)
     if "IMG_OUTPUT" in os.environ:
         plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "robust.svg"))
     plt.show()
 
 def plot_examples():
-    lw=0.7
+    lw=0.6
     examples = [
             #("tests/experiments/scale/covtype/all4g120s", 9),
             ("tests/experiments/scale/covtype/rnd4g30s10N_1", 152),
-            ("tests/experiments/scale/covtype/rnd4g30s10N_1", 165)
+            #("tests/experiments/scale/covtype/rnd4g30s10N_1", 165),
+            ("tests/experiments/scale/higgs/rnd4g30s10N_1", 156),
             ]
     fig, axs = plt.subplots(1, len(examples), figsize=(3.4, 1.2), sharey=False, sharex=False)
     oo = []
@@ -527,15 +537,15 @@ def plot_examples():
 
         if len(s0) > 0:
             print("A* optimal:", s0[0])
-            ax.axhline(s0[0], color="gray", linestyle=":", linewidth=lw, label="Solution")
+            #ax.axhline(s0[0], color="gray", linestyle=":", linewidth=lw, label="Solution")
             b0.append(s0[0])
             tb0.append(ts0[0])
             b0 = [x for x in b0 if x >= s0[0]]
             tb0 = [y for x, y in zip(b0, tb0) if x >= s0[0]]
         else:
             print("A* best:", min(b0))
-            ax.axhline(min(b0), color="gray", linestyle=":", linewidth=lw, label="A* best")
-        l0, = ax.plot(tb0, b0, lw=lw, label="A* upper")
+            #ax.axhline(min(b0), color="gray", linestyle=":", linewidth=lw, label="A* best")
+        l0, = ax.plot(tb0, b0, lw=lw, c=c1, label="A* upper")
         #if "best_solution_box" in o["a*"]:
         #    print("A* sol: ", o["a*"]["best_solution_box"])
 
@@ -552,7 +562,7 @@ def plot_examples():
             s1f = [b-a for a, b in zip(s10f, s11f)]
             b1f = util.flatten_ara_upper(s1f, e1f)
 
-            l1, = ax.plot(ts1f, s1f, ".-", lw=lw, ms=2.0, label="ARA* lower")
+            l1, = ax.plot(ts1, s11, "--", lw=lw, ms=2.0, c=c1, label="ARA* lower")
             #ax.plot(ts1f, b1f, label="ARA* upper", ls=(0, (2, 2)), c=l1.get_color())
             #ylim_lo, ylim_hi = ax.get_ylim()
             #ax.plot(tb1, b1, ".", markersize=1.5, c=l1.get_color())
@@ -560,25 +570,29 @@ def plot_examples():
             print("ARA* best:", max(s1f), "eps:", max(e1))
             #if "best_solution_box" in o["ara*"]:
             #    print("ARA* sol: ", o["ara*"]["best_solution_box"])
-            if len(s0) == 0:
-                ax.axhline(max(s1f), color="gray", ls=":", lw=lw, label="ARA* best")
+            #if len(s0) == 0:
+            #    #ax.fill_between()
+            #    ax.axhline(max(s1f), color="gray", ls=":", lw=lw, label="ARA* best")
 
         # merge
         if "merge" in o:
             b2 = [x[1][1]-x[0][0] for x in o["merge"]["bounds"]]
+            b3 = [x[1][0]-x[0][1] for x in o["merge"]["bounds"]]
             t2 = o["merge"]["times"]
             oot = o["merge"]["oot"]
             oom = o["merge"]["oom"]
             tt = o["merge"]["total_time"]
             mt = o["max_time"]
             mm = o["max_memory"]
-            l2, = ax.plot(t2, b2, "x-", lw=lw, ms=3.0, label="Merge")
+            l2, = ax.plot(t2, b2, ".-", lw=lw, ms=2.0, c=c2, label="Merge")
+            l3, = ax.plot(t2, b3, ".--", lw=lw, ms=2.0, c=c2)
             oot_pos = 0
             if oot or oom:
                 label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
                 oot_pos = max(oot_pos, max(tb0), max(tb1), max(t2))
                 ax.plot([t2[-1], oot_pos], [b2[-1], b2[-1]], ":", color=l2.get_color(), lw=lw)
-                ax.text(oot_pos, b2[-1]*1.1, label, horizontalalignment='right',
+                ax.plot([t2[-1], oot_pos], [b3[-1], b3[-1]], ":", color=l2.get_color(), lw=lw)
+                ax.text(oot_pos, b3[-1]*1.0, label, horizontalalignment='right',
                         verticalalignment='bottom', color=l2.get_color())
 
             print("merge best:", min(b2), "OOT:", oot, "OOM:", oom, "optimal", o["merge"]["optimal"])
@@ -590,15 +604,17 @@ def plot_examples():
     #ax.set_ylabel("model output");
     ##ax.set_ylim(bottom=min(b1), top=1.1*max(b0));
     #ax.xaxis.set_tick_params(which='both', labelbottom=True)
-    plt.subplots_adjust(top=0.8, bottom=0.16, left=0.15, right=0.95,wspace=0.4)
-    axs[0].legend([l0, l1, l2], ["up", "lo", "merge"],
+    fig.subplots_adjust(top=0.8, bottom=0.16, left=0.15, right=0.95,wspace=0.4)
+    axs[0].legend([l0, l2], ["\\ouralg{}", "\\merge{}"],
         bbox_to_anchor=(0.4, 1.0, 2.0, 1.0), loc='lower left',
-        ncol=3, mode="expand", borderaxespad=0.0, frameon=False)
-    plt.figtext(0.0, 0, "Time [s]")
-    plt.figtext(0.0, 0.85, "Output")
+        ncol=2, mode="expand", borderaxespad=0.0, frameon=False)
+    plt.figtext(0.0, 0, "time [s]")
+    plt.figtext(0.01, 0.88, "model")
+    plt.figtext(0.01, 0.80, "output")
     plt.savefig("/tmp/examples.svg")
     if "IMG_OUTPUT" in os.environ:
         plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "examples.svg"))
+        print(f"wrote svg to {os.environ['IMG_OUTPUT']}")
     plt.show()
 
 def youtube(file):
@@ -761,7 +777,7 @@ if __name__ == "__main__":
     if sys.argv[1] == "2":
         plot_output2(sys.argv[2], int(sys.argv[3]))
     if sys.argv[1] == "bounds":
-        plot_output3(sys.argv[2])
+        plot_bounds(sys.argv[2])
     if sys.argv[1] == "4":
         plot_output4(sys.argv[2], int(sys.argv[3]))
     if sys.argv[1] == "5":

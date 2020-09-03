@@ -246,7 +246,8 @@ def robust():
             certainly_unsat = all_unsats.values[-1]
             certainly_sat = all_sats.values[-1]
             is_exact = np.ceil(certainly_unsat) == np.floor(certainly_sat)
-            #print("exact_solve_ours", certainly_unsat, certainly_sat, is_exact)
+            if not is_exact:
+                print("exact_solve_ours", certainly_unsat, certainly_sat, is_exact)
             return is_exact
         return False
 
@@ -296,7 +297,7 @@ def robust():
     agg["mexact"] *= 100
     agg["same"] *= 100
     agg["better"] *= 100
-    print(agg)
+    print("agg", agg)
 
     bins = [-0.1, 1.0, 10, 100, 1000, 10000000]
     hist = np.histogram(ttb_ratio, bins=bins)
