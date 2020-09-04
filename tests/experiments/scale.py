@@ -1191,8 +1191,8 @@ def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta,
                     lo, up = aralo, araup
                     print("using ARA* bounds")
         else: # follow merge
-            lo = data["merge"]["bounds"][-1][0][0] # min of at0
-            up = data["merge"]["bounds"][-1][1][1] # max of at1
+            lo = data["merge"]["bounds"][-1][0] # min of at0
+            up = data["merge"]["bounds"][-1][1] # max of at1
 
         # if follow_astar, check if we generated examples, if so, update delta
         delta_update = exp.delta
