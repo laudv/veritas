@@ -590,6 +590,7 @@ PYBIND11_MODULE(pytreeck, m) {
                 return res;
             });
         })
+        .def("add_with_negated_leaf_values", &KPartiteGraph::add_with_negated_leaf_values)
         ;
 
     py::class_<Solution>(m, "Solution")

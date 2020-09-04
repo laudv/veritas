@@ -763,6 +763,25 @@ class TestGraph(unittest.TestCase):
         print(opt0.current_basic_bounds())
         print(opt1.current_basic_bounds())
 
+    def test_add_negated(self):
+        dummy = AddTree()
+        at = AddTree()
+        t = at.add_tree();
+        t.split(t.root(), 0, 2)
+        t.split( t.left(t.root()), 0, 1)
+        t.split(t.right(t.root()), 0, 3)
+        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
+
+        finfo = FeatInfo(dummy, at, set(), False);
+        g0 = KPartiteGraph(at, finfo, 0)
+        g1 = KPartiteGraph(at, finfo, 0)
+        g0.add_with_negated_leaf_values(g1)
+
+        g0.merge(2)
+        self.assertEqual((0.0, 0.0), g0.basic_bound())
 
     #def test_simplify(self):
     #    at = AddTree()

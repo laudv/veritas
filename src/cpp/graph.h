@@ -200,6 +200,9 @@ namespace treeck {
 
         inline const DomainStore& store() const { return store_; }
         inline DomainStore& store() { return store_; }
+
+        // for merge: with two ensembles, they simply merge independent sets of (-ensemble1 + ensemble2)
+        void add_with_negated_leaf_values(const KPartiteGraph&);
     };
 
     std::ostream& operator<<(std::ostream& s, const KPartiteGraph& graph);

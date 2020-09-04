@@ -917,6 +917,19 @@ namespace treeck {
         return set.vertices.size();
     }
 
+    void
+    KPartiteGraph::add_with_negated_leaf_values(const KPartiteGraph& rhs)
+    {
+        // CAREFUL: rhs.sets_ might be equal to this->sets_ -> don't use iterators
+        size_t index = sets_.size();
+        for (size_t i = 0; i < index; ++i)
+            sets_.push_back(rhs.sets_[i]); // copy!
+
+        for (; index < sets_.size(); ++index)
+            for (Vertex& v : sets_[index].vertices)
+                v = {v.box, -v.output};
+    }
+
     std::ostream&
     operator<<(std::ostream& s, const KPartiteGraph& graph)
     {
