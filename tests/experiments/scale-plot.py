@@ -481,7 +481,7 @@ def plot_robust():
         #ax.plot(g1["lo"].values, ":", c=l1.get_color(), lw=1)
         ax.fill_between(range(n), g1["lo"].values, g1["up"].values, color=l1.get_color(), alpha=0.2, linewidth=0)
 
-        ax.set_title(f"{i0[2]} vs. {i0[4]}")
+        ax.set_title(f"digits {i0[2]} vs. {i0[4]}")
         ax.set_yticks(range(0, 21, 5))
         ax.set_xticks(range(0, n, 2))
         ax.set_xticks(range(0, n, 1), minor=True)
