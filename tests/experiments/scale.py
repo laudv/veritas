@@ -1142,10 +1142,8 @@ def mnist_robust(outfile, max_memory, N, seed):
             if target_label == exp.example_label: continue
             print(f"source {exp.example_label} vs target {target_label} FOLLOW ASTAR")
             mnist_robust_search(exp, example_i, target_label, True, start_delta, seed)
-            break
             print(f"source {exp.example_label} vs target {target_label} FOLLOW MERGE")
             mnist_robust_search(exp, example_i, target_label, False, start_delta, seed)
-        break
 
     exp.write_results()
 
