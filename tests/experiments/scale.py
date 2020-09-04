@@ -194,37 +194,41 @@ class ScaleExperiment:
 
     def merge_worker_fun(self, conn):
         opt = self.get_opt()
+
+        g = opt.g1
+        g.set_max_mem_size(self.max_memory)
+        g.add_with_negated_leaf_values(opt.g0)
+        
         t = 0.0
-        b = opt.current_basic_bounds()
-        m = opt.current_memory()
-        v = opt.g0.num_vertices() + opt.g1.num_vertices()
+        b = g.basic_bound()
+        m = g.get_used_mem_size()
+        v = g.num_vertices()
         conn.send(("point", t, b, m, v))
         start = timeit.default_timer()
         try:
             while True:
                 try:
-                    print("MERGE worker: num_independent_sets:", opt.g1.num_independent_sets())
-                    opt.merge(2, reset_optimizer=False) # dyn prog. algorithm is quadratic, basic bound is linear
-                except:
-                    m = opt.current_memory()
-                    print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB")
+                    print("MERGE worker: num_independent_sets:", g.num_independent_sets())
+                    g.merge(2)
+                except Exception as e:
+                    m = g.get_used_mem_size()
+                    print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
                     conn.send(("oom", m))
                     break
 
                 t = timeit.default_timer() - start
-                b = opt.current_basic_bounds()
-                m = opt.current_memory()
-                v = opt.g0.num_vertices() + opt.g1.num_vertices()
+                b = g.basic_bound()
+                m = g.get_used_mem_size()
+                v = g.num_vertices()
                 conn.send(("point", t, b, m, v))
 
-                # dynamic programming gives optimal solution at 2
-                # without dyn prog, at 1 (with reset_optimizer = False)
-                #if opt.g0.num_independent_sets() <= 2 and opt.g1.num_independent_sets() <= 2:
-                if opt.g0.num_independent_sets() <= 1 and opt.g1.num_independent_sets() <= 1:
+                if g.num_independent_sets() <= 1:
                     conn.send(("optimal",))
                     break
         finally:
             print("MERGE worker: closing")
+            del g
+            del opt
             conn.close()
 
     def merge(self):
@@ -1138,8 +1142,10 @@ def mnist_robust(outfile, max_memory, N, seed):
             if target_label == exp.example_label: continue
             print(f"source {exp.example_label} vs target {target_label} FOLLOW ASTAR")
             mnist_robust_search(exp, example_i, target_label, True, start_delta, seed)
+            break
             print(f"source {exp.example_label} vs target {target_label} FOLLOW MERGE")
             mnist_robust_search(exp, example_i, target_label, False, start_delta, seed)
+        break
 
     exp.write_results()
 

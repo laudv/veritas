@@ -253,12 +253,6 @@ class Optimizer:
         self.clique_count = [self.num_candidate_cliques()]
         self.times = [0.0]
 
-    def merge(self, K, reset_optimizer=True):
-        self.g0.merge(K)
-        self.g1.merge(K)
-        if reset_optimizer:
-            self.reset_optimizer()
-
     def prune_example(self, example, delta):
         self.g0.prune_example(self.feat_info, example, delta)
         self.g1.prune_example(self.feat_info, example, delta)

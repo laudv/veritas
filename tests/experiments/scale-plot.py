@@ -60,6 +60,8 @@ def plot_output1(*args):
         oot_pos = 0
         for oo, ax, name in zip(oos, axs, filenames):
             print(f"\n== {name}: num_trees {oo['num_trees']}, depth {oo['depth']} ==")
+            if "delta" in oo:
+                print("delta:", oo["delta"])
 
             # A*
             tb0 = oo["a*"]["bounds_times"]
@@ -108,14 +110,16 @@ def plot_output1(*args):
 
             # merge
             if "merge" in oo:
-                b2 = [x[1][1]-x[0][0] for x in oo["merge"]["bounds"]]
+                b2 = [x[1] for x in oo["merge"]["bounds"]]
+                b3 = [x[0] for x in oo["merge"]["bounds"]]
                 t2 = oo["merge"]["times"]
                 oot = oo["merge"]["oot"]
                 oom = oo["merge"]["oom"]
                 tt = oo["merge"]["total_time"]
                 mt = oo["max_time"]
                 mm = oo["max_memory"]
-                l2, = ax.plot(t2, b2, "x-", label="Merge")
+                l2, = ax.plot(t2, b2, "x-", label="Merge Up")
+                #l3, = ax.plot(t2, b3, "x-", label="Merge Lo")
                 if oot or oom:
                     label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
                     oot_pos = max(oot_pos, max(tb0), max(tb1), max(t2))
@@ -130,7 +134,7 @@ def plot_output1(*args):
             ax.legend()
             ax.set_xlabel("time");
             ax.set_ylabel("model output");
-            ax.set_ylim(top=1.1*max(b0));
+            #ax.set_ylim(top=1.1*max(b0));
             ax.xaxis.set_tick_params(which='both', labelbottom=True)
 
             k+=1
