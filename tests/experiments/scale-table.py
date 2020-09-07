@@ -14,6 +14,7 @@ def tikzhist(buf, plotname, data, bins):
     N = len(data)
     hist = np.histogram(data, bins=bins)
     print("histogram", plotname, hist[0], hist[1])
+    print("histogram cumsum", plotname, np.cumsum(hist[0])/sum(hist[0]))
     c1, c2 = ("mygreen", "black") if "gap" in plotname else ("black", "mygreen")
 
     def lf(l):
@@ -59,7 +60,10 @@ def tikzstandalone_close(buf):
 def time_to_beat_merge(o):
     A = [b[1]-b[0] for b in o["a*"]["bounds"]]
     At = o["a*"]["bounds_times"]
-    merge = o["merge"]["bounds"][-1][1][1] - o["merge"]["bounds"][-1][0][0]
+    try:
+        merge = o["merge"]["bounds"][-1][1][1] - o["merge"]["bounds"][-1][0][0]
+    except:
+        merge = o["merge"]["bounds"][-1][1] - o["merge"]["bounds"][-1][0]
 
     #print(A)
     #print(At)
@@ -186,13 +190,14 @@ def robust():
 
     if not os.path.exists(cache_file):
         oo = []
-        for f in glob.glob(f"tests/experiments/scale/mnist/rob2g10s*"):
+        for f in glob.glob(f"tests/experiments/scale/mnist/robbb*"):
+            print("loading", f)
             with gzip.open(f, "r") as fh:
-                oo += json.load(fh)
-
-        print(len(oo))
-        print(list(oo[0].keys()))
-        print(list(oo[0]["a*"].keys()))
+                x = json.load(fh)
+                print(len(x), end=" ")
+                x = [o for o in x if len(o["merge"]["bounds"]) > 0]
+                print(len(x))
+                oo += x
 
         data = {}
 
@@ -209,9 +214,11 @@ def robust():
                 if len(o["ara*"]["epses"]) > 0
                 else 0.0
                 for o in oo]
-        merge = [o["merge"]["bounds"][-1] for o in oo]
-        data["merge0"] = [m[0][0] for m in merge]
-        data["merge1"] = [m[1][1] for m in merge]
+        merge = [o["merge"]["bounds"][-1]
+                if len(o["merge"]["bounds"]) > 0
+                else (-np.inf, np.inf) for o in oo]
+        data["merge0"] = [m[0] for m in merge]
+        data["merge1"] = [m[1] for m in merge]
         data["A_time"] = [o["a*"]["bounds_times"][-1] for o in oo]
         data["ARA_time"] = [o["ara*"]["bounds_times"][-1] for o in oo]
         data["merge_time"] = [o["merge"]["times"][-1] for o in oo]
@@ -227,7 +234,7 @@ def robust():
         data["binsearch_step"] = [o["binsearch_step"] for o in oo]
         data["done_early"] = ["done_early" in o for o in oo]
         data["a_unsat"] = [a[0] > a[1] for a in A]
-        data["merge_unsat"] = [m[0][0] > m[1][1] for m in merge]
+        data["merge_unsat"] = [m[0] > m[1] for m in merge]
         data["up"] = [o["binsearch_upper"] for o in oo]
         data["lo"] = [o["binsearch_lower"] for o in oo]
 

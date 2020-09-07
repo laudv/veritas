@@ -63,6 +63,10 @@ def plot_output1(*args):
             if "delta" in oo:
                 print("delta:", oo["delta"])
 
+            print("num_vertices A*", oo["a*"]["num_vertices0"],oo["a*"]["num_vertices1"])
+            print("num_vertices A*", oo["ara*"]["num_vertices0"],oo["ara*"]["num_vertices1"])
+            print("num_vertices merge", oo["merge"]["vertices"])
+
             # A*
             tb0 = oo["a*"]["bounds_times"]
             b0  = [x[1]-x[0] for x in oo["a*"]["bounds"]]
@@ -112,6 +116,8 @@ def plot_output1(*args):
             if "merge" in oo:
                 b2 = [x[1] for x in oo["merge"]["bounds"]]
                 b3 = [x[0] for x in oo["merge"]["bounds"]]
+                print("merge upper range:", max(b2), min(b2))
+                print("merge lower range:", min(b3), max(b3))
                 t2 = oo["merge"]["times"]
                 oot = oo["merge"]["oot"]
                 oom = oo["merge"]["oom"]

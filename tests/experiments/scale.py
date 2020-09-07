@@ -196,7 +196,6 @@ class ScaleExperiment:
         opt = self.get_opt()
 
         g = opt.g1
-        g.set_max_mem_size(self.max_memory)
         g.add_with_negated_leaf_values(opt.g0)
         
         t = 0.0
@@ -208,7 +207,7 @@ class ScaleExperiment:
         try:
             while True:
                 try:
-                    print("MERGE worker: num_independent_sets:", g.num_independent_sets())
+                    print("MERGE worker: num_independent_sets:", g.num_independent_sets(), g.num_vertices())
                     g.merge(2)
                 except Exception as e:
                     m = g.get_used_mem_size()
@@ -1190,9 +1189,10 @@ def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta,
                 if up-lo < araup-aralo:
                     lo, up = aralo, araup
                     print("using ARA* bounds")
+            max_output_diff = up-lo
         else: # follow merge
-            lo = data["merge"]["bounds"][-1][0] # min of at0
-            up = data["merge"]["bounds"][-1][1] # max of at1
+            min_output_diff = data["merge"]["bounds"][-1][0] # min of at0
+            max_output_diff = data["merge"]["bounds"][-1][1] # max of at1
 
         # if follow_astar, check if we generated examples, if so, update delta
         delta_update = exp.delta
@@ -1211,11 +1211,11 @@ def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta,
 
         delta_update = min(delta_update, example_delta) # !! avoid floating point rounding issues
 
-        print("STEP:", "lo", lo, "up", up, "delta", exp.delta)
+        print("STEP:", "max_output_diff", max_output_diff, "delta", exp.delta)
         old_delta = exp.delta
 
         # either we found an adversarial example, or we could not prove that one does not exist
-        if up-lo >= 0.0:
+        if max_output_diff >= 0.0:
             upper = delta_update
             exp.delta = delta_update - 0.5 * (upper - lower)
             print(f"maybe SAT delta update: {old_delta:.3f}/{delta_update:.3f}",
@@ -1327,7 +1327,8 @@ def youtube(outfile, max_memory):
 
 if __name__ == "__main__":
     output_file = sys.argv[2]
-    max_memory = 1024*1024*1024*int(sys.argv[3])
+    max_memory_gb = int(sys.argv[3])
+    max_memory = 1024*1024*1024*max_memory_gb
 
     exp = sys.argv[1]
     if exp == "calhouse":
@@ -1341,7 +1342,10 @@ if __name__ == "__main__":
     if exp == "mnist":
         mnistXvall(output_file, max_memory, sys.argv[4])
     if exp == "mnist_robust":
-        mnist_robust(output_file, max_memory, N=int(sys.argv[4]), seed=int(sys.argv[5]))
+        N = int(sys.argv[4])
+        seed = int(sys.argv[5])
+        output_file = f"{output_file}{max_memory_gb}g10s{N}N_{seed}"
+        mnist_robust(output_file, max_memory, N=N, seed=seed)
     if exp == "allstate":
         allstate(output_file, max_memory)
     if exp == "allstate_random":
