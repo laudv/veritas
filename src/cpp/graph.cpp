@@ -922,7 +922,7 @@ namespace treeck {
     {
         // CAREFUL: rhs.sets_ might be equal to this->sets_ -> don't use iterators
         size_t index = sets_.size();
-        for (size_t i = 0; i < index; ++i)
+        for (size_t i = 0; i < rhs.sets_.size(); ++i)
             sets_.push_back(rhs.sets_[i]); // copy!
 
         for (; index < sets_.size(); ++index)
