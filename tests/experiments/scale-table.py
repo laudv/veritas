@@ -15,7 +15,7 @@ def tikzhist(buf, plotname, data, bins):
     hist = np.histogram(data, bins=bins)
     print("histogram", plotname, hist[0], hist[1])
     print("histogram cumsum", plotname, np.cumsum(hist[0])/sum(hist[0]))
-    c1, c2 = ("mygreen", "black") if "gap" in plotname else ("black", "mygreen")
+    c1, c2 = ("myblue", "black") if "gap" in plotname else ("black", "mygreen")
 
     def lf(l):
         return f"\\tiny {l}"
@@ -49,6 +49,7 @@ def tikzstandalone_open():
     print("\\pgfplotsset{compat=1.16}", file=buf)
     print("\\pgfplotsset{grid style={dotted}}", file=buf)
     print("\\definecolor{myred}{RGB}{209,13,13}", file=buf)
+    print("\\definecolor{myblue}{RGB}{54,89,194}", file=buf)
     print("\\definecolor{mygreen}{RGB}{49,128,0}", file=buf)
 
     print("\\begin{document}", file=buf)
@@ -173,16 +174,16 @@ def random():
     df = pd.DataFrame({k:v for k,v in cols.items() 
         if k in ["dataset", "exact_ours", "exact_merge", "gap", "gapm", "ttb"]})
     df.columns = ["Data", "\\ouralg{} exact", "\\merge{} exact", "\\ouralg{} gap", "\\merge{} gap", "TTB"]
-    #print(df)
+    print(df)
     print(df.to_latex(index=False, float_format="%.1f", escape=False))
     tikzstandalone_close(buf)
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random_figures.tex"), "w") as f:
             print(buf.getvalue(), file=f)
-        with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random.tex"), "w") as f:
-            print("\\newcommand{\\myrndfig}[1]{\\includegraphics[page=#1]{images/table_random_figures.pdf}}", file=f)
-            df.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
-                    column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
+        #with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random.tex"), "w") as f:
+        #    print("\\newcommand{\\myrndfig}[1]{\\includegraphics[page=#1]{images/table_random_figures.pdf}}", file=f)
+        #    df.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+        #            column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
         print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 def robust():
@@ -351,15 +352,16 @@ def robust():
 
     dfagg["hist"] = "\\myrobfig{1}"
     dfagg.columns = ["better $\\bar{b}$", "better $\\ubar{\\delta}$", "\\ouralg{} exact", "\\merge{} exact", "TTB"]
+    print(dfagg)
     print(dfagg.to_latex(index=False, float_format="%.1f\%%", escape=False, column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}"))
 
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_robust_figures.tex"), "w") as f:
             print(buf.getvalue(), file=f)
-        with open(os.path.join(os.environ["IMG_OUTPUT"], "table_robust.tex"), "w") as f:
-            print("\\newcommand{\\myrobfig}[1]{\\includegraphics[page=#1]{images/table_robust_figures.pdf}}", file=f)
-            dfagg.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
-                    column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}")
+        #with open(os.path.join(os.environ["IMG_OUTPUT"], "table_robust.tex"), "w") as f:
+        #    print("\\newcommand{\\myrobfig}[1]{\\includegraphics[page=#1]{images/table_robust_figures.pdf}}", file=f)
+        #    dfagg.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+        #            column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}")
         print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 

@@ -486,7 +486,7 @@ def plot_robust():
         #ax.plot(g0["lo"].values, ":", c=l0.get_color(), lw=1)
         ax.fill_between(range(n), g0["lo"].values, g0["up"].values, color=l0.get_color(), alpha=0.2, linewidth=0)
 
-        l1, = ax.plot(g1["delta"].values, label="\\merge{}", lw=lw, c=c2, zorder=2)
+        l1, = ax.plot(g1["delta"].values, '--', label="\\merge{}", lw=lw, c=c2, zorder=2)
         #ax.plot(g1["up"].values, ":", c=l1.get_color(), lw=1)
         #ax.plot(g1["lo"].values, ":", c=l1.get_color(), lw=1)
         ax.fill_between(range(n), g1["lo"].values, g1["up"].values, color=l1.get_color(), alpha=0.2, linewidth=0)
@@ -496,17 +496,19 @@ def plot_robust():
         ax.set_xticks(range(0, n, 2))
         ax.set_xticks(range(0, n, 1), minor=True)
 
-#    for i0 in index:
-#        if not i0[3]: continue # only follow a*
-#        print(i0)
-#        plotit(dfg, i0)
-#        plt.show()
+    #for i0 in index:
+    #    if not i0[3]: continue # only follow a*
+    #    print(i0)
+    #    plotit(dfg, i0)
+    #    plt.show()
 
     interesting = [
             #(11, 10137, 3, True, 0),
             #(11, 49735, 2, True, 1),
-            (34, 40466, 8, True, 6),
-            (34, 38435, 2, True, 1),
+            #(34, 40466, 8, True, 6),
+            #(34, 38435, 2, True, 1),
+            (501, 35495, 5, True, 4),
+            (501, 23639, 8, True, 3),
             ]
 
     # interesting ones
@@ -518,9 +520,10 @@ def plot_robust():
     plt.figtext(0.05, 0.85, "\$\\delta\$")
     #plt.figtext(0.5, 0.00, "binary search step", horizontalalignment="center")
     plt.figtext(0.02, 0.00, "step", horizontalalignment="left")
-    axs[0].legend(frameon=False)
+    axs[0].legend(frameon=False, fontsize="small")
     if "IMG_OUTPUT" in os.environ:
         plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "robust.svg"))
+        print(f"wrote svg to {os.environ['IMG_OUTPUT']}")
     plt.show()
 
 def plot_examples():
