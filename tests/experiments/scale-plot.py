@@ -598,7 +598,7 @@ def plot_examples():
             l3, = ax.plot(t2, b3, ".--", lw=lw, ms=2.0, c=c2)
             oot_pos = 0
             if oot or oom:
-                label = f"OOM ({mm/(1024*1024*1024):.1f}gb, {tt:.0f}s)" if oom else f"OOT ({mt}s)"
+                label = f"OOM ({mm/(1024*1024*1024):.1f}Gb)" if oom else f"OOT ({mt}s)"
                 oot_pos = max(oot_pos, max(tb0), max(tb1), max(t2))
                 ax.plot([t2[-1], oot_pos], [b2[-1], b2[-1]], ":", color=l2.get_color(), lw=lw)
                 ax.plot([t2[-1], oot_pos], [b3[-1], b3[-1]], ":", color=l2.get_color(), lw=lw)

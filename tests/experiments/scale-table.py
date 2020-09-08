@@ -63,7 +63,7 @@ def time_to_beat_merge(o):
     try:
         merge = o["merge"]["bounds"][-1][1][1] - o["merge"]["bounds"][-1][0][0]
     except:
-        merge = o["merge"]["bounds"][-1][1] - o["merge"]["bounds"][-1][0]
+        merge = o["merge"]["bounds"][-1][1] # - o["merge"]["bounds"][-1][0]
 
     #print(A)
     #print(At)
