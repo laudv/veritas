@@ -742,6 +742,8 @@ def soccer2():
         meta = json.load(f)
     at = AddTree.read(os.path.join(result_dir, at_name))
 
+    print(meta_name, len(at))
+
     columns = meta["columns"]
     feat2id_dict = dict([(v, i) for i, v in enumerate(columns)])
     feat2id = lambda x: feat2id_dict[x]

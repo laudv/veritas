@@ -175,7 +175,7 @@ def random():
         if k in ["dataset", "exact_ours", "exact_merge", "gap", "gapm", "ttb"]})
     df.columns = ["Data", "\\ouralg{} exact", "\\merge{} exact", "\\ouralg{} gap", "\\merge{} gap", "TTB"]
     print(df)
-    print(df.to_latex(index=False, float_format="%.1f", escape=False))
+    print(df.to_latex(index=False, float_format="%.1f\%%", escape=False))
     tikzstandalone_close(buf)
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random_figures.tex"), "w") as f:
@@ -353,7 +353,7 @@ def robust():
     dfagg["hist"] = "\\myrobfig{1}"
     dfagg.columns = ["better $\\bar{b}$", "better $\\ubar{\\delta}$", "\\ouralg{} exact", "\\merge{} exact", "TTB"]
     print(dfagg)
-    print(dfagg.to_latex(index=False, float_format="%.1f\%%", escape=False, column_format="m{1cm}m{1cm}m{1.2cm}m{1cm}m{1.5cm}"))
+    print(dfagg.to_latex(index=False, float_format="%.1f\%%", escape=False))
 
     if "IMG_OUTPUT" in os.environ:
         with open(os.path.join(os.environ["IMG_OUTPUT"], "table_robust_figures.tex"), "w") as f:
