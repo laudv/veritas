@@ -227,7 +227,7 @@ def plot_output2(f, i):
     ax.xaxis.set_tick_params(which='both', labelbottom=True)
     plt.show()
 
-def plot_bounds(file):
+def plot_bounds(file, imgname="unconstrained", height=1.2):
     with open(file) as fh:
         oo = json.load(fh)
 
@@ -238,7 +238,7 @@ def plot_bounds(file):
         if len(oo) == 0: continue
         m[num_trees] = ooo
 
-    fig, axs = plt.subplots(1, len(m), sharey=True, figsize=(3.4, 1.2))
+    fig, axs = plt.subplots(1, len(m), sharey=True, figsize=(3.4, height))
 
     for i, ((num_trees, oo), ax) in enumerate(zip(m.items(), axs)):
         xs = [o["depth"] for o in oo]
@@ -270,6 +270,7 @@ def plot_bounds(file):
             ax.hlines(hi, x-0.1, x+0.1, lw=lw, color=c2)
 
         for x, lo, hi in zip(xxs, ARA, A):
+            print(num_trees, lo, hi)
             interval_ours(ax, x-0.1, lo, hi, lw=lw)
 
         for x, lo, hi in zip(xxs, mergelo, mergehi):
@@ -279,7 +280,7 @@ def plot_bounds(file):
         ax.set_title(f"M = {num_trees}")
 
         ax.set_xticks(xxs)
-        ax.set_yticks([-900, 0, 900])
+        #ax.set_yticks([-900, 0, 900])
         #ax.set_xticks(xxs, minor=True)
 
         #ax.xaxis.set_major_locator(FixedLocator(range(1, len(xs), 2)))
@@ -302,11 +303,16 @@ def plot_bounds(file):
     plt.figtext(0.00, 0.0, "tree depth", horizontalalignment="left")
     #plt.tight_layout()
     plt.subplots_adjust(top=0.75, bottom=0.15, left=0.18, right=0.95)
-    plt.savefig("/tmp/unconstrained.svg")
     if "IMG_OUTPUT" in os.environ:
-        plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], "unconstrained.svg"))
+        plt.savefig(os.path.join(os.environ["IMG_OUTPUT"], f"{imgname}.svg"))
         print(f"wrote svg to {os.environ['IMG_OUTPUT']}")
     plt.show()
+
+def plot_bounds2():
+    plot_bounds("tests/experiments/scale/allstate/all4g120s", imgname="unconstrained_allstate", height=1.4)
+    plot_bounds("tests/experiments/scale/calhouse/all4g120s", imgname="unconstrained_calhouse", height=1.4)
+    plot_bounds("tests/experiments/scale/covtype/all4g120s", imgname="unconstrained_covtype", height=1.4)
+    plot_bounds("tests/experiments/scale/higgs/all4g120s", imgname="unconstrained_higgs", height=1.4)
 
 def plot_output4(file, depth):
     fig, ax = plt.subplots(1, 1)#, figsize=(4, 2.5))
@@ -793,6 +799,8 @@ if __name__ == "__main__":
         plot_output2(sys.argv[2], int(sys.argv[3]))
     if sys.argv[1] == "bounds":
         plot_bounds(sys.argv[2])
+    if sys.argv[1] == "bounds2":
+        plot_bounds2()
     if sys.argv[1] == "4":
         plot_output4(sys.argv[2], int(sys.argv[3]))
     if sys.argv[1] == "5":

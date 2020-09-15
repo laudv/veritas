@@ -76,7 +76,7 @@ def time_to_beat_merge(o):
         print("INF TTB for merge =", merge, ":", A)
         return np.inf
 
-def random():
+def random(divide=""):
     data = dict()
 
     for k, g in [
@@ -89,7 +89,16 @@ def random():
             with open(f) as fh:
                 oo += json.load(fh)
         print(len(oo), "records (", k, ")")
-        data[k] = oo
+        if divide == "numtrees":
+            for num_trees in sorted(set([o["num_trees"] for o in oo])):
+                data[f"{k} {num_trees}"] = [o for o in oo
+                        if o["num_trees"] == num_trees]
+        elif divide == "depth":
+            for depth in sorted(set([o["depth"] for o in oo])):
+                data[f"{k} {depth}"] = [o for o in
+                        oo if o["depth"] == depth]
+        else:
+            data[k] = oo
 
     cols = {
         "dataset": [],
@@ -103,10 +112,14 @@ def random():
         "ttb": [],
     }
 
+
     buf = tikzstandalone_open()
     figcount = 1
 
     for k, oo in data.items():
+        if len(oo) == 0:
+            print("skipping", k)
+            continue
         print("%", k)
         A = [util.get_best_astar(o["a*"], task="both") for o in oo]
         ARA = [max(o["ara*"]["solutions"], key=lambda b: b[1]-b[0])
@@ -150,9 +163,9 @@ def random():
         cols["exact_merge"].append(sum(exact_merge) / num_experiments * 100)
         cols["better_upper"].append(sum(better_upper) / num_experiments * 100)
         cols["better_lower"].append(sum(better_lower) / num_experiments * 100)
-        cols["gap"].append(f"\\myrndfig{{{figcount}}}")
-        cols["gapm"].append(f"\\myrndfig{{{figcount+1}}}")
-        cols["ttb"].append(f"\\myrndfig{{{figcount+2}}}")
+        cols["gap"].append(f"\\myrndfig{divide}{{{figcount}}}")
+        cols["gapm"].append(f"\\myrndfig{divide}{{{figcount+1}}}")
+        cols["ttb"].append(f"\\myrndfig{divide}{{{figcount+2}}}")
         figcount += 3
         #cols["gap10"].append(sum(g < 0.1 for g in gap_ours) / num_experiments * 100)
         #cols["gap50"].append(sum(g < 0.5 for g in gap_ours) / num_experiments * 100)
@@ -162,9 +175,9 @@ def random():
 
         gapbins = [-0.1, 0.01, 0.2, 0.5, 1.0, 10000000]
 
-        tikzhist(buf, f"figrndgap{k}", gap_ours, bins=gapbins)
-        tikzhist(buf, f"figrndgapm{k}", gap_merge, bins=gapbins)
-        tikzhist(buf, f"figrndttb{k}", ttb_ratio, bins=[-0.1, 0.99999, 10, 100, 1000, 10000000])
+        tikzhist(buf, f"figrndgap{k}{divide}", gap_ours, bins=gapbins)
+        tikzhist(buf, f"figrndgapm{k}{divide}", gap_merge, bins=gapbins)
+        tikzhist(buf, f"figrndttb{k}{divide}", ttb_ratio, bins=[-0.1, 0.99999, 10, 100, 1000, 10000000])
 
     print("num_experiments", cols["num_experiments"])
     print("better_upper", cols["better_upper"])
@@ -173,17 +186,26 @@ def random():
 
     df = pd.DataFrame({k:v for k,v in cols.items() 
         if k in ["dataset", "exact_ours", "exact_merge", "gap", "gapm", "ttb"]})
-    df.columns = ["Data", "\\ouralg{} exact", "\\merge{} exact", "\\ouralg{} gap", "\\merge{} gap", "TTB"]
+    df.columns = ["Data", "Exact \\ouralg{}", "Exact \\merge{}", "Gap \\ouralg{}", "Gap \\merge{}", "TTB"]
     print(df)
     print(df.to_latex(index=False, float_format="%.1f\%%", escape=False))
     tikzstandalone_close(buf)
     if "IMG_OUTPUT" in os.environ:
-        with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random_figures.tex"), "w") as f:
+        with open(os.path.join(os.environ["IMG_OUTPUT"], f"table_random_figures{divide}.tex"), "w") as f:
             print(buf.getvalue(), file=f)
-        #with open(os.path.join(os.environ["IMG_OUTPUT"], "table_random.tex"), "w") as f:
-        #    print("\\newcommand{\\myrndfig}[1]{\\includegraphics[page=#1]{images/table_random_figures.pdf}}", file=f)
-        #    df.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
-        #            column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
+        with open(os.path.join(os.environ["IMG_OUTPUT"], f"table_random{divide}.tex"), "w") as f:
+            print(f"\\newcommand{{\\myrndfig{divide}}}[1]{{\\includegraphics[page=#1]{{images/table_random_figures{divide}.pdf}}}}", file=f)
+            if divide:
+                i = df.shape[0]//2
+                print("i =", i)
+                df.iloc[:i,:].to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+                        column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
+                print("\hspace{0.5cm}", file=f)
+                df.iloc[i:,:].to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+                        column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
+            else:
+                df.to_latex(f, index=False, float_format="%.1f\%%", escape=False,
+                        column_format="m{0.4cm}m{1.1cm}m{0.9cm}m{1.1cm}m{0.9cm}m{0.9cm}")
         print(f"wrote table tex to {os.environ['IMG_OUTPUT']}")
 
 def robust():
@@ -369,5 +391,9 @@ def robust():
 if __name__ == "__main__":
     if sys.argv[1] == "random":
         random()
+    if sys.argv[1] == "random_numtrees":
+        random(divide="numtrees")
+    if sys.argv[1] == "random_depth":
+        random(divide="depth")
     if sys.argv[1] == "robust":
         robust()
