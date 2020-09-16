@@ -105,7 +105,8 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(opt.g0.num_independent_sets(), 2)
         self.assertEqual(opt.g1.num_independent_sets(), 2)
 
-        opt.merge(2)
+        opt.g0.merge(2)
+        opt.g1.merge(2)
 
         self.assertEqual(opt.g0.num_independent_sets(), 1)
         self.assertEqual(opt.g1.num_independent_sets(), 1)
