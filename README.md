@@ -98,3 +98,5 @@ print("merge bounds:", g.basic_bound())
 print("merge number of independent sets:", g.num_independent_sets(), "should be", 1)
 ```
 
+You can convert XGBoost models to `AddTree` objects using the
+`veritas.xgb.addtrees_from_multiclass_xgb_model` function.
