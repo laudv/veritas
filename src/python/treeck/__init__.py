@@ -91,9 +91,13 @@ def __addtree_write(self, f):
         fh.write(json.encode("utf-8"))
 
 def __addtree_read(f):
-    with gzip.open(f, "rb") as fh:
-        json = fh.read()
-        return AddTree.from_json(json.decode("utf-8"))
+    try:
+        with gzip.open(f, "rb") as fh:
+            json = fh.read()
+            return AddTree.from_json(json.decode("utf-8"))
+    except OSError as e: # if file is not gzip encoded
+        with open(f, "r") as fh:
+            return AddTree.from_json(fh.read())
 
 AddTree.__iter__ = __addtree_iter
 AddTree.predict_single = __addtree_predict_single
