@@ -4,8 +4,8 @@
  * Author: Laurens Devos
 */
 
-#ifndef TREECK_TREE_H
-#define TREECK_TREE_H
+#ifndef VERITAS_TREE_H
+#define VERITAS_TREE_H
 
 #include <fstream>
 #include <iostream>
@@ -24,7 +24,7 @@
 
 #include "domain.h"
 
-namespace treeck {
+namespace veritas {
 
     using NodeId = int; /* Node Id type */
     using FeatId = int; /* Feat Id type */
@@ -314,6 +314,6 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& s, const AddTree& at);
 
-} /* namespace treeck */
+} /* namespace veritas */
 
-#endif /* TREECK_TREE_H */
+#endif /* VERITAS_TREE_H */

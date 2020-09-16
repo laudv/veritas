@@ -2,7 +2,7 @@
 #include "util.h"
 #include "smt.h"
 
-namespace treeck {
+namespace veritas {
 
     SMTSolver::SMTSolver(
             const FeatInfo* finfo,
@@ -260,4 +260,4 @@ namespace treeck {
         return solver_.check(1, &e) == z3::sat;
     }
 
-} /* namespace teeck */
+} /* namespace veritas */

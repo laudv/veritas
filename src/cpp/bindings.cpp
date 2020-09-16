@@ -23,7 +23,7 @@
 #include "smt.h"
 
 namespace py = pybind11;
-using namespace treeck;
+using namespace veritas;
 
 template <typename T>
 std::string tostr(T& o)
@@ -38,7 +38,7 @@ static AddTree DUMMY_ADDTREE{};
 using TreeD = Tree<Split, FloatT>;
 using NodeRefD = TreeD::MRef;
 
-PYBIND11_MODULE(pytreeck, m) {
+PYBIND11_MODULE(pyveritas, m) {
     m.doc() = "Tree-CK: verification of ensembles of trees";
 
     py::class_<RealDomain>(m, "RealDomain")

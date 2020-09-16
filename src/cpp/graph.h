@@ -12,8 +12,8 @@
  * https://github.com/chenhongge/treeVerification
  */
 
-#ifndef TREECK_GRAPH_H
-#define TREECK_GRAPH_H
+#ifndef VERITAS_GRAPH_H
+#define VERITAS_GRAPH_H
 
 #include <tuple>
 #include <vector>
@@ -28,7 +28,7 @@
 #include "domain.h"
 #include "tree.h"
 
-namespace treeck {
+namespace veritas {
 
     // to avoid having to check whether a domain is real or bool, we use RealDomain for both
     // True = [0.0, 1.0), False = [1.0, 2.0), Everything = [0.0, 2.0)
@@ -451,6 +451,6 @@ namespace treeck {
         void add_less_than(int id0, int id1);
     };
 
-} /* namespace treeck */
+} /* namespace veritas */
 
-#endif /* TREECK_GRAPH_H */
+#endif /* VERITAS_GRAPH_H */

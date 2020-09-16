@@ -10,8 +10,8 @@ import numpy as np
 import sklearn.metrics as metrics
 from scipy.special import logit, expit as logistic
 
-from treeck import *
-from treeck.xgb import addtree_from_xgb_model
+from veritas import *
+from veritas.xgb import addtree_from_xgb_model
 
 import util
 
@@ -557,7 +557,7 @@ class AllstateScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/allstate"
 
     def load_data(self):
-        allstate_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "allstate.h5")
+        allstate_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "allstate.h5")
         data = pd.read_hdf(allstate_data_path)
         X = data.drop(columns=["loss"]).to_numpy(dtype=float)
         y = data.loss.to_numpy(dtype=float)
@@ -676,7 +676,7 @@ class SoccerScaleExperiment(ScaleExperiment):
         ]
 
     def load_data(self):
-        soccer_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "soccerdata.h5")
+        soccer_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "soccerdata.h5")
         X = pd.read_hdf(soccer_data_path, "features")
         #X["goalscore_team"] = X["goalscore_team"].astype(np.float32)
         #X["goalscore_opponent"] = X["goalscore_opponent"].astype(np.float32)
@@ -906,7 +906,7 @@ class HiggsScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/higgs"
 
     def load_data(self):
-        higgs_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "higgs.h5")
+        higgs_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "higgs.h5")
         X = pd.read_hdf(higgs_data_path, "X").to_numpy(dtype=float)
         y = pd.read_hdf(higgs_data_path, "y").to_numpy(dtype=float)
         return X, y
@@ -980,7 +980,7 @@ class YouTubeScaleExperiment(ScaleExperiment):
         super().__init__(*args, **kwargs)
 
     def load_data(self):
-        yt_data_path = os.path.join(os.environ["TREECK_DATA_DIR"], "youtube.h5")
+        yt_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "youtube.h5")
         data = pd.read_hdf(yt_data_path)
         y = data["viewslg"].to_numpy(dtype=float)
         dropcolumns = [c for c in data.columns if c.count("_") > 1 and c.startswith("txt_")]

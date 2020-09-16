@@ -24,7 +24,7 @@
 
 #include "graph.h"
 
-namespace treeck {
+namespace veritas {
 
     FeatInfo::FeatInfo() : max_id_(-1), id_boundary_(0) {}
 
@@ -2322,4 +2322,4 @@ namespace treeck {
         less_thans_.push_back({id0, id1});
     }
 
-} /* namespace treeck */
+} /* namespace veritas */

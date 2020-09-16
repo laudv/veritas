@@ -13,7 +13,7 @@
 #include "util.h"
 #include "tree.h"
 
-namespace treeck {
+namespace veritas {
     template <typename Archive>
     void
     LtSplit::serialize(Archive& archive)
@@ -483,10 +483,10 @@ namespace treeck {
                 cereal::make_nvp("trees", trees_));
     }
 
-} /* namespace treeck */
+} /* namespace veritas */
 
 
-#define TREECK_INSTANTIATE_TREE_TEMPLATE(S, T) \
+#define VERITAS_INSTANTIATE_TREE_TEMPLATE(S, T) \
     template class inner::Node<S, T>; \
     template class NodeRef<inner::ConstRef<S, T>>; \
     template class NodeRef<inner::MutRef<S, T>>; \

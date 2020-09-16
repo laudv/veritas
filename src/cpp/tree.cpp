@@ -6,7 +6,7 @@
 
 #include "tree.hpp"
 
-namespace treeck {
+namespace veritas {
 
     SplitBase::SplitBase(FeatId feat_id) : feat_id(feat_id) {}
 
@@ -105,7 +105,7 @@ namespace treeck {
 
 
 
-    TREECK_INSTANTIATE_TREE_TEMPLATE(Split, FloatT);
+    VERITAS_INSTANTIATE_TREE_TEMPLATE(Split, FloatT);
 
 
     template <> // implement NodeRef::get_domains for AddTree nodes
@@ -300,4 +300,4 @@ namespace treeck {
         return s << "--------" << std::endl;
     }
 
-} /* namespace treeck */
+} /* namespace veritas */

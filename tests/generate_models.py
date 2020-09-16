@@ -15,7 +15,7 @@ from sklearn.datasets import fetch_openml
 
 
 #from treeverifier.tree_xgb import additive_tree_from_xgb_model
-from treeck.xgb import addtree_from_xgb_model
+from veritas.xgb import addtree_from_xgb_model
 
 def generate_california_housing():
     calhouse = fetch_california_housing()

@@ -4,14 +4,14 @@
  * Author: Laurens Devos
 */
 
-#ifndef TREECK_UTIL_H
-#define TREECK_UTIL_H
+#ifndef VERITAS_UTIL_H
+#define VERITAS_UTIL_H
 
 #include <sstream>
 #include <type_traits>
 #include <variant>
 
-namespace treeck {
+namespace veritas {
     namespace util {
         template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
         template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
@@ -20,7 +20,7 @@ namespace treeck {
         template <typename T>
         struct Typename { static const char* get(); };
 
-#define TREECK_ENABLE_TYPENAME(T) \
+#define VERITAS_ENABLE_TYPENAME(T) \
         template <> struct util::Typename<T> { static const char* get() { return #T; } }
 
         [[maybe_unused]] static void
@@ -51,8 +51,8 @@ namespace treeck {
             }
         }
     } /* namespace util */
-} /* namespace treeck */
+} /* namespace veritas */
 
 
 
-#endif /* TREECK_UTIL_H */
+#endif /* VERITAS_UTIL_H */

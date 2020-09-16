@@ -81,21 +81,15 @@ def test_suite():
 
 
 setup(
-    name='treeck',
+    name='veritas',
     version='0.1',
-    author='Laurens Devos',
+    author='Anonymous',
     author_email='',
-    description='Treeck: Reason about potential instances of additive tree ensembles',
     long_description='',
     packages=find_packages('src/python'),
-    install_requires=[
-      "z3-solver",
-      "dask",
-      "distributed"
-    ],
-    #extra_objects=["libtreeck.so"],
+    install_requires=[],
     package_dir={'':'src/python'},
-    ext_modules=[CMakeExtension('treeck/treeck')],
+    ext_modules=[CMakeExtension('veritas/veritas')],
     cmdclass=dict(build_ext=CMakeBuild),
     test_suite='setup.test_suite',
     zip_safe=False,

@@ -14,7 +14,7 @@
 
 #include "domain.h"
 
-namespace treeck {
+namespace veritas {
 
     RealDomain::RealDomain()
         : lo(-std::numeric_limits<FloatT>::infinity())
@@ -228,4 +228,4 @@ namespace treeck {
             }, a);
     }
 
-} /* namespace treeck */
+} /* namespace veritas */

@@ -1,7 +1,7 @@
 # https://github.com/benjaminjack/python_cpp_example
 
 cmake_minimum_required(VERSION 3.1)
-project(treeck)
+project(veritas)
 
 set(SOURCE_DIR "src/cpp")
 # Tell cmake that headers are also in source_dir
@@ -38,7 +38,7 @@ endif ()
 #cmake -DCMAKE_CXX_FLAGS=-pg -DCMAKE_EXE_LINKER_FLAGS=-pg -DCMAKE_SHARED_LINKER_FLAGS=-pg <SOURCE_DIR>
 
 
-#option(USE_SHARED_LIB "Use a shared libtreeck.so lib" ON)
+#option(USE_SHARED_LIB "Use a shared libveritas.so lib" ON)
 #if (USE_SHARED_LIB)
     add_library(${PROJECT_NAME} STATIC ${SOURCES})
 #endif()

@@ -5,7 +5,7 @@
 import timeit, gzip
 from io import StringIO
 
-from .pytreeck import *
+from .pyveritas import *
 
 def __realdomain__str(self):
     return "[{:.3g}, {:.3g})".format(self.lo, self.hi)

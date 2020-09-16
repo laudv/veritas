@@ -5,7 +5,7 @@
 #include "graph.h"
 #include "smt.h"
 
-using namespace treeck;
+using namespace veritas;
 
 void test_very_simple()
 {

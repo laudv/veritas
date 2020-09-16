@@ -4,8 +4,8 @@
  * Author: Laurens Devos
 */
 
-#ifndef TREECK_DOMAIN_H
-#define TREECK_DOMAIN_H
+#ifndef VERITAS_DOMAIN_H
+#define VERITAS_DOMAIN_H
 
 #include <tuple>
 #include <ostream>
@@ -15,7 +15,7 @@
 
 #include "util.h"
 
-namespace treeck {
+namespace veritas {
 
     using FloatT = float;
 
@@ -105,10 +105,10 @@ namespace treeck {
 
     std::ostream& operator<<(std::ostream& s, const Domain& d);
 
-    TREECK_ENABLE_TYPENAME(RealDomain);
-    TREECK_ENABLE_TYPENAME(BoolDomain);
+    VERITAS_ENABLE_TYPENAME(RealDomain);
+    VERITAS_ENABLE_TYPENAME(BoolDomain);
 
 
-} /* namespace treeck */
+} /* namespace veritas */
 
-#endif /* TREECK_DOMAIN_H */
+#endif /* VERITAS_DOMAIN_H */

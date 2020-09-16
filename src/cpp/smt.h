@@ -4,8 +4,8 @@
  * Author: Laurens Devos
 */
 
-#ifndef TREECK_SMT_H
-#define TREECK_SMT_H
+#ifndef VERITAS_SMT_H
+#define VERITAS_SMT_H
 
 #include <unordered_map>
 #include <z3++.h>
@@ -14,7 +14,7 @@
 #include "tree.h"
 #include "graph.h"
 
-namespace treeck {
+namespace veritas {
 
     class SMTSolver  {
         const FeatInfo *finfo_;
@@ -59,6 +59,6 @@ namespace treeck {
         bool check(z3::expr& e);
     };
 
-} /* namespace treeck */
+} /* namespace veritas */
 
-#endif // TREECK_SMT_H
+#endif // VERITAS
