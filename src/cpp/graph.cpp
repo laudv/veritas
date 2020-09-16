@@ -1,18 +1,6 @@
 /*
- * Copyright 2019 DTAI Research Group - KU Leuven.
- * License: Apache License 2.0
- * Author: Laurens Devos
- *
- * ----
- *
- * This file contains reimplemplementations of concepts introduced by the
- * following paper Chen et al. 2019
- *  - KPartiteGraph::merge (the core algorithm of the paper)
- *  - KPartiteGraph::propagate_outputs (dynamic programming output estimation agorithm)
- *
- * https://papers.nips.cc/paper/9399-robustness-verification-of-tree-based-models
- * https://github.com/chenhongge/treeVerification
-*/
+ * AAAI'21 Anonymous Code Submission
+ */
 
 #include <cmath>
 #include <algorithm>
