@@ -1,6 +1,6 @@
-#
-# AAAI'21 Anonymous Code Submission
-#
+# Copyright 2020 DTAI Research Group - KU Leuven.
+# License: Apache License 2.0
+# Author: Laurens Devos
 
 import timeit, gzip
 from io import StringIO

@@ -83,7 +83,7 @@ def test_suite():
 setup(
     name='veritas',
     version='0.1',
-    author='Anonymous',
+    author='Laurens Devos',
     author_email='',
     long_description='',
     packages=find_packages('src/python'),
