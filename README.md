@@ -1,6 +1,6 @@
 # Versatile Verification of Tree Ensembles with VERITAS
 
-For more information in the paper: https://arxiv.org/abs/2010.13880
+See the paper for more information: https://arxiv.org/abs/2010.13880
 
 ## Dependencies
 
