@@ -1,4 +1,8 @@
-# Dependencies
+# Versatile Verification of Tree Ensembles with VERITAS
+
+For more information in the paper: https://arxiv.org/abs/2010.13880
+
+## Dependencies
 
 * c++
 * cmake
@@ -12,13 +16,13 @@ installation, set the CMAKE variable `Z3_INSTALL` to the root directory of your
 Z3 installation.
 
 
-# Installation
+## Installation
 
 * Activate a (new) Python3 environment.
 * run `pip install .` in the root directory of Veritas
 
 
-# Example
+## Example
 
 ```python
 from veritas import *
