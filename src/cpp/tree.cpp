@@ -54,7 +54,7 @@ namespace veritas {
     bool
     BoolSplit::test(BoolSplit::ValueT value) const
     {
-        return value; // true left, false right
+        return !value; // true right, false left (consistent with LtSplit 0.5)
     }
 
     std::tuple<BoolSplit::DomainT, BoolSplit::DomainT>
