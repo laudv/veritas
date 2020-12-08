@@ -2217,29 +2217,53 @@ namespace veritas {
                 p1 = &p->second;
         }
 
+        // CONSTRAINT p0 < p1 + b
         if (p0 != nullptr && p1 != nullptr)
         {
-            //  lo1    hi1
-            //  [  ..  )
-            //            [ .. )
-            //            lo0  hi0
-            if (p0->lo >= p1->hi) // impossible that x0 < x1, reject
+            //std::cout << "EasyBoxAdjuster: log " << *p0 << ", " << *p1 << std::endl;
+
+            // INVALID: p0 >= p1 + b
+            // lowest possible value of p0 is greater than highest possible value of p1+b
+            //
+            //  lo1+c    hi1+c
+            //  [  ..    )
+            //              [ .. )
+            //              lo0  hi0
+            if (p0->lo >= p1->hi + c.b) // invalid that x0 < x1+c, reject
+            {
+                //std::cout << "EasyBoxAdjuster: rejecting " << p0->lo << " >= " << p1->hi+c.b << std::endl;
                 return false;
-            if (p1->lo < p0->lo) // x1 cannot be less than x0
-            {
-                //std::cout << "EasyBoxAdjuster: p1->lo: " << p1->lo << " -> " << p0->lo << std::endl;
-                p1->lo = p0->lo;
             }
-            if (p0->hi > p1->hi) // x0 cannot be larger than x1
+
+            // FIX p1:
+            // smallest possible value of p1+c must be gt smallest value of p0
+            //        lo0    hi0
+            //        [  ..    )
+            //     [       ..      )
+            //     lo1+c           hi1+c
+            // ==>    [  ..        )      ; fix lo of p1
+            if (p1->lo + c.b < p0->lo) // x1 cannot be less than x0
             {
-                //std::cout << "EasyBoxAdjuster: p0->hi: " << p0->hi << " -> " << p1->hi << std::endl;
-                p0->hi = p1->hi;
+                //std::cout << "EasyBoxAdjuster: p1->lo: " << p1->lo << " -> " << p0->lo-c.b << std::endl;
+                p1->lo = p0->lo - c.b;
+            }
+            // symmetric case:
+            if (p0->hi > p1->hi + c.b) // x0 cannot be larger than x1
+            {
+                //std::cout << "EasyBoxAdjuster: p0->hi: " << p0->hi << " -> " << p1->hi+c.b << std::endl;
+                p0->hi = p1->hi + c.b;
+            }
+
+            if (p0->lo >= p0->hi || p1->lo >= p1->hi)
+            {
+                std::cout << "EasyBoxAdjuster: rejecting adjustment" << std::endl;
+                return false;
             }
         }
         else if (p1 != nullptr && !std::isinf(p1->hi)) // add domain for id0
         {
             RealDomain dom;
-            dom.hi = p1->hi; // x0 cannot be larger than x1
+            dom.hi = p1->hi + c.b; // x0 cannot be larger than x1
             //std::cout << "EasyBoxAdjuster: inserting dom0 for " << c.id0 << ": " << dom << std::endl;
             workspace.push_back({ c.id0, dom });
             for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
@@ -2249,7 +2273,7 @@ namespace veritas {
         else if (p0 != nullptr && !std::isinf(p0->lo)) // add domain for id1
         {
             RealDomain dom;
-            dom.lo = p0->lo; // x0 cannot be larger than x1
+            dom.lo = p0->lo - c.b; // x0 cannot be larger than x1
             //std::cout << "EasyBoxAdjuster: inserting dom1 for " << c.id1 << ": " << dom << std::endl;
             workspace.push_back({ c.id1, dom });
             for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
@@ -2306,10 +2330,10 @@ namespace veritas {
     }
 
     void
-    EasyBoxAdjuster::add_less_than(int id0, int id1)
+    EasyBoxAdjuster::add_less_than(int id0, int id1, FloatT c)
     {
-        std::cout << "add_less_than X" << id0 << " < " << "X" << id1 << std::endl;
-        less_thans_.push_back({id0, id1});
+        std::cout << "add_less_than X" << id0 << " < " << "X" << id1 << " + " << c << std::endl;
+        less_thans_.push_back({id0, id1, c});
     }
 
 } /* namespace veritas */

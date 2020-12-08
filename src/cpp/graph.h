@@ -419,9 +419,10 @@ namespace veritas {
             int k;
         };
         struct LessThan {
-            // id0 < id1
+            // id0 < id1 + b
             int id0;
             int id1;
+            FloatT b;
         };
         std::vector<OneOutOfK> one_out_of_ks_;
         std::vector<AtMostK> at_most_ks_;
@@ -440,7 +441,7 @@ namespace veritas {
         bool operator()(DomainStore& store) const;
         void add_one_out_of_k(std::vector<int> ids, bool strict);
         void add_at_most_k(std::vector<int> ids, int k);
-        void add_less_than(int id0, int id1);
+        void add_less_than(int id0, int id1, FloatT b);
     };
 
 } /* namespace veritas */
