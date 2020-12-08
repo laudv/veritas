@@ -424,14 +424,32 @@ namespace veritas {
             int k;
         };
         struct LessThan {
-            // id0 < id1 + b
+            // id0 <= id1 + b
             int id0;
             int id1;
             FloatT b;
         };
+        struct Sum {
+            // idres = coefx*idx + coefy*idy
+            FloatT coefx;
+            int idx;
+            FloatT coefy;
+            int idy;
+            int idres;
+        };
+        struct Norm {
+            // sqrt((idx-bx)^2 + (idy-by)^2)
+            int idx;
+            FloatT bx;
+            int idy;
+            FloatT by;
+            int idres;
+        };
         std::vector<OneOutOfK> one_out_of_ks_;
         std::vector<AtMostK> at_most_ks_;
         std::vector<LessThan> less_thans_;
+        std::vector<Sum> sums_;
+        std::vector<Norm> norms_;
 
         bool handle_one_out_of_k(const OneOutOfK& c,
                 std::vector<DomainPair>& workspace) const;
@@ -442,11 +460,19 @@ namespace veritas {
         bool handle_less_than(const LessThan& c,
                 std::vector<DomainPair>& workspace) const;
 
+        bool handle_sum(const Sum& c,
+                std::vector<DomainPair>& workspace) const;
+
+        bool handle_norm(const Norm& c,
+                std::vector<DomainPair>& workspace) const;
+
     public:
         bool operator()(DomainStore& store) const;
         void add_one_out_of_k(std::vector<int> ids, bool strict);
         void add_at_most_k(std::vector<int> ids, int k);
         void add_less_than(int id0, int id1, FloatT b);
+        void add_sum(FloatT coefx, int idx, FloatT coefy, int idy, int idres);
+        void add_norm(int idx, FloatT bx, int idy, FloatT by, int idres);
     };
 
 } /* namespace veritas */

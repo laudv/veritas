@@ -2315,12 +2315,71 @@ namespace veritas {
     }
 
     bool
+    EasyBoxAdjuster::handle_sum(const Sum& c,
+            std::vector<DomainPair>& workspace) const
+    {
+        DomainT *px = nullptr;
+        DomainT *py = nullptr;
+        DomainT *pres = nullptr;
+
+        for (size_t i = 0; i < workspace.size(); ++i)
+        {
+            DomainPair *p = &workspace[i];
+            if (p->first == c.idx)
+                px = &p->second;
+            else if (p->first == c.idy)
+                py = &p->second;
+            else if (p->first == c.idres)
+                pres = &p->second;
+        }
+
+        if (px != nullptr && py != nullptr && pres != nullptr)
+        {
+            FloatT m, M, x;
+            m = M = c.coefx*px->lo + c.coefy*py->lo;
+            x = c.coefx*px->lo + c.coefy*py->hi;
+            m = std::min(m, x); M = std::max(M, x);
+            x = c.coefx*px->hi + c.coefy*py->lo;
+            m = std::min(m, x); M = std::max(M, x);
+            x = c.coefx*px->hi + c.coefy*py->hi;
+            m = std::min(m, x); M = std::max(M, x);
+
+            FloatT new_lo = std::max(m, pres->lo);
+            FloatT new_hi = std::min(M, pres->hi);
+            //std::cout << "EasyBoxAdjuster sum: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
+            //std::cout << "                     updating lo " << pres->lo << "->" << new_lo << std::endl;
+            //std::cout << "                     updating hi " << pres->hi << "->" << new_hi << std::endl;
+            pres->lo = new_lo;
+            pres->hi = new_hi;
+            if (pres->lo >= pres->hi)
+            {
+                std::cout << "EasyBoxAdjuster sum: rejecting " << *pres << std::endl;
+                return false;
+            }
+        }
+
+        return true; // accept
+    }
+
+    bool
+    EasyBoxAdjuster::handle_norm(const Norm& c,
+            std::vector<DomainPair>& workspace) const
+    {
+        return true; // accept
+    }
+
+    bool
     EasyBoxAdjuster::operator()(DomainStore& store) const
     {
         auto& workspace = store.workspace();
         for (const LessThan& c : less_thans_)
         {
             if (!handle_less_than(c, workspace))
+                return false;
+        }
+        for (const Sum& c : sums_)
+        {
+            if (!handle_sum(c, workspace))
                 return false;
         }
         for (const OneOutOfK& c : one_out_of_ks_)
@@ -2364,6 +2423,24 @@ namespace veritas {
     {
         std::cout << "add_less_than X" << id0 << " < " << "X" << id1 << " + " << c << std::endl;
         less_thans_.push_back({id0, id1, c});
+    }
+
+    void
+    EasyBoxAdjuster::add_sum(FloatT coefx, int idx, FloatT coefy, int idy, int idres)
+    {
+        std::cout << "add_sum X" << idres << " = "
+                  << coefx << " * X" << idx  << " + "
+                  << coefy << " * X" << idy  << std::endl;
+        sums_.push_back({coefx, idx, coefy, idy, idres});
+    }
+
+    void
+    EasyBoxAdjuster::add_norm(int idx, FloatT bx, int idy, FloatT by, int idres)
+    {
+        std::cout << "add_norm X" << idres << " = sqrt("
+                  << "(X" << idx << "-" << bx << ")^2 + "
+                  << "(X" << idy << "-" << by << ")^2)" << std::endl;
+        norms_.push_back({idx, bx, idy, by, idres});
     }
 
 } /* namespace veritas */

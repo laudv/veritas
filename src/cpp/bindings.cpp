@@ -367,6 +367,8 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("add_one_out_of_k", &EasyBoxAdjuster::add_one_out_of_k)
         .def("add_at_most_k", &EasyBoxAdjuster::add_at_most_k)
         .def("add_less_than", &EasyBoxAdjuster::add_less_than)
+        .def("add_sum", &EasyBoxAdjuster::add_sum)
+        .def("add_norm", &EasyBoxAdjuster::add_norm)
         ;
 
 
