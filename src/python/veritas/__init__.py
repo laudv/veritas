@@ -326,6 +326,20 @@ class Optimizer:
         self.times.append(timeit.default_timer() - self.start_time)
         return value
 
+    def solution_to_intervals(self, solution, num_attributes):
+        box = solution.box()
+        intervals = [[None for i in range(num_attributes)], [None for i in range(num_attributes)]]
+        for instance in [0, 1]:
+            for feat_id in range(num_attributes):
+                i = self.feat_info.get_id(instance, feat_id) # internal VERITAS id for instance
+                if i != -1 and i in box:
+                    if self.feat_info.is_real(i):
+                        interval = (box[i].lo, box[i].hi)
+                    else:
+                        interval = box[i].lo == 1.0 # (-inf, 1.0) == False, (1.0, inf) == True
+                    intervals[instance][feat_id] = interval
+        return intervals
+
     def parallel(self, num_threads):
         """ use with with-statement """
         return ParallelOptimizer(self, num_threads)
