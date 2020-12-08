@@ -293,7 +293,7 @@ namespace veritas {
     }
 
     void
-    DomainStore::combine_in_workspace(const DomainBox& a, const DomainBox& b)
+    DomainStore::combine_in_workspace(const DomainBox& a, const DomainBox& b, bool copy_b)
     {
         if (!workspace_.empty())
             throw std::runtime_error("workspace not empty");
@@ -317,7 +317,8 @@ namespace veritas {
             }
             else
             {
-                workspace_.push_back(*it1); // copy
+                if (copy_b)
+                    workspace_.push_back(*it1); // copy
                 ++it1;
             }
         }
@@ -325,14 +326,14 @@ namespace veritas {
         // push all remaining items (one of them is already at the end, no need to compare anymore)
         for (; it0 != a.end(); ++it0)
             workspace_.push_back(*it0); // copy
-        for (; it1 != b.end(); ++it1)
+        for (; copy_b && it1 != b.end(); ++it1)
             workspace_.push_back(*it1); // copy
     }
 
     DomainBox
-    DomainStore::combine_and_push(const DomainBox& a, const DomainBox& b)
+    DomainStore::combine_and_push(const DomainBox& a, const DomainBox& b, bool copy_b)
     {
-        combine_in_workspace(a, b);
+        combine_in_workspace(a, b, copy_b);
         return push_workspace();
     }
 
@@ -659,6 +660,33 @@ namespace veritas {
             auto& v = it->vertices;
             v.erase(std::remove_if(v.begin(), v.end(), f), v.end());
         }
+    }
+
+    void
+    KPartiteGraph::prune_by_workspace_box()
+    {
+        DomainBox b = store_.get_workspace_box();
+        prune([b](const DomainBox& box) {
+            return box.overlaps(b);
+        });
+
+        std::vector<IndependentSet> new_sets;
+        DomainStore new_store;
+
+        for (auto it = sets_.begin(); it != sets_.end(); ++it)
+        {
+            IndependentSet new_set;
+            for (auto v = it->vertices.begin(); v != it->vertices.end(); ++v)
+            {
+                Vertex new_vertex(*v);
+                new_vertex.box = new_store.combine_and_push(v->box, b, false); // order is important!
+                new_set.vertices.push_back(new_vertex);
+            }
+            new_sets.push_back(new_set);
+        }
+
+        std::swap(store_, new_store);
+        std::swap(sets_, new_sets);
     }
 
     std::tuple<FloatT, FloatT>
@@ -1385,7 +1413,7 @@ namespace veritas {
 
             DomainBox box = store_.get_workspace_box(); // box_adjuster can modify begin_ and end_
 
-            // recompute heuristic for `instance`
+            // recompute heuristic for instance0
             FloatT heuristic0 = 0.0;
             constexpr size_t plusone0 = instance == 0 ? 1 : 0; // include this indep_set? only when not expanding
             for (auto it = get0(graph_).sets_.cbegin() + get0(c.instance).indep_set + plusone0;
@@ -1398,7 +1426,7 @@ namespace veritas {
                 heuristic0 += min;
             }
 
-            // recompute heuristic for `other_instance`
+            // recompute heuristic for instance1
             FloatT heuristic1 = 0.0;
             constexpr size_t plusone1 = instance == 1 ? 1 : 0;
             for (auto it = get1(graph_).sets_.cbegin() + get1(c.instance).indep_set + plusone1;
@@ -1407,6 +1435,8 @@ namespace veritas {
                 FloatT max = -std::numeric_limits<FloatT>::infinity(); // maximize this value for graph1
                 for (const Vertex& w : it->vertices)
                 {
+                    //std::cout << "heur " << box << std::endl
+                    //          << "     " << w.box << " -> " << box.overlaps(w.box) << std::endl;
                     if (box.overlaps(w.box))
                         max = std::max(w.output, max);
                 }
@@ -2256,7 +2286,7 @@ namespace veritas {
 
             if (p0->lo >= p0->hi || p1->lo >= p1->hi)
             {
-                std::cout << "EasyBoxAdjuster: rejecting adjustment" << std::endl;
+                //std::cout << "EasyBoxAdjuster: rejecting adjustment" << std::endl;
                 return false;
             }
         }

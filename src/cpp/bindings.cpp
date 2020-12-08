@@ -218,12 +218,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 }
                 //else throw std::runtime_error("not supported");
             }
-
-            DomainBox b = g.store().get_workspace_box();
-            g.prune([b](const DomainBox& box) {
-                return box.overlaps(b);
-            });
-            g.store().clear_workspace();
+            g.prune_by_workspace_box();
         })
         .def("prune_box", [](KPartiteGraph& g, const FeatInfo& finfo,
                     const py::list box, int instance) {
@@ -236,11 +231,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 if (!std::isinf(d.hi))
                     g.store().refine_workspace(LtSplit(fid, d.hi), true, f);
             }
-            DomainBox b = g.store().get_workspace_box();
-            g.prune([b](const DomainBox& box) {
-                return box.overlaps(b);
-            });
-            g.store().clear_workspace();
+            g.prune_by_workspace_box();
         })
         .def("prune_smt", [](KPartiteGraph& g, SMTSolver& solver) {
             g.prune([&solver](const DomainBox& box) {

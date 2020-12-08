@@ -100,8 +100,8 @@ namespace veritas {
         DomainBox push_workspace();
 
         void refine_workspace(Split split, bool is_left_child, FeatIdMapper fmap);
-        void combine_in_workspace(const DomainBox& a, const DomainBox& b);
-        DomainBox combine_and_push(const DomainBox& a, const DomainBox& b);
+        void combine_in_workspace(const DomainBox& a, const DomainBox& b, bool copy_b=true);
+        DomainBox combine_and_push(const DomainBox& a, const DomainBox& b, bool copy_b=true);
         void clear_workspace();
     };
 
@@ -176,6 +176,11 @@ namespace veritas {
 
         /** remove all vertices for which the given function returns true. */
         void prune(BoxFilter filter);
+
+        /** remove all vertices that don't overlap with box in workspace.
+            and crop vertices' boxes so they are contained by the box in the workspace.
+            clear the workspace */
+        void prune_by_workspace_box();
 
         std::tuple<FloatT, FloatT> propagate_outputs();
         std::tuple<FloatT, FloatT> basic_bound() const;
