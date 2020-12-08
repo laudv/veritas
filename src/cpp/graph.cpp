@@ -2332,9 +2332,11 @@ namespace veritas {
             else if (p->first == c.idres)
                 pres = &p->second;
         }
-
+        
+        // could do much more, but for now: adjust bounds of result, if invalid range, reject
         if (px != nullptr && py != nullptr && pres != nullptr)
         {
+            // evaluate at all extreme points -> compute min and max
             FloatT m, M, x;
             m = M = c.coefx*px->lo + c.coefy*py->lo;
             x = c.coefx*px->lo + c.coefy*py->hi;
@@ -2353,7 +2355,7 @@ namespace veritas {
             pres->hi = new_hi;
             if (pres->lo >= pres->hi)
             {
-                std::cout << "EasyBoxAdjuster sum: rejecting " << *pres << std::endl;
+                //std::cout << "EasyBoxAdjuster sum: rejecting " << *pres << std::endl;
                 return false;
             }
         }
@@ -2365,6 +2367,49 @@ namespace veritas {
     EasyBoxAdjuster::handle_norm(const Norm& c,
             std::vector<DomainPair>& workspace) const
     {
+        DomainT *px = nullptr;
+        DomainT *py = nullptr;
+        DomainT *pres = nullptr;
+
+        for (size_t i = 0; i < workspace.size(); ++i)
+        {
+            DomainPair *p = &workspace[i];
+            if (p->first == c.idx)
+                px = &p->second;
+            else if (p->first == c.idy)
+                py = &p->second;
+            else if (p->first == c.idres)
+                pres = &p->second;
+        }
+
+        auto pow2 = [](FloatT x) { return x*x; };
+        auto min = [](FloatT x, FloatT y) { return std::min(x, y); };
+        auto max = [](FloatT x, FloatT y) { return std::max(x, y); };
+
+        // if all domains defined, check result (only forward)
+        if (px != nullptr && py != nullptr && pres != nullptr)
+        {
+            // evaluate at all extreme points -> smiling parabola is max at edges, min at bx/by
+            FloatT mx, Mx, my, My;
+            mx = max(pow2(max(0.0, px->lo-c.bx)), pow2(min(0.0, px->hi-c.bx)));
+            Mx = max(pow2(px->lo-c.bx), pow2(px->hi-c.bx));
+            my = max(pow2(max(0.0, py->lo-c.by)), pow2(min(0.0, py->hi-c.by)));
+            My = max(pow2(py->lo-c.by), pow2(py->hi-c.by));
+
+            FloatT new_lo = max(std::sqrt(mx + my), pres->lo);
+            FloatT new_hi = min(std::sqrt(Mx + My), pres->hi);
+            //std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
+            //std::cout << "                      updating lo " << pres->lo << "->" << new_lo << std::endl;
+            //std::cout << "                      updating hi " << pres->hi << "->" << new_hi << std::endl;
+            pres->lo = new_lo;
+            pres->hi = new_hi;
+            if (pres->lo >= pres->hi)
+            {
+                //std::cout << "EasyBoxAdjuster norm: rejecting " << *pres << std::endl;
+                return false;
+            }
+        }
+
         return true; // accept
     }
 
@@ -2377,11 +2422,6 @@ namespace veritas {
             if (!handle_less_than(c, workspace))
                 return false;
         }
-        for (const Sum& c : sums_)
-        {
-            if (!handle_sum(c, workspace))
-                return false;
-        }
         for (const OneOutOfK& c : one_out_of_ks_)
         {
             if (!handle_one_out_of_k(c, workspace))
@@ -2390,6 +2430,16 @@ namespace veritas {
         for (const AtMostK& c : at_most_ks_)
         {
             if (!handle_at_most_k(c, workspace))
+                return false;
+        }
+        for (const Sum& c : sums_)
+        {
+            if (!handle_sum(c, workspace))
+                return false;
+        }
+        for (const Norm& c : norms_)
+        {
+            if (!handle_norm(c, workspace))
                 return false;
         }
 
