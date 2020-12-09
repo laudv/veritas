@@ -2333,12 +2333,13 @@ namespace veritas {
                 pres = &p->second;
         }
         
-        // could do much more, but for now: adjust bounds of result, if invalid range, reject
         if (px != nullptr && py != nullptr && pres != nullptr)
         {
+            // adjust result
             // evaluate at all extreme points -> compute min and max
             FloatT m, M, x;
-            m = M = c.coefx*px->lo + c.coefy*py->lo;
+            m = c.coefx*px->lo + c.coefy*py->lo;
+            M = m;
             x = c.coefx*px->lo + c.coefy*py->hi;
             m = std::min(m, x); M = std::max(M, x);
             x = c.coefx*px->hi + c.coefy*py->lo;
@@ -2349,13 +2350,57 @@ namespace veritas {
             FloatT new_lo = std::max(m, pres->lo);
             FloatT new_hi = std::min(M, pres->hi);
             //std::cout << "EasyBoxAdjuster sum: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
-            //std::cout << "                     updating lo " << pres->lo << "->" << new_lo << std::endl;
-            //std::cout << "                     updating hi " << pres->hi << "->" << new_hi << std::endl;
+            //std::cout << "                     updating lo " << pres->lo << " -> " << new_lo << std::endl;
+            //std::cout << "                     updating hi " << pres->hi << " -> " << new_hi << std::endl;
             pres->lo = new_lo;
             pres->hi = new_hi;
             if (pres->lo >= pres->hi)
             {
                 //std::cout << "EasyBoxAdjuster sum: rejecting " << *pres << std::endl;
+                return false;
+            }
+
+            // adjust x
+            m = (pres->lo - c.coefy*py->lo) / c.coefx;
+            M = m;
+            x = (pres->lo - c.coefy*py->hi) / c.coefx;
+            m = std::min(m, x); M = std::max(M, x);
+            x = (pres->hi - c.coefy*py->lo) / c.coefx;
+            m = std::min(m, x); M = std::max(M, x);
+            x = (pres->hi - c.coefy*py->hi) / c.coefx;
+            m = std::min(m, x); M = std::max(M, x);
+
+            new_lo = std::max(m, px->lo);
+            new_hi = std::min(M, px->hi);
+            //std::cout << "                  x  updating lo " << px->lo << " -> " << new_lo << std::endl;
+            //std::cout << "                  x  updating hi " << px->hi << " -> " << new_hi << std::endl;
+            px->lo = new_lo;
+            px->hi = new_hi;
+            if (px->lo >= px->hi)
+            {
+                //std::cout << "EasyBoxAdjuster sum: rejecting x " << *px << std::endl;
+                return false;
+            }
+
+            // adjust y
+            m = (pres->lo - c.coefx*px->lo) / c.coefy;
+            M = m;
+            x = (pres->lo - c.coefx*px->hi) / c.coefy;
+            m = std::min(m, x); M = std::max(M, x);
+            x = (pres->hi - c.coefx*px->lo) / c.coefy;
+            m = std::min(m, x); M = std::max(M, x);
+            x = (pres->hi - c.coefx*px->hi) / c.coefy;
+            m = std::min(m, x); M = std::max(M, x);
+
+            new_lo = std::max(m, py->lo);
+            new_hi = std::min(M, py->hi);
+            //std::cout << "                  y  updating lo " << py->lo << " -> " << new_lo << std::endl;
+            //std::cout << "                  y  updating hi " << py->hi << " -> " << new_hi << std::endl;
+            py->lo = new_lo;
+            py->hi = new_hi;
+            if (py->lo >= py->hi)
+            {
+                //std::cout << "EasyBoxAdjuster sum: rejecting y " << *py << std::endl;
                 return false;
             }
         }
@@ -2386,10 +2431,13 @@ namespace veritas {
         auto min = [](FloatT x, FloatT y) { return std::min(x, y); };
         auto max = [](FloatT x, FloatT y) { return std::max(x, y); };
 
-        // if all domains defined, check result (only forward)
         if (px != nullptr && py != nullptr && pres != nullptr)
         {
-            // evaluate at all extreme points -> smiling parabola is max at edges, min at bx/by
+            //std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres
+            //    << ", bx = " << c.bx << ", by = " << c.by << std::endl;
+
+            // adjust pres -> sum of two smiling parabolas in monotonic function -> find min/max
+            // evaluate at all extreme points -> smiling parabola is max at edges, min at bx/by, or edges
             FloatT mx, Mx, my, My;
             mx = max(pow2(max(0.0, px->lo-c.bx)), pow2(min(0.0, px->hi-c.bx)));
             Mx = max(pow2(px->lo-c.bx), pow2(px->hi-c.bx));
@@ -2398,9 +2446,8 @@ namespace veritas {
 
             FloatT new_lo = max(std::sqrt(mx + my), pres->lo);
             FloatT new_hi = min(std::sqrt(Mx + My), pres->hi);
-            //std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
-            //std::cout << "                      updating lo " << pres->lo << "->" << new_lo << std::endl;
-            //std::cout << "                      updating hi " << pres->hi << "->" << new_hi << std::endl;
+            //std::cout << "                         updating lo " << pres->lo << " -> " << new_lo << std::endl;
+            //std::cout << "                         updating hi " << pres->hi << " -> " << new_hi << std::endl;
             pres->lo = new_lo;
             pres->hi = new_hi;
             if (pres->lo >= pres->hi)
@@ -2408,6 +2455,39 @@ namespace veritas {
                 //std::cout << "EasyBoxAdjuster norm: rejecting " << *pres << std::endl;
                 return false;
             }
+
+            if (!std::isinf(pres->hi))
+            {
+                // adjust px, py
+                // if ||(px-bx, py-by)|| in [m, M),
+                // then px-bx in [-M, M+eps) => px in [-M+bx, M+bx+eps)    (same for py)
+                new_lo = max(-pres->hi + c.bx, px->lo);
+                new_hi = min(1.00001*pres->hi + c.bx, px->hi); // pres->hi should always be positive
+                //std::cout << "                     px  updating lo " << px->lo << " -> " << new_lo << std::endl;
+                //std::cout << "                     px  updating hi " << px->hi << " -> " << new_hi << std::endl;
+                px->lo = new_lo;
+                px->hi = new_hi;
+                if (px->lo >= px->hi)
+                {
+                    //std::cout << "EasyBoxAdjuster norm px: rejecting " << *pres << std::endl;
+                    return false;
+                }
+
+                new_lo = max(-pres->hi + c.by, py->lo);
+                new_hi = min(1.00001*pres->hi + c.by, py->hi); // pres->hi should always be positive
+                //std::cout << "                     py  updating lo " << py->lo << " -> " << new_lo << std::endl;
+                //std::cout << "                     py  updating hi " << py->hi << " -> " << new_hi << std::endl;
+                py->lo = new_lo;
+                py->hi = new_hi;
+                if (py->lo >= py->hi)
+                {
+                    //std::cout << "EasyBoxAdjuster norm py: rejecting " << *pres << std::endl;
+                    return false;
+                }
+            }
+
+            //std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres
+            //    << ", bx = " << c.bx << ", by = " << c.by << std::endl << std::endl;
         }
 
         return true; // accept
