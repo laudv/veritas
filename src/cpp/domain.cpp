@@ -14,6 +14,11 @@
 
 #include "domain.h"
 
+#ifdef __GNUC__
+#include <unistd.h>
+#include <execinfo.h>
+#endif
+
 namespace veritas {
 
     RealDomain::RealDomain()
@@ -30,6 +35,14 @@ namespace veritas {
     {
         if (lo >= hi)
         {
+            #ifdef __GNUC__
+            // print backtrace if gcc
+            void *array[10];
+            size_t size;
+            size = backtrace(array, 10);
+            backtrace_symbols_fd(array, size, STDERR_FILENO);
+            #endif
+
             std::stringstream s;
             s << "Domain<real> error: lo >= hi: [" << lo << ", " << hi << ")";
             throw std::invalid_argument(s.str());
