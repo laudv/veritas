@@ -592,7 +592,7 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.root())), 4.0)
 
         opt = Optimizer(minimize=at)
-        opt.adjuster.add_less_than(0, 1)
+        opt.adjuster.add_less_than(0, 1, 0.0)
 
         opt.steps(50)
         sols = opt.solutions()
@@ -619,7 +619,7 @@ class TestGraph(unittest.TestCase):
         t.set_leaf_value(t.right(t.root()), 0.4) # X1 >= 1.0
 
         opt = Optimizer(minimize=at)
-        opt.adjuster.add_less_than(0, 1)
+        opt.adjuster.add_less_than(0, 1, 0.0)
         opt.steps(50)
         sols = opt.solutions()
         print("\n".join([str((s.box(), s.output0)) for s in sols]))
@@ -627,7 +627,7 @@ class TestGraph(unittest.TestCase):
         self.assertEqual(opt.num_solutions(), 4)
 
         opt = Optimizer(minimize=at)
-        opt.adjuster.add_less_than(1, 0)
+        opt.adjuster.add_less_than(1, 0, 0.0)
         opt.steps(50)
         sols = opt.solutions()
         print("\n".join([str((s.box(), s.output0)) for s in sols]))
