@@ -1196,7 +1196,7 @@ namespace veritas {
 
     template <size_t instance>
     bool
-    KPartiteGraphOptimize::update_clique(Clique& c)
+    KPartiteGraphOptimize::update_clique(Clique& c) // DYN_PROG heuristic
     {
         // Things to do:
         // 1. find next vertex in `indep_set`
@@ -1262,7 +1262,7 @@ namespace veritas {
 
     template <size_t instance, typename BA, typename OF>
     void
-    KPartiteGraphOptimize::step_instance(Clique&& c, BA box_adjuster, OF output_filter)
+    KPartiteGraphOptimize::step_instance(Clique&& c, BA box_adjuster, OF output_filter) // DYN_PROG heuristic
     {
         // invariant: Clique `c` can be extended
         //
@@ -1379,7 +1379,7 @@ namespace veritas {
 
     template <size_t instance, typename BA, typename OF>
     void
-    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BA box_adjuster, OF output_filter)
+    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BA box_adjuster, OF output_filter) // RECOMPUTE heuristic
     {
         // invariant: Clique `c` can be extended
         //
@@ -2338,23 +2338,12 @@ namespace veritas {
 
         if (cnt == 2) // at least two non-null -> insert RealDomain() for null, then refine it based on other two
         {
-            std::cout << "--- sum cnt==2 "
-                << (px != nullptr && !px->is_everything()) << " "
-                << (py != nullptr && !py->is_everything()) << " "
-                << (pres != nullptr && !pres->is_everything()) << std::endl;
-            if (px != nullptr) std::cout << "px " << *px << std::endl;
-            if (py != nullptr) std::cout << "py " << *py << std::endl;
-            if (pres != nullptr) std::cout << "pr " << *pres << std::endl;
-
             if (px == nullptr) {
                 adjuster_insert_into_workspace(workspace, c.idx, {});
-                std::cout << "inserting sum dom for px" << std::endl;
             } if (py == nullptr) {
                 adjuster_insert_into_workspace(workspace, c.idy, {});
-                std::cout << "inserting sum dom for py" << std::endl;
             } if (pres == nullptr) {
                 adjuster_insert_into_workspace(workspace, c.idres, {});
-                std::cout << "inserting sum dom for pres" << std::endl;
             }
 
             // find pointers again --> they may have changed
@@ -2369,12 +2358,6 @@ namespace veritas {
                     pres = &p->second;
                 }
             }
-
-            std::cout << "-" << std::endl;
-            if (px != nullptr) std::cout << "px " << *px << std::endl;
-            if (py != nullptr) std::cout << "py " << *py << std::endl;
-            if (pres != nullptr) std::cout << "pr " << *pres << std::endl;
-            std::cout << "---" << std::endl;
         }
 
         auto min = [](FloatT x, FloatT y) { return std::fmin(x, y); }; // fmin/fmax -> don't prop nan
@@ -2382,7 +2365,7 @@ namespace veritas {
         
         if (px != nullptr && py != nullptr && pres != nullptr)
         {
-            std::cout << "EasyBoxAdjuster sum: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
+            //std::cout << "EasyBoxAdjuster sum: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
 
             // adjust result
             // evaluate at all extreme points -> compute min and max
@@ -2452,7 +2435,7 @@ namespace veritas {
                 return false;
             }
 
-            std::cout << "          ---------> x " << *px << ", y " << *py << ", res " << *pres << std::endl;
+            //std::cout << "          ---------> x " << *px << ", y " << *py << ", res " << *pres << std::endl;
         }
 
         return true; // accept
@@ -2483,13 +2466,10 @@ namespace veritas {
         {
             if (px == nullptr) {
                 adjuster_insert_into_workspace(workspace, c.idx, {});
-                std::cout << "inserting dom for px" << std::endl;
             } if (py == nullptr) {
                 adjuster_insert_into_workspace(workspace, c.idy, {});
-                std::cout << "inserting dom for py" << std::endl;
             } if (pres == nullptr) {
                 adjuster_insert_into_workspace(workspace, c.idres, {});
-                std::cout << "inserting dom for pres" << std::endl;
             }
 
             // find pointers again, they may have changed
@@ -2512,8 +2492,8 @@ namespace veritas {
 
         if (px != nullptr && py != nullptr && pres != nullptr)
         {
-            std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres
-                << ", bx = " << c.bx << ", by = " << c.by << std::endl;
+            //std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres
+            //    << ", bx = " << c.bx << ", by = " << c.by << std::endl;
 
             // use info from x, y to compute possible update to lo, hi of res
             // lo: max_x (x-bx)^2
@@ -2537,7 +2517,7 @@ namespace veritas {
 
             if (pres->lo >= pres->hi)
             {
-                std::cout << "EasyBoxAdjuster norm: rejecting pres " << *pres << std::endl;
+                //std::cout << "EasyBoxAdjuster norm: rejecting pres " << *pres << std::endl;
                 return false;
             }
 
@@ -2551,67 +2531,17 @@ namespace veritas {
 
             if (px->lo >= px->hi)
             {
-                std::cout << "EasyBoxAdjuster norm: rejecting px" << *pres << std::endl;
+                //std::cout << "EasyBoxAdjuster norm: rejecting px" << *pres << std::endl;
                 return false;
             }
             if (py->lo >= py->hi)
             {
-                std::cout << "EasyBoxAdjuster norm: rejecting py" << *pres << std::endl;
+                //std::cout << "EasyBoxAdjuster norm: rejecting py" << *pres << std::endl;
                 return false;
             }
 
-            //// adjust pres -> sum of two smiling parabolas in monotonic function -> find min/max
-            //// evaluate at all extreme points -> smiling parabola is max at edges, min at bx/by, or edges
-            //FloatT mx, Mx, my, My;
-            //mx = max(pow2(max(0.0, px->lo-c.bx)), pow2(min(0.0, px->hi-c.bx)));
-            //Mx = max(pow2(px->lo-c.bx), pow2(px->hi-c.bx));
-            //my = max(pow2(max(0.0, py->lo-c.by)), pow2(min(0.0, py->hi-c.by)));
-            //My = max(pow2(py->lo-c.by), pow2(py->hi-c.by));
-
-            //FloatT new_lo = max(std::sqrt(mx + my), pres->lo);
-            //FloatT new_hi = min(std::sqrt(Mx + My), pres->hi);
-            ////std::cout << "                         updating lo " << pres->lo << " -> " << new_lo << std::endl;
-            ////std::cout << "                         updating hi " << pres->hi << " -> " << new_hi << std::endl;
-            //pres->lo = new_lo;
-            //pres->hi = new_hi;
-            //if (pres->lo >= pres->hi)
-            //{
-            //    //std::cout << "EasyBoxAdjuster norm: rejecting " << *pres << std::endl;
-            //    return false;
-            //}
-
-            //if (std::isfinite(pres->hi))
-            //{
-            //    // adjust px, py
-            //    // if ||(px-bx, py-by)|| in [m, M),
-            //    // then px-bx in [-M, M+eps) => px in [-M+bx, M+bx+eps)    (same for py)
-            //    new_lo = max(-pres->hi + c.bx, px->lo);
-            //    new_hi = min(1.00001*pres->hi + c.bx, px->hi); // pres->hi should always be positive
-            //    //std::cout << "                     px  updating lo " << px->lo << " -> " << new_lo << std::endl;
-            //    //std::cout << "                     px  updating hi " << px->hi << " -> " << new_hi << std::endl;
-            //    px->lo = new_lo;
-            //    px->hi = new_hi;
-            //    if (px->lo >= px->hi)
-            //    {
-            //        //std::cout << "EasyBoxAdjuster norm px: rejecting " << *pres << std::endl;
-            //        return false;
-            //    }
-
-            //    new_lo = max(-pres->hi + c.by, py->lo);
-            //    new_hi = min(1.00001*pres->hi + c.by, py->hi); // pres->hi should always be positive
-            //    //std::cout << "                     py  updating lo " << py->lo << " -> " << new_lo << std::endl;
-            //    //std::cout << "                     py  updating hi " << py->hi << " -> " << new_hi << std::endl;
-            //    py->lo = new_lo;
-            //    py->hi = new_hi;
-            //    if (py->lo >= py->hi)
-            //    {
-            //        //std::cout << "EasyBoxAdjuster norm py: rejecting " << *pres << std::endl;
-            //        return false;
-            //    }
-            //}
-
-            std::cout << "       -------------> x " << *px << ", y " << *py << ", res " << *pres
-                << ", bx = " << c.bx << ", by = " << c.by << std::endl;
+            //std::cout << "       -------------> x " << *px << ", y " << *py << ", res " << *pres
+            //    << ", bx = " << c.bx << ", by = " << c.by << std::endl;
         }
 
         return true; // accept
