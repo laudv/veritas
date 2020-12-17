@@ -15,12 +15,14 @@
 #include <pybind11/cast.h>
 #include <pybind11/functional.h>
 
-#include <z3++.h>
-
 #include "domain.h"
 #include "tree.h"
 #include "graph.h"
-#include "smt.h"
+
+#ifdef VERITAS_FEATURE_SMT
+    #include <z3++.h>
+    #include "smt.h"
+#endif
 
 namespace py = pybind11;
 using namespace veritas;
@@ -233,6 +235,7 @@ PYBIND11_MODULE(pyveritas, m) {
             }
             g.prune_by_workspace_box();
         })
+#ifdef VERITAS_FEATURE_SMT
         .def("prune_smt", [](KPartiteGraph& g, SMTSolver& solver) {
             g.prune([&solver](const DomainBox& box) {
                 z3::expr e = solver.domains_to_z3(box);
@@ -241,6 +244,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 return res;
             });
         })
+#endif
         .def("add_with_negated_leaf_values", &KPartiteGraph::add_with_negated_leaf_values)
         ;
 
@@ -285,13 +289,6 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("set_eps", [](KPartiteGraphOptimize& o, FloatT eps) { o.set_eps(eps); })
         //.def("__str__", [](const KPartiteGraphOptimize& o) { return tostr(o); })
         .def("steps", [](KPartiteGraphOptimize& opt, int nsteps, py::kwargs kwargs) {
-            //auto f = [opt](const DomainBox& box) {
-            //    z3::expr e = opt.solver->domains_to_z3(box);
-            //    bool res = opt.solver->check(e);
-            //    //std::cout << "test: " << box << " -> " << e << " res? " << res << std::endl;
-            //    //std::cout << opt.solver->get_z3() << std::endl;
-            //    return res;
-            //};
             EasyBoxAdjuster eadj;
             if (kwargs.contains("adjuster"))
                 eadj = kwargs["adjuster"].cast<EasyBoxAdjuster>();
@@ -354,13 +351,14 @@ PYBIND11_MODULE(pyveritas, m) {
             opt.steps_for(num_millisecs);
         });
 
+#ifdef VERITAS_FEATURE_SMT
     py::class_<SMTSolver>(m, "SMTSolver")
         .def(py::init<const FeatInfo *, const AddTree&, const AddTree&>())
         .def("parse_smt", &SMTSolver::parse_smt)
         .def("xvar_id", &SMTSolver::xvar_id)
         .def("xvar_name", &SMTSolver::xvar_name)
         ;
-
+#endif
 
     py::class_<EasyBoxAdjuster>(m, "EasyBoxAdjuster")
         .def(py::init<>())
