@@ -9,7 +9,7 @@ See the paper for more information: https://arxiv.org/abs/2010.13880
 * pybind11 (included)
 * cereal (included)
 * python3
-* z3
+* z3 (optional)
 
 You can use Ubuntu's and Fedora's Z3 package. If you prefer your local
 installation, set the CMAKE variable `Z3_INSTALL` to the root directory of your
@@ -18,8 +18,13 @@ Z3 installation.
 
 ## Installation
 
+* Clone this repository.
+* Initialize the submodules `git submodule init` and `git submodule update`.
 * Activate a (new) Python3 environment.
 * run `pip install .` in the root directory of Veritas
+
+If you want to use Z3, modify CMake variables `USE_Z3` and optionally
+`Z3_INSTALL`. Z3 is disabled by default.
 
 
 ## Example
