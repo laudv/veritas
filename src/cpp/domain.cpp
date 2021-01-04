@@ -232,7 +232,7 @@ namespace veritas {
         return visit_domain(
             [b](const RealDomain& ra) {
                 const RealDomain& rb = std::get<RealDomain>(b);
-                return ra.lo == rb.lo && ra.hi == rb.hi;
+                return ra == rb;
             }, 
             [b](const BoolDomain& ba) {
                 const BoolDomain& bb = std::get<BoolDomain>(b);

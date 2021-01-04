@@ -10,6 +10,7 @@ set(SOURCES
     "${SOURCE_DIR}/domain.cpp"
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/graph.cpp"
+    "${SOURCE_DIR}/boxchecker.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)

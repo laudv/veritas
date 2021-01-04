@@ -1,3 +1,4 @@
+import sys
 import xgboost as xgb
 import numpy as np
 import matplotlib.pyplot as plt
@@ -61,7 +62,6 @@ ax0.plot(x[~pred&target], y[~pred&target], 'x', color="red", label="false neg")
 im = ax1.imshow(vs.reshape(100,100).T, origin="lower", cmap="Spectral")
 fig.colorbar(im, ax=ax1)
 plt.show()
-
 
 # Use VERITAS to find the ordered possible outputs descendingly in box x: [25, 75], y: [50, 80]
 opt = veritas.Optimizer(maximize=at)

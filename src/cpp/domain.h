@@ -60,6 +60,9 @@ namespace veritas {
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d);
 
+    inline bool operator==(const RealDomain& a, const RealDomain& b)
+    { return a.lo == b.lo && a.hi == b.hi; }
+
     // bool domain
     struct BoolDomain {
         short value_; // -1 unset (everything), 0 false, 1 true

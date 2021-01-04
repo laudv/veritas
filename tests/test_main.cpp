@@ -1,9 +1,11 @@
 #include <functional>
 #include <iostream>
 #include <chrono>
+#include <cmath>
+#include <iomanip>
 #include "tree.h"
 #include "graph.h"
-#include "smt.h"
+#include "boxchecker.h"
 
 using namespace veritas;
 
@@ -218,6 +220,29 @@ void test_parallel(const char *model)
     }
 }
 
+void test_box_checker()
+{
+    BoxChecker checker{2};
+    std::vector<DomainPair> box{ {0, {2.0f, 5.0f}}, {1, {}} };
+    int cid = checker.add_const(7.0);
+    std::cout << "cid " << cid << std::endl;
+
+    int sumid = checker.add_sum(0, cid);
+    std::cout << "sumid " << sumid << std::endl;
+    checker.add_eq(1, sumid);
+
+    checker.copy_from_workspace(box);
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    checker.copy_to_workspace(box);
+
+    std::cout << std::endl << "----" << std::endl;
+    for (auto p : box)
+    {
+        std::cout << "box: " << p.first << ", " << p.second << std::endl;
+    }
+}
+
 int main()
 {
     //test_very_simple();
@@ -225,5 +250,6 @@ int main()
     //test_img();
     //test_unconstrained_bounds("tests/models/xgb-calhouse-hard.json");
     //test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
-    test_parallel("tests/models/xgb-calhouse-hard.json");
+    //test_parallel("tests/models/xgb-calhouse-hard.json");
+    test_box_checker();
 }
