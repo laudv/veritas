@@ -234,6 +234,14 @@ void test_box_checker()
     checker.copy_from_workspace(box);
     std::cout << "update " << checker.update() << std::endl;
     std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
+    std::cout << "update " << checker.update() << std::endl;
     checker.copy_to_workspace(box);
 
     std::cout << std::endl << "----" << std::endl;
