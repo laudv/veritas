@@ -21,45 +21,62 @@
 
 namespace veritas {
 
-    RealDomain::RealDomain()
-        : lo(-std::numeric_limits<FloatT>::infinity())
-        , hi(std::numeric_limits<FloatT>::infinity()) {}
+    //RealDomain::RealDomain()
+    //    : lo(-std::numeric_limits<FloatT>::infinity())
+    //    , hi(std::numeric_limits<FloatT>::infinity()) {}
 
-    RealDomain::RealDomain(FloatT value, bool is_lo) : RealDomain()
+    //RealDomain::RealDomain(FloatT lo, FloatT hi) : lo(lo), hi(hi)
+    //{
+    //    if (lo >= hi)
+    //    {
+    //        #ifdef __GNUC__
+    //        // print backtrace if gcc
+    //        void *array[10];
+    //        size_t size;
+    //        size = backtrace(array, 10);
+    //        backtrace_symbols_fd(array, size, STDERR_FILENO);
+    //        #endif
+
+    //        std::stringstream s;
+    //        s << "Domain<real> error: lo >= hi: [" << lo << ", " << hi << ")";
+    //        throw std::invalid_argument(s.str());
+    //    }
+    //}
+
+    RealDomain
+    RealDomain::from_lo(FloatT lo)
     {
-        if (is_lo) lo = value;
-        else       hi = value;
+        RealDomain d;
+        d.lo = lo;
+        return d;
     }
 
-    RealDomain::RealDomain(FloatT lo, FloatT hi) : lo(lo), hi(hi)
+    RealDomain
+    RealDomain::from_hi_exclusive(FloatT hi)
     {
-        if (lo >= hi)
-        {
-            #ifdef __GNUC__
-            // print backtrace if gcc
-            void *array[10];
-            size_t size;
-            size = backtrace(array, 10);
-            backtrace_symbols_fd(array, size, STDERR_FILENO);
-            #endif
+        RealDomain d;
+        d.hi = std::nextafter(hi, -std::numeric_limits<FloatT>::infinity());
+        return d;
+    }
 
-            std::stringstream s;
-            s << "Domain<real> error: lo >= hi: [" << lo << ", " << hi << ")";
-            throw std::invalid_argument(s.str());
-        }
+    RealDomain
+    RealDomain::from_hi_inclusive(FloatT hi)
+    {
+        RealDomain d;
+        d.hi = hi;
+        return d;
     }
 
     bool
     RealDomain::is_everything() const
     {
-        return lo == -std::numeric_limits<FloatT>::infinity()
-            && hi == std::numeric_limits<FloatT>::infinity();
+        return std::isinf(lo) && std::isinf(hi);
     }
 
     WhereFlag
     RealDomain::where_is(FloatT value) const
     {
-        if (hi <= value) // hi is excluded from the domain
+        if (hi < value) // hi is included in the domain
             return WhereFlag::RIGHT;
         else if (lo > value) // lo is included in the domain
             return WhereFlag::LEFT;
@@ -91,7 +108,9 @@ namespace veritas {
     bool
     RealDomain::overlaps(const RealDomain& other) const
     {
-        return this->lo < other.hi && this->hi > other.lo;
+        // [      ]
+        //        [    ] edges are included so this overlaps
+        return this->lo <= other.hi && this->hi >= other.lo;
     }
 
     RealDomain
@@ -110,19 +129,19 @@ namespace veritas {
         return { nlo, nhi };
     }
 
-    bool
-    RealDomain::covers(const RealDomain& other) const
-    {
-        return where_is(other.lo) == WhereFlag::IN_DOMAIN
-            && where_is(other.hi) == WhereFlag::IN_DOMAIN;
-    }
+    //bool
+    //RealDomain::covers(const RealDomain& other) const
+    //{
+    //    return where_is(other.lo) == WhereFlag::IN_DOMAIN
+    //        && where_is(other.hi) == WhereFlag::IN_DOMAIN;
+    //}
 
-    bool
-    RealDomain::covers_strict(const RealDomain& other) const
-    {
-        return where_is_strict(other.lo) == WhereFlag::IN_DOMAIN
-            && where_is_strict(other.hi) == WhereFlag::IN_DOMAIN;
-    }
+    //bool
+    //RealDomain::covers_strict(const RealDomain& other) const
+    //{
+    //    return where_is_strict(other.lo) == WhereFlag::IN_DOMAIN
+    //        && where_is_strict(other.hi) == WhereFlag::IN_DOMAIN;
+    //}
 
     bool
     RealDomain::lo_is_inf() const
@@ -139,7 +158,11 @@ namespace veritas {
     std::tuple<RealDomain, RealDomain>
     RealDomain::split(FloatT value) const
     {
-        return {{lo, value}, {value, hi}};
+        //return {{lo, value}, {value, hi}};
+        return {
+            RealDomain::exclusive(lo, value),
+            RealDomain::inclusive(value, hi)
+        };
     }
 
     std::ostream& operator<<(std::ostream& s, const RealDomain& d)

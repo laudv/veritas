@@ -12,6 +12,8 @@
 #include <type_traits>
 #include <vector>
 #include <variant>
+#include <sstream>
+#include <cmath>
 
 #include "util.h"
 
@@ -20,12 +22,12 @@ namespace veritas {
     using FloatT = float;
 
     /**          lo                  hi
-     *           [--- real domain ---)
+     *           [--- real domain ---]
      * ---X1--------------x2-----------------x3-----------> (real axis)
      *
      * x1 -> LEFT:      value not in domain and smaller than any value in the domain
      * x2 -> IN_DOMAIN: value in domain
-     * x3 -> RIGHT:     value not in domain and larger than any value in the domain (also value==hi)
+     * x3 -> RIGHT:     value not in domain and larger than any value in the domain
      */
     enum WhereFlag {
         LEFT      = -1,  // x1: value lies to the left of the domain
@@ -37,9 +39,26 @@ namespace veritas {
     struct RealDomain {
         FloatT lo, hi;
 
-        RealDomain();
-        RealDomain(FloatT lo, FloatT hi);
-        RealDomain(FloatT value, bool is_lo);
+        inline RealDomain()
+            : lo(-std::numeric_limits<FloatT>::infinity())
+            , hi(std::numeric_limits<FloatT>::infinity()) {}
+
+        inline RealDomain(FloatT lo, FloatT hi) : lo(lo), hi(hi) // inclusive!
+        {
+            if (lo > hi)
+            {
+                std::stringstream s;
+                s << "Domain<real> error: lo > hi: [" << lo << ", " << hi << "]";
+                throw std::invalid_argument(s.str());
+            }
+        }
+
+        static RealDomain from_lo(FloatT lo);
+        static RealDomain from_hi_inclusive(FloatT hi);
+        static RealDomain from_hi_exclusive(FloatT hi);
+        static inline RealDomain inclusive(FloatT lo, FloatT hi) { return {lo, hi}; }
+        static inline RealDomain exclusive(FloatT lo, FloatT hi)
+        { return {lo, std::nextafter(hi, -std::numeric_limits<FloatT>::infinity())}; }
 
         bool is_everything() const;
         WhereFlag where_is(FloatT value) const;
@@ -48,8 +67,8 @@ namespace veritas {
         bool contains_strict(FloatT value) const;
         RealDomain intersect(const RealDomain& o) const;
         bool overlaps(const RealDomain& other) const;
-        bool covers(const RealDomain& other) const;
-        bool covers_strict(const RealDomain& value) const;
+        //bool covers(const RealDomain& other) const;
+        //bool covers_strict(const RealDomain& value) const;
 
         bool lo_is_inf() const;
         bool hi_is_inf() const;
@@ -99,7 +118,7 @@ namespace veritas {
                 return f1(arg);
             else if constexpr (std::is_same_v<T, BoolDomain>)
                 return f2(arg);
-            else 
+            else
                 static_assert(util::always_false<T>::value, "non-exhaustive visit_domain");
         }, dom);
     }
