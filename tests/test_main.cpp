@@ -223,25 +223,23 @@ void test_parallel(const char *model)
 void test_box_checker()
 {
     BoxChecker checker{2};
-    std::vector<DomainPair> box{ {0, {2.0f, 5.0f}}, {1, {}} };
-    int cid = checker.add_const(7.0);
+    std::vector<DomainPair> box{ {0, {2, INFINITY}}, {1, {-100, 50}} };
+    int cid = checker.add_const(-2.0);
     std::cout << "cid " << cid << std::endl;
 
-    int sumid = checker.add_sum(0, cid);
+    int sumid = checker.add_pow2(0);
     std::cout << "sumid " << sumid << std::endl;
-    checker.add_eq(1, sumid);
+    checker.add_eq(sumid, 1);
 
     checker.copy_from_workspace(box);
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
-    std::cout << "update " << checker.update() << std::endl;
+    auto st = checker.update();
+    std::cout << "update " << st << std::endl;
+    st = checker.update();
+    std::cout << "update " << st << std::endl;
+    st = checker.update();
+    std::cout << "update " << st << std::endl;
+    st = checker.update();
+    std::cout << "update " << st << std::endl;
     checker.copy_to_workspace(box);
 
     std::cout << std::endl << "----" << std::endl;

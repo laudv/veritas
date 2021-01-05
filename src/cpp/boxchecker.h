@@ -22,21 +22,39 @@ namespace box_checker {
 
     struct Sum {
         int left, right;
-        UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom) const;
+        static UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom);
     };
 
     struct Prod {
         int left, right;
-        UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom) const;
+        static UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom);
+    };
+
+    struct Div {
+        int left, right; // left / right = self <=> left = self * right
+        // uses Prod::update(left, self, right)
+    };
+
+    struct Pow2 {
+        int arg;
+        static UpdateResult update(DomainT& self, DomainT& arg_dom);
+    };
+
+    struct Sqrt {
+        int arg;
+        // uses Pow2::update(arg, self)
     };
 
     struct AnyExpr {
         DomainT dom;
-        enum { VAR, SUM, PROD } tag;
+        enum { VAR, SUM, PROD, DIV, POW2, SQRT } tag;
         union {
             Var var;
             Sum sum;
             Prod prod;
+            Div div;
+            Pow2 pow2;
+            Sqrt sqrt;
         };
     };
 
@@ -70,6 +88,9 @@ namespace box_checker {
         int add_const(FloatT value);
         int add_sum(int left, int right);
         int add_prod(int left, int right);
+        int add_div(int left, int right);
+        int add_pow2(int arg);
+        int add_sqrt(int arg);
 
         void add_eq(int left, int right);
         void add_lteq(int left, int right);

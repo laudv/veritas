@@ -6,42 +6,39 @@
 
 #include "boxchecker.h"
 #include <cmath>
-#include <iomanip>
 
 namespace veritas {
 
 #define RETURN_IF_INVALID(res) if ((res) == box_checker::INVALID) { return box_checker::INVALID; }
-#define CHECK_DOM_BOUNDARY(v) if (std::isnan(v)) { return box_checker::INVALID; }
+#define INVALID_IF_NAN(v) if (std::isnan(v)) { return box_checker::INVALID; }
 
 namespace box_checker {
 
-    static FloatT nextf(FloatT f)
-    { return std::nextafter(f, std::numeric_limits<FloatT>::infinity()); }
-
-    static FloatT prevf(FloatT f)
-    { return std::nextafter(f, -std::numeric_limits<FloatT>::infinity()); }
-
-
     UpdateResult
-    Sum::update(DomainT& self, DomainT& ldom, DomainT& rdom) const
+    Sum::update(DomainT& self, DomainT& ldom, DomainT& rdom)
     {
-        std::cout << "SUM1 " << self << " = " << ldom << " + " << rdom << ";" << std::endl;
-        DomainT new_self = DomainT(
-                std::max(self.lo, prevf(ldom.lo+rdom.lo)),
-                std::min(self.hi, prevf(ldom.hi+rdom.hi)));
-        DomainT new_ldom = DomainT(
-                std::max(ldom.lo, self.lo-rdom.lo),
-                std::min(ldom.hi, self.hi-rdom.hi));
-        DomainT new_rdom = DomainT(
-                std::max(rdom.lo, self.lo-ldom.lo),
-                std::min(rdom.hi, self.hi-ldom.hi));
+        // self = ldom + rdom
+        DomainT new_self, new_ldom, new_rdom;
+        try
+        {
+            new_self = {std::max(self.lo, ldom.lo+rdom.lo),
+                        std::min(self.hi, ldom.hi+rdom.hi)};
+            new_ldom = {std::max(ldom.lo, self.lo-rdom.hi),
+                        std::min(ldom.hi, self.hi-rdom.lo)};
+            new_rdom = {std::max(rdom.lo, self.lo-ldom.hi),
+                        std::min(rdom.hi, self.hi-ldom.lo)};
+        }
+        catch (const std::exception& e) { return INVALID; }
+
         UpdateResult res = static_cast<UpdateResult>(
                 !(self == new_self
                 && ldom == new_ldom
                 && rdom == new_rdom));
 
-        std::cout << "SUM2 " << new_self << " = " << new_ldom << " + " << new_rdom << ";" << std::endl;
-        std::cout << std::setprecision(20) << new_rdom.lo << ", " << new_rdom.hi << std::endl;
+        std::cout << "SUM "
+            << "self: " << self << " -> " << new_self
+            << ", l: " << ldom << " -> " << new_ldom
+            << ", r: " << rdom << " -> " << new_rdom << std::endl;
 
         self = new_self;
         ldom = new_ldom;
@@ -51,10 +48,126 @@ namespace box_checker {
     }
 
     UpdateResult
-    Prod::update(DomainT& self, DomainT& ldom, DomainT& rdom) const
+    Prod::update(DomainT& self, DomainT& ldom, DomainT& rdom)
     {
-        std::runtime_error("unimplemented");
-        return INVALID;
+        // self = ldom * rdom
+        // update self -> result variable
+        FloatT m, M, x, contains_zero;
+        m = ldom.lo * rdom.lo;
+        M = m;
+        x = ldom.lo * rdom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+        x = ldom.hi * rdom.lo;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+        x = ldom.hi * rdom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+
+        DomainT new_self;
+        try {
+            new_self = {std::fmax(self.lo, m), std::fmin(self.hi, M)};
+        }
+        catch (const std::exception&) { return INVALID; }
+
+        // update ldom -> +/- inf if denominator 0 = OK
+        m = self.lo / rdom.lo;
+        M = m;
+        x = self.lo / rdom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+        x = self.hi / rdom.lo;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+        x = self.hi / rdom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+
+        contains_zero = (rdom.lo < 0.0 && rdom.hi > 0.0); // (!) if 0.0 in rdom, div can grow to +/- inf!
+        m = std::fmin(m, -contains_zero / 0.0); // NaN if not contains 0.0 -> chooses m, else -inf
+        M = std::fmax(M, contains_zero / 0.0); // NaN if not contains 0.0 -> chooses M, else +inf
+
+        DomainT new_ldom;
+        try {
+            new_ldom = {std::fmax(ldom.lo, m), std::fmin(ldom.hi, M)};
+        }
+        catch (const std::exception& e) { return INVALID; }
+
+        // update rdom -> +/- inf if denominator 0 = OK
+        m = self.lo / ldom.lo;
+        M = m;
+        x = self.lo / ldom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+        x = self.hi / ldom.lo;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+        x = self.hi / ldom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+
+        contains_zero = (ldom.lo < 0.0 && ldom.hi > 0.0);
+        m = std::fmin(m, -contains_zero / 0.0); // NaN if not contains 0.0 -> chooses m, else -inf
+        M = std::fmax(M, contains_zero / 0.0); // NaN if not contains 0.0 -> chooses M, else +inf
+
+        DomainT new_rdom;
+        try {
+            new_rdom = {std::fmax(rdom.lo, m), std::fmin(rdom.hi, M)};
+        }
+        catch (const std::exception& e) { return INVALID; }
+
+        UpdateResult res = static_cast<UpdateResult>(
+                !(self == new_self
+                && ldom == new_ldom
+                && rdom == new_rdom));
+
+        std::cout << "PROD "
+            << "self: " << self << " -> " << new_self
+            << ", l: " << ldom << " -> " << new_ldom
+            << ", r: " << rdom << " -> " << new_rdom
+            << std::endl;
+
+        self = new_self;
+        ldom = new_ldom;
+        rdom = new_rdom;
+
+        return res;
+    }
+
+    UpdateResult
+    Pow2::update(DomainT& self, DomainT& adom)
+    {
+        // self = adom * adom
+        FloatT m, M, x, contains_zero;
+        m = adom.lo * adom.lo;
+        M = m;
+        x = adom.hi * adom.hi;
+        m = std::fmin(m, x); M = std::fmax(M, x);
+
+        contains_zero = (adom.lo<0.0) && (adom.hi>0.0);
+        m = std::fmin(0.0 / contains_zero, m); // 0.0/0.0 is nan -> m stays unchanged, else 0/1==0
+
+        DomainT new_self;
+        try {
+            new_self = {std::fmax(self.lo, m), std::fmin(self.hi, M)};
+        }
+        catch (const std::exception& e) { std::cout << "woops" << e.what() <<  std::endl;return INVALID; }
+
+        // update adom: adom = sqrt(self)
+        M = std::sqrt(self.hi);
+        DomainT new_adom;
+        try {
+            new_adom = {std::fmax(adom.lo, -M), std::fmin(adom.hi, M)};
+        }
+        catch (const std::exception& e) { std::cout << "woops" << e.what() <<  std::endl;return INVALID; }
+
+        UpdateResult res = static_cast<UpdateResult>(
+                !(self == new_self
+                && adom == new_adom));
+                //&& rdom == new_rdom));
+
+        std::cout << "POW2 "
+            << "self: " << self << " -> " << new_self
+            << ", adom: " << adom << " -> " << new_adom
+            << std::endl;
+
+        self = new_self;
+        adom = new_adom;
+
+
+        return res;
     }
 
     UpdateResult
@@ -63,8 +176,10 @@ namespace box_checker {
         // L == R -> share the same domain
         FloatT new_lo = std::max(ldom.lo, rdom.lo);
         FloatT new_hi = std::min(ldom.hi, rdom.hi);
-        CHECK_DOM_BOUNDARY(new_lo);
-        CHECK_DOM_BOUNDARY(new_hi);
+
+        if (new_lo > new_hi)
+            return box_checker::INVALID;
+
         UpdateResult res = static_cast<UpdateResult>(
                (ldom.lo != new_lo || ldom.hi != new_hi)
             || (rdom.lo != new_lo || rdom.hi != new_hi));
@@ -72,6 +187,7 @@ namespace box_checker {
         rdom.lo = new_lo;
         ldom.hi = new_hi;
         rdom.hi = new_hi;
+
         return res;
     }
 
@@ -81,8 +197,6 @@ namespace box_checker {
         // LEFT <= RIGHT
         FloatT new_lo = std::max(ldom.lo, rdom.lo);
         FloatT new_hi = std::min(ldom.hi, rdom.hi);
-        CHECK_DOM_BOUNDARY(new_lo);
-        CHECK_DOM_BOUNDARY(new_hi);
         UpdateResult res = static_cast<UpdateResult>(
                (ldom.lo != new_lo || ldom.hi != new_hi)
             || (rdom.lo != new_lo || rdom.hi != new_hi));
@@ -104,9 +218,7 @@ namespace box_checker {
     BoxChecker::add_const(FloatT value)
     {
         box_checker::AnyExpr e;
-        //FloatT s = 0.00001*((0.0<value) - (value<0.0)) + 0.00001*(value==0.0);
-        e.dom = DomainT(value, std::nextafter(value,
-                    std::numeric_limits<FloatT>::infinity()));
+        e.dom = DomainT(value, value);
         e.tag = box_checker::AnyExpr::VAR;
         e.var = {};
         exprs_.push_back(e);
@@ -133,6 +245,37 @@ namespace box_checker {
         return exprs_.size() - 1;
     }
 
+    int
+    BoxChecker::add_div(int left, int right)
+    {
+        box_checker::AnyExpr e;
+        e.tag = box_checker::AnyExpr::DIV;
+        e.div = {left, right};
+        exprs_.push_back(e);
+        return exprs_.size() - 1;
+    }
+
+    int
+    BoxChecker::add_pow2(int arg)
+    {
+        box_checker::AnyExpr e;
+        e.tag = box_checker::AnyExpr::POW2;
+        e.pow2 = {arg};
+        exprs_.push_back(e);
+        return exprs_.size() - 1;
+    }
+
+    int
+    BoxChecker::add_sqrt(int arg)
+    {
+        box_checker::AnyExpr e;
+        e.tag = box_checker::AnyExpr::SQRT;
+        e.pow2 = {arg};
+        exprs_.push_back(e);
+        return exprs_.size() - 1;
+    }
+
+
     void
     BoxChecker::add_eq(int left, int right)
     {
@@ -140,6 +283,7 @@ namespace box_checker {
         c.left = left;
         c.right = right;
         c.comp.eq = {};
+        c.tag = box_checker::AnyComp::EQ;
         comps_.push_back(c);
     }
 
@@ -150,8 +294,8 @@ namespace box_checker {
         c.left = left;
         c.right = right;
         c.comp.lteq = {};
+        c.tag = box_checker::AnyComp::LTEQ;
         comps_.push_back(c);
-        return;
     }
 
 
@@ -270,7 +414,7 @@ namespace box_checker {
         case box_checker::AnyExpr::SUM: {
             box_checker::AnyExpr& left = exprs_[e.sum.left];
             box_checker::AnyExpr& right = exprs_[e.sum.right];
-            auto sum_res = e.sum.update(e.dom, left.dom, right.dom);
+            auto sum_res = box_checker::Sum::update(e.dom, left.dom, right.dom);
             RETURN_IF_INVALID(sum_res);
             auto left_res = update_expr(left);
             auto right_res = update_expr(right);
@@ -280,11 +424,40 @@ namespace box_checker {
         case box_checker::AnyExpr::PROD: {
             box_checker::AnyExpr& left = exprs_[e.prod.left];
             box_checker::AnyExpr& right = exprs_[e.prod.right];
-            auto prod_res = e.prod.update(e.dom, left.dom, right.dom);
+            auto prod_res = box_checker::Prod::update(e.dom, left.dom, right.dom);
             RETURN_IF_INVALID(prod_res);
             auto left_res = update_expr(left);
             auto right_res = update_expr(right);
             res = aggregate_update_result({prod_res, left_res, right_res});
+            break;
+        }
+        case box_checker::AnyExpr::DIV: {
+            box_checker::AnyExpr& left = exprs_[e.div.left];
+            box_checker::AnyExpr& right = exprs_[e.div.right];
+            // c = l/r <=> l = c*r --> reuse Prod::update
+            auto div_res = box_checker::Prod::update(left.dom, e.dom, right.dom);
+            RETURN_IF_INVALID(div_res);
+            auto left_res = update_expr(left);
+            auto right_res = update_expr(right);
+            res = aggregate_update_result({div_res, left_res, right_res});
+            break;
+        }
+        case box_checker::AnyExpr::POW2: {
+            box_checker::AnyExpr& arg = exprs_[e.pow2.arg];
+            // c = l/r <=> l = c*r --> reuse Prod::update
+            auto pow2_res = box_checker::Pow2::update(e.dom, arg.dom);
+            RETURN_IF_INVALID(pow2_res);
+            auto arg_res = update_expr(arg);
+            res = aggregate_update_result({pow2_res, arg_res});
+            break;
+        }
+        case box_checker::AnyExpr::SQRT: {
+            box_checker::AnyExpr& arg = exprs_[e.sqrt.arg];
+            // c = l/r <=> l = c*r --> reuse Prod::update
+            auto sqrt_res = box_checker::Pow2::update(arg.dom, e.dom);
+            RETURN_IF_INVALID(sqrt_res);
+            auto arg_res = update_expr(arg);
+            res = aggregate_update_result({sqrt_res, arg_res});
             break;
         }};
 
