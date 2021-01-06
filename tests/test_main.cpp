@@ -222,14 +222,16 @@ void test_parallel(const char *model)
 
 void test_box_checker()
 {
-    BoxChecker checker{2};
-    std::vector<DomainPair> box{ {0, {2, INFINITY}}, {1, {-100, 50}} };
-    int cid = checker.add_const(-2.0);
-    std::cout << "cid " << cid << std::endl;
+    BoxChecker checker{3};
+    std::vector<DomainPair> box{ {0, {2, INFINITY}}, {1, {-5.0, 5.0}}, {2, {-100, 50}} };
 
-    int sumid = checker.add_pow2(0);
+    int sumid = checker.add_sum(0, 1);
     std::cout << "sumid " << sumid << std::endl;
-    checker.add_eq(sumid, 1);
+    int pow2id = checker.add_pow2(sumid);
+    int sqrtid = checker.add_sqrt(pow2id);
+    int constid = checker.add_const(10.0);
+    int subid = checker.add_sub(sqrtid, constid);
+    checker.add_eq(subid, 2);
 
     checker.copy_from_workspace(box);
     auto st = checker.update();
@@ -247,6 +249,12 @@ void test_box_checker()
     {
         std::cout << "box: " << p.first << ", " << p.second << std::endl;
     }
+
+    std::cout << "expr dom sum: " << checker.get_expr_dom(sumid) << std::endl;
+    std::cout << "expr dom pow2: " << checker.get_expr_dom(pow2id) << std::endl;
+    std::cout << "expr dom sqrt: " << checker.get_expr_dom(sqrtid) << std::endl;
+    std::cout << "expr dom const: " << checker.get_expr_dom(constid) << std::endl;
+    std::cout << "expr dom sub: " << checker.get_expr_dom(subid) << std::endl;
 }
 
 int main()

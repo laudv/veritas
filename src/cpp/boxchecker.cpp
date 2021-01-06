@@ -143,7 +143,7 @@ namespace box_checker {
         try {
             new_self = {std::fmax(self.lo, m), std::fmin(self.hi, M)};
         }
-        catch (const std::exception& e) { std::cout << "woops" << e.what() <<  std::endl;return INVALID; }
+        catch (const std::exception& e) { return INVALID; }
 
         // update adom: adom = sqrt(self)
         M = std::sqrt(self.hi);
@@ -151,12 +151,11 @@ namespace box_checker {
         try {
             new_adom = {std::fmax(adom.lo, -M), std::fmin(adom.hi, M)};
         }
-        catch (const std::exception& e) { std::cout << "woops" << e.what() <<  std::endl;return INVALID; }
+        catch (const std::exception& e) { return INVALID; }
 
         UpdateResult res = static_cast<UpdateResult>(
                 !(self == new_self
                 && adom == new_adom));
-                //&& rdom == new_rdom));
 
         std::cout << "POW2 "
             << "self: " << self << " -> " << new_self
@@ -171,11 +170,56 @@ namespace box_checker {
     }
 
     UpdateResult
+    Sqrt::update(DomainT& self, DomainT& adom)
+    {
+        // self = sqrt(adom) => both self and adom > 0
+
+        // limit both doms to positive
+        DomainT new_self, new_adom;
+        try {
+            new_self = { std::fmax(self.lo, 0.0f), self.hi };
+            new_adom = { std::fmax(adom.lo, 0.0f), adom.hi };
+        }
+        catch (const std::exception& e) { return INVALID; }
+
+        try {
+            // self in [sqrt(adom.lo), sqrt(adom.hi)] (sqrt monotonic)
+            new_self = {
+                std::fmax(new_self.lo, std::sqrt(new_adom.lo)),
+                std::fmin(new_self.hi, std::sqrt(new_adom.hi))
+            };
+
+            new_adom = {
+                std::fmax(new_adom.lo, new_self.lo*new_self.lo),
+                std::fmin(new_adom.hi, new_self.hi*new_self.hi)
+            };
+
+        }
+        catch (const std::exception& e) { return INVALID; }
+
+        UpdateResult res = static_cast<UpdateResult>(
+                !(self == new_self
+                && adom == new_adom));
+
+        std::cout << "SQRT "
+            << "self: " << self << " -> " << new_self
+            << ", adom: " << adom << " -> " << new_adom
+            << std::endl;
+
+        self = new_self;
+        adom = new_adom;
+
+        return res;
+    }
+
+    UpdateResult
     Eq::update(DomainT& ldom, DomainT& rdom) const
     {
         // L == R -> share the same domain
         FloatT new_lo = std::max(ldom.lo, rdom.lo);
         FloatT new_hi = std::min(ldom.hi, rdom.hi);
+
+        std::cout << "EQ ldom " << ldom << ", rdom " << rdom << std::endl;
 
         if (new_lo > new_hi)
             return box_checker::INVALID;
@@ -231,6 +275,16 @@ namespace box_checker {
         box_checker::AnyExpr e;
         e.tag = box_checker::AnyExpr::SUM;
         e.sum = {left, right};
+        exprs_.push_back(e);
+        return exprs_.size() - 1;
+    }
+
+    int
+    BoxChecker::add_sub(int left, int right)
+    {
+        box_checker::AnyExpr e;
+        e.tag = box_checker::AnyExpr::SUB;
+        e.sub = {left, right};
         exprs_.push_back(e);
         return exprs_.size() - 1;
     }
@@ -296,6 +350,13 @@ namespace box_checker {
         c.comp.lteq = {};
         c.tag = box_checker::AnyComp::LTEQ;
         comps_.push_back(c);
+    }
+
+
+    DomainT
+    BoxChecker::get_expr_dom(int id) const
+    {
+        return exprs_.at(id).dom;
     }
 
 
@@ -385,7 +446,6 @@ namespace box_checker {
         switch (c.tag)
         {
         case box_checker::AnyComp::EQ:
-            std::cout << "EQ" << std::endl;
             comp_res = c.comp.eq.update(left.dom, right.dom);
             break;
         case box_checker::AnyComp::LTEQ:
@@ -421,6 +481,16 @@ namespace box_checker {
             res = aggregate_update_result({sum_res, left_res, right_res});
             break;
         }
+        case box_checker::AnyExpr::SUB: { // c = a-b <=> a = c+b
+            box_checker::AnyExpr& left = exprs_[e.sub.left];
+            box_checker::AnyExpr& right = exprs_[e.sub.right];
+            auto sum_res = box_checker::Sum::update(left.dom, e.dom, right.dom);
+            RETURN_IF_INVALID(sum_res);
+            auto left_res = update_expr(left);
+            auto right_res = update_expr(right);
+            res = aggregate_update_result({sum_res, left_res, right_res});
+            break;
+        }
         case box_checker::AnyExpr::PROD: {
             box_checker::AnyExpr& left = exprs_[e.prod.left];
             box_checker::AnyExpr& right = exprs_[e.prod.right];
@@ -444,7 +514,6 @@ namespace box_checker {
         }
         case box_checker::AnyExpr::POW2: {
             box_checker::AnyExpr& arg = exprs_[e.pow2.arg];
-            // c = l/r <=> l = c*r --> reuse Prod::update
             auto pow2_res = box_checker::Pow2::update(e.dom, arg.dom);
             RETURN_IF_INVALID(pow2_res);
             auto arg_res = update_expr(arg);
@@ -453,8 +522,7 @@ namespace box_checker {
         }
         case box_checker::AnyExpr::SQRT: {
             box_checker::AnyExpr& arg = exprs_[e.sqrt.arg];
-            // c = l/r <=> l = c*r --> reuse Prod::update
-            auto sqrt_res = box_checker::Pow2::update(arg.dom, e.dom);
+            auto sqrt_res = box_checker::Sqrt::update(e.dom, arg.dom);
             RETURN_IF_INVALID(sqrt_res);
             auto arg_res = update_expr(arg);
             res = aggregate_update_result({sqrt_res, arg_res});

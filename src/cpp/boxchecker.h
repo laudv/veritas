@@ -25,6 +25,11 @@ namespace box_checker {
         static UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom);
     };
 
+    struct Sub {
+        int left, right;
+        // uses Sum::update(left, self, right)
+    };
+
     struct Prod {
         int left, right;
         static UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom);
@@ -42,15 +47,20 @@ namespace box_checker {
 
     struct Sqrt {
         int arg;
-        // uses Pow2::update(arg, self)
+
+        // does not reuse Pow2::update because of negative
+        // (!) a = b² <=> b = +/-sqrt(a)
+        // a = sqrt(b) <=> b = a² -> both a and b positive
+        static UpdateResult update(DomainT& self, DomainT& arg_dom);
     };
 
     struct AnyExpr {
         DomainT dom;
-        enum { VAR, SUM, PROD, DIV, POW2, SQRT } tag;
+        enum { VAR, SUM, SUB, PROD, DIV, POW2, SQRT } tag;
         union {
             Var var;
             Sum sum;
+            Sub sub;
             Prod prod;
             Div div;
             Pow2 pow2;
@@ -87,6 +97,7 @@ namespace box_checker {
 
         int add_const(FloatT value);
         int add_sum(int left, int right);
+        int add_sub(int left, int right);
         int add_prod(int left, int right);
         int add_div(int left, int right);
         int add_pow2(int arg);
@@ -94,6 +105,8 @@ namespace box_checker {
 
         void add_eq(int left, int right);
         void add_lteq(int left, int right);
+
+        DomainT get_expr_dom(int expr_id) const;
 
         /** Copy the domains for the Vars from the workspace */
         void copy_from_workspace(const std::vector<DomainPair>& workspace);
