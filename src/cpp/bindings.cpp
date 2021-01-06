@@ -18,6 +18,7 @@
 #include "domain.h"
 #include "tree.h"
 #include "graph.h"
+#include "boxchecker.h"
 
 #ifdef VERITAS_FEATURE_SMT
     #include <z3++.h>
@@ -46,6 +47,11 @@ PYBIND11_MODULE(pyveritas, m) {
     py::class_<RealDomain>(m, "RealDomain")
         .def(py::init<>())
         .def(py::init<FloatT, FloatT>())
+        .def_static("from_lo", &RealDomain::from_lo)
+        .def_static("from_hi_exclusive", &RealDomain::from_hi_exclusive)
+        .def_static("from_hi_exclusive", &RealDomain::from_hi_inclusive)
+        .def_static("exclusive", &RealDomain::exclusive)
+        .def_static("inclusive", &RealDomain::inclusive)
         .def_readwrite("lo", &RealDomain::lo)
         .def_readwrite("hi", &RealDomain::hi)
         .def("lo_is_inf", &RealDomain::lo_is_inf)
@@ -289,16 +295,20 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("set_eps", [](KPartiteGraphOptimize& o, FloatT eps) { o.set_eps(eps); })
         //.def("__str__", [](const KPartiteGraphOptimize& o) { return tostr(o); })
         .def("steps", [](KPartiteGraphOptimize& opt, int nsteps, py::kwargs kwargs) {
-            EasyBoxAdjuster eadj;
-            if (kwargs.contains("adjuster"))
-                eadj = kwargs["adjuster"].cast<EasyBoxAdjuster>();
+            BoxChecker checker{0};
+            GenericBoxCheckerT bc;
+            if (kwargs.contains("box_checker"))
+            {
+                checker = kwargs["box_checker"].cast<BoxChecker>();
+                bc = [&](DomainStore& s) { return checker.update(s); };
+            }
 
             if (kwargs.contains("min_output_difference"))
             {
                 FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
                 //if (opt.solver)
                 //    return opt.opt->steps(nsteps, f, min_output_difference);
-                return opt.steps(nsteps, eadj, min_output_difference);
+                return opt.steps(nsteps, bc, min_output_difference);
             }
             else
             {
@@ -310,7 +320,7 @@ PYBIND11_MODULE(pyveritas, m) {
                     min_output1 = kwargs["min_output"].cast<FloatT>();
                 //if (opt.solver)
                 //    return opt.opt->steps(nsteps, f, max_output0, min_output1);
-                return opt.steps(nsteps, eadj, max_output0, min_output1);
+                return opt.steps(nsteps, bc, max_output0, min_output1);
             }
         })
         .def("parallel", [](const KPartiteGraphOptimize& opt, size_t num_threads) {
@@ -318,38 +328,63 @@ PYBIND11_MODULE(pyveritas, m) {
         })
         ;
 
-    py::class_<KPartiteGraphParOpt>(m, "KPartiteGraphParOpt")
-        .def("num_threads", &KPartiteGraphParOpt::num_threads)
-        .def("num_solutions", &KPartiteGraphParOpt::num_solutions)
-        .def("num_new_valid_solutions", [](const KPartiteGraphParOpt& o) { return o.num_new_valid_solutions(); })
-        .def("num_candidate_cliques", &KPartiteGraphParOpt::num_candidate_cliques)
-        .def("current_bounds", &KPartiteGraphParOpt::current_bounds)
-        .def("current_memory", &KPartiteGraphParOpt::current_memory)
-        .def("get_eps", &KPartiteGraphParOpt::get_eps)
-        .def("set_eps", &KPartiteGraphParOpt::set_eps)
-        .def("join_all", &KPartiteGraphParOpt::join_all)
-        .def("worker_opt", &KPartiteGraphParOpt::worker_opt)
-        .def("set_box_adjuster", [](KPartiteGraphParOpt& paropt, EasyBoxAdjuster adj) {
-            paropt.set_box_adjuster([adj]() { return adj; }); // copy
-        })
-        .def("steps_for", [](KPartiteGraphParOpt& opt, size_t num_millisecs, py::kwargs kwargs) {
-            if (kwargs.contains("min_output_difference"))
-            {
-                FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
-                opt.set_output_limits(min_output_difference);
-            }
-            else if (kwargs.contains("max_output"))
-            {
-                FloatT max_output0 = std::numeric_limits<FloatT>::infinity();
-                FloatT min_output1 = -std::numeric_limits<FloatT>::infinity();
-                if (kwargs.contains("max_output"))
-                    max_output0 = kwargs["max_output"].cast<FloatT>();
-                if (kwargs.contains("min_output"))
-                    min_output1 = kwargs["min_output"].cast<FloatT>();
-                opt.set_output_limits(max_output0, min_output1);
-            }
-            opt.steps_for(num_millisecs);
-        });
+    //py::class_<KPartiteGraphParOpt>(m, "KPartiteGraphParOpt")
+    //    .def("num_threads", &KPartiteGraphParOpt::num_threads)
+    //    .def("num_solutions", &KPartiteGraphParOpt::num_solutions)
+    //    .def("num_new_valid_solutions", [](const KPartiteGraphParOpt& o) { return o.num_new_valid_solutions(); })
+    //    .def("num_candidate_cliques", &KPartiteGraphParOpt::num_candidate_cliques)
+    //    .def("current_bounds", &KPartiteGraphParOpt::current_bounds)
+    //    .def("current_memory", &KPartiteGraphParOpt::current_memory)
+    //    .def("get_eps", &KPartiteGraphParOpt::get_eps)
+    //    .def("set_eps", &KPartiteGraphParOpt::set_eps)
+    //    .def("join_all", &KPartiteGraphParOpt::join_all)
+    //    .def("worker_opt", &KPartiteGraphParOpt::worker_opt)
+    //    .def("set_box_adjuster", [](KPartiteGraphParOpt& paropt, EasyBoxAdjuster adj) {
+    //        paropt.set_box_adjuster([adj]() { return adj; }); // copy
+    //    })
+    //    .def("steps_for", [](KPartiteGraphParOpt& opt, size_t num_millisecs, py::kwargs kwargs) {
+    //        if (kwargs.contains("min_output_difference"))
+    //        {
+    //            FloatT min_output_difference = kwargs["min_output_difference"].cast<FloatT>();
+    //            opt.set_output_limits(min_output_difference);
+    //        }
+    //        else if (kwargs.contains("max_output"))
+    //        {
+    //            FloatT max_output0 = std::numeric_limits<FloatT>::infinity();
+    //            FloatT min_output1 = -std::numeric_limits<FloatT>::infinity();
+    //            if (kwargs.contains("max_output"))
+    //                max_output0 = kwargs["max_output"].cast<FloatT>();
+    //            if (kwargs.contains("min_output"))
+    //                min_output1 = kwargs["min_output"].cast<FloatT>();
+    //            opt.set_output_limits(max_output0, min_output1);
+    //        }
+    //        opt.steps_for(num_millisecs);
+    //    });
+
+    py::enum_<box_checker::UpdateResult>(m, "BoxCheckerUpdateResult")
+        .value("UNCHANGED", box_checker::UNCHANGED)
+        .value("UPDATED", box_checker::UPDATED)
+        .value("INVALID", box_checker::INVALID)
+        .export_values();
+
+    py::class_<BoxChecker>(m, "BoxChecker")
+        .def(py::init<int, int>())
+        .def("add_const", &BoxChecker::add_const)
+        .def("add_sum", &BoxChecker::add_sum)
+        .def("add_sub", &BoxChecker::add_sub)
+        .def("add_prod", &BoxChecker::add_prod)
+        .def("add_div", &BoxChecker::add_div)
+        .def("add_pow2", &BoxChecker::add_pow2)
+        .def("add_sqrt", &BoxChecker::add_sqrt)
+        .def("add_eq", &BoxChecker::add_eq)
+        .def("add_lteq", &BoxChecker::add_lteq)
+        .def("add_at_most_k", &BoxChecker::add_at_most_k)
+        .def("add_at_least_k", &BoxChecker::add_at_least_k)
+        .def("add_k_out_of_n", &BoxChecker::add_k_out_of_n)
+        .def("get_expr_dom", &BoxChecker::get_expr_dom)
+        .def("copy_from_workspace", &BoxChecker::copy_from_workspace)
+        .def("update", [](BoxChecker& bc) { return bc.update(); })
+        ;
 
 #ifdef VERITAS_FEATURE_SMT
     py::class_<SMTSolver>(m, "SMTSolver")
@@ -359,15 +394,5 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("xvar_name", &SMTSolver::xvar_name)
         ;
 #endif
-
-    py::class_<EasyBoxAdjuster>(m, "EasyBoxAdjuster")
-        .def(py::init<>())
-        .def("add_one_out_of_k", &EasyBoxAdjuster::add_one_out_of_k)
-        .def("add_at_most_k", &EasyBoxAdjuster::add_at_most_k)
-        .def("add_less_than", &EasyBoxAdjuster::add_less_than)
-        .def("add_sum", &EasyBoxAdjuster::add_sum)
-        .def("add_norm", &EasyBoxAdjuster::add_norm)
-        ;
-
 
 } /* PYBIND11_MODULE */

@@ -651,7 +651,7 @@ namespace veritas {
     }
 
     void
-    KPartiteGraph::prune(BoxFilter filter)
+    KPartiteGraph::prune(GenericBoxFilter filter)
     {
         auto f = [filter](const Vertex& v) { return !filter(v.box); }; // keep if true, remove if false
 
@@ -1260,9 +1260,9 @@ namespace veritas {
         return false; // out of compatible vertices in `indep_set`
     }
 
-    template <size_t instance, typename BA, typename OF>
+    template <size_t instance, typename BC, typename OF>
     void
-    KPartiteGraphOptimize::step_instance(Clique&& c, BA box_adjuster, OF output_filter) // DYN_PROG heuristic
+    KPartiteGraphOptimize::step_instance(Clique&& c, BC box_checker, OF output_filter) // DYN_PROG heuristic
     {
         // invariant: Clique `c` can be extended
         //
@@ -1322,7 +1322,7 @@ namespace veritas {
 
         // == UPDATE NEW
         ++num_box_checks;
-        bool is_valid_box = box_adjuster(store_);
+        bool is_valid_box = box_checker(store_);
         bool is_solution0 = is_instance_solution<0>(new_c);
         bool is_solution1 = is_instance_solution<1>(new_c);
 
@@ -1377,16 +1377,16 @@ namespace veritas {
         std::get<instance>(num_steps)++;
     }
 
-    template <size_t instance, typename BA, typename OF>
+    template <size_t instance, typename BC, typename OF>
     void
-    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BA box_adjuster, OF output_filter) // RECOMPUTE heuristic
+    KPartiteGraphOptimize::expand_clique_instance(Clique&& c, BC box_checker, OF output_filter) // RECOMPUTE heuristic
     {
         // invariant: Clique `c` can be extended
         //
         // Things to do (cont. step_aux)
         // 3. find first next vertex with box that overlaps c.box
         // 4. construct combined box
-        // 5. run box_adjuster, if reject, continue to next vertex
+        // 5. run box_checker, if reject, continue to next vertex
         // 6. compute heuristic
         // 7. check output_filter, if reject, continue to next vertex
         // 8. push new clique to pq
@@ -1405,13 +1405,13 @@ namespace veritas {
 
             // do we accept this new box?
             ++num_box_checks;
-            if (!box_adjuster(store_))
+            if (!box_checker(store_))
             {
                 ++num_rejected;
                 continue;
             }
 
-            DomainBox box = store_.get_workspace_box(); // box_adjuster can modify begin_ and end_
+            DomainBox box = store_.get_workspace_box(); // box_checker can modify begin_ and end_
 
             // recompute heuristic for instance0
             FloatT heuristic0 = 0.0;
@@ -1482,9 +1482,9 @@ namespace veritas {
         std::get<instance>(num_steps)++;
     }
 
-    template <typename BA, typename OF>
+    template <typename BC, typename OF>
     bool
-    KPartiteGraphOptimize::step_aux(BA box_adjuster, OF output_filter)
+    KPartiteGraphOptimize::step_aux(BC box_checker, OF output_filter)
     {
         if (cliques_.empty())
             return false;
@@ -1561,17 +1561,17 @@ namespace veritas {
         {
             //std::cout << "step(): extend graph0" << std::endl;
             if (heuristic_ == DYN_PROG)
-                step_instance<0>(std::move(c), box_adjuster, output_filter);
+                step_instance<0>(std::move(c), box_checker, output_filter);
             else
-                expand_clique_instance<0>(std::move(c), box_adjuster, output_filter);
+                expand_clique_instance<0>(std::move(c), box_checker, output_filter);
         }
         else if (!is_solution1)
         {
             //std::cout << "step(): extend graph1" << std::endl;
             if (heuristic_ == DYN_PROG)
-                step_instance<1>(std::move(c), box_adjuster, output_filter);
+                step_instance<1>(std::move(c), box_checker, output_filter);
             else
-                expand_clique_instance<1>(std::move(c), box_adjuster, output_filter);
+                expand_clique_instance<1>(std::move(c), box_checker, output_filter);
         }
         else // there's a solution in `cliques_` -> shouldn't happen
         {
@@ -1591,28 +1591,28 @@ namespace veritas {
     }
 
     bool
-    KPartiteGraphOptimize::step(BoxAdjuster ba)
+    KPartiteGraphOptimize::step(GenericBoxChecker bc)
     {
         return step_aux(
-                ba,
+                bc,
                 [](FloatT, FloatT) { return true; }); // accept all outputs
     }
 
     bool
-    KPartiteGraphOptimize::step(BoxAdjuster ba, FloatT max_output0, FloatT min_output1)
+    KPartiteGraphOptimize::step(GenericBoxChecker bc, FloatT max_output0, FloatT min_output1)
     {
         return step_aux(
-                ba,
+                bc,
                 [max_output0, min_output1](FloatT output0, FloatT output1) {
                     return output0 <= max_output0 && output1 >= min_output1;
                 });
     }
 
     bool
-    KPartiteGraphOptimize::step(BoxAdjuster ba, FloatT min_output_difference)
+    KPartiteGraphOptimize::step(GenericBoxChecker bc, FloatT min_output_difference)
     {
         return step_aux(
-                ba,
+                bc,
                 [min_output_difference](FloatT output0, FloatT output1) {
                     return (output1 - output0) >= min_output_difference;
                 });
@@ -1627,26 +1627,26 @@ namespace veritas {
     }
 
     bool
-    KPartiteGraphOptimize::steps(int K, BoxAdjuster ba)
+    KPartiteGraphOptimize::steps(int K, GenericBoxChecker bc)
     {
         for (int i=0; i<K; ++i)
-            if (!step(ba)) return false;
+            if (!step(bc)) return false;
         return true;
     }
 
     bool
-    KPartiteGraphOptimize::steps(int K, BoxAdjuster ba, FloatT max_output0, FloatT min_output1)
+    KPartiteGraphOptimize::steps(int K, GenericBoxChecker bc, FloatT max_output0, FloatT min_output1)
     {
         for (int i=0; i<K; ++i)
-            if (!step(ba, max_output0, min_output1)) return false;
+            if (!step(bc, max_output0, min_output1)) return false;
         return true;
     }
 
     bool
-    KPartiteGraphOptimize::steps(int K, BoxAdjuster ba, FloatT min_output_difference)
+    KPartiteGraphOptimize::steps(int K, GenericBoxChecker bc, FloatT min_output_difference)
     {
         for (int i=0; i<K; ++i)
-            if (!step(ba, min_output_difference)) return false;
+            if (!step(bc, min_output_difference)) return false;
         return true;
     }
 
@@ -1686,7 +1686,7 @@ namespace veritas {
 
     // PARALLEL
     
-    static bool DEFAULT_BOX_ADJUSTER(DomainStore&) { return true; }
+    static bool DEFAULT_BOX_CHECKER(DomainStore&) { return true; }
 
     Worker::Worker()
         : index_(0)
@@ -1698,7 +1698,7 @@ namespace veritas {
         , mutex_{}
         , cv_{}
         , opt_{}
-        , box_adjuster_{DEFAULT_BOX_ADJUSTER}
+        , box_checker_{DEFAULT_BOX_CHECKER}
     {}
 
     SharedWorkerInfo::SharedWorkerInfo(FloatT eps)
@@ -1742,20 +1742,20 @@ namespace veritas {
                 if (!std::isnan(info->max_output0)) // assume min_output1 is also valid
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_adjuster_,
+                        if (!self->opt_->steps(100, self->box_checker_,
                                     info->max_output0, info->min_output1))
                             break;
                 }
                 else if (!std::isnan(info->min_output_difference))
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_adjuster_, info->min_output_difference))
+                        if (!self->opt_->steps(100, self->box_checker_, info->min_output_difference))
                             break;
                 }
                 else
                 {
                     while (clock::now() < stop)
-                        if (!self->opt_->steps(100, self->box_adjuster_))
+                        if (!self->opt_->steps(100, self->box_checker_))
                             break;
                 }
                 self->num_millisecs_ = 0;
@@ -2060,570 +2060,5 @@ namespace veritas {
         return mem;
     }
 
-
-
-    // ------------------------------------------------------------------------
-
-    void
-    adjuster_insert_into_workspace(std::vector<DomainPair>& workspace,
-            int id, RealDomain dom)
-    {
-        workspace.push_back({ id, dom });
-        for (int i = workspace.size() - 1; i > 0; --i) // ids sorted
-            if (workspace[i-1].first > workspace[i].first)
-                std::swap(workspace[i-1], workspace[i]);
-    }
-
-    bool
-    EasyBoxAdjuster::handle_one_out_of_k(const OneOutOfK& c,
-                std::vector<DomainPair>& workspace) const
-    {
-        // check if there's a TRUE feature, if so, we need to make all others FALSE
-        auto it1 = c.ids.begin();
-        int true_id = -1;
-        int unset_id = -1;
-        bool unset_in_box = false;
-        size_t num_false = 0;
-        //std::cout << "EasyBoxAdjuster: " << DomainBox(&*workspace.begin(), &*workspace.end()) << std::endl;
-        for (size_t i = 0; i < workspace.size() && it1 != c.ids.end();)
-        {
-            if (workspace[i].first == *it1)
-            {
-                if (!workspace[i].second.overlaps(FALSE_DOMAIN)) // not FALSE domain, assume TRUE domain
-                {                                                // -> set all other to false
-                    if (true_id != -1)
-                    {
-                        //std::cout << "EasyBoxAdjuster: more than one true, REJECT!" << std::endl;
-                        return false; // two TRUE features, and there can only be one
-                    }
-                    true_id = *it1;
-                }
-                else if (!workspace[i].second.overlaps(TRUE_DOMAIN)) // not TRUE, so must be FALSE
-                    ++num_false;
-                else { unset_id = *it1; unset_in_box = true; } // not not FALSE and not not TRUE, so must be anything
-                ++i; ++it1;
-            }
-            else if (workspace[i].first > *it1) { unset_id = *it1; ++it1; }
-            else ++i;
-        }
-
-        //std::cout << "EasyBoxAdjuster: num_false: " << num_false << std::endl;
-
-        int num_added = 0;
-
-        // CASE 0: everything is FALSE, that's invalid (strict only)
-        if (c.strict && num_false == c.ids.size())
-            return false;
-
-        // CASE 1: everything except one is set to FALSE -> write TRUE in the one (strict only)
-        if (c.strict && true_id == -1 && num_false + 1 == c.ids.size())
-        {
-            if (it1 == c.ids.end() - 1) unset_id = *(c.ids.end() - 1);
-            if (unset_id == -1) throw std::runtime_error("assertion error");
-
-            if (unset_in_box)
-            {
-                for (auto&& [id, dom] : workspace)
-                {
-                    if (id == unset_id)
-                    {
-                        dom = TRUE_DOMAIN;
-                        //std::cout << "EasyBoxAdjuster: " << id << " set to TRUE" << std::endl;
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                //std::cout << "EasyBoxAdjuster: " << unset_id << " set to TRUE (added)" << std::endl;
-                adjuster_insert_into_workspace(workspace, unset_id, TRUE_DOMAIN);
-            }
-        }
-
-        // CASE 2: we found one TRUE -> write FALSE in all others
-        if (true_id != -1)
-        {
-            it1 = c.ids.begin();
-            size_t end = workspace.size();
-            for (size_t i = 0; i < end && it1 != c.ids.end();)
-            {
-                if (workspace[i].first == *it1)
-                {
-                    if (workspace[i].first != true_id)
-                        workspace[i].second = FALSE_DOMAIN;
-                    ++i; ++it1;
-                }
-                else if (workspace[i].first > *it1) // we skipped over *it1, so it's not in the box -> add it
-                {
-                    workspace.push_back({*it1, FALSE_DOMAIN});
-                    //std::cout << "EasyBoxAdjuster: setting " << *it1 << " to FALSE" << std::endl;
-                    ++it1;
-                    ++num_added;
-                }
-                else ++i;
-            }
-        }
-
-        // make sure all newly added ids are in sorted order
-        if (num_added > 0)
-        {
-            std::sort(workspace.begin(), workspace.end(),
-                    [](const DomainPair& a, const DomainPair& b) {
-                        return a.first < b.first;
-                    });
-        }
-
-        return true;
-    }
-
-    bool
-    EasyBoxAdjuster::handle_at_most_k(const AtMostK& c,
-            std::vector<DomainPair>& workspace) const
-    {
-        auto it1 = c.ids.begin();
-        int true_count = 0;
-        for (size_t i = 0; i < workspace.size() && it1 != c.ids.end();)
-        {
-            if (workspace[i].first == *it1)
-            {
-                if (!workspace[i].second.overlaps(FALSE_DOMAIN)) // not FALSE, so must be TRUE
-                    ++true_count;
-                ++i; ++it1;
-            }
-            else if (workspace[i].first > *it1) { ++it1; }
-            else ++i;
-        }
-        if (true_count > c.k)
-            return false;
-        if (true_count < c.k)
-            return true;
-
-        // false propagation: we have k TRUEs, set others to FALSE
-        it1 = c.ids.begin();
-        size_t end = workspace.size();
-        int num_added = 0;
-        int num_false_prop = 0;
-        for (size_t i = 0; i < end && it1 != c.ids.end();)
-        {
-            if (workspace[i].first == *it1)
-            {
-                if (workspace[i].second.overlaps(TRUE_DOMAIN)
-                        && workspace[i].second.overlaps(FALSE_DOMAIN)) // write FALSE in it
-                {
-                    workspace[i].second = FALSE_DOMAIN;
-                    ++num_false_prop;
-                }
-                ++i; ++it1;
-            }
-            else if (workspace[i].first > *it1) // we skipped over *it1, so it's not in the box -> add it
-            {
-                workspace.push_back({*it1, FALSE_DOMAIN});
-                ++it1;
-                ++num_added;
-            }
-            else ++i;
-        }
-        // make sure all newly added ids are in sorted order
-        if (num_added > 0)
-        {
-            std::sort(workspace.begin(), workspace.end(),
-                    [](const DomainPair& a, const DomainPair& b) {
-                        return a.first < b.first;
-                    });
-        }
-
-        //std::cout << "atmostk: false prop, " << num_false_prop << " set to false, "
-        //    << num_added << " FALSES added" << std::endl;
-
-        return true;
-    }
-
-    bool 
-    EasyBoxAdjuster::handle_less_than(const LessThan& c,
-            std::vector<DomainPair>& workspace) const
-    {
-        DomainT *p0 = nullptr;
-        DomainT *p1 = nullptr;
-
-        for (size_t i = 0; i < workspace.size(); ++i)
-        {
-            DomainPair *p = &workspace[i];
-            if (p->first == c.id0)
-                p0 = &p->second;
-            if (p->first == c.id1)
-                p1 = &p->second;
-        }
-
-        // CONSTRAINT p0 < p1 + b
-        if (p0 != nullptr && p1 != nullptr)
-        {
-            //std::cout << "EasyBoxAdjuster: log " << *p0 << ", " << *p1 << std::endl;
-
-            // INVALID: p0 >= p1 + b
-            // lowest possible value of p0 is greater than highest possible value of p1+b
-            //
-            //  lo1+c    hi1+c
-            //  [  ..    )
-            //              [ .. )
-            //              lo0  hi0
-            if (p0->lo >= p1->hi + c.b) // invalid that x0 < x1+c, reject
-            {
-                //std::cout << "EasyBoxAdjuster: rejecting " << p0->lo << " >= " << p1->hi+c.b << std::endl;
-                return false;
-            }
-
-            // FIX p1:
-            // smallest possible value of p1+c must be gt smallest value of p0
-            //        lo0    hi0
-            //        [  ..    )
-            //     [       ..      )
-            //     lo1+c           hi1+c
-            // ==>    [  ..        )      ; fix lo of p1
-            if (p1->lo + c.b < p0->lo) // x1 cannot be less than x0
-            {
-                //std::cout << "EasyBoxAdjuster: p1->lo: " << p1->lo << " -> " << p0->lo-c.b << std::endl;
-                p1->lo = p0->lo - c.b;
-            }
-            // symmetric case:
-            if (p0->hi > p1->hi + c.b) // x0 cannot be larger than x1
-            {
-                //std::cout << "EasyBoxAdjuster: p0->hi: " << p0->hi << " -> " << p1->hi+c.b << std::endl;
-                p0->hi = p1->hi + c.b;
-            }
-
-            if (p0->lo >= p0->hi || p1->lo >= p1->hi)
-            {
-                //std::cout << "EasyBoxAdjuster: rejecting adjustment" << std::endl;
-                return false;
-            }
-        }
-        else if (p1 != nullptr && !std::isinf(p1->hi)) // add domain for id0
-        {
-            RealDomain dom;
-            dom.hi = p1->hi + c.b; // x0 cannot be larger than x1
-            //std::cout << "EasyBoxAdjuster: inserting dom0 for " << c.id0 << ": " << dom << std::endl;
-            adjuster_insert_into_workspace(workspace, c.id0, dom);
-        }
-        else if (p0 != nullptr && !std::isinf(p0->lo)) // add domain for id1
-        {
-            RealDomain dom;
-            dom.lo = p0->lo - c.b; // x0 cannot be larger than x1
-            //std::cout << "EasyBoxAdjuster: inserting dom1 for " << c.id1 << ": " << dom << std::endl;
-            adjuster_insert_into_workspace(workspace, c.id1, dom);
-        }
-
-        return true;
-    }
-
-    bool
-    EasyBoxAdjuster::handle_sum(const Sum& c,
-            std::vector<DomainPair>& workspace) const
-    {
-        DomainT *px = nullptr;
-        DomainT *py = nullptr;
-        DomainT *pres = nullptr;
-        int cnt = 0; // count number of informative domains (not null or (-inf, inf))
-
-        for (size_t i = 0; i < workspace.size(); ++i)
-        {
-            DomainPair *p = &workspace[i];
-            if (p->first == c.idx) {
-                px = &p->second; cnt += (int)(!px->is_everything());
-            } else if (p->first == c.idy) {
-                py = &p->second; cnt += (int)(!py->is_everything());
-            } else if (p->first == c.idres) {
-                pres = &p->second; cnt += (int)(!pres->is_everything());
-            }
-        }
-
-        if (cnt == 2) // at least two non-null -> insert RealDomain() for null, then refine it based on other two
-        {
-            if (px == nullptr) {
-                adjuster_insert_into_workspace(workspace, c.idx, {});
-            } if (py == nullptr) {
-                adjuster_insert_into_workspace(workspace, c.idy, {});
-            } if (pres == nullptr) {
-                adjuster_insert_into_workspace(workspace, c.idres, {});
-            }
-
-            // find pointers again --> they may have changed
-            for (size_t i = 0; i < workspace.size(); ++i)
-            {
-                DomainPair *p = &workspace[i];
-                if (p->first == c.idx) {
-                    px = &p->second;
-                } else if (p->first == c.idy) {
-                    py = &p->second;
-                } else if (p->first == c.idres) {
-                    pres = &p->second;
-                }
-            }
-        }
-
-        auto min = [](FloatT x, FloatT y) { return std::fmin(x, y); }; // fmin/fmax -> don't prop nan
-        auto max = [](FloatT x, FloatT y) { return std::fmax(x, y); };
-        
-        if (px != nullptr && py != nullptr && pres != nullptr)
-        {
-            //std::cout << "EasyBoxAdjuster sum: x " << *px << ", y " << *py << ", res " << *pres << std::endl;
-
-            // adjust result
-            // evaluate at all extreme points -> compute min and max
-            FloatT m, M, x;
-            m = c.coefx*px->lo + c.coefy*py->lo;
-            M = m;
-            x = c.coefx*px->lo + c.coefy*py->hi;
-            m = min(m, x); M = max(M, x);
-            x = c.coefx*px->hi + c.coefy*py->lo;
-            m = min(m, x); M = max(M, x);
-            x = c.coefx*px->hi + c.coefy*py->hi;
-            m = min(m, x); M = max(M, x);
-
-            FloatT new_lo = max(m, pres->lo);
-            FloatT new_hi = min(M, pres->hi);
-            //std::cout << "                     updating lo " << pres->lo << " -> " << new_lo << std::endl;
-            //std::cout << "                     updating hi " << pres->hi << " -> " << new_hi << std::endl;
-            pres->lo = new_lo;
-            pres->hi = new_hi;
-            if (pres->lo >= pres->hi)
-            {
-                //std::cout << "EasyBoxAdjuster sum: rejecting " << *pres << std::endl;
-                return false;
-            }
-
-            // adjust x
-            m = (pres->lo - c.coefy*py->lo) / c.coefx;
-            M = m;
-            x = (pres->lo - c.coefy*py->hi) / c.coefx;
-            m = min(m, x); M = max(M, x);
-            x = (pres->hi - c.coefy*py->lo) / c.coefx;
-            m = min(m, x); M = max(M, x);
-            x = (pres->hi - c.coefy*py->hi) / c.coefx;
-            m = min(m, x); M = max(M, x);
-
-            new_lo = max(m, px->lo);
-            new_hi = min(M, px->hi);
-            //std::cout << "                  x  updating lo " << px->lo << " -> " << new_lo << std::endl;
-            //std::cout << "                  x  updating hi " << px->hi << " -> " << new_hi << std::endl;
-            px->lo = new_lo;
-            px->hi = new_hi;
-            if (px->lo >= px->hi)
-            {
-                //std::cout << "EasyBoxAdjuster sum: rejecting x " << *px << std::endl;
-                return false;
-            }
-
-            // adjust y
-            m = (pres->lo - c.coefx*px->lo) / c.coefy;
-            M = m;
-            x = (pres->lo - c.coefx*px->hi) / c.coefy;
-            m = min(m, x); M = max(M, x);
-            x = (pres->hi - c.coefx*px->lo) / c.coefy;
-            m = min(m, x); M = max(M, x);
-            x = (pres->hi - c.coefx*px->hi) / c.coefy;
-            m = min(m, x); M = max(M, x);
-
-            new_lo = max(m, py->lo);
-            new_hi = min(M, py->hi);
-            //std::cout << "                  y  updating lo " << py->lo << " -> " << new_lo << std::endl;
-            //std::cout << "                  y  updating hi " << py->hi << " -> " << new_hi << std::endl;
-            py->lo = new_lo;
-            py->hi = new_hi;
-            if (py->lo >= py->hi)
-            {
-                //std::cout << "EasyBoxAdjuster sum: rejecting y " << *py << std::endl;
-                return false;
-            }
-
-            //std::cout << "          ---------> x " << *px << ", y " << *py << ", res " << *pres << std::endl;
-        }
-
-        return true; // accept
-    }
-
-    bool
-    EasyBoxAdjuster::handle_norm(const Norm& c,
-            std::vector<DomainPair>& workspace) const
-    {
-        DomainT *px = nullptr;
-        DomainT *py = nullptr;
-        DomainT *pres = nullptr;
-        int cnt = 0; // count number of informative domains (not null or (-inf, inf))
-
-        for (size_t i = 0; i < workspace.size(); ++i)
-        {
-            DomainPair *p = &workspace[i];
-            if (p->first == c.idx) {
-                px = &p->second; cnt += (int)(!px->is_everything());
-            } else if (p->first == c.idy) {
-                py = &p->second; cnt += (int)(!py->is_everything());
-            } else if (p->first == c.idres) {
-                pres = &p->second; cnt += (int)(!pres->is_everything());
-            }
-        }
-
-        if (cnt == 2) // at least two non-null -> insert RealDomain() for null
-        {
-            if (px == nullptr) {
-                adjuster_insert_into_workspace(workspace, c.idx, {});
-            } if (py == nullptr) {
-                adjuster_insert_into_workspace(workspace, c.idy, {});
-            } if (pres == nullptr) {
-                adjuster_insert_into_workspace(workspace, c.idres, {});
-            }
-
-            // find pointers again, they may have changed
-            for (size_t i = 0; i < workspace.size(); ++i)
-            {
-                DomainPair *p = &workspace[i];
-                if (p->first == c.idx) {
-                    px = &p->second;
-                } else if (p->first == c.idy) {
-                    py = &p->second;
-                } else if (p->first == c.idres) {
-                    pres = &p->second;
-                }
-            }
-        }
-
-        auto pow2 = [](FloatT x) { return x*x; };
-        auto min = [](FloatT x, FloatT y) { return std::fmin(x, y); }; // help with type inference
-        auto max = [](FloatT x, FloatT y) { return std::fmax(x, y); };
-
-        if (px != nullptr && py != nullptr && pres != nullptr)
-        {
-            //std::cout << "EasyBoxAdjuster norm: x " << *px << ", y " << *py << ", res " << *pres
-            //    << ", bx = " << c.bx << ", by = " << c.by << std::endl;
-
-            // use info from x, y to compute possible update to lo, hi of res
-            // lo: max_x (x-bx)^2
-            //     max_y (y-by)^2   --> evaluate in edges, take max
-            FloatT Mx = max(pow2(px->lo-c.bx), pow2(px->hi-c.bx)); // maybe +inf => fine
-            FloatT My = max(pow2(py->lo-c.by), pow2(py->hi-c.by)); // maybe +inf => fine
-            pres->hi = min(std::sqrt(Mx + My), pres->hi);
-
-            // hi: min_x (x-bx)^2
-            //     min_y (y-by)^2   --> evaluate in edges and in y=0, take min
-            // smiling parabola is min in b if b in [lo, hi)
-            //   [lo   b   hi)  --> b min  : max(lo, b) = b,  min(b, hi) = b
-            //    b   [lo  hi)  --> lo min : max(lo, b) = lo, min(b, hi) = b
-            //   [lo  hi)  b    --> hi min : max(lo, b) = b,  min(b, hi) = hi
-            // if lo = -inf => choose b, if hi = inf => choose b
-            FloatT mx = max(pow2(max(c.bx, px->lo)-c.bx), pow2(min(px->hi, c.bx)-c.bx));
-            FloatT my = max(pow2(max(c.by, py->lo)-c.by), pow2(min(py->hi, c.by)-c.by));
-            pres->lo = max(std::sqrt(mx + my), pres->lo);
-
-            // mx, Mx contain max en min of (x-b)^2, same for my, My
-
-            if (pres->lo >= pres->hi)
-            {
-                //std::cout << "EasyBoxAdjuster norm: rejecting pres " << *pres << std::endl;
-                return false;
-            }
-
-            // use info from y, res to compute possible update to lo, hi of x
-            // use info from x, res to compute possible update to lo, hi of y
-            // (!) min chooses finite value over NaN! (sqrt(neg value) == NaN)
-            px->hi = min(1.00001 * std::sqrt(pow2(pres->hi) - my) + c.bx, px->hi);
-            py->hi = min(1.00001 * std::sqrt(pow2(pres->hi) - mx) + c.by, py->hi);
-            px->lo = max(std::sqrt(pow2(pres->lo) - My) + c.bx, px->lo);
-            py->lo = max(std::sqrt(pow2(pres->lo) - Mx) + c.by, py->lo);
-
-            if (px->lo >= px->hi)
-            {
-                //std::cout << "EasyBoxAdjuster norm: rejecting px" << *pres << std::endl;
-                return false;
-            }
-            if (py->lo >= py->hi)
-            {
-                //std::cout << "EasyBoxAdjuster norm: rejecting py" << *pres << std::endl;
-                return false;
-            }
-
-            //std::cout << "       -------------> x " << *px << ", y " << *py << ", res " << *pres
-            //    << ", bx = " << c.bx << ", by = " << c.by << std::endl;
-        }
-
-        return true; // accept
-    }
-
-    bool
-    EasyBoxAdjuster::operator()(DomainStore& store) const
-    {
-        auto& workspace = store.workspace();
-        for (const LessThan& c : less_thans_)
-        {
-            if (!handle_less_than(c, workspace))
-                return false;
-        }
-        for (const OneOutOfK& c : one_out_of_ks_)
-        {
-            if (!handle_one_out_of_k(c, workspace))
-                return false;
-        }
-        for (const AtMostK& c : at_most_ks_)
-        {
-            if (!handle_at_most_k(c, workspace))
-                return false;
-        }
-        for (const Sum& c : sums_)
-        {
-            if (!handle_sum(c, workspace))
-                return false;
-        }
-        for (const Norm& c : norms_)
-        {
-            if (!handle_norm(c, workspace))
-                return false;
-        }
-        return true; // accept the box in the store's workspace
-    }
-
-    void
-    EasyBoxAdjuster::add_one_out_of_k(std::vector<int> ids, bool strict)
-    {
-        if (!ids.empty())
-        {
-            std::sort(ids.begin(), ids.end());
-            std::cout << "add_one_out_of_k strict=" << strict << std::endl;
-            one_out_of_ks_.push_back({ids, strict});
-        }
-    }
-
-    void
-    EasyBoxAdjuster::add_at_most_k(std::vector<int> ids, int k)
-    {
-        if (!ids.empty())
-        {
-            std::sort(ids.begin(), ids.end());
-            std::cout << "add_at_most_k with k=" << k << std::endl;
-            at_most_ks_.push_back({ids, k});
-        }
-    }
-
-    void
-    EasyBoxAdjuster::add_less_than(int id0, int id1, FloatT c)
-    {
-        std::cout << "add_less_than X" << id0 << " < " << "X" << id1 << " + " << c << std::endl;
-        less_thans_.push_back({id0, id1, c});
-    }
-
-    void
-    EasyBoxAdjuster::add_sum(FloatT coefx, int idx, FloatT coefy, int idy, int idres)
-    {
-        std::cout << "add_sum X" << idres << " = "
-                  << coefx << " * X" << idx  << " + "
-                  << coefy << " * X" << idy  << std::endl;
-        sums_.push_back({coefx, idx, coefy, idy, idres});
-    }
-
-    void
-    EasyBoxAdjuster::add_norm(int idx, FloatT bx, int idy, FloatT by, int idres)
-    {
-        std::cout << "add_norm X" << idres << " = sqrt("
-                  << "(X" << idx << "-" << bx << ")^2 + "
-                  << "(X" << idy << "-" << by << ")^2)" << std::endl;
-        norms_.push_back({idx, bx, idy, by, idres});
-    }
 
 } /* namespace veritas */

@@ -251,7 +251,11 @@ namespace box_checker {
 
 } /* namespace box_checker */
 
-    BoxChecker::BoxChecker(int num_vars) : num_vars_(num_vars), exprs_(), comps_()
+    BoxChecker::BoxChecker(int num_vars, int max_num_updates)
+        : num_vars_(num_vars)
+        , max_num_updates_(max_num_updates)
+        , exprs_()
+        , comps_()
     {
         // provide space for the attributes
         box_checker::AnyExpr expr { };
@@ -466,6 +470,24 @@ namespace box_checker {
             RETURN_IF_INVALID(res);
         }
         return res;
+    }
+
+    bool
+    BoxChecker::update(std::vector<DomainPair>& workspace)
+    {
+        copy_from_workspace(workspace);
+        for (int i = 0; i < max_num_updates_; ++i)
+        {
+            box_checker::UpdateResult res = update();
+            if (res == box_checker::UNCHANGED)
+                break;
+            if (res == box_checker::INVALID)
+                return false;
+
+        }
+        copy_to_workspace(workspace);
+
+        return true;
     }
 
     box_checker::UpdateResult

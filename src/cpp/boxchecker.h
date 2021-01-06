@@ -100,13 +100,16 @@ namespace box_checker {
 
 } /* namespace box_checker */
 
+    class RepeatedBoxChecker;
+
     class BoxChecker {
         int num_vars_;
+        int max_num_updates_;
         std::vector<box_checker::AnyExpr> exprs_;
         std::vector<box_checker::AnyComp> comps_;
         std::vector<box_checker::BinaryConstraint> bin_constraints_;
     public:
-        BoxChecker(int num_vars);
+        BoxChecker(int num_vars, int max_num_updates = 5);
 
         int add_const(FloatT value);
         int add_sum(int left, int right);
@@ -132,6 +135,10 @@ namespace box_checker {
 
         /** Do one step in the update domain propagation process */
         box_checker::UpdateResult update();
+
+        /** Do max_num_updates updates, ignore further possible updates (ie UpdateResult::CHANGED) */
+        bool update(std::vector<DomainPair>& workspace);
+        inline bool update(DomainStore& store) { return update(store.workspace()); }
 
     private:
         box_checker::UpdateResult update_comp(const box_checker::AnyComp &c);

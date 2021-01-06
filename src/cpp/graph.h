@@ -35,10 +35,10 @@ namespace veritas {
     class DomainBox;
     class DomainStore;
 
-    using BoxFilter = const std::function<bool(const DomainBox&)>&;
-    using BoxFilterT = std::remove_const_t<std::remove_reference_t<BoxFilter>>;
-    using BoxAdjuster = const std::function<bool(DomainStore&)>&;
-    using BoxAdjusterT = std::remove_const_t<std::remove_reference_t<BoxAdjuster>>;
+    using GenericBoxFilter = const std::function<bool(const DomainBox&)>&;
+    using GenericBoxFilterT = std::remove_const_t<std::remove_reference_t<GenericBoxFilter>>;
+    using GenericBoxChecker = const std::function<bool(DomainStore&)>&;
+    using GenericBoxCheckerT = std::remove_const_t<std::remove_reference_t<GenericBoxChecker>>;
     using FeatIdMapper = const std::function<int(FeatId)>&;
 
 
@@ -175,7 +175,7 @@ namespace veritas {
         std::vector<IndependentSet>::const_iterator end() const;
 
         /** remove all vertices for which the given function returns true. */
-        void prune(BoxFilter filter);
+        void prune(GenericBoxFilter filter);
 
         /** remove all vertices that don't overlap with box in workspace.
             and crop vertices' boxes so they are contained by the box in the workspace.
@@ -288,14 +288,14 @@ namespace veritas {
         template <size_t instance>
         bool update_clique(Clique& c);
 
-        template <size_t instance, typename BA, typename OF>
-        void step_instance(Clique&& c, BA box_adjuster, OF output_filter);
+        template <size_t instance, typename BC, typename OF>
+        void step_instance(Clique&& c, BC box_checker, OF output_filter);
 
-        template <size_t instance, typename BA, typename OF>
-        void expand_clique_instance(Clique&& c, BA box_adjuster, OF output_filter);
+        template <size_t instance, typename BC, typename OF>
+        void expand_clique_instance(Clique&& c, BC box_checker, OF output_filter);
 
-        template <typename BA, typename OF>
-        bool step_aux(BA box_adjuster, OF of);
+        template <typename BC, typename OF>
+        bool step_aux(BC box_checker, OF of);
 
     public:
         two_of<size_t> num_steps;
@@ -316,13 +316,13 @@ namespace veritas {
         void set_eps(FloatT eps, bool rebuild_heap = true);
 
         bool step();
-        bool step(BoxAdjuster ba);
-        bool step(BoxAdjuster ba, FloatT max_output0, FloatT min_output1);
-        bool step(BoxAdjuster ba, FloatT min_output_difference);
+        bool step(GenericBoxChecker bc);
+        bool step(GenericBoxChecker bc, FloatT max_output0, FloatT min_output1);
+        bool step(GenericBoxChecker bc, FloatT min_output_difference);
         bool steps(int howmany);
-        bool steps(int howmany, BoxAdjuster ba);
-        bool steps(int howmany, BoxAdjuster ba, FloatT max_output0, FloatT min_output1);
-        bool steps(int howmany, BoxAdjuster ba, FloatT min_output_difference);
+        bool steps(int howmany, GenericBoxChecker bc);
+        bool steps(int howmany, GenericBoxChecker bc, FloatT max_output0, FloatT min_output1);
+        bool steps(int howmany, GenericBoxChecker bc, FloatT min_output_difference);
 
         two_of<FloatT> current_bounds() const;
         size_t num_candidate_cliques() const;
@@ -351,7 +351,7 @@ namespace veritas {
         std::mutex mutex_;
         std::condition_variable cv_;
         std::optional<KPartiteGraphOptimize> opt_;
-        BoxAdjusterT box_adjuster_;
+        GenericBoxCheckerT box_checker_;
 
     public:
         Worker();
@@ -388,13 +388,13 @@ namespace veritas {
         const KPartiteGraphOptimize& worker_opt(size_t worker) const;
 
         template <typename F>
-        inline void set_box_adjuster(F f)
+        inline void set_box_checker(F f)
         {
             for (size_t i = 0; i < num_threads(); ++i)
             {
                 Worker& w = workers_->at(i);
                 std::lock_guard guard(w.mutex_);
-                w.box_adjuster_ = f();
+                w.box_checker_ = f();
             }
         }
         void set_output_limits(FloatT max_output0, FloatT min_output1);
@@ -405,74 +405,6 @@ namespace veritas {
         size_t num_candidate_cliques() const;
         two_of<FloatT> current_bounds() const;
         std::vector<size_t> current_memory() const;
-    };
-
-    class EasyBoxAdjuster {
-        struct OneOutOfK {
-            // if one of these features is TRUE_DOMAIN, then all others are
-            // FALSE_DOMAIN (eg. one-hot encoding)
-            std::vector<int> ids;
-
-            // if strict, enforce that, if all others FALSE, the one remaining is TRUE
-            // this is not always desired, e.g. when one of the features is not
-            // used in the model
-            bool strict;
-        };
-        struct AtMostK {
-            // if k of these are TRUE_DOMAIN, then all others are FALSE_DOMAIN
-            std::vector<int> ids;
-            int k;
-        };
-        struct LessThan {
-            // id0 <= id1 + b
-            int id0;
-            int id1;
-            FloatT b;
-        };
-        struct Sum {
-            // idres = coefx*idx + coefy*idy
-            FloatT coefx;
-            int idx;
-            FloatT coefy;
-            int idy;
-            int idres;
-        };
-        struct Norm {
-            // sqrt((idx-bx)^2 + (idy-by)^2)
-            int idx;
-            FloatT bx;
-            int idy;
-            FloatT by;
-            int idres;
-        };
-        std::vector<OneOutOfK> one_out_of_ks_;
-        std::vector<AtMostK> at_most_ks_;
-        std::vector<LessThan> less_thans_;
-        std::vector<Sum> sums_;
-        std::vector<Norm> norms_;
-
-        bool handle_one_out_of_k(const OneOutOfK& c,
-                std::vector<DomainPair>& workspace) const;
-
-        bool handle_at_most_k(const AtMostK& c,
-                std::vector<DomainPair>& workspace) const;
-
-        bool handle_less_than(const LessThan& c,
-                std::vector<DomainPair>& workspace) const;
-
-        bool handle_sum(const Sum& c,
-                std::vector<DomainPair>& workspace) const;
-
-        bool handle_norm(const Norm& c,
-                std::vector<DomainPair>& workspace) const;
-
-    public:
-        bool operator()(DomainStore& store) const;
-        void add_one_out_of_k(std::vector<int> ids, bool strict);
-        void add_at_most_k(std::vector<int> ids, int k);
-        void add_less_than(int id0, int id1, FloatT b);
-        void add_sum(FloatT coefx, int idx, FloatT coefy, int idy, int idres);
-        void add_norm(int idx, FloatT bx, int idy, FloatT by, int idres);
     };
 
 } /* namespace veritas */
