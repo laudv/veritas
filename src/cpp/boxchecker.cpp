@@ -251,11 +251,11 @@ namespace box_checker {
 
 } /* namespace box_checker */
 
-    BoxChecker::BoxChecker(int max_id) : max_id_(max_id), exprs_(), comps_()
+    BoxChecker::BoxChecker(int num_vars) : num_vars_(num_vars), exprs_(), comps_()
     {
         // provide space for the attributes
         box_checker::AnyExpr expr { };
-        exprs_.resize(max_id_, expr);
+        exprs_.resize(num_vars_, expr);
     }
 
     int
@@ -352,6 +352,34 @@ namespace box_checker {
         comps_.push_back(c);
     }
 
+    void
+    BoxChecker::add_at_most_k(std::vector<int> ids, int k)
+    {
+        bin_constraints_.push_back({
+                box_checker::BinaryConstraint::AT_MOST_K, ids, k });
+    }
+
+    void
+    BoxChecker::add_at_least_k(std::vector<int> ids, int k)
+    {
+        bin_constraints_.push_back({
+                box_checker::BinaryConstraint::AT_LEAST_K, ids, k });
+    }
+
+    void
+    BoxChecker::add_k_out_of_n(std::vector<int> ids, int k, bool strict)
+    {
+        if (strict) // both at most k and at least k == exactly k
+        {
+            bin_constraints_.push_back({
+                    box_checker::BinaryConstraint::K_OUT_OF_N, ids, k });
+        }
+        else // only at most k
+        {
+            add_at_most_k(ids, k);
+        }
+    }
+
 
     DomainT
     BoxChecker::get_expr_dom(int id) const
@@ -367,7 +395,7 @@ namespace box_checker {
         // workspace is ordered by .first (attribute id)
 
         size_t j = 0;
-        for (int i = 0; i < max_id_; ++i)
+        for (int i = 0; i < num_vars_; ++i)
         {
             if (j < workspace.size() && workspace[j].first == i)
             {
@@ -386,7 +414,7 @@ namespace box_checker {
     {
         size_t j = 0;
         size_t sz = workspace.size();
-        for (int i = 0; i < max_id_; ++i)
+        for (int i = 0; i < num_vars_; ++i)
         {
             if (j < sz && workspace[j].first == i)
             {
@@ -427,9 +455,14 @@ namespace box_checker {
     BoxChecker::update()
     {
         box_checker::UpdateResult res = box_checker::UNCHANGED;
-        for (const auto &c : comps_)
+        for (const auto& c : comps_)
         {
             res = aggregate_update_result({res, update_comp(c)});
+            RETURN_IF_INVALID(res);
+        }
+        for (const auto& c : bin_constraints_)
+        {
+            res = aggregate_update_result({res, update_bin_constraint(c)});
             RETURN_IF_INVALID(res);
         }
         return res;
@@ -528,6 +561,71 @@ namespace box_checker {
             res = aggregate_update_result({sqrt_res, arg_res});
             break;
         }};
+
+        return res;
+    }
+
+    box_checker::UpdateResult
+    BoxChecker::update_bin_constraint(const box_checker::BinaryConstraint& c)
+    {
+        auto res = box_checker::UNCHANGED;
+
+        int num_true = 0;
+        int num_false = 0;
+
+        for (auto id : c.ids)
+        {
+            const box_checker::AnyExpr& e = exprs_[id];
+            num_true += !e.dom.overlaps(FALSE_DOMAIN); // not FALSE => assume TRUE
+            num_false += !e.dom.overlaps(TRUE_DOMAIN); // not TRUE => assume FALSE
+        }
+
+        int num_unset = c.ids.size() - num_true - num_false;
+
+        std::cout << "BinaryConstraint " << num_true << ", " << num_false << ", " << num_unset << std::endl;
+
+        // AT_LEAST_K
+        if ((c.tag & box_checker::BinaryConstraint::AT_LEAST_K) != 0)
+        {
+            int most_true_possible = num_unset + num_true; // all unset become true
+            if (most_true_possible < c.k) // impossible to make at least k true
+                return box_checker::INVALID;
+
+            if (most_true_possible == c.k && num_unset > 0) // set all remaining unset to true
+            {
+                for (auto id : c.ids)
+                {
+                    box_checker::AnyExpr& e = exprs_[id];
+                    if (e.dom.is_everything())
+                    {
+                        e.dom = TRUE_DOMAIN;
+                        std::cout << "AT_LEAST_K set " << id << " to TRUE" << std::endl;
+                    }
+                }
+                res = box_checker::UPDATED;
+            }
+        }
+
+        // AT_MOST_K
+        if ((c.tag & box_checker::BinaryConstraint::AT_MOST_K) != 0)
+        {
+            if (num_true > c.k) // more trues that allowed
+                return box_checker::INVALID;
+
+            if (num_true == c.k && num_unset > 0) // set all remaining to false
+            {
+                for (auto id : c.ids)
+                {
+                    box_checker::AnyExpr& e = exprs_[id];
+                    if (e.dom.is_everything())
+                    {
+                        e.dom = FALSE_DOMAIN;
+                        std::cout << "AT_MOST_K set " << id << " to FALSE" << std::endl;
+                    }
+                }
+                res = box_checker::UPDATED;
+            }
+        }
 
         return res;
     }

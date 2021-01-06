@@ -86,14 +86,27 @@ namespace box_checker {
         } comp;
     };
 
+    struct Binary {
+        std::vector<int> ids;
+        int k;
+    };
+
+    struct BinaryConstraint {
+        enum { AT_LEAST_K = 1, AT_MOST_K = 2, K_OUT_OF_N = 1 | 2 } tag;
+        std::vector<int> ids;
+        int k;
+    };
+
+
 } /* namespace box_checker */
 
     class BoxChecker {
-        int max_id_;
+        int num_vars_;
         std::vector<box_checker::AnyExpr> exprs_;
         std::vector<box_checker::AnyComp> comps_;
+        std::vector<box_checker::BinaryConstraint> bin_constraints_;
     public:
-        BoxChecker(int max_id);
+        BoxChecker(int num_vars);
 
         int add_const(FloatT value);
         int add_sum(int left, int right);
@@ -105,6 +118,9 @@ namespace box_checker {
 
         void add_eq(int left, int right);
         void add_lteq(int left, int right);
+        void add_at_most_k(std::vector<int> ids, int k);
+        void add_at_least_k(std::vector<int> ids, int k);
+        void add_k_out_of_n(std::vector<int> ids, int k, bool strict);
 
         DomainT get_expr_dom(int expr_id) const;
 
@@ -120,6 +136,7 @@ namespace box_checker {
     private:
         box_checker::UpdateResult update_comp(const box_checker::AnyComp &c);
         box_checker::UpdateResult update_expr(box_checker::AnyExpr &e);
+        box_checker::UpdateResult update_bin_constraint(const box_checker::BinaryConstraint &c);
     };
 
 } /* namespace veritas */

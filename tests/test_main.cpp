@@ -220,7 +220,7 @@ void test_parallel(const char *model)
     }
 }
 
-void test_box_checker()
+void test_box_checker1()
 {
     BoxChecker checker{3};
     std::vector<DomainPair> box{ {0, {2, INFINITY}}, {1, {-5.0, 5.0}}, {2, {-100, 50}} };
@@ -257,6 +257,27 @@ void test_box_checker()
     std::cout << "expr dom sub: " << checker.get_expr_dom(subid) << std::endl;
 }
 
+void test_box_checker2()
+{
+    BoxChecker checker{3};
+    std::vector<DomainPair> box{{1, TRUE_DOMAIN}, {2, TRUE_DOMAIN}};
+
+    checker.add_k_out_of_n({0, 1, 2}, 2, true);
+
+    checker.copy_from_workspace(box);
+    auto st = checker.update();
+    std::cout << "update " << st << std::endl;
+    st = checker.update();
+    std::cout << "update " << st << std::endl;
+    checker.copy_to_workspace(box);
+
+    std::cout << std::endl << "----" << std::endl;
+    for (auto p : box)
+    {
+        std::cout << "box: " << p.first << ", " << p.second << std::endl;
+    }
+}
+
 int main()
 {
     //test_very_simple();
@@ -265,5 +286,6 @@ int main()
     //test_unconstrained_bounds("tests/models/xgb-calhouse-hard.json");
     //test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
     //test_parallel("tests/models/xgb-calhouse-hard.json");
-    test_box_checker();
+    //test_box_checker1();
+    test_box_checker2();
 }

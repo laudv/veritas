@@ -27,8 +27,8 @@ namespace veritas {
     // (like a LtSplit(_, 1.0))
     using DomainT = RealDomain;
     const DomainT BOOL_DOMAIN;
-    const DomainT FALSE_DOMAIN{-std::numeric_limits<FloatT>::infinity(), static_cast<FloatT>(1.0)};
-    const DomainT TRUE_DOMAIN{static_cast<FloatT>(1.0), std::numeric_limits<FloatT>::infinity()};
+    const DomainT FALSE_DOMAIN = DomainT::from_hi_exclusive(1.0);
+    const DomainT TRUE_DOMAIN = DomainT::from_lo(1.0);
     using DomainPair = std::pair<int, DomainT>;
 
 
