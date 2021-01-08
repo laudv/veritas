@@ -9,9 +9,6 @@ def update_bc(workspace, bc):
         i += 1
         print("update", i)
 
-TRUE_DOMAIN = RealDomain.from_lo(1.0);
-FALSE_DOMAIN = RealDomain.from_hi_exclusive(1.0);
-
 class TestBoxChecker(unittest.TestCase):
     def test_copy_from_workspace(self):
         workspace = [(0, RealDomain(-1, 10)), (1, RealDomain(1, 2))]

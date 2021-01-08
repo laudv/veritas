@@ -187,6 +187,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("is_real", &FeatInfo::is_real)
         .def("feat_ids0", &FeatInfo::feat_ids0)
         .def("feat_ids1", &FeatInfo::feat_ids1)
+        .def("num_ids", &FeatInfo::num_ids)
         ;
 
     py::class_<KPartiteGraph>(m, "KPartiteGraph")

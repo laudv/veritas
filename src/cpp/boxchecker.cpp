@@ -35,10 +35,10 @@ namespace box_checker {
                 && ldom == new_ldom
                 && rdom == new_rdom));
 
-        std::cout << "SUM "
-            << "self: " << self << " -> " << new_self
-            << ", l: " << ldom << " -> " << new_ldom
-            << ", r: " << rdom << " -> " << new_rdom << std::endl;
+        //std::cout << "SUM "
+        //    << "self: " << self << " -> " << new_self
+        //    << ", l: " << ldom << " -> " << new_ldom
+        //    << ", r: " << rdom << " -> " << new_rdom << std::endl;
 
         self = new_self;
         ldom = new_ldom;
@@ -113,11 +113,11 @@ namespace box_checker {
                 && ldom == new_ldom
                 && rdom == new_rdom));
 
-        std::cout << "PROD "
-            << "self: " << self << " -> " << new_self
-            << ", l: " << ldom << " -> " << new_ldom
-            << ", r: " << rdom << " -> " << new_rdom
-            << std::endl;
+        //std::cout << "PROD "
+        //    << "self: " << self << " -> " << new_self
+        //    << ", l: " << ldom << " -> " << new_ldom
+        //    << ", r: " << rdom << " -> " << new_rdom
+        //    << std::endl;
 
         self = new_self;
         ldom = new_ldom;
@@ -157,10 +157,10 @@ namespace box_checker {
                 !(self == new_self
                 && adom == new_adom));
 
-        std::cout << "POW2 "
-            << "self: " << self << " -> " << new_self
-            << ", adom: " << adom << " -> " << new_adom
-            << std::endl;
+        //std::cout << "POW2 "
+        //    << "self: " << self << " -> " << new_self
+        //    << ", adom: " << adom << " -> " << new_adom
+        //    << std::endl;
 
         self = new_self;
         adom = new_adom;
@@ -201,10 +201,10 @@ namespace box_checker {
                 !(self == new_self
                 && adom == new_adom));
 
-        std::cout << "SQRT "
-            << "self: " << self << " -> " << new_self
-            << ", adom: " << adom << " -> " << new_adom
-            << std::endl;
+        //std::cout << "SQRT "
+        //    << "self: " << self << " -> " << new_self
+        //    << ", adom: " << adom << " -> " << new_adom
+        //    << std::endl;
 
         self = new_self;
         adom = new_adom;
@@ -219,7 +219,7 @@ namespace box_checker {
         FloatT new_lo = std::max(ldom.lo, rdom.lo);
         FloatT new_hi = std::min(ldom.hi, rdom.hi);
 
-        std::cout << "EQ ldom " << ldom << ", rdom " << rdom << std::endl;
+        //std::cout << "EQ ldom " << ldom << ", rdom " << rdom << std::endl;
 
         if (new_lo > new_hi)
             return box_checker::INVALID;
@@ -482,12 +482,12 @@ namespace box_checker {
             if (res == box_checker::UNCHANGED)
                 break;
             if (res == box_checker::INVALID)
-                return false;
+                return false; // reject this state
 
         }
         copy_to_workspace(workspace);
 
-        return true;
+        return true; // accept this state
     }
 
     box_checker::UpdateResult
@@ -604,7 +604,7 @@ namespace box_checker {
 
         int num_unset = c.ids.size() - num_true - num_false;
 
-        std::cout << "BinaryConstraint " << num_true << ", " << num_false << ", " << num_unset << std::endl;
+        //std::cout << "BinaryConstraint " << num_true << ", " << num_false << ", " << num_unset << std::endl;
 
         // AT_LEAST_K
         if ((c.tag & box_checker::BinaryConstraint::AT_LEAST_K) != 0)
@@ -621,7 +621,7 @@ namespace box_checker {
                     if (e.dom.is_everything())
                     {
                         e.dom = TRUE_DOMAIN;
-                        std::cout << "AT_LEAST_K set " << id << " to TRUE" << std::endl;
+                        //std::cout << "AT_LEAST_K set " << id << " to TRUE" << std::endl;
                     }
                 }
                 res = box_checker::UPDATED;
@@ -642,7 +642,7 @@ namespace box_checker {
                     if (e.dom.is_everything())
                     {
                         e.dom = FALSE_DOMAIN;
-                        std::cout << "AT_MOST_K set " << id << " to FALSE" << std::endl;
+                        //std::cout << "AT_MOST_K set " << id << " to FALSE" << std::endl;
                     }
                 }
                 res = box_checker::UPDATED;

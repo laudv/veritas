@@ -8,7 +8,7 @@ from io import StringIO
 from .pyveritas import *
 
 def __realdomain__str(self):
-    return "[{:.3g}, {:.3g})".format(self.lo, self.hi)
+    return "[{:.3g}, {:.3g}]".format(self.lo, self.hi)
 
 def __realdomain__eq(self, o):
     return self.lo == o.lo and self.hi == o.hi
@@ -196,6 +196,9 @@ def get_example_box_smt(opt, instance, example, eps):
 
     return smt.getvalue()
 
+TRUE_DOMAIN = RealDomain.from_lo(1.0);
+FALSE_DOMAIN = RealDomain.from_hi_exclusive(1.0);
+
 class Optimizer:
     def __init__(self, **kwargs):
         self.at0 = AddTree(); # dummy tree
@@ -208,8 +211,6 @@ class Optimizer:
             self.at1 = kwargs["maximize"]
             del kwargs["maximize"]
 
-        self.adjuster = EasyBoxAdjuster()
-
         matches = set()
         match_is_reuse = True
         if "matches" in kwargs:
@@ -219,6 +220,8 @@ class Optimizer:
             match_is_reuse = kwargs["match_is_reuse"]
             del kwargs["match_is_reuse"]
         self.feat_info = FeatInfo(self.at0, self.at1, matches, match_is_reuse)
+
+        self.box_checker = BoxChecker(self.feat_info.num_ids(), 5)
 
         self.g0 = KPartiteGraph(self.at0, self.feat_info, 0)
         self.g1 = KPartiteGraph(self.at1, self.feat_info, 1)
@@ -319,7 +322,7 @@ class Optimizer:
         return self.g0.get_used_mem_size() + self.g1.get_used_mem_size() + self.opt.get_used_mem_size()
 
     def steps(self, num_steps, **kwargs):
-        value = self.opt.steps(num_steps, adjuster=self.adjuster, **kwargs)
+        value = self.opt.steps(num_steps, box_checker=self.box_checker, **kwargs)
         self.bounds.append(self.current_bounds())
         self.memory.append(self.current_memory())
         self.clique_count.append(self.num_candidate_cliques())
@@ -345,44 +348,44 @@ class Optimizer:
         return ParallelOptimizer(self, num_threads)
         
 
-class ParallelOptimizer:
-    def __init__(self, opt, num_threads):
-        self.opt = opt
-        self.paropt = self.opt.opt.parallel(num_threads)
-        self.paropt.set_box_adjuster(self.opt.adjuster)
-        self.bounds = opt.bounds + [self.paropt.current_bounds()]
-        self.memory = opt.memory + [self.paropt.current_memory()]
-        self.clique_count = opt.clique_count + [self.num_candidate_cliques()]
-        self.start_time = opt.start_time + opt.times[-1]
-        self.times = opt.times + [opt.times[-1]]
-
-    def __enter__(self):
-        return self
-    def __exit__ (self, type, value, tb):
-        self.paropt.join_all()
-
-    def num_threads(self): return self.paropt.num_threads()
-    def redistribute_work(self): self.paropt.redistribute_work()
-    def num_solutions(self): return self.paropt.num_solutions()
-    def num_new_valid_solutions(self): return self.paropt.num_new_valid_solutions()
-    def num_candidate_cliques(self): return self.paropt.num_candidate_cliques()
-    def current_bounds(self): return self.paropt.current_bounds()
-    def current_memory(self): return self.paropt.current_memory()
-    def join_all(self): self.paropt.join_all()
-    def get_eps(self): return self.paropt.get_eps()
-    def set_eps(self, new_eps): self.paropt.set_eps(new_eps)
-    def worker_opt(self, i): return self.paropt.worker_opt(i)
-    def steps_for(self, millis, **kwargs):
-        self.paropt.steps_for(millis, **kwargs)
-        self.bounds.append(self.paropt.current_bounds())
-        self.memory.append(self.paropt.current_memory())
-        self.times.append(timeit.default_timer() - self.start_time)
-
-    def solutions(self):
-        solutions = []
-        for i in range(self.num_threads()):
-            wopt = self.worker_opt(i)
-            solutions += wopt.solutions
-        solutions.sort(key=lambda s: s.time)
-        return solutions
+#class ParallelOptimizer:
+#    def __init__(self, opt, num_threads):
+#        self.opt = opt
+#        self.paropt = self.opt.opt.parallel(num_threads)
+#        self.paropt.set_box_adjuster(self.opt.adjuster)
+#        self.bounds = opt.bounds + [self.paropt.current_bounds()]
+#        self.memory = opt.memory + [self.paropt.current_memory()]
+#        self.clique_count = opt.clique_count + [self.num_candidate_cliques()]
+#        self.start_time = opt.start_time + opt.times[-1]
+#        self.times = opt.times + [opt.times[-1]]
+#
+#    def __enter__(self):
+#        return self
+#    def __exit__ (self, type, value, tb):
+#        self.paropt.join_all()
+#
+#    def num_threads(self): return self.paropt.num_threads()
+#    def redistribute_work(self): self.paropt.redistribute_work()
+#    def num_solutions(self): return self.paropt.num_solutions()
+#    def num_new_valid_solutions(self): return self.paropt.num_new_valid_solutions()
+#    def num_candidate_cliques(self): return self.paropt.num_candidate_cliques()
+#    def current_bounds(self): return self.paropt.current_bounds()
+#    def current_memory(self): return self.paropt.current_memory()
+#    def join_all(self): self.paropt.join_all()
+#    def get_eps(self): return self.paropt.get_eps()
+#    def set_eps(self, new_eps): self.paropt.set_eps(new_eps)
+#    def worker_opt(self, i): return self.paropt.worker_opt(i)
+#    def steps_for(self, millis, **kwargs):
+#        self.paropt.steps_for(millis, **kwargs)
+#        self.bounds.append(self.paropt.current_bounds())
+#        self.memory.append(self.paropt.current_memory())
+#        self.times.append(timeit.default_timer() - self.start_time)
+#
+#    def solutions(self):
+#        solutions = []
+#        for i in range(self.num_threads()):
+#            wopt = self.worker_opt(i)
+#            solutions += wopt.solutions
+#        solutions.sort(key=lambda s: s.time)
+#        return solutions
 
