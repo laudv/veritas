@@ -17,6 +17,12 @@ namespace box_checker {
     UpdateResult
     Sum::update(DomainT& self, DomainT& ldom, DomainT& rdom)
     {
+        //std::cout << "SUM0 "
+        //    << "self: " << self
+        //    << ", l: " << ldom
+        //    << ", r: " << rdom
+        //    << std::endl;
+
         // self = ldom + rdom
         DomainT new_self, new_ldom, new_rdom;
         try
@@ -35,14 +41,16 @@ namespace box_checker {
                 && ldom == new_ldom
                 && rdom == new_rdom));
 
-        //std::cout << "SUM "
-        //    << "self: " << self << " -> " << new_self
-        //    << ", l: " << ldom << " -> " << new_ldom
-        //    << ", r: " << rdom << " -> " << new_rdom << std::endl;
-
         self = new_self;
         ldom = new_ldom;
         rdom = new_rdom;
+
+        //std::cout << "SUM1 "
+        //    << "self: " << self
+        //    << ", l: " << ldom
+        //    << ", r: " << rdom
+        //    << " res=" << res
+        //    << std::endl;
 
         return res;
     }
@@ -129,6 +137,11 @@ namespace box_checker {
     UpdateResult
     Pow2::update(DomainT& self, DomainT& adom)
     {
+        //std::cout << "POW2_0 "
+        //    << "self: " << self
+        //    << ", adom: " << adom
+        //    << std::endl;
+
         // self = adom * adom
         FloatT m, M, x, contains_zero;
         m = adom.lo * adom.lo;
@@ -157,14 +170,14 @@ namespace box_checker {
                 !(self == new_self
                 && adom == new_adom));
 
-        //std::cout << "POW2 "
-        //    << "self: " << self << " -> " << new_self
-        //    << ", adom: " << adom << " -> " << new_adom
-        //    << std::endl;
-
         self = new_self;
         adom = new_adom;
 
+        //std::cout << "POW2_1 "
+        //    << "self: " << self
+        //    << ", adom: " << adom
+        //    << " res=" << res
+        //    << std::endl;
 
         return res;
     }
@@ -172,6 +185,11 @@ namespace box_checker {
     UpdateResult
     Sqrt::update(DomainT& self, DomainT& adom)
     {
+        //std::cout << "SQRT0 "
+        //    << "self: " << self
+        //    << ", adom: " << adom
+        //    << std::endl;
+
         // self = sqrt(adom) => both self and adom > 0
 
         // limit both doms to positive
@@ -201,13 +219,14 @@ namespace box_checker {
                 !(self == new_self
                 && adom == new_adom));
 
-        //std::cout << "SQRT "
-        //    << "self: " << self << " -> " << new_self
-        //    << ", adom: " << adom << " -> " << new_adom
-        //    << std::endl;
-
         self = new_self;
         adom = new_adom;
+
+        //std::cout << "SQRT1 "
+        //    << "self: " << self
+        //    << ", adom: " << adom
+        //    << " res=" << res
+        //    << std::endl;
 
         return res;
     }
@@ -241,11 +260,16 @@ namespace box_checker {
         // LEFT <= RIGHT
         FloatT new_lo = std::max(ldom.lo, rdom.lo);
         FloatT new_hi = std::min(ldom.hi, rdom.hi);
+
         UpdateResult res = static_cast<UpdateResult>(
                (ldom.lo != new_lo || ldom.hi != new_hi)
             || (rdom.lo != new_lo || rdom.hi != new_hi));
-        rdom.lo = new_lo;
-        ldom.hi = new_hi;
+
+        try {
+            ldom = {ldom.lo, new_hi};
+            rdom = {new_lo, rdom.hi};
+        } catch (std::exception&) { return INVALID; }
+
         return res;
     }
 
@@ -411,6 +435,14 @@ namespace box_checker {
                 exprs_[i].dom = RealDomain();
             }
         }
+
+        // reset all intermediary values
+        for (size_t i = num_vars_; i < exprs_.size(); ++i)
+        {
+            box_checker::AnyExpr& e = exprs_[i];
+            if (e.tag != box_checker::AnyExpr::VAR) // don't override domains of constants!
+                exprs_[i].dom = RealDomain();
+        }
     }
 
     void
@@ -482,7 +514,10 @@ namespace box_checker {
             if (res == box_checker::UNCHANGED)
                 break;
             if (res == box_checker::INVALID)
+            {
+                //std::cout << "invalid\n";
                 return false; // reject this state
+            }
 
         }
         copy_to_workspace(workspace);

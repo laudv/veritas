@@ -324,9 +324,9 @@ PYBIND11_MODULE(pyveritas, m) {
                 return opt.steps(nsteps, bc, max_output0, min_output1);
             }
         })
-        .def("parallel", [](const KPartiteGraphOptimize& opt, size_t num_threads) {
-            return KPartiteGraphParOpt(num_threads, opt);
-        })
+        //.def("parallel", [](const KPartiteGraphOptimize& opt, size_t num_threads) {
+        //    return KPartiteGraphParOpt(num_threads, opt);
+        //})
         ;
 
     //py::class_<KPartiteGraphParOpt>(m, "KPartiteGraphParOpt")
