@@ -377,6 +377,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("add_div", &BoxChecker::add_div)
         .def("add_pow2", &BoxChecker::add_pow2)
         .def("add_sqrt", &BoxChecker::add_sqrt)
+        .def("add_unit_vec2", &BoxChecker::add_unit_vec2)
         .def("add_eq", &BoxChecker::add_eq)
         .def("add_lteq", &BoxChecker::add_lteq)
         .def("add_at_most_k", &BoxChecker::add_at_most_k)

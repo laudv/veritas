@@ -6,6 +6,7 @@
 
 #include "boxchecker.h"
 #include <cmath>
+#include <iomanip>
 
 namespace veritas {
 
@@ -232,6 +233,78 @@ namespace box_checker {
     }
 
     UpdateResult
+    UnitVec2::update(DomainT& self, DomainT& adom, DomainT& bdom)
+    {
+        std::cout << "UNIT_VEC2_0 "
+            << "self: " << self
+            << std::setprecision(9)
+            << ", adom: " << adom
+            << ", bdom: " << bdom
+            << std::endl;
+
+        // self = a / sqrt(a² + b²)
+        FloatT m, M, bmin, bmax;
+        std::tie(bmin, bmax) = std::minmax(std::abs(bdom.lo), std::abs(bdom.hi));
+        m = adom.lo / std::sqrt(adom.lo*adom.lo + bmin*bmin);
+        m = std::fmin(m, adom.lo / std::sqrt(adom.lo*adom.lo + bmax*bmax));
+        M = adom.hi / std::sqrt(adom.hi*adom.hi + bmin*bmin);
+        M = std::fmax(M, adom.hi / std::sqrt(adom.hi*adom.hi + bmax*bmax));
+
+        DomainT new_self;
+        try {
+            new_self = {std::fmax(self.lo, -1.0f), std::fmin(self.hi, 1.0f)};
+            new_self = {std::fmax(self.lo, m), std::fmin(self.hi, M)};
+        }
+        catch (const std::exception& e) { std::cout << "inv1\n"; return INVALID; }
+
+        // |a| = sqrt((self² * b²) / (1 - self²)) -> use new_self s.t. its dom is [-1, 1]
+        FloatT tmp = std::fmax(std::abs(new_self.lo), std::abs(new_self.hi));
+        tmp *= tmp;
+        M = std::sqrt((tmp * bdom.lo*bdom.lo) / (1.0 - tmp));
+        M = std::fmax(M, std::sqrt((tmp * bdom.hi*bdom.hi) / (1.0 - tmp)));
+        M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
+
+        DomainT new_adom;
+        try {
+            new_adom = {std::fmax(adom.lo, -M), std::fmin(adom.hi, M)};
+        }
+        catch (const std::exception& e) { std::cout << "inv2\n"; return INVALID; }
+
+        // |b| = sqrt((a² * (1 - self²)) / self²)
+        tmp = std::fmin(std::abs(new_self.lo), std::abs(new_self.hi));
+        tmp *= tmp;
+        M = std::sqrt((adom.lo*adom.lo*(1-tmp))/tmp);
+        M = std::fmax(M, std::sqrt((adom.hi*adom.hi*(1-tmp))/tmp));
+        M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
+
+        DomainT new_bdom;
+        try {
+            new_bdom = {std::fmax(bdom.lo, -M), std::fmin(bdom.hi, M)};
+        }
+        catch (const std::exception& e) { std::cout << "inv3 " << M << "\n"; return INVALID; }
+
+        UpdateResult res = static_cast<UpdateResult>(
+                !(self == new_self
+                && adom == new_adom
+                && bdom == new_bdom
+                ));
+
+        self = new_self;
+        adom = new_adom;
+        bdom = new_bdom;
+
+        std::cout << "UNIT_VEC2_1 "
+            << "self: " << self
+            << std::setprecision(9)
+            << ", adom: " << adom
+            << ", bdom: " << bdom
+            << ", res: " << res
+            << std::endl;
+
+        return res;
+    }
+
+    UpdateResult
     Eq::update(DomainT& ldom, DomainT& rdom) const
     {
         // L == R -> share the same domain
@@ -353,6 +426,16 @@ namespace box_checker {
         box_checker::AnyExpr e;
         e.tag = box_checker::AnyExpr::SQRT;
         e.pow2 = {arg};
+        exprs_.push_back(e);
+        return exprs_.size() - 1;
+    }
+
+    int
+    BoxChecker::add_unit_vec2(int a, int b)
+    {
+        box_checker::AnyExpr e;
+        e.tag = box_checker::AnyExpr::UNIT_VEC2;
+        e.unit_vec2 = {a, b};
         exprs_.push_back(e);
         return exprs_.size() - 1;
     }
@@ -616,6 +699,16 @@ namespace box_checker {
             RETURN_IF_INVALID(sqrt_res);
             auto arg_res = update_expr(arg);
             res = aggregate_update_result({sqrt_res, arg_res});
+            break;
+        }
+        case box_checker::AnyExpr::UNIT_VEC2: {
+            box_checker::AnyExpr& a = exprs_[e.unit_vec2.a];
+            box_checker::AnyExpr& b = exprs_[e.unit_vec2.b];
+            auto uvec_res = box_checker::UnitVec2::update(e.dom, a.dom, b.dom);
+            RETURN_IF_INVALID(uvec_res);
+            auto a_res = update_expr(a);
+            auto b_res = update_expr(b);
+            res = aggregate_update_result({uvec_res, a_res, b_res});
             break;
         }};
 

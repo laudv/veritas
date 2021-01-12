@@ -248,6 +248,38 @@ class TestBoxChecker(unittest.TestCase):
         update_bc(workspace, bc)
         self.assertEqual(bc.update(), BoxCheckerUpdateResult.INVALID)
 
+    def test_unit_vec2_1(self):
+        workspace = [(0, RealDomain(-3, 3)), (1, RealDomain(-4, 4))] # `a` and `b`
+        bc = BoxChecker(3, 5)
+        s = bc.add_unit_vec2(0, 1)
+        bc.add_eq(2, s)
+
+        update_bc(workspace, bc)
+
+        self.assertEqual(bc.get_expr_dom(2), RealDomain(-0.6, 0.6))
+
+    def test_unit_vec2_2(self):
+        workspace = [(0, RealDomain()), (1, RealDomain(-4, 4)),
+                (2, RealDomain(-0.6, 0.6))] # `a` and `b`
+        bc = BoxChecker(3, 5)
+        s = bc.add_unit_vec2(0, 1)
+        bc.add_eq(2, s)
+
+        update_bc(workspace, bc)
+
+        self.assertEqual(bc.get_expr_dom(0), RealDomain(-3, 3))
+
+    def test_unit_vec2_3(self):
+        workspace = [(0, RealDomain(-3, 3)), (1, RealDomain(4, 4))] # `a` and `b` (const)
+        bc = BoxChecker(3, 5)
+        s = bc.add_unit_vec2(0, 1)
+        bc.add_eq(2, s)
+
+        update_bc(workspace, bc)
+
+        self.assertEqual(bc.get_expr_dom(2), RealDomain(-0.6, 0.6))
+
+
     def test_complex1(self):
         workspace = [(0, RealDomain(2, 6)), (1, RealDomain(1, 9)), (2, RealDomain())]
         bc = BoxChecker(3, 5)

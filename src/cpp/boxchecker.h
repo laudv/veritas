@@ -54,9 +54,14 @@ namespace box_checker {
         static UpdateResult update(DomainT& self, DomainT& arg_dom);
     };
 
+    struct UnitVec2 {
+        int a, b;
+        static UpdateResult update(DomainT& self, DomainT& a_dom, DomainT& b_dom);
+    };
+
     struct AnyExpr {
         DomainT dom;
-        enum { VAR, SUM, SUB, PROD, DIV, POW2, SQRT } tag;
+        enum { VAR, SUM, SUB, PROD, DIV, POW2, SQRT, UNIT_VEC2 } tag;
         union {
             Var var;
             Sum sum;
@@ -65,6 +70,7 @@ namespace box_checker {
             Div div;
             Pow2 pow2;
             Sqrt sqrt;
+            UnitVec2 unit_vec2;
         };
     };
 
@@ -118,6 +124,7 @@ namespace box_checker {
         int add_div(int left, int right);
         int add_pow2(int arg);
         int add_sqrt(int arg);
+        int add_unit_vec2(int a, int b); // a / sqrt(a² + b²)
 
         void add_eq(int left, int right);
         void add_lteq(int left, int right);
