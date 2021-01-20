@@ -488,7 +488,9 @@ class MnistXvallScaleExperiment(ScaleExperiment):
     result_dir = "tests/experiments/scale/mnist"
 
     def load_model(self, num_trees, depth, label):
-        print("\n=== NEW MNIST MODEL ===")
+        print(f"\n=== NEW MNIST MODEL label {label} ===")
+        self.num_trees = num_trees
+        self.tree_depth = depth
         model_name = f"mnist-{label}vall-{num_trees}-{depth}"
         if not hasattr(self, "X"):
             X, y = util.load_openml("mnist", data_id=554)
@@ -1156,9 +1158,9 @@ def mnist_robust(outfile, max_memory, N, seed):
     exp.write_results()
 
 def mnist_robust_search(outfile, exp, example_i, target_label, follow_astar,
-        start_delta, seed,
-        num_trees=50, tree_depth=5):
-    depth = tree_depth
+        start_delta, seed):
+    num_trees = exp.num_trees
+    depth = exp.tree_depth
 
     upper = start_delta
     exp.delta = start_delta
