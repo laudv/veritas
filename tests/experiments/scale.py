@@ -13,6 +13,9 @@ from scipy.special import logit, expit as logistic
 from veritas import *
 from veritas.xgb import addtree_from_xgb_model
 
+from milp.xgbKantchelianAttack import xgbKantchelianAttack
+from milp.xgbKantchelianAttack import xgbMultiClassKantchelianAttack
+
 import util
 
 class ScaleExperiment:
@@ -297,9 +300,9 @@ class ScaleExperiment:
         if isinstance(opt, Optimizer):
             data["num_vertices0"] = opt.g0.num_vertices()
             data["num_vertices1"] = opt.g1.num_vertices()
-        if isinstance(opt, ParallelOptimizer):
-            data["num_vertices0"] = opt.opt.g0.num_vertices()
-            data["num_vertices1"] = opt.opt.g1.num_vertices()
+        #if isinstance(opt, ParallelOptimizer):
+        #    data["num_vertices0"] = opt.opt.g0.num_vertices()
+        #    data["num_vertices1"] = opt.opt.g1.num_vertices()
         return data
 
     def astar(self):
@@ -376,7 +379,7 @@ class CalhouseScaleExperiment(ScaleExperiment):
             self.model, lr, metric_value = util.optimize_learning_rate(X, y,
                     params, num_trees, metric)
 
-            self.meta = {"lr": lr, "metric": metric_value}
+            self.meta = {"lr": lr, "metric": metric_value, "columns": list(X.columns)}
 
             with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "wb") as f:
                 pickle.dump(self.model, f)
@@ -389,7 +392,9 @@ class CalhouseScaleExperiment(ScaleExperiment):
             with open(os.path.join(self.result_dir, f"{model_name}.meta"), "r") as f:
                 self.meta = json.load(f)
 
-        self.at = addtree_from_xgb_model(self.model)
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
 
     def get_opt(self):
@@ -505,10 +510,10 @@ class MnistXvallScaleExperiment(ScaleExperiment):
             def metric(y, raw_yhat): #maximized
                 return metrics.accuracy_score(y, raw_yhat > 0)
             
-            print(ybin)
+            #print(ybin)
             self.model, lr, metric_value = util.optimize_learning_rate(X, ybin,
                     params, num_trees, metric)
-            self.meta = {"lr": lr, "metric": metric_value}
+            self.meta = {"lr": lr, "metric": metric_value, "columns": list(X.columns)}
 
             with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "wb") as f:
                 pickle.dump(self.model, f)
@@ -521,7 +526,9 @@ class MnistXvallScaleExperiment(ScaleExperiment):
             with open(os.path.join(self.result_dir, f"{model_name}.meta"), "r") as f:
                 self.meta = json.load(f)
 
-        self.at = addtree_from_xgb_model(self.model)
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
 
     def get_opt(self):
@@ -538,7 +545,7 @@ class MnistXvallPrunedScaleExperiment(MnistXvallScaleExperiment):
         self.example_i = example_i
         self.delta = delta
 
-        self.example = self.X[self.example_i]
+        self.example = self.X.iloc[self.example_i, :]
         self.example_label = self.y[self.example_i]
 
     def get_opt(self):
@@ -581,7 +588,7 @@ class AllstateScaleExperiment(ScaleExperiment):
                 return -metrics.mean_squared_error(y, raw_yhat)
             self.model, lr, metric_value = util.optimize_learning_rate(X, y,
                     params, num_trees, metric)
-            self.meta = {"lr": lr, "metric": float(metric_value)}
+            self.meta = {"lr": lr, "metric": float(metric_value), "columns": list(X.columns)}
 
             with open(os.path.join(self.result_dir, f"{model_name}.xgb"), "wb") as f:
                 pickle.dump(self.model, f)
@@ -594,7 +601,9 @@ class AllstateScaleExperiment(ScaleExperiment):
             with open(os.path.join(self.result_dir, f"{model_name}.meta"), "r") as f:
                 self.meta = json.load(f)
 
-        self.at = addtree_from_xgb_model(self.model)
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
 
     def get_opt(self):
@@ -1062,10 +1071,10 @@ def calhouse(outfile, max_memory):
     exp = CalhouseScaleExperiment(max_memory=max_memory, max_time=120, num_threads=1)
     exp.confirm_write_results(outfile)
     exp.do_merge = True
-    for depth in [4, 6, 8]:
-        for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
+    for depth in [4]:#, 6, 8]:
+        for num_trees in [25]:#, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+            exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
                 exp.meta["lr"]}, start_eps=0.01)
             #break
         #break
@@ -1081,7 +1090,7 @@ def calhouse_random(outfile, max_memory, N, seed):
             for i in range(N):
                 exp.constraint_seed = rng.randint(2**31)
                 exp.load_model(num_trees, depth)
-                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
                     exp.meta["lr"], "constraint_seed": exp.constraint_seed},
                     start_eps=0.01)
     exp.write_results()
@@ -1093,7 +1102,7 @@ def covtype(outfile, max_memory):
     for depth in [4, 6, 8]:
         for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+            exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
                 exp.meta["lr"]}, start_eps=0.01)
             #break
         #break
@@ -1109,7 +1118,7 @@ def covtype_random(outfile, max_memory, N, seed):
             for i in range(N):
                 exp.constraint_seed = rng.randint(2**31)
                 exp.load_model(num_trees, depth)
-                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
                     exp.meta["lr"], "constraint_seed": exp.constraint_seed},
                     start_eps=0.01)
     exp.write_results()
@@ -1121,7 +1130,7 @@ def mnistXvall(outfile, max_memory, label):
     for depth in [4, 6, 8]:
         for num_trees in [25, 50, 75, 100, 150, 200, 250, 500]:
             exp.load_model(num_trees, depth, label)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
+            exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]})
             #break
         #break
     exp.write_results()
@@ -1140,15 +1149,16 @@ def mnist_robust(outfile, max_memory, N, seed):
         for target_label in range(10):
             if target_label == exp.example_label: continue
             print(f"source {exp.example_label} vs target {target_label} FOLLOW ASTAR")
-            mnist_robust_search(exp, example_i, target_label, True, start_delta, seed)
+            mnist_robust_search(outfile, exp, example_i, target_label, True, start_delta, seed)
             print(f"source {exp.example_label} vs target {target_label} FOLLOW MERGE")
-            mnist_robust_search(exp, example_i, target_label, False, start_delta, seed)
+            mnist_robust_search(outfile, exp, example_i, target_label, False, start_delta, seed)
 
     exp.write_results()
 
-def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta, seed):
-    depth = 5
-    num_trees = 50
+def mnist_robust_search(outfile, exp, example_i, target_label, follow_astar,
+        start_delta, seed,
+        num_trees=50, tree_depth=5):
+    depth = tree_depth
 
     upper = start_delta
     exp.delta = start_delta
@@ -1170,7 +1180,7 @@ def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta,
         exp.load_model(num_trees, depth, target_label)
         exp.target_at = exp.at
         exp.load_model(num_trees, depth, exp.example_label)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+        exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
             exp.meta["lr"], "example_i": int(exp.example_i), "example_label":
             int(exp.example_label), "example": list(exp.example),
             "target_label": target_label, "delta": exp.delta,
@@ -1179,7 +1189,7 @@ def mnist_robust_search(exp, example_i, target_label, follow_astar, start_delta,
             "follow_astar": follow_astar},
             start_eps=0.01)
 
-        data = exp.results[output_file][-1]
+        data = exp.results[outfile][-1]
         if follow_astar:
             lo, up = util.get_best_astar(data["a*"], task="both")
 
@@ -1245,7 +1255,7 @@ def allstate(outfile, max_memory):
     for depth in [4, 6, 8]:
         for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]},
+            exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]},
                     start_eps=0.01)
             #break
         #break
@@ -1261,7 +1271,7 @@ def allstate_random(outfile, max_memory, N, seed):
             for i in range(N):
                 exp.constraint_seed = rng.randint(2**31)
                 exp.load_model(num_trees, depth)
-                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
                     exp.meta["lr"], "constraint_seed": exp.constraint_seed},
                     start_eps=0.01)
     exp.write_results()
@@ -1271,12 +1281,12 @@ def soccer(outfile, max_memory, exp_type):
     exp.confirm_write_results(outfile)
     num_trees, depth, lr = 200, 10, 0.25
     exp.load_model(num_trees, depth, lr)
-    #exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": lr}, start_eps=0.01)
+    #exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr": lr}, start_eps=0.01)
     def incr_eps_fun(eps):
         return min(1.0, eps+0.05)
-    exp.results[output_file] = [{"num_trees": num_trees, "depth": depth, "lr": lr}]
+    exp.results[outfile] = [{"num_trees": num_trees, "depth": depth, "lr": lr}]
     info = exp.arastar_single_multiple_solutions(0.05, incr_eps_fun, 10)
-    exp.results[output_file][0]["ara*"] = info
+    exp.results[outfile][0]["ara*"] = info
     exp.write_results()
 
 def higgs(outfile, max_memory):
@@ -1286,7 +1296,7 @@ def higgs(outfile, max_memory):
     for depth in [4, 6, 8]:
         for num_trees in [25, 50, 75, 100, 150, 200, 300, 400, 500]:
             exp.load_model(num_trees, depth)
-            exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]},
+            exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr": exp.meta["lr"]},
                     start_eps=0.01)
     exp.write_results()
 
@@ -1300,7 +1310,7 @@ def higgs_random(outfile, max_memory, N, seed):
             for i in range(N):
                 exp.constraint_seed = rng.randint(2**31)
                 exp.load_model(num_trees, depth)
-                exp.run(output_file, {"num_trees": num_trees, "depth": depth, "lr":
+                exp.run(outfile, {"num_trees": num_trees, "depth": depth, "lr":
                     exp.meta["lr"], "constraint_seed": exp.constraint_seed},
                     start_eps=0.01)
     exp.write_results()
@@ -1320,7 +1330,7 @@ def youtube(outfile, max_memory):
             ]:
         exp.fixed_words = fixed_words
         exp.load_model(num_trees, depth)
-        exp.run(output_file, {"num_trees": num_trees, "depth": depth,
+        exp.run(outfile, {"num_trees": num_trees, "depth": depth,
             "lr": exp.meta["lr"], "fixed_words": fixed_words},
             start_eps=0.01)
     exp.write_results()

@@ -1,2 +1,3 @@
 *.mat
 *.libsvm
+mnist.h5

@@ -7,7 +7,7 @@ import xgboost as xgb
 import math
 from sklearn.datasets import fetch_openml
 
-from veritas import Optimizer, ParallelOptimizer, RealDomain
+from veritas import Optimizer, RealDomain
 
 def load_openml(name, data_id, task="classification", force=False):
     """
@@ -15,25 +15,25 @@ def load_openml(name, data_id, task="classification", force=False):
     mnist: data_id=554
     covtype: data_id=1596
     """
-    if not os.path.exists(f"tests/data/{name}.mat") or force:
+    if not os.path.exists(f"tests/data/{name}.h5") or force:
         print(f"loading {name} with fetch_openml")
-        d = fetch_openml(data_id=data_id)
-        X = d["data"]
-        if task == "regression":
-            y = np.array(list(map(float, d["target"])))
-        elif task == "classification":
-            y = np.array(list(map(int, d["target"])))
-        else:
-            raise RuntimeError("invalid task")
-        scipy.io.savemat(f"tests/data/{name}.mat", {"X": X, "y": y},
-                do_compression=True, format="5")
-    else:
-        print(f"loading {name} MAT file")
-        mat = scipy.io.loadmat(f"tests/data/{name}.mat") # much faster
-        X = mat["X"]
-        y = mat["y"]
+        X, y = fetch_openml(data_id=data_id, return_X_y=True, as_frame=True)
+        #if task == "regression":
+        #    y = np.array(list(map(float, d["target"])))
+        #elif task == "classification":
+        #    y = np.array(list(map(int, d["target"])))
+        #else:
+        #    raise RuntimeError("invalid task")
+        #scipy.io.savemat(f"tests/data/{name}.mat", {"X": X, "y": y},
+        #        do_compression=True, format="5")
+        X = X.astype(np.float32)
+        y = y.astype(np.float32)
+        X.to_hdf(f"tests/data/{name}.h5", key="X", complevel=9)
+        y.to_hdf(f"tests/data/{name}.h5", key="y", complevel=9)
 
-    y = y.reshape((X.shape[0],))
+    print(f"loading {name} h5 file")
+    X = pd.read_hdf(f"tests/data/{name}.h5", key="X")
+    y = pd.read_hdf(f"tests/data/{name}.h5", key="y")
 
     return X, y
 
@@ -63,7 +63,9 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
     best_model = None
     best_lr = 0.0
 
-    for lr in np.linspace(0, 1, 11)[1:]:
+    lr_values_tested = set()
+    for lr in np.linspace(0, 1, 5)[1:]:
+        lr_values_tested.add(lr)
         print("(1) LEARNING_RATE =", lr)
         params["learning_rate"] = lr
         model = xgb.train(params, dtrain, num_boost_round=num_trees,
@@ -75,8 +77,9 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
             best_model = model
             best_lr = lr
 
-    for lr in np.linspace(best_lr - 0.1, best_lr + 0.1, 11)[1:-1]:
+    for lr in np.linspace(best_lr - 0.1, best_lr + 0.1, 5)[1:-1]:
         if lr <= 0.0 or lr > 1.0: continue
+        if lr in lr_values_tested: continue
         print("(2) LEARNING_RATE =", lr)
         params["learning_rate"] = lr
         model = xgb.train(params, dtrain, num_boost_round=num_trees,
@@ -128,22 +131,22 @@ def get_ara_bound(epses, sols, task="maximize"):
     return solsbest, epsesbest, bound
 
 def filter_solutions(*args):
-    if len(args) == 1 and isinstance(args[0], ParallelOptimizer):
-        sols = []
-        paropt = args[0]
-        for i in range(paropt.num_threads()):
-            sols += paropt.worker_opt(i).solutions
-            #sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
-        sols.sort(key=lambda s: s.output_difference(), reverse=True)
-        sols.sort(key=lambda s: s.eps) # stable sort
+    #if len(args) == 1 and isinstance(args[0], ParallelOptimizer):
+    #    sols = []
+    #    paropt = args[0]
+    #    for i in range(paropt.num_threads()):
+    #        sols += paropt.worker_opt(i).solutions
+    #        #sols += [s for s in paropt.worker_opt(i).solutions if s.is_valid]
+    #    sols.sort(key=lambda s: s.output_difference(), reverse=True)
+    #    sols.sort(key=lambda s: s.eps) # stable sort
 
-        fsols = [] # filtered solutions
-        prev_eps = -1
-        for s in sols:
-            if s.eps != prev_eps:
-                fsols.append(s)
-            prev_eps = s.eps
-        return fsols
+    #    fsols = [] # filtered solutions
+    #    prev_eps = -1
+    #    for s in sols:
+    #        if s.eps != prev_eps:
+    #            fsols.append(s)
+    #        prev_eps = s.eps
+    #    return fsols
 
     if len(args) == 1 and isinstance(args[0], Optimizer):
         opt = args[0]
