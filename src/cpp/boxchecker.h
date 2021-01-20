@@ -20,6 +20,10 @@ namespace box_checker {
 
     struct Var {};
 
+    struct Const {
+        FloatT value;
+    };
+
     struct Sum {
         int left, right;
         static UpdateResult update(DomainT& self, DomainT& left_dom, DomainT& right_dom);
@@ -61,9 +65,10 @@ namespace box_checker {
 
     struct AnyExpr {
         DomainT dom;
-        enum { VAR, SUM, SUB, PROD, DIV, POW2, SQRT, UNIT_VEC2 } tag;
+        enum { VAR, CONST, SUM, SUB, PROD, DIV, POW2, SQRT, UNIT_VEC2 } tag;
         union {
             Var var;
+            Const constant;
             Sum sum;
             Sub sub;
             Prod prod;

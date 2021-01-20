@@ -249,18 +249,7 @@ class TestBoxChecker(unittest.TestCase):
         self.assertEqual(bc.update(), BoxCheckerUpdateResult.INVALID)
 
     def test_unit_vec2_1(self):
-        workspace = [(0, RealDomain(-3, 3)), (1, RealDomain(-4, 4))] # `a` and `b`
-        bc = BoxChecker(3, 5)
-        s = bc.add_unit_vec2(0, 1)
-        bc.add_eq(2, s)
-
-        update_bc(workspace, bc)
-
-        self.assertEqual(bc.get_expr_dom(2), RealDomain(-0.6, 0.6))
-
-    def test_unit_vec2_2(self):
-        workspace = [(0, RealDomain()), (1, RealDomain(-4, 4)),
-                (2, RealDomain(-0.6, 0.6))] # `a` and `b`
+        workspace = [(0, RealDomain(-3, 3)), (1, RealDomain(4, 15))] # `a` and `b`
         bc = BoxChecker(3, 5)
         s = bc.add_unit_vec2(0, 1)
         bc.add_eq(2, s)
@@ -268,16 +257,100 @@ class TestBoxChecker(unittest.TestCase):
         update_bc(workspace, bc)
 
         self.assertEqual(bc.get_expr_dom(0), RealDomain(-3, 3))
+        self.assertEqual(bc.get_expr_dom(1), RealDomain(4, 15))
+        self.assertEqual(bc.get_expr_dom(2), RealDomain(-0.6, 0.6))
 
-    def test_unit_vec2_3(self):
-        workspace = [(0, RealDomain(-3, 3)), (1, RealDomain(4, 4))] # `a` and `b` (const)
+    def test_unit_vec2_2(self):
+        workspace = [(1, RealDomain(-4, 4)), (2, RealDomain(-0.6, 0.6))] # derive interval for a
         bc = BoxChecker(3, 5)
         s = bc.add_unit_vec2(0, 1)
         bc.add_eq(2, s)
 
         update_bc(workspace, bc)
 
-        self.assertEqual(bc.get_expr_dom(2), RealDomain(-0.6, 0.6))
+        dom0 = bc.get_expr_dom(0)
+        print(dom0.lo, dom0.hi)
+        self.assertTrue(dom0.lo <= -3.0)
+        self.assertTrue(dom0.lo >= -3.00001)
+        self.assertTrue(dom0.hi >= 3.0)
+        self.assertTrue(dom0.hi <= 3.00001)
+
+    def test_unit_vec2_3(self):
+        workspace = [(0, RealDomain(3, 3)), (1, RealDomain(4, 4))] # `a` and `b` const
+        bc = BoxChecker(3, 5)
+        s = bc.add_unit_vec2(0, 1)
+        bc.add_eq(2, s)
+
+        update_bc(workspace, bc)
+
+        self.assertEqual(bc.get_expr_dom(0), RealDomain(3, 3))
+        self.assertEqual(bc.get_expr_dom(1), RealDomain(4, 4))
+        self.assertEqual(bc.get_expr_dom(2), RealDomain(0.6, 0.6))
+
+    def test_unit_vec2_4(self):
+        workspace = [(0, RealDomain(1, 4)), (1, RealDomain(3, 4)), 
+                (2, RealDomain(0.5, 0.9))]
+        bc = BoxChecker(4, 5)
+        s0 = bc.add_unit_vec2(0, 1)
+        s1 = bc.add_unit_vec2(1, 0)
+        bc.add_eq(2, s0)
+        bc.add_eq(3, s1)
+        s2 = bc.add_sum(bc.add_pow2(s0), bc.add_pow2(s1))
+        bc.add_eq(bc.add_const(1.0), s2)
+
+        update_bc(workspace, bc)
+
+        print("s0", bc.get_expr_dom(s0))
+        print("s1", bc.get_expr_dom(s1))
+
+        self.assertEqual(bc.get_expr_dom(s0), RealDomain(0.5, 0.8))
+        self.assertEqual(bc.get_expr_dom(s1), RealDomain(0.6, 0.866025388241))
+
+    def test_unit_vec2_5(self):
+        workspace = [(0, RealDomain(-10, 40)), (1, RealDomain(-30, 1000))] # `a` and `b`
+        bc = BoxChecker(3, 5)
+        s = bc.add_unit_vec2(0, 1)
+        bc.add_eq(2, s)
+
+        update_bc(workspace, bc)
+
+        self.assertEqual(bc.get_expr_dom(2), RealDomain(-1, 1))
+
+    def test_unit_vec2_const(self): # should never update const
+        for alo, ahi, b in np.float32(np.random.uniform(-10, 10, (1000, 3))):
+            alo, ahi = sorted([alo, ahi])
+            #b = 0.9 * max(abs(alo), abs(ahi)) # catastrophic cancellation in sqrt(1-c²) !!
+            workspace = [(0, RealDomain(alo, ahi)), (1, RealDomain(b, b))]
+            bc = BoxChecker(3, 5)
+            s = bc.add_unit_vec2(0, 1)
+            bc.add_eq(2, s)
+
+            update_bc(workspace, bc)
+
+            clo, chi = sorted([
+                alo / np.sqrt(alo**2 + b**2),
+                ahi / np.sqrt(ahi**2 + b**2)])
+
+            print("---")
+
+            adom = bc.get_expr_dom(0)
+            bdom = bc.get_expr_dom(1)
+            cdom = bc.get_expr_dom(2)
+
+            print(f"alo {alo}, ahi {ahi}")
+            print(f"alo {adom.lo}, ahi {adom.hi} (veritas)")
+            print(f"b {b}")
+            print(f"blo {bdom.lo}, bhi {bdom.hi}")
+            print(f"clo {clo}, chi {chi}")
+            print(f"clo {cdom.lo}, chi {cdom.hi} (veritas)")
+
+            self.assertAlmostEqual((adom.lo-alo)/alo, 0.0, places=4)
+            self.assertAlmostEqual((adom.hi-ahi)/ahi, 0.0, places=4)
+            self.assertEqual(bc.get_expr_dom(1), RealDomain(b, b))
+            self.assertAlmostEqual((cdom.lo-clo)/clo, 0.0, places=4)
+            self.assertAlmostEqual((cdom.hi-chi)/chi, 0.0, places=4)
+
+    
 
 
     def test_complex1(self):
@@ -286,6 +359,7 @@ class TestBoxChecker(unittest.TestCase):
         s0 = bc.add_sub(0, 1)
         s1 = bc.add_pow2(s0)
         s2 = bc.add_sqrt(s1)
+        #u = bc.add_bc.add_pow2()
 
         bc.add_eq(s2, 2)
         update_bc(workspace, bc)

@@ -236,50 +236,78 @@ namespace box_checker {
     UnitVec2::update(DomainT& self, DomainT& adom, DomainT& bdom)
     {
         std::cout << "UNIT_VEC2_0 "
+            << std::setprecision(12)
             << "self: " << self
-            << std::setprecision(9)
             << ", adom: " << adom
             << ", bdom: " << bdom
             << std::endl;
 
+        // use double precision to minize rounding errors
+
         // self = a / sqrt(a² + b²)
-        FloatT m, M, bmin, bmax;
-        std::tie(bmin, bmax) = std::minmax(std::abs(bdom.lo), std::abs(bdom.hi));
-        m = adom.lo / std::sqrt(adom.lo*adom.lo + bmin*bmin);
-        m = std::fmin(m, adom.lo / std::sqrt(adom.lo*adom.lo + bmax*bmax));
-        M = adom.hi / std::sqrt(adom.hi*adom.hi + bmin*bmin);
-        M = std::fmax(M, adom.hi / std::sqrt(adom.hi*adom.hi + bmax*bmax));
+        double m, M, tmp;
+        double alo = adom.lo, ahi = adom.hi;
+        double blo = bdom.lo, bhi = bdom.hi;
+
+        if (blo <= 0.0 && bhi >= 0.0)
+        {
+            m = -1.0;
+            M = 1.0;
+        }
+        else
+        {
+            tmp = std::fmin(std::abs(blo), std::abs(bhi));
+            tmp *= tmp;
+            m = alo / std::sqrt(alo*alo + tmp);
+            M = ahi / std::sqrt(ahi*ahi + tmp);
+            tmp = std::fmax(std::abs(blo), std::abs(bhi));
+            tmp *= tmp;
+            m = std::fmin(m, alo / std::sqrt(alo*alo + tmp));
+            M = std::fmax(M, ahi / std::sqrt(ahi*ahi + tmp));
+            //m = std::nextafter(m, -std::numeric_limits<FloatT>::infinity());
+            //M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
+        }
+
+        double slo = std::fmax(std::fmax(self.lo, -1.0), m);
+        double shi = std::fmin(std::fmin(self.hi,  1.0), M);
 
         DomainT new_self;
         try {
-            new_self = {std::fmax(self.lo, -1.0f), std::fmin(self.hi, 1.0f)};
-            new_self = {std::fmax(self.lo, m), std::fmin(self.hi, M)};
+            new_self = {static_cast<FloatT>(slo), static_cast<FloatT>(shi)};
         }
         catch (const std::exception& e) { std::cout << "inv1\n"; return INVALID; }
 
         // |a| = sqrt((self² * b²) / (1 - self²)) -> use new_self s.t. its dom is [-1, 1]
-        FloatT tmp = std::fmax(std::abs(new_self.lo), std::abs(new_self.hi));
-        tmp *= tmp;
-        M = std::sqrt((tmp * bdom.lo*bdom.lo) / (1.0 - tmp));
-        M = std::fmax(M, std::sqrt((tmp * bdom.hi*bdom.hi) / (1.0 - tmp)));
-        M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
+        // |a| = (|self| * |b| / sqrt(1 - self²)
+        tmp = std::fmax(std::abs(slo), std::abs(shi));
+        M = (tmp * std::fmax(std::abs(blo), std::abs(bhi))) / std::sqrt((1.0-tmp)*(1.0+tmp));
+        //M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
 
         DomainT new_adom;
         try {
-            new_adom = {std::fmax(adom.lo, -M), std::fmin(adom.hi, M)};
+            new_adom = {std::fmax(adom.lo, -static_cast<FloatT>(M)),
+                std::fmin(adom.hi, static_cast<FloatT>(M))};
         }
         catch (const std::exception& e) { std::cout << "inv2\n"; return INVALID; }
 
         // |b| = sqrt((a² * (1 - self²)) / self²)
-        tmp = std::fmin(std::abs(new_self.lo), std::abs(new_self.hi));
-        tmp *= tmp;
-        M = std::sqrt((adom.lo*adom.lo*(1-tmp))/tmp);
-        M = std::fmax(M, std::sqrt((adom.hi*adom.hi*(1-tmp))/tmp));
-        M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
+        // |b| = (|a| * sqrt(1 - self²)) / |self|)
+        if (slo <= 0.0 && shi >= 0.0) // self can be zero -> no info about b
+        {
+            // no info about b: if self is 0, then b can take on any value
+            M = std::numeric_limits<FloatT>::infinity();
+        }
+        else
+        {
+            tmp = std::fmin(std::abs(slo), std::abs(shi));
+            M = std::fmax(std::abs(alo), std::abs(ahi)) * std::sqrt((1.0-tmp)*(1.0+tmp)) / tmp;
+            //M = std::nextafter(M, std::numeric_limits<FloatT>::infinity());
+        }
 
         DomainT new_bdom;
         try {
-            new_bdom = {std::fmax(bdom.lo, -M), std::fmin(bdom.hi, M)};
+            new_bdom = {std::fmax(bdom.lo, -static_cast<FloatT>(M)),
+                std::fmin(bdom.hi, static_cast<FloatT>(M))};
         }
         catch (const std::exception& e) { std::cout << "inv3 " << M << "\n"; return INVALID; }
 
@@ -294,8 +322,8 @@ namespace box_checker {
         bdom = new_bdom;
 
         std::cout << "UNIT_VEC2_1 "
+            << std::setprecision(12)
             << "self: " << self
-            << std::setprecision(9)
             << ", adom: " << adom
             << ", bdom: " << bdom
             << ", res: " << res
@@ -363,9 +391,8 @@ namespace box_checker {
     BoxChecker::add_const(FloatT value)
     {
         box_checker::AnyExpr e;
-        e.dom = DomainT(value, value);
-        e.tag = box_checker::AnyExpr::VAR;
-        e.var = {};
+        e.tag = box_checker::AnyExpr::CONST;
+        e.constant = {value};
         exprs_.push_back(e);
         return exprs_.size() - 1;
     }
@@ -522,9 +549,11 @@ namespace box_checker {
         // reset all intermediary values
         for (size_t i = num_vars_; i < exprs_.size(); ++i)
         {
-            box_checker::AnyExpr& e = exprs_[i];
-            if (e.tag != box_checker::AnyExpr::VAR) // don't override domains of constants!
-                exprs_[i].dom = RealDomain();
+            auto& expr = exprs_[i];
+            if (expr.tag == box_checker::AnyExpr::CONST)
+                expr.dom = {expr.constant.value, expr.constant.value};
+            else
+                expr.dom = {}; // reset domain of non-consts
         }
     }
 
@@ -639,9 +668,23 @@ namespace box_checker {
     {
         box_checker::UpdateResult res = box_checker::UNCHANGED;
 
+        //switch (e.tag)
+        //{
+        //    case box_checker::AnyExpr::VAR: std::cout << "VAR\n"; break;
+        //    case box_checker::AnyExpr::CONST: std::cout << "CONST\n"; break;
+        //    case box_checker::AnyExpr::SUM: std::cout << "SUM\n"; break;
+        //    case box_checker::AnyExpr::SUB: std::cout << "SUB\n"; break;
+        //    case box_checker::AnyExpr::PROD: std::cout << "PROD\n"; break;
+        //    case box_checker::AnyExpr::DIV: std::cout << "DIV\n"; break;
+        //    case box_checker::AnyExpr::POW2: std::cout << "POW2\n"; break;
+        //    case box_checker::AnyExpr::SQRT: std::cout << "SQRT\n"; break;
+        //    case box_checker::AnyExpr::UNIT_VEC2: std::cout << "UNIT_VEC2\n"; break;
+        //}
+
         switch (e.tag)
         {
         case box_checker::AnyExpr::VAR:
+        case box_checker::AnyExpr::CONST:
             // leaf -> don't need to do anything
             break;
         case box_checker::AnyExpr::SUM: {
