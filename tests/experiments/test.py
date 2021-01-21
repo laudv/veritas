@@ -3,7 +3,6 @@ import json
 import numpy as np
 from scale import MnistXvallPrunedScaleExperiment, mnist_robust_search
 
-import milp.xgbKantchelianAttack as chen
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 
 import matplotlib.pyplot as plt
@@ -11,6 +10,8 @@ import matplotlib.pyplot as plt
 outfile = "/tmp/test_outfile"
 seed = 0
 start_delta = 20.1
+num_trees = 10
+tree_depth = 4
 
 exp = MnistXvallPrunedScaleExperiment(max_memory=4*1024*1024*1024, max_time=10, num_threads=1)
 exp.steps_kwargs["min_output_difference"] = 0.0
@@ -20,9 +21,9 @@ exp.do_merge = False
 example_i = 16
 exp.load_example(example_i, start_delta)
 target_label = (exp.example_label + 1) % 10
-exp.load_model(num_trees=10, depth=4, label=target_label)
+exp.load_model(num_trees=num_trees, depth=tree_depth, label=target_label)
 exp.target_at = exp.at
-exp.load_model(num_trees=10, depth=4, label=exp.example_label)
+exp.load_model(num_trees=num_trees, depth=tree_depth, label=exp.example_label)
 #mnist_robust_search(outfile, exp, example_i, 0, True, start_delta, seed)
 
 actual_prediction0 = exp.at.predict_single(exp.example)

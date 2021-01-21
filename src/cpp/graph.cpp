@@ -1106,7 +1106,7 @@ namespace veritas {
         return cmp_.eps;
     }
 
-    static std::mutex stdout_mutex;
+    //static std::mutex stdout_mutex;
 
     void
     KPartiteGraphOptimize::set_eps(FloatT eps, bool rebuild_heap)

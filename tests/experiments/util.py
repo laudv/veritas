@@ -63,6 +63,11 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
     best_model = None
     best_lr = 0.0
 
+    if "num_class" not in params:
+        metric2 = lambda model: metric(ytest, model.predict(dtest, output_margin=True))
+    else:
+        metric2 = lambda model: metric(ytest, model.predict(dtest))
+
     lr_values_tested = set()
     for lr in np.linspace(0, 1, 5)[1:]:
         lr_values_tested.add(lr)
@@ -70,9 +75,10 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
         params["learning_rate"] = lr
         model = xgb.train(params, dtrain, num_boost_round=num_trees,
                           evals=[(dtrain, "train"), (dtest, "test")])
-        m = metric(ytest, model.predict(dtest, output_margin=True))
+        m = metric2(model)
+        print(f"(1) metric = {m}")
         if m > best_metric:
-            print("(1) NEW BEST LEARNING_RATE", best_lr, "->", lr)
+            print(f"(1) NEW BEST LEARNING_RATE {best_lr} -> {lr}")
             best_metric = m
             best_model = model
             best_lr = lr
@@ -84,16 +90,17 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
         params["learning_rate"] = lr
         model = xgb.train(params, dtrain, num_boost_round=num_trees,
                           evals=[(dtrain, "train"), (dtest, "test")])
-        m = metric(ytest, model.predict(dtest, output_margin=True))
+        m = metric2(model)
+        print(f"(1) metric = {m}")
         if m > best_metric:
-            print("(2) NEW BEST LEARNING_RATE", best_lr, "->", lr)
+            print(f"(2) NEW BEST LEARNING_RATE {best_lr} -> {lr}")
             best_metric = m
             best_model = model
             best_lr = lr
 
     print("(3) BEST LEARNING_RATE =", best_lr, best_metric)
 
-    return model, best_lr, best_metric
+    return model, float(best_lr), float(best_metric)
 
 def double_check_at_output(model, at, X):
     max_diff = 0.0

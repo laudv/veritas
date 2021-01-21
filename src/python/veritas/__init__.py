@@ -2,7 +2,7 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit, gzip
+import timeit, gzip, types
 from io import StringIO
 
 from .pyveritas import *
@@ -329,6 +329,101 @@ class Optimizer:
         self.times.append(timeit.default_timer() - self.start_time)
         return value
 
+    def astar(self, max_time=10,
+            min_num_steps=10, max_num_steps=1000,
+            steps_kwargs={}):
+        done = False
+        oom = False
+        num_steps = min_num_steps
+        start = timeit.default_timer()
+        stop = start + max_time
+        while not done and self.num_solutions() == 0 \
+                and timeit.default_timer() < stop:
+            try:
+                done = not self.steps(num_steps, **steps_kwargs)
+                num_steps = min(max_num_steps, num_steps * 2)
+            except Exception as e:
+                print("A* OUT OF MEMORY", type(e))
+                done = True
+                oom = True
+        dur = timeit.default_timer() - start
+        return dur, oom
+
+    def arastar(self, max_time=10,
+            eps_start=0.1, eps_incr=0.1,
+            min_num_steps=10, max_num_steps=1000,
+            steps_kwargs={}):
+
+        if isinstance(eps_incr, float):
+            eps_incr_fun = lambda eps: min(1.0, eps+eps_incr)
+        elif isinstance(eps_incr, types.FunctionType):
+            eps_incr_fun = eps_incr
+        else: raise ValueError("invalid eps_incr parameter")
+
+        self.set_eps(eps_start)
+
+        done = False
+        oom = False
+        num_steps = min_num_steps
+        start = timeit.default_timer()
+        stop = start + max_time
+        solution_count = 0
+        while not done and timeit.default_timer() < stop \
+                and not (self.get_eps() == 1.0 \
+                and solution_count < self.num_solutions()):
+            if solution_count < self.num_solutions():
+                eps = self.get_eps()
+                self.set_eps(eps_incr_fun(eps))
+                print(f"ARA* eps: {eps} -> {self.get_eps()}")
+                solution_count = self.num_solutions()
+                num_steps = min_num_steps
+            try:
+                done = not self.steps(num_steps, **steps_kwargs)
+                num_steps = min(max_num_steps, num_steps * 2)
+            except Exception as e:
+                print("ARA* OUT OF MEMORY", type(e))
+                done = True
+                oom = True
+        dur = timeit.default_timer() - start
+        return dur, oom
+
+    def arastar_multiple_solutions(self, num_solutions, eps_margin=0.05,
+            max_time=10, min_num_steps=10, max_num_steps=1000,
+            steps_kwargs={}, **arastar_kwargs):
+
+        dur, oom = self.arastar(max_time=max_time, min_num_steps=min_num_steps,
+                max_num_steps=max_num_steps, steps_kwargs=steps_kwargs,
+                **arastar_kwargs)
+
+        if self.get_eps() != 1.0:
+            # we found one solution for the previous eps, not certain we will
+            # also be able to do that for the current eps
+            self.set_eps(self.get_eps() - eps_margin)
+
+        done = False
+        if oom:
+            done = True
+
+        num_steps = min_num_steps * 4
+        start = timeit.default_timer()
+        stop = start + max_time
+        while not done \
+                and self.num_solutions() < num_solutions \
+                and timeit.default_timer() < stop:
+            print("generating more solutions...", self.num_solutions())
+            try:
+                self.steps(num_steps, **steps_kwargs)
+                num_steps = min(max_num_steps, num_steps * 2)
+            except Exception as e:
+                print("ARA* OUT OF MEMORY", type(e))
+                done = True
+                oom = True
+        print("done generating more solutions", self.num_solutions())
+
+        dur += timeit.default_timer() - start
+
+        return dur, oom
+
     def solution_to_intervals(self, solution, num_attributes):
         box = solution.box()
         intervals = [[None for i in range(num_attributes)], [None for i in range(num_attributes)]]
@@ -343,9 +438,9 @@ class Optimizer:
                     intervals[instance][feat_id] = interval
         return intervals
 
-    def parallel(self, num_threads):
-        """ use with with-statement """
-        return ParallelOptimizer(self, num_threads)
+    #def parallel(self, num_threads):
+    #    """ use with with-statement """
+    #    return ParallelOptimizer(self, num_threads)
         
 
 #class ParallelOptimizer:

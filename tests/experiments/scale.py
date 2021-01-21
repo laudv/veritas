@@ -13,9 +13,6 @@ from scipy.special import logit, expit as logistic
 from veritas import *
 from veritas.xgb import addtree_from_xgb_model
 
-from milp.xgbKantchelianAttack import xgbKantchelianAttack
-from milp.xgbKantchelianAttack import xgbMultiClassKantchelianAttack
-
 import util
 
 class ScaleExperiment:
