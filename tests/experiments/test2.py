@@ -1,6 +1,6 @@
 import datasets
 from veritas import Optimizer
-from robust import RobustnessSearch, VeritasRobustnessSearch
+from robust import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,8 +42,13 @@ actual_prediction1 = at1.predict_single(example)
 
 rob = VeritasRobustnessSearch(at0, at1, example, start_delta=20+1e-4,
         stop_condition=RobustnessSearch.INT_STOP_COND)
-rob.search()
+rob_norm, rob_lo, rob_hi = rob.search()
 rob_example = rob.generated_examples[-1]
+print("=================================================")
+
+mer = MergeRobustnessSearch(at0, at1, example, 2, start_delta=20+1e-4,
+        stop_condition=RobustnessSearch.INT_STOP_COND)
+mer_norm, mer_lo, mer_hi = mer.search()
 print("=================================================")
 
 m = KantchelianTargetedAttack(at0, at1, example=example)
@@ -53,7 +58,8 @@ adv_example, adv_prediction0, adv_prediction1, norm = m.solution()
 print("Robust adv prediction check           ",
         at0.predict_single(rob_example),
         at1.predict_single(rob_example))
-print("Robust norm check              ", max(abs(x-y) for x, y in zip(rob_example, example)))
+print("Robust norm check              ", max(abs(x-y) for x, y in zip(rob_example, example)), rob_norm)
+print("Merge norm                     ", mer_norm)
 
 print("KantchelianAttack act prediction      ", actual_prediction0, actual_prediction1)
 print("KantchelianAttack adv prediction      ", adv_prediction0, adv_prediction1)

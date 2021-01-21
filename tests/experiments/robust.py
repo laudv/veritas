@@ -40,8 +40,8 @@ class RobustnessSearch:
             if max_output_diff >= 0.0:
                 upper = min(delta, best_example_delta)
                 delta = upper - 0.5 * (upper - lower)
-                maybe_sat_str = "maybe SAT" if len(generated_examples) == 0 else ""
-                print(f"{maybe_sat_str}SAT delta update: {old_delta:.3f}/{example_delta:.3f}",
+                maybe_sat_str = "maybe SAT" if len(generated_examples) == 0 else "SAT"
+                print(f"{maybe_sat_str} delta update: {old_delta:.3f}/{best_example_delta:.3f}",
                       f"-> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
             else: # no adv. can exist
                 if delta == upper:
@@ -57,6 +57,8 @@ class RobustnessSearch:
             if self.stop_condition(lower, upper):
                 print("Done early")
                 break
+
+        return delta, lower, upper
 
     def get_max_output_difference(self, delta): # returns (max_output_diff, [list of generated_example])
         """
@@ -98,8 +100,8 @@ class VeritasRobustnessSearch(RobustnessSearch):
         self.target_at = target_at
         self.optimizer_kwargs = optimizer_kwargs
 
-        #self.steps_kwargs = { "min_output_difference": 0.0 }
-        self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
+        self.steps_kwargs = { "min_output_difference": 0.0 }
+        #self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
 
     def get_max_output_difference(self, delta):
 
@@ -119,7 +121,6 @@ class VeritasRobustnessSearch(RobustnessSearch):
             max_output_diff = sol.output_difference()
             closest = self.opt.get_closest_example(sol, self.example, instance=0)
             closest = self.opt.get_closest_example(sol, closest, instance=1)
-            print(f"A* generated example check {self.opt.at0.predict_single(closest)} {self.opt.at1.predict_single(closest)}")
             generated_examples = [closest]
         else:
             lo, up = self.opt.bounds[-1]
@@ -127,3 +128,23 @@ class VeritasRobustnessSearch(RobustnessSearch):
             generated_examples = []
 
         return max_output_diff, generated_examples
+
+class MergeRobustnessSearch(RobustnessSearch):
+    def __init__(self, source_at, target_at, example, max_merge_depth=9999,
+            optimizer_kwargs={}, **kwargs):
+        super().__init__(example, **kwargs)
+
+        self.source_at = source_at
+        self.target_at = target_at
+        self.merge_kwargs = { "max_merge_depth": max_merge_depth }
+
+    def get_max_output_difference(self, delta):
+        # Share all variables between source and target model
+        self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
+                matches=set(), match_is_reuse=False)
+        self.opt.prune_example(list(self.example), delta)
+
+        result = self.opt.merge(self.max_time, **self.merge_kwargs)
+        max_output_diff = result["bounds"][-1][1]
+
+        return max_output_diff, [] # merge cannot generate examples

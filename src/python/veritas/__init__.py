@@ -3,6 +3,7 @@
 # Author: Laurens Devos
 
 import timeit, gzip, types
+import multiprocessing as mp
 from io import StringIO
 
 from .pyveritas import *
@@ -426,6 +427,90 @@ class Optimizer:
 
         return dur, oom
 
+    # Chen, H., Zhang, H., Si, S., Li, Y., Boning, D., & Hsieh, C. J. (2019).
+    # Robustness verification of tree-based models. In Advances in Neural
+    # Information Processing Systems (pp. 12317-12328).
+    def merge(self, max_time=10, max_merge_depth=9999):
+        def merge_worker_fun(self, conn, max_merge_depth):
+            g = self.g1
+            g.add_with_negated_leaf_values(self.g0)
+
+            t = 0.0
+            b = g.basic_bound()
+            m = g.get_used_mem_size()
+            v = g.num_vertices()
+            conn.send(("point", t, b, m, v))
+            start = timeit.default_timer()
+            try:
+                for merge_step in range(max_merge_depth):
+                    try:
+                        print("MERGE worker: num_independent_sets:", g.num_independent_sets(), g.num_vertices())
+                        g.merge(2)
+                    except Exception as e:
+                        m = g.get_used_mem_size()
+                        print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
+                        conn.send(("oom", m))
+                        break
+
+                    t = timeit.default_timer() - start
+                    b = g.basic_bound()
+                    m = g.get_used_mem_size()
+                    v = g.num_vertices()
+                    conn.send(("point", t, b, m, v))
+
+                    if g.num_independent_sets() <= 1:
+                        conn.send(("optimal",))
+                        break
+            finally:
+                print("MERGE worker: closing")
+                conn.close()
+
+        cparent, cchild = mp.Pipe()
+        p = mp.Process(target=merge_worker_fun, name="Merger", args=(self, cchild, max_merge_depth))
+        p.start()
+        start = timeit.default_timer()
+        times, bounds, memory, vertices = [], [], [], []
+        data = {"oot": True, "oom": False, "optimal": False}
+        while timeit.default_timer() - start < max_time:
+            has_data = cparent.poll(0.1)
+            if has_data:
+                msg = cparent.recv()
+                if msg[0] == "point":
+                    t, b, m, v = msg[1:]
+                    print("MERGE host: data", t, b, m, v)
+                    times.append(t)
+                    bounds.append(b)
+                    memory.append(m)
+                    vertices.append(v)
+                elif msg[0] == "optimal":
+                    print("MERGE host: optimal found")
+                    data["optimal"] = True
+                elif msg[0] == "oom":
+                    m = msg[1]
+                    print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
+                    data["oom"] = True
+                    data["oom_value"] = m
+            elif p.exitcode is not None:
+                data["oot"] = False
+                break
+
+        dur = timeit.default_timer() - start
+
+        if data["oot"]:
+            print("MERGE host: timeout")
+
+        print("MERGE host: terminating")
+        p.terminate()
+        cparent.close()
+
+        data["times"] = times
+        data["bounds"] = bounds
+        data["memory"] = memory
+        data["vertices"] = vertices
+        data["total_time"] = dur
+
+        return data
+
     def solution_to_intervals(self, solution, num_attributes):
         box = solution.box()
         intervals = [[None for i in range(num_attributes)], [None for i in range(num_attributes)]]
@@ -470,7 +555,7 @@ class Optimizer:
     #def parallel(self, num_threads):
     #    """ use with with-statement """
     #    return ParallelOptimizer(self, num_threads)
-        
+
 
 #class ParallelOptimizer:
 #    def __init__(self, opt, num_threads):
