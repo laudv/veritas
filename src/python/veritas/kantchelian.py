@@ -117,6 +117,13 @@ class KantchelianAttackBase:
                 var0 = var1
 
     def _add_mislabel_constraint(self, at, node_info_per_tree, target_output): # uses self.model
+        ensemble_output = self._get_ensemble_output_expr(at, node_info_per_tree)
+        if target_output: # positive class
+            self.model.addConstr(ensemble_output >= 0.0, name=f"mislabel_pos")
+        else: # negative class
+            self.model.addConstr(ensemble_output <= 0.0, name=f"mislabel_neg")
+
+    def _get_ensemble_output_expr(self, at, node_info_per_tree):
         leaf_values = []
         vars = []
 
@@ -127,11 +134,7 @@ class KantchelianAttackBase:
             vars += [node_infos[n].var for n in leafs]
             leaf_values += [tree.get_leaf_value(n) for n in leafs]
 
-        ensemble_output = gu.LinExpr(leaf_values, vars)
-        if target_output: # positive class
-            self.model.addConstr(ensemble_output >= 0.0, name=f"mislabel_pos")
-        else: # negative class
-            self.model.addConstr(ensemble_output <= 0.0, name=f"mislabel_neg")
+        return gu.LinExpr(leaf_values, vars)
 
     def _add_objective(self, example): # uses self.model, self.split_values, self.pvars, adds self.bvar
         self.bvar = self.model.addVar(name="b")
@@ -265,10 +268,15 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
 
         self._add_predicate_consistency()
 
-        self._add_mislabel_constraint(self.source_at,
-                self.source_node_info_per_tree, target_output=False)
-        self._add_mislabel_constraint(self.target_at,
-                self.target_node_info_per_tree, target_output=True)
+        ## source_at < 0 && target_at > 0
+        #self._add_mislabel_constraint(self.source_at,
+        #        self.source_node_info_per_tree, target_output=False)
+        #self._add_mislabel_constraint(self.target_at,
+        #        self.target_node_info_per_tree, target_output=True)
+
+        # same mislabel constraint as Veritas/Merge: more confident about
+        # target than source
+        self._add_multiclass_mislabel_constraint()
 
         self._add_objective(self.example)
 
@@ -297,6 +305,14 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
 
         return split_values
 
+    def _add_multiclass_mislabel_constraint(self):
+        source_ensemble_output = self._get_ensemble_output_expr(self.source_at,
+                self.source_node_info_per_tree)
+        target_ensemble_output = self._get_ensemble_output_expr(self.target_at,
+                self.target_node_info_per_tree)
+
+        self.model.addConstr(source_ensemble_output <= target_ensemble_output,
+                name="multiclass_mislabel")
 
 
 
