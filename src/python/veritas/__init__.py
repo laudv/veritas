@@ -145,6 +145,7 @@ class AddTreeFeatureTypes:
         return self._types[feat_id]
 
 def get_xvar_id_map(feat_info=None, instance=None):
+    """ deprecated """
     if isinstance(feat_info, Optimizer):
         feat_info = feat_info.feat_info
     if instance is not None:
@@ -159,6 +160,7 @@ def get_xvar_id_map(feat_info=None, instance=None):
         return idmap
 
 def get_closest_example(xvar_id_map, base_example, doms, delta=1e-5):
+    """ deprecated: use Optimizer.get_closest_example """
     example = base_example.copy()
 
     for id, dom in doms.items():
@@ -437,6 +439,33 @@ class Optimizer:
                         interval = box[i].lo == 1.0 # (-inf, 1.0) == False, (1.0, inf) == True
                     intervals[instance][feat_id] = interval
         return intervals
+
+    def get_closest_example(self, solution, example, instance=0, guard=1e-4):
+        num_attributes = len(example)
+        intervals = self.solution_to_intervals(solution, num_attributes)[instance]
+
+        closest = example.copy()
+
+        for feat_id, interval in enumerate(intervals):
+            x = example[feat_id]
+            if isinstance(x, bool):
+                raise RuntimeError("not supported yet")
+            if interval is None:
+                continue
+            lo, hi = interval
+            if lo <= x and x < hi:
+                continue # keep the value x
+
+            dist_lo = abs(lo - x)
+            dist_hi = abs(x - hi)
+            if dist_lo > dist_hi:
+                closest[feat_id] = hi - guard
+            else:
+                closest[feat_id] = lo
+
+            #print(f"interval {feat_id}:", interval, x, "->", closest[feat_id])
+
+        return closest
 
     #def parallel(self, num_threads):
     #    """ use with with-statement """

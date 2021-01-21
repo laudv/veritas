@@ -22,7 +22,8 @@ class KantchelianAttackBase:
     def __init__(self, split_values):
         self.guard = 1e-4
         self.split_values = split_values
-        self.model = gu.Model("KantchelianAttack")
+        self.env = gu.Env(empty=True)
+        self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
         self.pvars = self._construct_pvars()
 
     def _construct_pvars(self): # uses self.split_values, self.model
@@ -172,11 +173,13 @@ class KantchelianAttackBase:
             for split_value in split_values:
                 pvar = self.pvars[(attribute, split_value)]
                 if pvar.x > 0.5 and x >= split_value: # greater than or equal to split_value
-                    print("adjusting attribute", attribute, "down from", x, "to", split_value-self.guard)
+                    #print("adjusting attribute", attribute, "down from", x, "to", split_value-self.guard)
                     adv_example[attribute] = split_value - self.guard
+                    break # pick first active pvar we encounter
                 if pvar.x <= 0.5 and x < split_value:
-                    print("adjusting attribute", attribute, "up from", x, "to", split_value)
+                    #print("adjusting attribute", attribute, "up from", x, "to", split_value)
                     adv_example[attribute] = split_value# + self.guard
+                    # pick last active pvar we encouter!
         return adv_example
 
     def _extract_ensemble_output(self, at, node_info_per_tree):
