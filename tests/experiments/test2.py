@@ -1,6 +1,7 @@
 import datasets
 from veritas import Optimizer
 from robust import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
+from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 import matplotlib.pyplot as plt
@@ -11,9 +12,9 @@ import matplotlib.pyplot as plt
 #print(calhouse.at)
 
 mnist = datasets.Mnist()
-mnist.load_model(10, 4)
+mnist.load_model(20, 4)
 mnist.load_dataset()
-example_i = 1
+example_i = 5
 example = list(mnist.X.iloc[example_i,:])
 example_label = int(mnist.y[example_i])
 
@@ -40,28 +41,46 @@ at1 = mnist.at[(example_label+1)%10]
 actual_prediction0 = at0.predict_single(example)
 actual_prediction1 = at1.predict_single(example)
 
-rob = VeritasRobustnessSearch(at0, at1, example, start_delta=20+1e-4,
+rob = VeritasRobustnessSearch(at0, at1, example, start_delta=20,
         stop_condition=RobustnessSearch.INT_STOP_COND)
 rob_norm, rob_lo, rob_hi = rob.search()
 rob_example = rob.generated_examples[-1]
+
 print("=================================================")
 
-mer = MergeRobustnessSearch(at0, at1, example, 2, start_delta=20+1e-4,
+mer = MergeRobustnessSearch(at0, at1, example, 2, start_delta=20,
         stop_condition=RobustnessSearch.INT_STOP_COND)
 mer_norm, mer_lo, mer_hi = mer.search()
+
+print("=================================================")
+
+tck = TreeckRobustnessSearch(at0, at1, example, start_delta=20,
+        stop_condition=RobustnessSearch.INT_STOP_COND)
+tck_norm, tck_lo, tck_hi = tck.search()
+tck_example = tck.generated_examples[-1]
+
 print("=================================================")
 
 m = KantchelianTargetedAttack(at0, at1, example=example)
 m.optimize()
 adv_example, adv_prediction0, adv_prediction1, norm = m.solution()
 
-print("Robust adv prediction check           ",
+print("=================================================")
+
+print("Original prediction            ", actual_prediction0, actual_prediction1)
+print("Veritas adv prediction check   ",
         at0.predict_single(rob_example),
         at1.predict_single(rob_example))
-print("Robust norm check              ", max(abs(x-y) for x, y in zip(rob_example, example)), rob_norm)
-print("Merge norm                     ", mer_norm)
+print("Robust norm check              ", max(abs(x-y) for x, y in zip(rob_example, example)), rob_lo, rob_norm, rob_hi)
+print("Merge norm                     ", mer_lo, mer_norm, mer_hi)
+print("Treeck norm check              ", max(abs(x-y) for x, y in zip(tck_example, example)), tck_lo, tck_norm, tck_hi)
+print("Treeck adv prediction check    ",
+        at0.predict_single(tck_example),
+        at1.predict_single(tck_example))
+print("Treeck adv prediction check    ",
+        tck.source_at.predict_single(tck_example),
+        tck.target_at.predict_single(tck_example))
 
-print("KantchelianAttack act prediction      ", actual_prediction0, actual_prediction1)
 print("KantchelianAttack adv prediction      ", adv_prediction0, adv_prediction1)
 print("KantchelianAttack adv prediction check",
         at0.predict_single(adv_example),
@@ -69,9 +88,20 @@ print("KantchelianAttack adv prediction check",
 print("KantchelianAttack reported norm", norm)
 print("KantchelianAttack norm check   ", max(abs(x-y) for x, y in zip(adv_example, example)))
 
-#fig, (ax0, ax1, ax2) = plt.subplots(1, 3)
-#ax0.imshow(np.array(example).reshape((28,28)))
-#ax1.imshow(np.array(adv_example).reshape((28,28)))
-##ax2.imshow(np.array(exp.example)-np.array(adv_example).reshape((28,28)))
-#ax2.imshow(np.array(rob_example).reshape((28,28)))
-#plt.show()
+fig, ax = plt.subplots(2, 4)
+ax[0][0].set_title("original")
+ax[0][0].imshow(np.array(example).reshape((28,28)))
+ax[1][0].set_title("Veritas vs MILP")
+ax[1][0].imshow((np.array(rob_example)-np.array(adv_example)).reshape((28,28)))
+ax[0][1].set_title("Veritas")
+ax[0][1].imshow(np.array(rob_example).reshape((28,28)))
+ax[1][1].imshow((np.array(example)-np.array(rob_example)).reshape((28,28)))
+#ax2.imshow(np.array(exp.example)-np.array(adv_example).reshape((28,28)))
+#ax[0][2].imshow(np.array(tck_example).reshape((28,28)))
+ax[0][2].set_title("Treeck")
+ax[0][2].imshow(np.array(tck_example).reshape((28,28)))
+ax[1][2].imshow((np.array(example)-np.array(tck_example)).reshape((28,28)))
+ax[0][3].set_title("MILP")
+ax[0][3].imshow(np.array(adv_example).reshape((28,28)))
+ax[1][3].imshow((np.array(example)-np.array(adv_example)).reshape((28,28)))
+plt.show()

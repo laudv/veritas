@@ -11,7 +11,7 @@ class RobustnessSearch:
             max_time = 10,
             stop_condition=NO_STOP_COND):
         self.example = example
-        self.start_delta = start_delta
+        self.start_delta = start_delta+guard
         self.num_steps = num_steps
         self.guard = guard # avoid numerical issues when boundaries are ints (e.g. mnist)
         self.max_time = max_time
@@ -25,7 +25,6 @@ class RobustnessSearch:
         delta = self.start_delta
 
         for i in range(self.num_steps):
-            print(f"RobustnessSearch step {i}")
             max_output_diff, generated_examples = self.get_max_output_difference(delta)
             best_example_delta = delta
             if len(generated_examples) > 0:
@@ -41,8 +40,8 @@ class RobustnessSearch:
                 upper = min(delta, best_example_delta)
                 delta = upper - 0.5 * (upper - lower)
                 maybe_sat_str = "maybe SAT" if len(generated_examples) == 0 else "SAT"
-                print(f"{maybe_sat_str} delta update: {old_delta:.3f}/{best_example_delta:.3f}",
-                      f"-> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
+                print(f"[{i}]: {maybe_sat_str} delta update: {old_delta:.3f}/{best_example_delta:.3f}"
+                      f" -> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
             else: # no adv. can exist
                 if delta == upper:
                     lower = delta
@@ -51,11 +50,11 @@ class RobustnessSearch:
                 else:
                     lower = delta
                     delta = lower + 0.5 * (upper - lower)
-                print(f"UNSAT delta update: {old_delta:.3f}"
-                      f"-> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
+                print(f"[{i}]: UNSAT delta update: {old_delta:.3f}"
+                      f" -> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
 
             if self.stop_condition(lower, upper):
-                print("Done early")
+                print(f"done early {lower} <= {delta} <= {upper}")
                 break
 
         return delta, lower, upper
@@ -117,7 +116,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
 
         if self.opt.num_solutions() > 0:
             sol = self.opt.solutions()[0]
-            print(f"A* generated example       {sol.output0} {sol.output1}")
+            print(f"Veritas generated example {sol.output0} {sol.output1}")
             max_output_diff = sol.output_difference()
             closest = self.opt.get_closest_example(sol, self.example, instance=0)
             closest = self.opt.get_closest_example(sol, closest, instance=1)
