@@ -128,6 +128,8 @@ class VeritasRobustnessSearch(RobustnessSearch):
 
         return max_output_diff, generated_examples
 
+
+
 class MergeRobustnessSearch(RobustnessSearch):
     def __init__(self, source_at, target_at, example, max_merge_depth=9999,
             optimizer_kwargs={}, **kwargs):

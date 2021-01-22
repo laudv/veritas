@@ -1,6 +1,6 @@
 import sys
 from veritas import LtSplit
-from robust import RobustnessSearch
+from veritas import RobustnessSearch
 
 import treeck
 from treeck.verifier import Verifier

@@ -23,7 +23,11 @@ class KantchelianAttackBase:
         self.guard = 1e-4
         self.split_values = split_values
         self.env = gu.Env(empty=True)
-        self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
+        self.env.setParam("Threads", 1)
+        try:
+            self.model = gu.Model("KantchelianAttack", env=self.env) # requires license
+        except:
+            self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
         self.pvars = self._construct_pvars()
 
     def _construct_pvars(self): # uses self.split_values, self.model
