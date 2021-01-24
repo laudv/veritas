@@ -46,6 +46,7 @@ class TreeckRobustnessSearch(RobustnessSearch):
         dt = treeck.DomTree([(self.source_at, {}), (self.target_at, {})])
         l0 = dt.get_leaf(dt.tree().root())
         v = Verifier(l0, Backend())
+        v.set_timeout(self.max_time)
         v.add_all_trees()
 
         fids0 = set(v.instance(0).feat_ids())
@@ -70,7 +71,10 @@ class TreeckRobustnessSearch(RobustnessSearch):
         v.add_constraint(v.instance(0).fvar() <= v.instance(1).fvar())
 
         start_time = timeit.default_timer()
-        res = v.check()
+        try:
+            res = v.check()
+        except:
+            res = Verifier.Result.UNKNOWN
         dur = timeit.default_timer() - start_time
         self.log.append({"time": dur})
 

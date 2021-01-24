@@ -13,11 +13,13 @@ import matplotlib.pyplot as plt
 #print(calhouse.at)
 
 mnist = datasets.Mnist()
-mnist.load_model(20, 4)
+mnist.load_model(100, 6)
 mnist.load_dataset()
-example_i = 5
+example_i = 9
 example = list(mnist.X.iloc[example_i,:])
 example_label = int(mnist.y[example_i])
+#target_label = (example_label+1)%10
+target_label = 7
 
 #opt = Optimizer(minimize=mnist.at[1], maximize=mnist.at[0],
 #        matches=set(), match_is_reuse=False)
@@ -37,12 +39,12 @@ example_label = int(mnist.y[example_i])
 #    print(at)
 
 at0 = mnist.at[example_label]
-at1 = mnist.at[(example_label+1)%10]
+at1 = mnist.at[target_label]
 
 actual_prediction0 = at0.predict_single(example)
 actual_prediction1 = at1.predict_single(example)
 
-ver = VeritasRobustnessSearch(at0, at1, example, start_delta=20,
+ver = VeritasRobustnessSearch(at0, at1, example, start_delta=20, max_time=2,
         stop_condition=RobustnessSearch.INT_STOP_COND)
 ver_norm, ver_lo, ver_hi = ver.search()
 ver_example = ver.generated_examples[-1]
@@ -51,22 +53,22 @@ print("Total time veritas", ver.total_time)
 
 print("=================================================")
 
-mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=2,
-        start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
-mer_norm, mer_lo, mer_hi = mer.search()
-
-print("Total time merge", mer.total_time)
-
-print("=================================================")
-
-tck = TreeckRobustnessSearch(at0, at1, example, start_delta=20,
-        stop_condition=RobustnessSearch.INT_STOP_COND)
-tck_norm, tck_lo, tck_hi = tck.search()
-tck_example = tck.generated_examples[-1]
-
-print("Total time treeck", tck.total_time)
-
-print("=================================================")
+#mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=2,
+#        start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
+#mer_norm, mer_lo, mer_hi = mer.search()
+#
+#print("Total time merge", mer.total_time)
+#
+#print("=================================================")
+#
+#tck = TreeckRobustnessSearch(at0, at1, example, start_delta=20,
+#        stop_condition=RobustnessSearch.INT_STOP_COND)
+#tck_norm, tck_lo, tck_hi = tck.search()
+#tck_example = tck.generated_examples[-1]
+#
+#print("Total time treeck", tck.total_time)
+#
+#print("=================================================")
 
 m = KantchelianTargetedAttack(at0, at1, example=example)
 m.optimize()
@@ -81,14 +83,14 @@ print("Veritas adv prediction check   ",
         at0.predict_single(ver_example),
         at1.predict_single(ver_example))
 print("Veritas norm check             ", max(abs(x-y) for x, y in zip(ver_example, example)), ver_lo, ver_norm, ver_hi)
-print("Merge norm                     ", mer_lo, mer_norm, mer_hi)
-print("Treeck norm check              ", max(abs(x-y) for x, y in zip(tck_example, example)), tck_lo, tck_norm, tck_hi)
-print("Treeck adv prediction check    ",
-        at0.predict_single(tck_example),
-        at1.predict_single(tck_example))
-print("Treeck adv prediction check    ",
-        tck.source_at.predict_single(tck_example),
-        tck.target_at.predict_single(tck_example))
+#print("Merge norm                     ", mer_lo, mer_norm, mer_hi)
+#print("Treeck norm check              ", max(abs(x-y) for x, y in zip(tck_example, example)), tck_lo, tck_norm, tck_hi)
+#print("Treeck adv prediction check    ",
+#        at0.predict_single(tck_example),
+#        at1.predict_single(tck_example))
+#print("Treeck adv prediction check    ",
+#        tck.source_at.predict_single(tck_example),
+#        tck.target_at.predict_single(tck_example))
 
 print("KantchelianAttack adv prediction      ", adv_prediction0, adv_prediction1)
 print("KantchelianAttack adv prediction check",

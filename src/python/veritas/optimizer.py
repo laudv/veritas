@@ -228,6 +228,7 @@ class Optimizer:
                 print("ARA* OUT OF MEMORY", type(e))
                 done = True
                 oom = True
+                raise e
         dur = timeit.default_timer() - start
         return dur, oom
 

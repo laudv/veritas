@@ -121,9 +121,12 @@ class OptimizerRobustnessSearch(RobustnessSearch):
 class VeritasRobustnessSearch(OptimizerRobustnessSearch):
 
     def __init__(self, source_at, target_at, example,
-            optimizer_kwargs={}, **kwargs):
+            optimizer_kwargs={}, eps_start=1.0, eps_incr=0.05, **kwargs):
         super().__init__(source_at, target_at, example, optimizer_kwargs,
                 **kwargs)
+
+        self.eps_start = eps_start
+        self.eps_incr = eps_incr
 
         self.steps_kwargs = { "min_output_difference": 0.0 }
         #self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
@@ -136,10 +139,11 @@ class VeritasRobustnessSearch(OptimizerRobustnessSearch):
                 matches=set(), match_is_reuse=False)
         self.opt.prune_example(list(self.example), delta)
 
-        #Optimizer::astar(self, max_time=10,
-        #            min_num_steps=10, max_num_steps=1000,
-        #            steps_kwargs={}):
-        self.opt.astar(self.max_time, steps_kwargs=self.steps_kwargs)
+        if self.eps_start == 1.0:
+            self.opt.astar(self.max_time, steps_kwargs=self.steps_kwargs)
+        else:
+            self.opt.arastar(self.max_time, self.eps_start, self.eps_incr,
+                    steps_kwargs=self.steps_kwargs)
 
         if self.opt.num_solutions() > 0:
             sol = self.opt.solutions()[0]
@@ -163,7 +167,6 @@ class MergeRobustnessSearch(OptimizerRobustnessSearch):
             optimizer_kwargs={}, **kwargs):
         super().__init__(source_at, target_at, example, optimizer_kwargs,
                 **kwargs)
-        print(kwargs)
         self.merge_kwargs = { "max_merge_depth": max_merge_depth }
 
     def get_max_output_difference(self, delta):
