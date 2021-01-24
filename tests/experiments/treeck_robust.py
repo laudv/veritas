@@ -1,4 +1,4 @@
-import sys
+import sys, timeit
 from veritas import LtSplit
 from veritas import RobustnessSearch
 
@@ -40,6 +40,8 @@ class TreeckRobustnessSearch(RobustnessSearch):
         self.source_at = _veritas_at_to_treeck_at(source_at)
         self.target_at = _veritas_at_to_treeck_at(target_at)
 
+        self.log = []
+
     def get_max_output_difference(self, delta):
         dt = treeck.DomTree([(self.source_at, {}), (self.target_at, {})])
         l0 = dt.get_leaf(dt.tree().root())
@@ -66,7 +68,11 @@ class TreeckRobustnessSearch(RobustnessSearch):
             v.add_constraint(x0 == x1)
 
         v.add_constraint(v.instance(0).fvar() <= v.instance(1).fvar())
+
+        start_time = timeit.default_timer()
         res = v.check()
+        dur = timeit.default_timer() - start_time
+        self.log.append({"time": dur})
 
         # Actual output_difference does not really matter, just use values to
         # direct the search

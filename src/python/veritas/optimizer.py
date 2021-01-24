@@ -62,6 +62,48 @@ class Optimizer:
         self.clique_count = [self.num_candidate_cliques()]
         self.times = [0.0]
 
+    def filter_solutions(self, num=None):
+        sols = self.solutions()
+        sols.sort(key=lambda s: s.output_difference(), reverse=True)
+        sols.sort(key=lambda s: s.eps) # stable sort
+
+        fsols = [] # filtered solutions
+        prev_eps = -1
+        for s in sols:
+            if s.eps != prev_eps:
+                fsols.append(s)
+            prev_eps = s.eps
+
+        if num is not None:
+            fsols = fsols[-num:]
+
+        return fsols
+
+    def snapshot(self, num_solutions=None):
+        sols = self.filter_solutions(num_solutions)
+        snap = {
+            "bounds": self.bounds.copy(),
+            "times": self.times.copy(),
+            "memory": self.memory.copy(),
+            "clique_count": self.clique_count.copy(),
+            "solutions": [(s.output0, s.output1) for s in sols],
+            "sol_times": [s.time for s in sols],
+            "sol_epses": [s.eps for s in sols],
+
+            "start_eps": self.ara_eps,
+            "eps": self.opt.get_eps(),
+            "max_memory": self.max_memory,
+
+            "total_time": timeit.default_timer() - self.start_time,
+
+            "num_vertices0": self.g0.num_vertices(),
+            "num_vertices1": self.g1.num_vertices(),
+        }
+        if len(sols) > 0:
+            best_sol = max(sols, key=lambda s: s.output_difference())
+            snap["best_solution_box"] = {i: (d.lo, d.hi) for i, d in best_sol.box().items()}
+        return snap
+
     def prune_example(self, example, delta):
         self.g0.prune_example(self.feat_info, example, delta)
         self.g1.prune_example(self.feat_info, example, delta)
@@ -243,7 +285,8 @@ class Optimizer:
             try:
                 for merge_step in range(max_merge_depth):
                     try:
-                        print("MERGE worker: num_independent_sets:", g.num_independent_sets(), g.num_vertices())
+                        print("MERGE worker: num_independent_sets:",
+                                g.num_independent_sets(), g.num_vertices())
                         g.merge(2)
                     except Exception as e:
                         m = g.get_used_mem_size()

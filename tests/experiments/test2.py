@@ -1,3 +1,4 @@
+import sys
 import datasets
 from veritas import Optimizer
 from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
@@ -46,11 +47,15 @@ ver = VeritasRobustnessSearch(at0, at1, example, start_delta=20,
 ver_norm, ver_lo, ver_hi = ver.search()
 ver_example = ver.generated_examples[-1]
 
+print("Total time veritas", ver.total_time)
+
 print("=================================================")
 
-mer = MergeRobustnessSearch(at0, at1, example, 2, start_delta=20,
-        stop_condition=RobustnessSearch.INT_STOP_COND)
+mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=2,
+        start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
 mer_norm, mer_lo, mer_hi = mer.search()
+
+print("Total time merge", mer.total_time)
 
 print("=================================================")
 
@@ -59,11 +64,15 @@ tck = TreeckRobustnessSearch(at0, at1, example, start_delta=20,
 tck_norm, tck_lo, tck_hi = tck.search()
 tck_example = tck.generated_examples[-1]
 
+print("Total time treeck", tck.total_time)
+
 print("=================================================")
 
 m = KantchelianTargetedAttack(at0, at1, example=example)
 m.optimize()
 adv_example, adv_prediction0, adv_prediction1, norm = m.solution()
+
+print("Total time Kantchelian", m.total_time)
 
 print("=================================================")
 

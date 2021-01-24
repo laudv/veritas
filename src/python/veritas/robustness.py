@@ -1,3 +1,4 @@
+import timeit
 import numpy as np
 
 from veritas import Optimizer
@@ -18,13 +19,17 @@ class RobustnessSearch:
         self.stop_condition = stop_condition
 
         self.generated_examples = []
+        self.delta_log = []
+        self.total_time = None
 
     def search(self):
+        start_time = timeit.default_timer()
         upper = self.start_delta
         lower = 0.0
         delta = self.start_delta
 
         for i in range(self.num_steps):
+            self.delta_log.append((delta, lower, upper))
             max_output_diff, generated_examples = self.get_max_output_difference(delta)
             best_example_delta = delta
             if len(generated_examples) > 0:
@@ -56,6 +61,8 @@ class RobustnessSearch:
             if self.stop_condition(lower, upper):
                 print(f"done early {lower} <= {delta} <= {upper}")
                 break
+
+        self.total_time = timeit.default_timer() - start_time
 
         return delta, lower, upper
 
@@ -89,8 +96,8 @@ class RobustnessSearch:
 
 
 
-class VeritasRobustnessSearch(RobustnessSearch):
 
+class OptimizerRobustnessSearch(RobustnessSearch):
     def __init__(self, source_at, target_at, example,
             optimizer_kwargs={}, **kwargs):
         super().__init__(example, **kwargs)
@@ -99,10 +106,30 @@ class VeritasRobustnessSearch(RobustnessSearch):
         self.target_at = target_at
         self.optimizer_kwargs = optimizer_kwargs
 
+        self.opt = None
+
+        self.log = []
+
+    def _log_opt(self, delta):
+        if self.opt is not None: 
+            snapshot = self.opt.snapshot()
+            self.log.append(snapshot)
+
+
+
+
+class VeritasRobustnessSearch(OptimizerRobustnessSearch):
+
+    def __init__(self, source_at, target_at, example,
+            optimizer_kwargs={}, **kwargs):
+        super().__init__(source_at, target_at, example, optimizer_kwargs,
+                **kwargs)
+
         self.steps_kwargs = { "min_output_difference": 0.0 }
         #self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
 
     def get_max_output_difference(self, delta):
+        super()._log_opt(delta)
 
         # Share all variables between source and target model
         self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
@@ -130,16 +157,18 @@ class VeritasRobustnessSearch(RobustnessSearch):
 
 
 
-class MergeRobustnessSearch(RobustnessSearch):
+
+class MergeRobustnessSearch(OptimizerRobustnessSearch):
     def __init__(self, source_at, target_at, example, max_merge_depth=9999,
             optimizer_kwargs={}, **kwargs):
-        super().__init__(example, **kwargs)
-
-        self.source_at = source_at
-        self.target_at = target_at
+        super().__init__(source_at, target_at, example, optimizer_kwargs,
+                **kwargs)
+        print(kwargs)
         self.merge_kwargs = { "max_merge_depth": max_merge_depth }
 
     def get_max_output_difference(self, delta):
+        super()._log_opt(delta)
+
         # Share all variables between source and target model
         self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
                 matches=set(), match_is_reuse=False)

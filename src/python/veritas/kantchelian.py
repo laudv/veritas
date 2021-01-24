@@ -9,6 +9,7 @@
 ##    hardening of tree ensemble classifiers." International Conference on Machine
 ##    Learning. 2016.
 
+import timeit
 import gurobipy as gu
 import numpy as np
 
@@ -29,6 +30,7 @@ class KantchelianAttackBase:
         except:
             self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
         self.pvars = self._construct_pvars()
+        self.total_time = None
 
     def _construct_pvars(self): # uses self.split_values, self.model
         pvars = {}
@@ -241,7 +243,9 @@ class KantchelianAttack(KantchelianAttackBase):
         #print(self.model.display())
 
     def optimize(self):
+        start_time = timeit.default_timer()
         self.model.optimize()
+        self.total_time = timeit.default_timer() - start_time
         #for v in self.model.getVars():
         #    print(f"{v.varName} {v.x}")
 
@@ -287,7 +291,9 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
         self.model.update()
 
     def optimize(self):
+        start_time = timeit.default_timer()
         self.model.optimize()
+        self.total_time = timeit.default_timer() - start_time
 
     def solution(self):
         adv_example = self._extract_adv_example(self.example)
