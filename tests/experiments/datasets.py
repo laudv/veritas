@@ -1,6 +1,8 @@
 import os, json
 import util
 import pickle
+import numpy as np
+import pandas as pd
 
 import sklearn.metrics as metrics
 
@@ -42,6 +44,7 @@ class Calhouse(Dataset):
     def load_dataset(self):
         if self.X is None or self.y is None:
             self.X, self.y = util.load_openml("calhouse", data_id=537)
+            self.y = np.log(self.y)
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)
@@ -73,6 +76,150 @@ class Calhouse(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+
+class Allstate(Dataset):
+    def __init__(self):
+        super().__init__()
+        self.params = {
+            "objective": "reg:squarederror",
+            "tree_method": "hist",
+            "seed": 14,
+            "nthread": 1,
+        }
+
+    def load_dataset(self):
+        if self.X is None or self.y is None:
+            allstate_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "allstate.h5")
+            data = pd.read_hdf(allstate_data_path)
+            self.X = data.drop(columns=["loss"])
+            self.y = data.loss
+
+    def load_model(self, num_trees, tree_depth):
+        model_name = self.get_model_name(num_trees, tree_depth)
+        if not os.path.isfile(os.path.join(self.models_dir, f"{model_name}.xgb")):
+            self.load_dataset()
+            print(f"training model depth={tree_depth}, num_trees={num_trees}")
+
+            def metric(y, raw_yhat): #maximized
+                return -metrics.mean_squared_error(y, raw_yhat)
+
+            self.params["max_depth"] = tree_depth
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
+                    self.y, self.params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
+
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
+
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
+        self.at.base_score = 0
+
+class Covtype(Dataset):
+    def __init__(self):
+        super().__init__()
+        self.params = {
+            "objective": "binary:logistic",
+            "eval_metric": "error",
+            "tree_method": "hist",
+            "seed": 235,
+            "nthread": 1,
+        }
+
+    def load_dataset(self):
+        if self.X is None or self.y is None:
+            self.X, self.y = util.load_openml("covtype", data_id=1596)
+            self.y = (self.y==2)
+
+    def load_model(self, num_trees, tree_depth):
+        model_name = self.get_model_name(num_trees, tree_depth)
+        if not os.path.isfile(os.path.join(self.models_dir, f"{model_name}.xgb")):
+            self.load_dataset()
+            print(f"training model depth={tree_depth}, num_trees={num_trees}")
+
+            def metric(y, raw_yhat):
+                return metrics.accuracy_score(y, raw_yhat > 0)
+
+            self.params["max_depth"] = tree_depth
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
+                    self.y, self.params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
+
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
+
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
+        self.at.base_score = 0
+
+class Higgs(Dataset):
+    def __init__(self):
+        super().__init__()
+        self.params = {
+            "objective": "binary:logistic",
+            "eval_metric": "error",
+            "tree_method": "hist",
+            "seed": 220,
+            "nthread": 1,
+        }
+
+    def load_dataset(self):
+        if self.X is None or self.y is None:
+            higgs_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "higgs.h5")
+            self.X = pd.read_hdf(higgs_data_path, "X")
+            self.y = pd.read_hdf(higgs_data_path, "y")
+
+    def load_model(self, num_trees, tree_depth):
+        model_name = self.get_model_name(num_trees, tree_depth)
+        if not os.path.isfile(os.path.join(self.models_dir, f"{model_name}.xgb")):
+            self.load_dataset()
+            print(f"training model depth={tree_depth}, num_trees={num_trees}")
+
+            def metric(y, raw_yhat):
+                return metrics.accuracy_score(y, raw_yhat > 0)
+
+            self.params["max_depth"] = tree_depth
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
+                    self.y, self.params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
+
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
+
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
+        self.at.base_score = 0
+
 
 class Mnist(Dataset):
 

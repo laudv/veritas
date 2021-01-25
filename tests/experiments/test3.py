@@ -1,13 +1,19 @@
-import datasets
+import datasets, sys
 from veritas import Optimizer
-from robust import RobustnessSearch, VeritasRobustnessSearch
+from veritas import RobustnessSearch, VeritasRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 import matplotlib.pyplot as plt
 
-mnist = datasets.Mnist()
-mnist.load_model(10, 4)
+mnist = datasets.Higgs()
 mnist.load_dataset()
+mnist.load_model(10, 4)
+
+plt.hist(mnist.y, bins=100)
+plt.show()
+plt.hist(np.log(mnist.y), bins=100)
+plt.show()
+sys.exit()
 example_i = 1
 example = list(mnist.X.iloc[example_i,:])
 example_label = int(mnist.y[example_i])

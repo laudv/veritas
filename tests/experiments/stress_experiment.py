@@ -12,61 +12,84 @@ MAX_MEM = 4*1024*1024*1024
 def stress_experiment(dataset, outfile, algos):
 
     for num_trees, tree_depth in [
-            (20, 4)
+            (50, 4),
+            (50, 5),
+            (50, 6),
+            (50, 8),
+            (100, 4),
+            (100, 5),
+            (100, 6),
+            (100, 8),
+            (200, 4),
+            (200, 5),
+            (200, 6),
+            (200, 8),
+            (300, 4),
+            (300, 5),
+            (300, 6),
+            (300, 8),
+            (400, 4),
+            (400, 5),
+            (400, 6),
+            (400, 8),
             ]:
         dataset.load_model(num_trees, tree_depth)
-        at = dataset.at[0]
+        at = dataset.at
+        if not isinstance(at, list):
+            at = [at]
 
-        result = {
-            "algos": algos,
-            "num_trees": num_trees,
-            "tree_depth": tree_depth,
-        }
+        for at_index, at in enumerate(at):
+            result = {
+                "at_index": at_index,
+                "algos": algos,
+                "num_trees": num_trees,
+                "tree_depth": tree_depth,
+            }
 
-        if algos[0] == "1":
-            print("\n== VERITAS ======================================")
-            opt = Optimizer(maximize=at, max_memory=MAX_MEM)
-            dur, oom = opt.astar(max_time=VERITAS_MAX_TIME)
-            result["veritas"] = opt.snapshot()
-            result["veritas_time"] = dur
-            result["veritas_oom"] = oom
-            print("   ", result["veritas"]["bounds"][-1], dur)
+            if algos[0] == "1":
+                print("\n== VERITAS ======================================")
+                opt = Optimizer(maximize=at, max_memory=MAX_MEM)
+                dur, oom = opt.astar(max_time=VERITAS_MAX_TIME)
+                result["veritas"] = opt.snapshot()
+                result["veritas_time"] = dur
+                result["veritas_oom"] = oom
+                print("   ", result["veritas"]["bounds"][-1], dur)
 
-        if algos[1] == "1":
-            print("\n== MERGE ========================================")
-            opt = Optimizer(maximize=at, max_memory=MAX_MEM)
-            data = opt.merge(max_time=VERITAS_MAX_TIME)
-            result["merge"] = data
+            if algos[1] == "1":
+                print("\n== MERGE ========================================")
+                opt = Optimizer(maximize=at, max_memory=MAX_MEM)
+                data = opt.merge(max_time=VERITAS_MAX_TIME)
+                result["merge"] = data
 
-        if algos[2] == "1":
-            print("\n== KANTCHELIAN MIPS =============================")
-            kan = KantchelianOutputOpt(at)
-            kan.optimize()
-            result["kantchelian"] = kan.solution()
-            print("   ", result["kantchelian"], kan.total_time)
+            if algos[2] == "1":
+                print("\n== KANTCHELIAN MIPS =============================")
+                kan = KantchelianOutputOpt(at)
+                kan.optimize()
+                result["kantchelian"] = kan.solution()
+                print("   ", result["kantchelian"], kan.total_time)
 
-        result_str = json.dumps(result)
-        result_bytes = result_str.encode('utf-8')  
-        outfile.write(result_bytes)
-        outfile.write(b"\n")
+            result_str = json.dumps(result)
+            result_bytes = result_str.encode('utf-8')  
+            outfile.write(result_bytes)
+            outfile.write(b"\n")
 
-        # Make sure we write so we don't lose anything on error
-        outfile.flush()
-        os.fsync(outfile)
+            # Make sure we write so we don't lose anything on error
+            outfile.flush()
+            os.fsync(outfile)
 
 
 if __name__ == "__main__":
     dataset = sys.argv[1]
-    num_trees = int(sys.argv[2])
-    tree_depth = int(sys.argv[3])
-    outfile_base = sys.argv[4]
-    try: algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
+    outfile_base = sys.argv[2]
+    try: algos = sys.argv[3] # algo order: veritas merge treeck kantchelian
     except: algos="111"
     assert len(algos) == 3
-    outfile = f"{outfile_base}-{dataset}-{num_trees}-depth{tree_depth}-{algos}.gz"
+    outfile = f"{outfile_base}-{dataset}-{algos}.gz"
 
     if dataset == "mnist":
         dataset = datasets.Mnist()
+    if dataset == "calhouse":
+        dataset = datasets.Calhouse()
     else:
         raise RuntimeError("invalid dataset")
 
