@@ -1,4 +1,4 @@
-import timeit
+import timeit, time
 import numpy as np
 
 from veritas import Optimizer
@@ -21,9 +21,11 @@ class RobustnessSearch:
         self.generated_examples = []
         self.delta_log = []
         self.total_time = None
+        self.total_time_p = None
 
     def search(self):
         start_time = timeit.default_timer()
+        start_time_p = time.process_time()
         upper = self.start_delta
         lower = 0.0
         delta = self.start_delta
@@ -63,6 +65,8 @@ class RobustnessSearch:
                 break
 
         self.total_time = timeit.default_timer() - start_time
+        self.total_time_p = time.process_time() - start_time_p
+        self.delta_log.append((delta, lower, upper))
 
         return delta, lower, upper
 
@@ -154,6 +158,8 @@ class VeritasRobustnessSearch(OptimizerRobustnessSearch):
             generated_examples = [closest]
         else:
             lo, up = self.opt.bounds[-1]
+            lo = lo/self.opt.get_eps()
+            up = up/self.opt.get_eps()
             max_output_diff = up - lo
             generated_examples = []
 

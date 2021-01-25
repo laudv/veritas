@@ -21,7 +21,7 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
         for target_label in [j for j in range(10) if j!=example_label]:
             at1 = mnist.at[target_label]
 
-            print(f"\n\n== EXAMPLE {example_i}: {example_label} vs {target_label} ({algos}) ======")
+            print(f"\n\n== EXAMPLE {example_i}: {example_label} vs {target_label} ({algos}) ===========")
             result = {
                 "example_i": example_i,
                 "example_label": example_label,
@@ -40,7 +40,9 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
                 result["veritas_deltas"] = ver.delta_log
                 result["veritas_log"] = ver.log
                 result["veritas_time"] = ver.total_time
+                result["veritas_time_p"] = ver.total_time_p
                 result["veritas_examples"] = ver.generated_examples
+                print("veritas time", ver.total_time, ver.total_time_p)
 
             if algos[1] == "1":
                 print("\n== MERGE ========================================")
@@ -51,26 +53,31 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
                 result["merge_deltas"] = mer.delta_log
                 result["merge_log"] = mer.log
                 result["merge_time"] = mer.total_time
+                result["merge_time_p"] = mer.total_time_p
+                print("merge time", mer.total_time, mer.total_time_p)
 
             if algos[2] == "1":
                 print("\n== TREECK =======================================")
                 tck = TreeckRobustnessSearch(at0, at1, example, start_delta=20,
-                        max_time=VERITAS_MAX_TIME*4, # needs more time
+                        max_time=VERITAS_MAX_TIME,
                         stop_condition=RobustnessSearch.INT_STOP_COND)
                 tck_norm, tck_lo, tck_hi = tck.search()
                 result["treeck_deltas"] = tck.delta_log
                 result["treeck_log"] = tck.log
                 result["treeck_time"] = tck.total_time
+                result["treeck_time_p"] = tck.total_time_p
                 result["treeck_examples"] = tck.generated_examples,
+                print("treeck time", tck.total_time, tck.total_time_p)
 
             if algos[3] == "1":
                 print("\n== KANTCHELIAN MIPS =============================")
                 kan = KantchelianTargetedAttack(at0, at1, example=example)
                 kan.optimize()
                 kan_example, kan_pred0, kan_pred1, kan_norm = kan.solution()
-                result["kantchelian"] =  { "time": kan.total_time, "example":
-                        kan_example, "out0": kan_pred0, "out1": kan_pred1,
-                        "norm": kan_norm }
+                result["kantchelian"] =  { "time": kan.total_time, "time_p":
+                        kan.total_time_p, "example": kan_example, "out0":
+                        kan_pred0, "out1": kan_pred1, "norm": kan_norm }
+                print("kantchelian time", kan.total_time, kan.total_time_p)
 
             result_str = json.dumps(result)
             result_bytes = result_str.encode('utf-8')  

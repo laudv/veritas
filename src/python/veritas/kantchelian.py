@@ -9,7 +9,7 @@
 ##    hardening of tree ensemble classifiers." International Conference on Machine
 ##    Learning. 2016.
 
-import timeit
+import timeit, time
 import gurobipy as gu
 import numpy as np
 
@@ -142,7 +142,7 @@ class KantchelianAttackBase:
 
         return gu.LinExpr(leaf_values, vars)
 
-    def _add_objective(self, example): # uses self.model, self.split_values, self.pvars, adds self.bvar
+    def _add_robustness_objective(self, example): # uses self.model, split_values, pvars, adds self.bvar
         self.bvar = self.model.addVar(name="b")
         
         for attribute, split_values in self.split_values.items():
@@ -154,6 +154,10 @@ class KantchelianAttackBase:
             self.model.addConstr(expr <= self.bvar, name=f"obj{attribute}")
 
         self.model.setObjective(self.bvar, gu.GRB.MINIMIZE)
+
+    def _add_output_objective(self, at, node_info_per_tree, sense=gu.GRB.MAXIMIZE):
+        output = self._get_ensemble_output_expr(at, node_info_per_tree)
+        self.model.setObjective(output, sense)
 
     def _get_objective_weights(self, split_values, x):
         axis = [-np.inf] + split_values + [np.inf]
@@ -236,8 +240,7 @@ class KantchelianAttack(KantchelianAttackBase):
         self._add_mislabel_constraint(self.at, self.node_info_per_tree,
                 target_output=target_output)
 
-        # OBJECTIVE: infinity norm only
-        self._add_objective(self.example)
+        self._add_robustness_objective(self.example)
 
         self.model.update()
         #print(self.model.display())
@@ -286,14 +289,16 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
         # target than source
         self._add_multiclass_mislabel_constraint()
 
-        self._add_objective(self.example)
+        self._add_robustness_objective(self.example)
 
         self.model.update()
 
     def optimize(self):
         start_time = timeit.default_timer()
+        start_time_p = time.process_time()
         self.model.optimize()
         self.total_time = timeit.default_timer() - start_time
+        self.total_time_p = time.process_time() - start_time_p
 
     def solution(self):
         adv_example = self._extract_adv_example(self.example)
@@ -325,4 +330,26 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
                 name="multiclass_mislabel")
 
 
+class KantchelianOutputOpt(KantchelianAttackBase):
+    def __init__(self, at):
+        self.at = at
+        super().__init__(self.at.get_splits())
+        self.node_info_per_tree = self._collect_node_info(self.at)
+        self._add_leaf_consistency(self.at, self.node_info_per_tree)
+        self._add_predicate_leaf_consistency(self.at, self.node_info_per_tree)
+        self._add_predicate_consistency()
 
+        self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MAXIMIZE)
+        # self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MINIMIZE)
+
+        self.model.update()
+
+    def optimize(self):
+        start_time = timeit.default_timer()
+        self.model.optimize()
+        self.total_time = timeit.default_timer() - start_time
+
+    def solution(self):
+        ensemble_output = self._extract_ensemble_output(self.at,
+                self.node_info_per_tree)
+        return ensemble_output

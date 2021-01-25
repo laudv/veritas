@@ -1,4 +1,4 @@
-
+import time, timeit
 from veritas import *
 
 class Optimizer:
@@ -308,49 +308,77 @@ class Optimizer:
                 print("MERGE worker: closing")
                 conn.close()
 
-        cparent, cchild = mp.Pipe()
-        p = mp.Process(target=merge_worker_fun, name="Merger", args=(self, cchild, max_merge_depth))
-        p.start()
-        start = timeit.default_timer()
         times, bounds, memory, vertices = [], [], [], []
+        start = timeit.default_timer()
+        start_p = time.process_time()
         data = {"oot": True, "oom": False, "optimal": False}
-        while timeit.default_timer() - start < max_time:
-            has_data = cparent.poll(0.1)
-            if has_data:
-                msg = cparent.recv()
-                if msg[0] == "point":
-                    t, b, m, v = msg[1:]
-                    print("MERGE host: data", t, b, m, v)
-                    times.append(t)
-                    bounds.append(b)
-                    memory.append(m)
-                    vertices.append(v)
-                elif msg[0] == "optimal":
-                    print("MERGE host: optimal found")
-                    data["optimal"] = True
-                elif msg[0] == "oom":
-                    m = msg[1]
-                    print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
+
+        if max_merge_depth > 3:
+            cparent, cchild = mp.Pipe()
+            p = mp.Process(target=merge_worker_fun, name="Merger", args=(self, cchild, max_merge_depth))
+            p.start()
+            while timeit.default_timer() - start < max_time:
+                has_data = cparent.poll(0.1)
+                if has_data:
+                    msg = cparent.recv()
+                    if msg[0] == "point":
+                        t, b, m, v = msg[1:]
+                        print("MERGE host: data", t, b, m, v)
+                        times.append(t)
+                        bounds.append(b)
+                        memory.append(m)
+                        vertices.append(v)
+                    elif msg[0] == "optimal":
+                        print("MERGE host: optimal found")
+                        data["optimal"] = True
+                    elif msg[0] == "oom":
+                        m = msg[1]
+                        print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
+                        data["oom"] = True
+                        data["oom_value"] = m
+                elif p.exitcode is not None:
+                    data["oot"] = False
+                    break
+
+            if data["oot"]:
+                print("MERGE host: timeout")
+
+            print("MERGE host: terminating")
+            p.terminate()
+            cparent.close()
+        else:
+            g = self.g1
+            g.add_with_negated_leaf_values(self.g0)
+            for merge_step in range(max_merge_depth):
+                try:
+                    print("MERGE worker: num_independent_sets:",
+                            g.num_independent_sets(), g.num_vertices())
+                    g.merge(2)
+                except Exception as e:
+                    m = g.get_used_mem_size()
+                    print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
                     data["oom"] = True
                     data["oom_value"] = m
-            elif p.exitcode is not None:
-                data["oot"] = False
-                break
+                    break
+
+                times.append(timeit.default_timer() - start)
+                bounds.append(g.basic_bound())
+                memory.append(g.get_used_mem_size())
+                vertices.append(g.num_vertices())
+
+                if g.num_independent_sets() <= 1:
+                    data["optimal"] = True
+                    break
 
         dur = timeit.default_timer() - start
-
-        if data["oot"]:
-            print("MERGE host: timeout")
-
-        print("MERGE host: terminating")
-        p.terminate()
-        cparent.close()
+        dur_p = time.process_time() - start_p
 
         data["times"] = times
         data["bounds"] = bounds
         data["memory"] = memory
         data["vertices"] = vertices
         data["total_time"] = dur
+        data["total_time_p"] = dur_p
 
         return data
 
