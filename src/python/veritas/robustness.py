@@ -116,8 +116,8 @@ class OptimizerRobustnessSearch(RobustnessSearch):
 
     def _log_opt(self, delta):
         if self.opt is not None: 
-            snapshot = self.opt.snapshot()
-            self.log.append(snapshot)
+            stats = self.opt.stats()
+            self.log.append(stats)
 
 
 

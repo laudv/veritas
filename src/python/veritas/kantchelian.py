@@ -20,7 +20,7 @@ class NodeInfo:
 
 class KantchelianAttackBase:
 
-    def __init__(self, split_values):
+    def __init__(self, split_values, max_time=1e100):
         self.guard = 1e-4
         self.split_values = split_values
         self.env = gu.Env(empty=True)
@@ -30,7 +30,52 @@ class KantchelianAttackBase:
         except:
             self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
         self.pvars = self._construct_pvars()
+
+        self.max_time = max_time
         self.total_time = None
+        self.total_time_p = None
+        self.bounds = []
+        self.times = []
+
+    def stats(self):
+        return {
+            "bounds": self.bounds,
+            "times": self.times,
+            "max_time": self.max_time,
+            "time": self.total_time,
+            "time_p": self.total_time_p
+        }
+
+    def optimize(self):
+        start_time = timeit.default_timer()
+        start_time_p = time.process_time()
+        self.model.optimize(self._optimize_callback())
+        self.total_time = timeit.default_timer() - start_time
+        self.total_time_p = time.process_time() - start_time_p
+
+    def _optimize_callback_fn(self, model, where):
+        time = None
+        if where == gu.GRB.Callback.MIP:
+            time = model.cbGet(gu.GRB.Callback.RUNTIME)
+            lo = model.cbGet(gu.GRB.Callback.MIP_OBJBST)
+            up = model.cbGet(gu.GRB.Callback.MIP_OBJBND)
+            self.times.append(time)
+            self.bounds.append((lo, up))
+
+        if where == gu.GRB.Callback.MIPSOL:
+            time = model.cbGet(gu.GRB.Callback.RUNTIME)
+            lo = model.cbGet(gu.GRB.Callback.MIPSOL_OBJBST)
+            up = model.cbGet(gu.GRB.Callback.MIPSOL_OBJBND)
+            self.times.append(time)
+            self.bounds.append((lo, up))
+
+        if time is not None:
+            if time > self.max_time:
+                print(f"Terminating Gurobi after {self.max_time} seconds")
+                model.terminate()
+
+    def _optimize_callback(self):
+        return lambda m, w: self._optimize_callback_fn(m, w)
 
     def _construct_pvars(self): # uses self.split_values, self.model
         pvars = {}
@@ -211,11 +256,11 @@ class KantchelianAttackBase:
 
 class KantchelianAttack(KantchelianAttackBase):
 
-    def __init__(self, at, target_output, example):
+    def __init__(self, at, target_output, example, **kwargs):
         self.at = at
         self.example = example
 
-        super().__init__(self.at.get_splits())
+        super().__init__(self.at.get_splits(), **kwargs)
 
         self.node_info_per_tree = self._collect_node_info(self.at)
 
@@ -245,13 +290,6 @@ class KantchelianAttack(KantchelianAttackBase):
         self.model.update()
         #print(self.model.display())
 
-    def optimize(self):
-        start_time = timeit.default_timer()
-        self.model.optimize()
-        self.total_time = timeit.default_timer() - start_time
-        #for v in self.model.getVars():
-        #    print(f"{v.varName} {v.x}")
-
     def solution(self):
         adv_example = self._extract_adv_example(self.example)
         ensemble_output = self._extract_ensemble_output(self.at,
@@ -261,12 +299,12 @@ class KantchelianAttack(KantchelianAttackBase):
 
 class KantchelianTargetedAttack(KantchelianAttackBase):
 
-    def __init__(self, source_at, target_at, example):
+    def __init__(self, source_at, target_at, example, **kwargs):
         self.source_at = source_at
         self.target_at = target_at
         self.example = example
 
-        super().__init__(self._combine_split_values())
+        super().__init__(self._combine_split_values(), **kwargs)
 
         self.source_node_info_per_tree = self._collect_node_info(self.source_at)
         self.target_node_info_per_tree = self._collect_node_info(self.target_at)
@@ -292,13 +330,6 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
         self._add_robustness_objective(self.example)
 
         self.model.update()
-
-    def optimize(self):
-        start_time = timeit.default_timer()
-        start_time_p = time.process_time()
-        self.model.optimize()
-        self.total_time = timeit.default_timer() - start_time
-        self.total_time_p = time.process_time() - start_time_p
 
     def solution(self):
         adv_example = self._extract_adv_example(self.example)
@@ -331,9 +362,9 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
 
 
 class KantchelianOutputOpt(KantchelianAttackBase):
-    def __init__(self, at):
+    def __init__(self, at, **kwargs):
         self.at = at
-        super().__init__(self.at.get_splits())
+        super().__init__(self.at.get_splits(), **kwargs)
         self.node_info_per_tree = self._collect_node_info(self.at)
         self._add_leaf_consistency(self.at, self.node_info_per_tree)
         self._add_predicate_leaf_consistency(self.at, self.node_info_per_tree)
@@ -343,11 +374,6 @@ class KantchelianOutputOpt(KantchelianAttackBase):
         # self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MINIMIZE)
 
         self.model.update()
-
-    def optimize(self):
-        start_time = timeit.default_timer()
-        self.model.optimize()
-        self.total_time = timeit.default_timer() - start_time
 
     def solution(self):
         ensemble_output = self._extract_ensemble_output(self.at,

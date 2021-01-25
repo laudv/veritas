@@ -79,7 +79,7 @@ class Optimizer:
 
         return fsols
 
-    def snapshot(self, num_solutions=None):
+    def stats(self, num_solutions=None):
         sols = self.filter_solutions(num_solutions)
         snap = {
             "bounds": self.bounds.copy(),

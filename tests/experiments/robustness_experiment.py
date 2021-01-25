@@ -6,7 +6,7 @@ from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 
-VERITAS_MAX_TIME = 2
+VERITAS_MAX_TIME = 1.0
 
 
 def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
@@ -74,9 +74,10 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
                 kan = KantchelianTargetedAttack(at0, at1, example=example)
                 kan.optimize()
                 kan_example, kan_pred0, kan_pred1, kan_norm = kan.solution()
-                result["kantchelian"] =  { "time": kan.total_time, "time_p":
-                        kan.total_time_p, "example": kan_example, "out0":
-                        kan_pred0, "out1": kan_pred1, "norm": kan_norm }
+                result["kantchelian"] = kan.stats()
+                result["kantchelian_example"] = kan_example
+                result["kantchelian_pred"] = (kan_pred0, kan_pred1)
+                result["kantchelian_delta"] = kan_norm
                 print("kantchelian time", kan.total_time, kan.total_time_p)
 
             result_str = json.dumps(result)
