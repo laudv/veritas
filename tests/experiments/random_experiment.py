@@ -7,7 +7,7 @@ from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianOutputOpt
 import numpy as np
 
-MAX_TIME = 30
+MAX_TIME = 20
 MAX_MEM = 4*1024*1024*1024
 
 def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_seed, algos):
@@ -47,13 +47,25 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
                 print("    sol:", result["veritas"]["solutions"][0])
             print("    veritas time", dur)
 
+            print("\n== VERITAS ARA* =================================")
+            opt = Optimizer(maximize=at, max_memory=MAX_MEM)
+            opt.prune_box(box, instance=1)
+            dur, oom = opt.arastar(max_time=MAX_TIME)
+            result["veritas_ara"] = opt.stats()
+            result["veritas_ara_time"] = dur
+            result["veritas_ara_oom"] = oom
+            print("   ", result["veritas_ara"]["bounds"][-1], dur)
+            if len(result["veritas_ara"]["solutions"]) > 0:
+                print("    sol:", max(result["veritas_ara"]["solutions"], key=lambda s: s[1])[1])
+            print("    veritas time", dur)
+
         if algos[1] == "1":
             print("\n== MERGE ========================================")
             opt = Optimizer(maximize=at, max_memory=MAX_MEM)
             opt.prune_box(box, instance=1)
             data = opt.merge(max_time=MAX_TIME)
             result["merge"] = data
-            print("    merge time", data["total_time_p"])
+            print("    merge time", data["total_time"])
 
         if algos[2] == "1":
             print("\n== KANTCHELIAN MIPS =============================")
@@ -99,7 +111,7 @@ if __name__ == "__main__":
     else:
         raise RuntimeError("invalid dataset")
 
-    if os.path.isfile(outfile):
+    if "--yes" not in sys.argv and os.path.isfile(outfile):
         if input(f"override {outfile}? ") != "y":
             print("OK BYE")
             sys.exit()

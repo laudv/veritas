@@ -97,7 +97,7 @@ if __name__ == "__main__":
         jsons2 = parse_robustness_files(filename2)
         jsons = zip_result(jsons, jsons2)
     df = get_df(jsons)
-    #print(df)
+    print(df.head(20))
     #print(df[df["ver_delta"]>df["mer_delta"]])
     #print(df[df["kan_delta"]==df["mer_delta"]])
     #print(df[df["kan_delta"]==df["ver_delta"]])

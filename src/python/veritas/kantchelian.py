@@ -390,13 +390,15 @@ class KantchelianOutputOpt(KantchelianAttackBase):
     def constraint_to_box(self, box):
         for attribute, dom in enumerate(box):
             lo, hi = dom.lo, dom.hi
+            if attribute not in self.split_values:
+                continue
             split_values = self.split_values[attribute]
             #print(lo, hi)
             for val in split_values:
                 var = self.pvars[(attribute, val)]
-                if val < lo:
+                if val <= lo:
                     self.model.addConstr(var == 0)
-                if val > hi:
+                if val >= hi:
                     self.model.addConstr(var == 1)
 
     def solution(self):

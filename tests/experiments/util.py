@@ -83,7 +83,7 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
             best_model = model
             best_lr = lr
 
-    for lr in np.linspace(best_lr - 0.1, best_lr + 0.1, 5)[1:-1]:
+    for lr in np.linspace(best_lr - 0.25, best_lr + 0.25, 7)[1:-1]:
         if lr <= 0.0 or lr > 1.0: continue
         if lr in lr_values_tested: continue
         print("(2) LEARNING_RATE =", lr)

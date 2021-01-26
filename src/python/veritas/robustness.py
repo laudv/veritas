@@ -24,8 +24,8 @@ class RobustnessSearch:
         self.total_time_p = None
 
     def search(self):
-        start_time = timeit.default_timer()
-        start_time_p = time.process_time()
+        self.start_time = timeit.default_timer()
+        self.start_time_p = time.process_time()
         upper = self.start_delta
         lower = 0.0
         delta = self.start_delta
@@ -64,8 +64,8 @@ class RobustnessSearch:
                 print(f"done early {lower} <= {delta} <= {upper}")
                 break
 
-        self.total_time = timeit.default_timer() - start_time
-        self.total_time_p = time.process_time() - start_time_p
+        self.total_time = timeit.default_timer() - self.start_time
+        self.total_time_p = time.process_time() - self.start_time_p
         self.delta_log.append((delta, lower, upper))
 
         return delta, lower, upper
@@ -143,14 +143,16 @@ class VeritasRobustnessSearch(OptimizerRobustnessSearch):
                 matches=set(), match_is_reuse=False)
         self.opt.prune_example(list(self.example), delta)
 
+        rem_time = self.max_time - timeit.default_timer() + self.start_time
+
         if self.eps_start == 1.0:
-            self.opt.astar(self.max_time, steps_kwargs=self.steps_kwargs)
+            self.opt.astar(rem_time/2, steps_kwargs=self.steps_kwargs)
         else:
-            self.opt.arastar(self.max_time, self.eps_start, self.eps_incr,
+            self.opt.arastar(rem_time/2, self.eps_start, self.eps_incr,
                     steps_kwargs=self.steps_kwargs)
 
         if self.opt.num_solutions() > 0:
-            sol = self.opt.solutions()[0]
+            sol = max(self.opt.solutions(), key=lambda s: s.output_difference())
             print(f"Veritas generated example {sol.output0} {sol.output1}")
             max_output_diff = sol.output_difference()
             closest = self.opt.get_closest_example(sol, self.example, instance=0)
@@ -158,9 +160,7 @@ class VeritasRobustnessSearch(OptimizerRobustnessSearch):
             generated_examples = [closest]
         else:
             lo, up = self.opt.bounds[-1]
-            lo = lo/self.opt.get_eps()
-            up = up/self.opt.get_eps()
-            max_output_diff = up - lo
+            max_output_diff = (up - lo) / self.opt.get_eps()
             generated_examples = []
 
         return max_output_diff, generated_examples
@@ -183,7 +183,9 @@ class MergeRobustnessSearch(OptimizerRobustnessSearch):
                 matches=set(), match_is_reuse=False)
         self.opt.prune_example(list(self.example), delta)
 
-        result = self.opt.merge(self.max_time, **self.merge_kwargs)
+        rem_time = self.max_time - timeit.default_timer() + self.start_time
+
+        result = self.opt.merge(rem_time, **self.merge_kwargs)
         max_output_diff = result["bounds"][-1][1]
 
         return max_output_diff, [] # merge cannot generate examples
