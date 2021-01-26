@@ -47,32 +47,44 @@ class KantchelianAttackBase:
         }
 
     def optimize(self):
-        start_time = timeit.default_timer()
-        start_time_p = time.process_time()
+        self.start_time = timeit.default_timer()
+        self.start_time_p = time.process_time()
         self.model.optimize(self._optimize_callback())
-        self.total_time = timeit.default_timer() - start_time
-        self.total_time_p = time.process_time() - start_time_p
+        self.total_time = timeit.default_timer() - self.start_time
+        self.total_time_p = time.process_time() - self.start_time_p
+
+    def _check_time(self, model):
+        if self.start_time_p + self.max_time < time.process_time():
+            print(f"Terminating Gurobi after {self.max_time} processor seconds")
+            model.terminate()
 
     def _optimize_callback_fn(self, model, where):
-        time = None
         if where == gu.GRB.Callback.MIP:
-            time = model.cbGet(gu.GRB.Callback.RUNTIME)
+            t = model.cbGet(gu.GRB.Callback.RUNTIME)
+            t_p = time.process_time() - self.start_time_p
+            self.times.append((t, t_p))
             lo = model.cbGet(gu.GRB.Callback.MIP_OBJBST)
             up = model.cbGet(gu.GRB.Callback.MIP_OBJBND)
-            self.times.append(time)
             self.bounds.append((lo, up))
+            self._check_time(model)
 
         if where == gu.GRB.Callback.MIPSOL:
-            time = model.cbGet(gu.GRB.Callback.RUNTIME)
+            t = model.cbGet(gu.GRB.Callback.RUNTIME)
+            t_p = time.process_time() - self.start_time_p
+            self.times.append((t, t_p))
             lo = model.cbGet(gu.GRB.Callback.MIPSOL_OBJBST)
             up = model.cbGet(gu.GRB.Callback.MIPSOL_OBJBND)
-            self.times.append(time)
             self.bounds.append((lo, up))
+            self._check_time(model)
 
-        if time is not None:
-            if time > self.max_time:
-                print(f"Terminating Gurobi after {self.max_time} seconds")
-                model.terminate()
+        if where == gu.GRB.Callback.MIPNODE:
+            t = model.cbGet(gu.GRB.Callback.RUNTIME)
+            t_p = time.process_time() - self.start_time_p
+            self.times.append((t, t_p))
+            lo = model.cbGet(gu.GRB.Callback.MIPNODE_OBJBST)
+            up = model.cbGet(gu.GRB.Callback.MIPNODE_OBJBND)
+            self.bounds.append((lo, up))
+            self._check_time(model)
 
     def _optimize_callback(self):
         return lambda m, w: self._optimize_callback_fn(m, w)
@@ -374,6 +386,18 @@ class KantchelianOutputOpt(KantchelianAttackBase):
         # self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MINIMIZE)
 
         self.model.update()
+    
+    def constraint_to_box(self, box):
+        for attribute, dom in enumerate(box):
+            lo, hi = dom.lo, dom.hi
+            split_values = self.split_values[attribute]
+            #print(lo, hi)
+            for val in split_values:
+                var = self.pvars[(attribute, val)]
+                if val < lo:
+                    self.model.addConstr(var == 0)
+                if val > hi:
+                    self.model.addConstr(var == 1)
 
     def solution(self):
         ensemble_output = self._extract_ensemble_output(self.at,

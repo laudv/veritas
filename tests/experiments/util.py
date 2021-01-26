@@ -257,7 +257,7 @@ def randomly_prune_opt(X, opt, seed):
     fraction = max(0.05, rng.rand())
     num_vertices_goal = fraction * (opt.g0.num_vertices() + opt.g1.num_vertices())
 
-    print("prune start:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
+    #print("prune start:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
     
     while opt.g0.num_vertices() + opt.g1.num_vertices() > num_vertices_goal and num_tries < 100:
         num_tries += 1
@@ -272,4 +272,6 @@ def randomly_prune_opt(X, opt, seed):
         opt.prune_box(box, 0)
         opt.prune_box(box, 1)
 
-        print("prune progress:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
+        #print("prune progress:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
+
+    return box,num_vertices_goal

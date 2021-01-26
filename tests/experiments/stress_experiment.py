@@ -2,7 +2,6 @@ import os, sys, json, gzip
 import datasets
 from veritas import Optimizer
 from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
-from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack, KantchelianOutputOpt
 import numpy as np
 
@@ -65,10 +64,10 @@ def stress_experiment(dataset, outfile, algos):
                 print("\n== KANTCHELIAN MIPS =============================")
                 kan = KantchelianOutputOpt(at, max_time=MAX_TIME)
                 kan.optimize()
-                result["kantchelian"] = kan.solution()
-                print("   ", result["kantchelian"], kan.total_time)
 
-                print(kan.stats())
+                #result["kantchelian_output"] = kan.solution()
+                result["kantchelian"] = kan.stats()
+                print("   ", result["kantchelian"]["bounds"][-1], kan.total_time_p)
 
             result_str = json.dumps(result)
             result_bytes = result_str.encode('utf-8')
@@ -83,15 +82,20 @@ def stress_experiment(dataset, outfile, algos):
 if __name__ == "__main__":
     dataset = sys.argv[1]
     outfile_base = sys.argv[2]
-    try: algos = sys.argv[3] # algo order: veritas merge treeck kantchelian
-    except: algos="111"
+    algos = sys.argv[3]
     assert len(algos) == 3
     outfile = f"{outfile_base}-{dataset}-{algos}.gz"
 
     if dataset == "mnist":
         dataset = datasets.Mnist()
-    if dataset == "calhouse":
+    elif dataset == "calhouse":
         dataset = datasets.Calhouse()
+    elif dataset == "allstate":
+        dataset = datasets.Allstate()
+    elif dataset == "covtype":
+        dataset = datasets.Covtype()
+    elif dataset == "higgs":
+        dataset = datasets.Higgs()
     else:
         raise RuntimeError("invalid dataset")
 
@@ -101,9 +105,10 @@ if __name__ == "__main__":
             sys.exit()
 
     with gzip.open(outfile, "wb") as f:
-        stress_experiment(dataset, f, algos)
-
-    print("results written to", outfile)
+        try:
+            stress_experiment(dataset, f, algos)
+        finally:
+            print("results written to", outfile)
 
 
 

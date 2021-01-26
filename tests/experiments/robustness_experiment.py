@@ -105,6 +105,7 @@ if __name__ == "__main__":
             sys.exit()
 
     with gzip.open(outfile, "wb") as f:
-        robustness_experiment(num_trees, tree_depth, example_is, f, algos)
-
-    print("results written to", outfile)
+        try:
+            robustness_experiment(num_trees, tree_depth, example_is, f, algos)
+        finally: 
+            print("results written to", outfile)
