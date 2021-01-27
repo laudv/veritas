@@ -3,6 +3,18 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
+def combine_result(jsons0, jsons1):
+    for j0, j1 in zip(jsons0, jsons1):
+        print(j0.keys())
+        print(j1.keys())
+        for k, v in j1.items():
+            if k not in j0:
+                j0[k] = v
+            elif k == "algos": pass
+            else:
+                assert j0[k] == v
+    return jsons0
+
 def get_df(jsons):
 
     col_names = ["num_trees", "tree_depth", "num_vert", "ver_bnd",
@@ -62,23 +74,33 @@ def plot(jsons):
         if len(j["veritas"]["solutions"]) > 0:
             ax.axhline(y=j["veritas"]["solutions"][0][1], color="gray", ls=":")
         kan_lo_bnds = [b[0] for b in j["kantchelian"]["bounds"]]
-        kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_output"]]
+        #kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_output"]]
+        kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]]
         kan_times_lo = [t[1] for t in j["kantchelian"]["times"]]
-        kan_times_hi = kan_times_lo + [j["kantchelian"]["time_p"]]
-        ax.plot(j["veritas"]["times"], ver_bnds, label="veritas")
-        if "veritas_ara" in j:
-            ax.plot(j["veritas_ara"]["sol_times"], [s[1] for s in j["veritas_ara"]["solutions"]], label="ARA*")
+        kan_times_hi = (kan_times_lo + [j["kantchelian"]["time_p"]])[0:len(kan_hi_bnds)]
+        lv, = ax.plot(j["veritas"]["times"], ver_bnds, label="veritas")
+        m = min(ver_bnds)
+        if "veritas_ara" in j and len(j["veritas_ara"]["solutions"]) > 0:
+            ax.plot(j["veritas_ara"]["sol_times"], [s[1] for s in
+                j["veritas_ara"]["solutions"]], label="veritas lo",
+                color=lv.get_color(), ls="--", marker="x")
+            m = min(s[1] for s in j["veritas_ara"]["solutions"])
+            M = max(s[1] for s in j["veritas_ara"]["solutions"])
+            ax.plot([j["veritas_ara"]["sol_times"][-1],
+                j["veritas"]["times"][-1]], [M, M], color=lv.get_color(), ls="--")
         if "merge" in j:
             ax.plot(j["merge"]["times"], [b[1] for b in j["merge"]["bounds"]], label="merge")
-        ax.plot(kan_times_hi, kan_hi_bnds, label="milp")
-        ax.plot(kan_times_lo, kan_lo_bnds, label="milp lo")
+        lk, = ax.plot(kan_times_hi, kan_hi_bnds, label="milp")
+        ax.plot(kan_times_lo, kan_lo_bnds, label="milp lo", c=lk.get_color(), ls="--")
         #ax.axhline(j["kantchelian_output"], ls="--", color="lightgray")
         #ax.set_ylim([kan_lo_bnds[10], max(ver_bnds)])
-        ax.set_ylim([0.9*min(min(ver_bnds), min(kan_hi_bnds)), max(ver_bnds)])
+        ax.set_ylim([0.9*min(m, min(kan_hi_bnds)), max(ver_bnds)])
+        ax.set_xlabel("time")
+        ax.set_ylabel("model output")
         ax.legend()
         plt.show()
 
-def parse_files(filename):
+def parse_file(filename):
     with gzip.open(filename, "rb") as f:
         lines = f.readlines()
         return [json.loads(line) for line in lines]
@@ -86,7 +108,13 @@ def parse_files(filename):
 if __name__ == "__main__":
     task = sys.argv[1]
     filename = sys.argv[2]
-    jsons = parse_files(filename)
+    try: filename2 = sys.argv[3]
+    except: filename2 = None
+
+    jsons = parse_file(filename)
+    if filename2 != None:
+        jsons2 = parse_file(filename2)
+        jsons = combine_result(jsons, jsons2)
     df = get_df(jsons)
     print(df)
     plot(jsons)

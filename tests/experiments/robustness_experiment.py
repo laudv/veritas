@@ -6,7 +6,7 @@ from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 
-MAX_TIME = 1.0
+MAX_TIME = 4.0
 
 
 def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
@@ -59,6 +59,18 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
             if algos[1] == "1":
                 print("\n== MERGE ========================================")
                 mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=2,
+                        max_time=MAX_TIME,
+                        start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
+                mer_norm, mer_lo, mer_hi = mer.search()
+                result["merge_deltas"] = mer.delta_log
+                result["merge_log"] = mer.log
+                result["merge_time"] = mer.total_time
+                result["merge_time_p"] = mer.total_time_p
+                print("merge time", mer.total_time, mer.total_time)
+
+            if algos[1] == "3":
+                print("\n== MERGE ========================================")
+                mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=3,
                         max_time=MAX_TIME,
                         start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
                 mer_norm, mer_lo, mer_hi = mer.search()

@@ -61,6 +61,7 @@ class Optimizer:
         self.memory = [self.current_memory()]
         self.clique_count = [self.num_candidate_cliques()]
         self.times = [0.0]
+        self.max_time = None
 
     def filter_solutions(self, num=None):
         sols = self.solutions()
@@ -95,6 +96,7 @@ class Optimizer:
             "max_memory": self.max_memory,
 
             "total_time": timeit.default_timer() - self.start_time,
+            "max_time": self.max_time,
 
             "num_vertices0": self.g0.num_vertices(),
             "num_vertices1": self.g1.num_vertices(),
@@ -176,11 +178,12 @@ class Optimizer:
     def astar(self, max_time=10,
             min_num_steps=10, max_num_steps=1000,
             steps_kwargs={}):
+        self.max_time = max_time
         done = False
         oom = False
         num_steps = min_num_steps
         start = timeit.default_timer()
-        stop = start + max_time
+        stop = start + self.max_time
         while not done and self.num_solutions() == 0 \
                 and timeit.default_timer() < stop:
             try:
@@ -206,11 +209,12 @@ class Optimizer:
 
         self.set_eps(eps_start)
 
+        self.max_time = max_time
         done = False
         oom = False
         num_steps = min_num_steps
         start = timeit.default_timer()
-        stop = start + max_time
+        stop = start + self.max_time
         solution_count = 0
         while not done and timeit.default_timer() < stop \
                 and not (self.get_eps() == 1.0 \
@@ -273,6 +277,7 @@ class Optimizer:
     # Robustness verification of tree-based models. In Advances in Neural
     # Information Processing Systems (pp. 12317-12328).
     def merge(self, max_time=10, max_merge_depth=9999):
+        self.max_time = max_time
         def merge_worker_fun(self, conn, max_merge_depth):
             g = self.g1
             g.add_with_negated_leaf_values(self.g0)
@@ -373,6 +378,7 @@ class Optimizer:
         dur = timeit.default_timer() - start
         dur_p = time.process_time() - start_p
 
+        data["max_time"] = max_time
         data["times"] = times
         data["bounds"] = bounds
         data["memory"] = memory
