@@ -3,16 +3,14 @@ import pandas as pd
 
 import matplotlib.pyplot as plt
 
-def combine_result(jsons0, jsons1):
-    for j0, j1 in zip(jsons0, jsons1):
-        print(j0.keys())
-        print(j1.keys())
-        for k, v in j1.items():
-            if k not in j0:
+def combine_results(*jsons):
+    jsons0 = []
+    for js in zip(*jsons):
+        j0 = {}
+        for j in js:
+            for k, v in j.items():
                 j0[k] = v
-            elif k == "algos": pass
-            else:
-                assert j0[k] == v
+        jsons0.append(j0)
     return jsons0
 
 def get_df(jsons):
@@ -49,6 +47,7 @@ def get_df(jsons):
 
         if "kantchelian" in j:
             #print(list(j["kantchelian"].keys()))
+            #kan_bnd.append(min(j["kantchelian"]["bounds"][-1][1], j["kantchelian_output"]))
             kan_bnd.append(j["kantchelian"]["bounds"][-1][1])
             kan_time.append(j["kantchelian"]["time_p"])
 
@@ -57,8 +56,10 @@ def get_df(jsons):
         mer_oom]) if len(v) > 0 }
     df = pd.DataFrame(columns)
 
-    df["ver_faster"] = (df["kan_time"] > df["ver_time"]) & (df["ver_time"] < 120)
-    df["ver_better"] = df["kan_bnd"] > df["ver_bnd"]
+    df["ver_faster"] = (df["kan_time"] > df["ver_time"]) & (df["ver_time"] < 20.0)
+    df["ver_better"] = df["kan_bnd"].round(4) > df["ver_bnd"].round(4)
+    df["ver_worse"] = df["kan_bnd"].round(4) < df["ver_bnd"].round(4)
+    df["ver_equal"] = df["kan_bnd"].round(4) == df["ver_bnd"].round(4)
 
     return df.round(1)
 
@@ -103,18 +104,20 @@ def plot(jsons):
 def parse_file(filename):
     with gzip.open(filename, "rb") as f:
         lines = f.readlines()
+        print(filename, len(lines))
         return [json.loads(line) for line in lines]
 
 if __name__ == "__main__":
     task = sys.argv[1]
-    filename = sys.argv[2]
-    try: filename2 = sys.argv[3]
-    except: filename2 = None
-
-    jsons = parse_file(filename)
-    if filename2 != None:
-        jsons2 = parse_file(filename2)
-        jsons = combine_result(jsons, jsons2)
+    filenames = [f for f in sys.argv[2:] if not f.startswith("--")]
+    jsons = [parse_file(f) for f in filenames]
+    jsons = combine_results(*jsons)
     df = get_df(jsons)
     print(df)
+    print(df.head(20))
+    print(f"Veritas faster than MILP:  {100.0*sum(df['ver_faster'])/len(df):4.0f}%   n={len(df)}")
+    print(f"Veritas better than MILP:  {100.0*sum(df['ver_better'])/len(df):4.0f}%")
+    print(f"Veritas worse than MILP:   {100.0*sum(df['ver_worse'])/len(df):4.0f}%")
+    print(f"Veritas as good as MILP:   {100.0*sum(df['ver_equal'])/len(df):4.0f}%")
+    print(f"Veritas better and faster: {100.0*sum(df['ver_better'] & df['ver_faster'])/len(df):4.0f}%")
     plot(jsons)

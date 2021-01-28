@@ -7,14 +7,14 @@ import matplotlib.pyplot as plt
 
 import datasets
 
-def combine_result(jsons0, jsons1):
-    for j0, j1 in zip(jsons0, jsons1):
-        for k, v in j1.items():
-            if k not in j0:
+def combine_results(*jsons):
+    jsons0 = []
+    for js in zip(*jsons):
+        j0 = {}
+        for j in js:
+            for k, v in j.items():
                 j0[k] = v
-            elif k == "algos": pass
-            else:
-                assert j0[k] == v
+        jsons0.append(j0)
     return jsons0
 
 def get_df(jsons):
@@ -66,19 +66,18 @@ def plot(jsons):
         fig, ax = plt.subplots()
 
         ver_y = [b[0] for b in j["veritas_deltas"]]
-        #ver_times = np.cumsum([b["total_time"] for b in j["veritas_log"]])
-        #ver_times = [b[3] for b in j["veritas_deltas"]]
-        ver_times = np.linspace(0, j["veritas_time"], len(ver_y))
+        try:
+            ver_times = [b[3] for b in j["veritas_deltas"]]
+        except:
+            ver_times = np.linspace(0, j["veritas_time"], len(ver_y))
         ver_total_opt_time = sum(b["total_time"] for b in j["veritas_log"])
-        print("veritas time actually optimizing:", j["veritas_time"], "vs", ver_total_opt_time,
-                (j["veritas_time"]-ver_total_opt_time)/ver_total_opt_time)
+        #print("veritas time actually optimizing:", j["veritas_time"], "vs", ver_total_opt_time,
+        #        (j["veritas_time"]-ver_total_opt_time)/ver_total_opt_time)
         #print(j["veritas_log"][0].keys())
         kan_lo_y = [b[0] for b in j["kantchelian"]["bounds"]]
         kan_hi_y = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_delta"]]
         kan_times_lo = [t[1] for t in j["kantchelian"]["times"]]
         kan_times_hi = kan_times_lo + [j["kantchelian"]["time_p"]]
-        print(ver_times, j["veritas_time"])
-        print(ver_y)
         ax.plot(ver_times, ver_y, label="veritas")
 
         mer_y = [b[0] for b in j["merge_deltas"]]
@@ -100,7 +99,7 @@ def plot(jsons):
         plt.show()
 
 
-def parse_robustness_files(filename):
+def parse_file(filename):
     with gzip.open(filename, "rb") as f:
         lines = f.readlines()
         return [json.loads(line) for line in lines]
@@ -111,20 +110,10 @@ def avg_time_90percentile(x):
     return np.mean(x)
 
 if __name__ == "__main__":
-
     task = sys.argv[1]
-    filename = sys.argv[2]
-    try: filename2 = sys.argv[3]
-    except: filename2 = None
-
-    print(filename)
-    print(filename2)
-
-    jsons = parse_robustness_files(filename)
-
-    if filename2 is not None:
-        jsons2 = parse_robustness_files(filename2)
-        jsons = combine_result(jsons, jsons2)
+    filenames = [f for f in sys.argv[2:] if not f.startswith("--")]
+    jsons = [parse_file(f) for f in filenames]
+    jsons = combine_results(*jsons)
     df = get_df(jsons)
     print(df.head(20))
     ver_worse = df[df["ver_delta"]<df["mer_delta"]]
@@ -143,5 +132,10 @@ if __name__ == "__main__":
     print("mean delta diff ver", (df["kan_delta"]-df["ver_delta"]).mean())
     print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).mean())
 
-    #plot(jsons)
-    plot([jsons[i] for i in ver_worse.index])
+    #worst_perf = df["kan_time"].sort_values(ascending=False).index[0:10]
+    #print(worst_perf)
+    #print(df.iloc[worst_perf,:])
+
+
+    plot(jsons)
+    #plot([jsons[i] for i in ver_worse.index])
