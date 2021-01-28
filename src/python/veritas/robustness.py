@@ -32,7 +32,9 @@ class RobustnessSearch:
 
         for i in range(self.num_steps):
             self.delta_log.append((delta, lower, upper, timeit.default_timer()-self.start_time))
-            max_output_diff, generated_examples = self.get_max_output_difference(delta)
+            res = self.get_max_output_difference(delta)
+            if res is None: break
+            max_output_diff, generated_examples = res
             best_example_delta = delta
             if len(generated_examples) > 0:
                 for example in generated_examples:
@@ -111,6 +113,7 @@ class OptimizerRobustnessSearch(RobustnessSearch):
         self.optimizer_kwargs = optimizer_kwargs
 
         self.opt = None
+        self.prev_delta = None
 
         self.log = []
 
@@ -135,19 +138,32 @@ class VeritasRobustnessSearch(OptimizerRobustnessSearch):
         self.steps_kwargs = { "min_output_difference": 0.0 }
         #self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
 
-    def get_max_output_difference(self, delta):
+    def get_opt(self, delta):
         # Share all variables between source and target model
-        self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
-                matches=set(), match_is_reuse=False)
+        if self.opt is not None and self.prev_delta > delta:
+            pass  # reuse self.opt, and prune further
+        else:
+            self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
+                    matches=set(), match_is_reuse=False)
         self.opt.prune_example(list(self.example), delta)
+        self.prev_delta = delta
+
+    def get_max_output_difference(self, delta):
+        self.get_opt(delta)
 
         rem_time = self.max_time - timeit.default_timer() + self.start_time
+        #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
+        rem_time /= (self.num_steps - len(self.log))
+        print("step time", rem_time, self.max_time, self.num_steps)
+
+        if rem_time < 0.0:
+            return None
 
         if self.eps_start == 1.0:
-            self.opt.astar(rem_time/2.0, steps_kwargs=self.steps_kwargs)
+            self.opt.astar(rem_time, steps_kwargs=self.steps_kwargs, max_num_steps=100)
         else:
-            self.opt.arastar(rem_time/2.0, self.eps_start, self.eps_incr,
-                    steps_kwargs=self.steps_kwargs)
+            self.opt.arastar(rem_time, self.eps_start, self.eps_incr,
+                    steps_kwargs=self.steps_kwargs, max_num_steps=100)
 
         if self.opt.num_solutions() > 0:
             sol = max(self.opt.solutions(), key=lambda s: s.output_difference())
@@ -177,14 +193,23 @@ class MergeRobustnessSearch(OptimizerRobustnessSearch):
 
     def get_max_output_difference(self, delta):
         # Share all variables between source and target model
+        # Can't reuse opts because g0 and g1 are modified by the merge process!
         self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
                 matches=set(), match_is_reuse=False)
         self.opt.prune_example(list(self.example), delta)
 
         rem_time = self.max_time - timeit.default_timer() + self.start_time
+        #rem_time = min(rem_time / 2, 2.0 * self.max_time / self.num_steps)
+        rem_time /= (self.num_steps - len(self.log))
+        print("step time", rem_time, self.max_time, self.num_steps)
+
+        if rem_time < 0.0:
+            return None
 
         result = self.opt.merge(rem_time, **self.merge_kwargs)
-        max_output_diff = result["bounds"][-1][1]
+
+        try: max_output_diff = result["bounds"][-1][1]
+        except: max_output_diff = np.inf
 
         super()._log_opt(delta)
 

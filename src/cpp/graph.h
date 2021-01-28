@@ -184,7 +184,7 @@ namespace veritas {
 
         std::tuple<FloatT, FloatT> propagate_outputs();
         std::tuple<FloatT, FloatT> basic_bound() const;
-        void merge(int K);
+        bool merge(int K, float max_time);
         //void simplify(FloatT max_err, bool overestimate); // vertices must be in DFS order, left to right!
         void sort_asc();
         void sort_desc();

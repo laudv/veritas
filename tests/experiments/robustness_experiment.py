@@ -9,7 +9,7 @@ import numpy as np
 MAX_TIME = 4.0
 
 
-def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
+def robustness_experiment(num_trees, tree_depth, example_is, max_time, outfile, algos):
     mnist = datasets.Mnist()
     mnist.load_model(num_trees, tree_depth)
     mnist.load_dataset()
@@ -33,8 +33,8 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
                 print("\n== VERITAS ======================================")
                 ver = VeritasRobustnessSearch(at0, at1, example, start_delta=20,
                         eps_start=1.0, eps_incr=0.1,
-                        max_time=MAX_TIME,
-                        stop_condition=RobustnessSearch.INT_STOP_COND)
+                        max_time=max_time,
+                        stop_condition=RobustnessSearch.NO_STOP_COND)
                 ver_norm, ver_lo, ver_hi = ver.search()
                 result["veritas_deltas"] = ver.delta_log
                 result["veritas_log"] = ver.log
@@ -46,8 +46,8 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
                 print("\n== VERITAS ARA* =================================")
                 ver = VeritasRobustnessSearch(at0, at1, example, start_delta=20,
                         eps_start=0.1, eps_incr=0.1,
-                        max_time=MAX_TIME,
-                        stop_condition=RobustnessSearch.INT_STOP_COND)
+                        max_time=max_time,
+                        stop_condition=RobustnessSearch.NO_STOP_COND)
                 ver_norm, ver_lo, ver_hi = ver.search()
                 result["veritas_ara_deltas"] = ver.delta_log
                 result["veritas_ara_log"] = ver.log
@@ -58,9 +58,9 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
 
             if algos[1] == "1":
                 print("\n== MERGE ========================================")
-                mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=2,
-                        max_time=MAX_TIME,
-                        start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
+                mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=999,
+                        max_time=max_time,
+                        start_delta=20, stop_condition=RobustnessSearch.NO_STOP_COND)
                 mer_norm, mer_lo, mer_hi = mer.search()
                 result["merge_deltas"] = mer.delta_log
                 result["merge_log"] = mer.log
@@ -68,23 +68,23 @@ def robustness_experiment(num_trees, tree_depth, example_is, outfile, algos):
                 result["merge_time_p"] = mer.total_time_p
                 print("merge time", mer.total_time, mer.total_time)
 
-            if algos[1] == "3":
-                print("\n== MERGE ========================================")
-                mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=3,
-                        max_time=MAX_TIME,
-                        start_delta=20, stop_condition=RobustnessSearch.INT_STOP_COND)
-                mer_norm, mer_lo, mer_hi = mer.search()
-                result["merge_deltas"] = mer.delta_log
-                result["merge_log"] = mer.log
-                result["merge_time"] = mer.total_time
-                result["merge_time_p"] = mer.total_time_p
-                print("merge time", mer.total_time, mer.total_time)
+            #if algos[1] == "3":
+            #    print("\n== MERGE ========================================")
+            #    mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=3,
+            #            max_time=max_time,
+            #            start_delta=20, stop_condition=RobustnessSearch.NO_STOP_COND)
+            #    mer_norm, mer_lo, mer_hi = mer.search()
+            #    result["merge_deltas"] = mer.delta_log
+            #    result["merge_log"] = mer.log
+            #    result["merge_time"] = mer.total_time
+            #    result["merge_time_p"] = mer.total_time_p
+            #    print("merge time", mer.total_time, mer.total_time)
 
             if algos[2] == "1":
                 print("\n== TREECK =======================================")
                 tck = TreeckRobustnessSearch(at0, at1, example, start_delta=20,
-                        max_time=MAX_TIME,
-                        stop_condition=RobustnessSearch.INT_STOP_COND)
+                        max_time=max_time,
+                        stop_condition=RobustnessSearch.NO_STOP_COND)
                 tck_norm, tck_lo, tck_hi = tck.search()
                 result["treeck_deltas"] = tck.delta_log
                 result["treeck_log"] = tck.log
@@ -118,9 +118,10 @@ if __name__ == "__main__":
     tree_depth = int(sys.argv[2])
     example_is = range(*(int(i) for i in sys.argv[3].split(":")))
     outfile_base = sys.argv[4]
-    algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
+    max_time = int(sys.argv[5])
+    algos = sys.argv[6] # algo order: veritas merge treeck kantchelian
     assert len(algos) == 4
-    outfile = f"{outfile_base}{num_trees}-depth{tree_depth}-{example_is.start}:{example_is.stop}-{algos}.gz"
+    outfile = f"{outfile_base}{num_trees}-depth{tree_depth}-time{max_time}-{example_is.start}:{example_is.stop}-{algos}.gz"
 
     if "--yes" not in sys.argv and os.path.isfile(outfile):
         if input(f"override {outfile}? ") != "y":
@@ -129,6 +130,7 @@ if __name__ == "__main__":
 
     with gzip.open(outfile, "wb") as f:
         try:
-            robustness_experiment(num_trees, tree_depth, example_is, f, algos)
+            robustness_experiment(num_trees, tree_depth, example_is, max_time,
+                f, algos)
         finally: 
             print("results written to", outfile)

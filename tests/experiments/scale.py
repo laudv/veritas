@@ -207,7 +207,7 @@ class ScaleExperiment:
         try:
             while True:
                 try:
-                    print("MERGE worker: num_independent_sets:", g.num_independent_sets(), g.num_vertices())
+                    #print("MERGE worker: num_independent_sets:", g.num_independent_sets(), g.num_vertices())
                     g.merge(2)
                 except Exception as e:
                     m = g.get_used_mem_size()
@@ -225,7 +225,7 @@ class ScaleExperiment:
                     conn.send(("optimal",))
                     break
         finally:
-            print("MERGE worker: closing")
+            #print("MERGE worker: closing")
             del g
             del opt
             conn.close()
@@ -244,17 +244,17 @@ class ScaleExperiment:
                 msg = cparent.recv()
                 if msg[0] == "point":
                     t, b, m, v = msg[1:]
-                    print("MERGE host: data", t, b, m, v)
+                    #print("MERGE host: data", t, b, m, v)
                     times.append(t)
                     bounds.append(b)
                     memory.append(m)
                     vertices.append(v)
                 elif msg[0] == "optimal":
-                    print("MERGE host: optimal found")
+                    #print("MERGE host: optimal found")
                     data["optimal"] = True
                 elif msg[0] == "oom":
                     m = msg[1]
-                    print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
+                    #print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
                     data["oom"] = True
                     data["oom_value"] = m
             elif p.exitcode is not None:
@@ -266,7 +266,7 @@ class ScaleExperiment:
         if data["oot"]:
             print("MERGE host: timeout")
 
-        print("MERGE host: terminating")
+        #print("MERGE host: terminating")
         p.terminate()
         cparent.close()
 

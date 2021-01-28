@@ -66,32 +66,38 @@ def plot(jsons):
         fig, ax = plt.subplots()
 
         ver_y = [b[0] for b in j["veritas_deltas"]]
+        ver2_y = [b[0] for b in j["veritas_ara_deltas"]]
         try:
             ver_times = [b[3] for b in j["veritas_deltas"]]
+            ver2_times = [b[3] for b in j["veritas_ara_deltas"]]
         except:
+            print("approximating times for veritas")
             ver_times = np.linspace(0, j["veritas_time"], len(ver_y))
+            ver2_times = np.linspace(0, j["veritas_ara_time"], len(ver2_y))
+
+
+        for l in j["veritas_log"]:
+            print("A*", l["bounds"][-1], l["solutions"])
+        for l in j["veritas_ara_log"]:
+            print("ARA*", l["bounds"][-1], l["solutions"])
         ver_total_opt_time = sum(b["total_time"] for b in j["veritas_log"])
+        l, = ax.plot(ver_times, ver_y, label="veritas")
+        ax.plot(ver2_times, ver2_y, label="veritas2", c=l.get_color(), ls="--")
         #print("veritas time actually optimizing:", j["veritas_time"], "vs", ver_total_opt_time,
         #        (j["veritas_time"]-ver_total_opt_time)/ver_total_opt_time)
-        #print(j["veritas_log"][0].keys())
-        kan_lo_y = [b[0] for b in j["kantchelian"]["bounds"]]
-        kan_hi_y = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_delta"]]
-        kan_times_lo = [t[1] for t in j["kantchelian"]["times"]]
-        kan_times_hi = kan_times_lo + [j["kantchelian"]["time_p"]]
-        ax.plot(ver_times, ver_y, label="veritas")
+        if "kantchelian" in j:
+            kan_lo_y = [b[0] for b in j["kantchelian"]["bounds"]]
+            kan_hi_y = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_delta"]]
+            kan_times_lo = [t[1] for t in j["kantchelian"]["times"]]
+            kan_times_hi = kan_times_lo + [j["kantchelian"]["time_p"]]
+            ax.plot(kan_times_hi, kan_hi_y, label="milp")
+            ax.plot(kan_times_lo, kan_lo_y, label="milp lo")
+            ax.axhline(y=j["kantchelian_delta"], color="gray", ls=":")
 
         mer_y = [b[0] for b in j["merge_deltas"]]
         mer_times = np.linspace(0, j["merge_time"], len(mer_y))
         ax.plot(mer_times, mer_y, label="merge")
 
-        
-        #if "veritas_ara" in j:
-        #    ax.plot(j["veritas_ara"]["sol_times"], [s[1] for s in j["veritas_ara"]["solutions"]], label="ARA*")
-        #if "merge" in j:
-        #    ax.plot(j["merge"]["times"], [b[1] for b in j["merge"]["bounds"]], label="merge")
-        ax.plot(kan_times_hi, kan_hi_y, label="milp")
-        ax.plot(kan_times_lo, kan_lo_y, label="milp lo")
-        ax.axhline(y=j["kantchelian_delta"], color="gray", ls=":")
         ax.set_ylim([min(ver_y)-1, max(ver_y)+1])
         ax.set_xlabel("time")
         ax.set_ylabel("robustness \delta")
@@ -115,27 +121,18 @@ if __name__ == "__main__":
     jsons = [parse_file(f) for f in filenames]
     jsons = combine_results(*jsons)
     df = get_df(jsons)
-    print(df.head(20))
-    ver_worse = df[df["ver_delta"]<df["mer_delta"]]
-    print(ver_worse)
-    #print(df[df["kan_delta"]==df["mer_delta"]])
-    #print(df[df["kan_delta"]==df["ver_delta"]])
-    #print(df[df["ver_delta"] != df["ver2_delta"]])
     print("how often ver better than mer", sum(df["ver_delta"]>df["mer_delta"]),df.shape[0])
     print("how often mer better than ver", sum(df["ver_delta"]<df["mer_delta"]),df.shape[0])
-    print("how often ver exact", sum(df["ver_delta"]==df["kan_delta"]),df.shape[0])
-    print("how often mer exact", sum(df["mer_delta"]==df["kan_delta"]),df.shape[0])
-    print("mean times", df["ver_time"].mean(), df["mer_time"].mean(), df["kan_time"].mean())
-    print("mean times 90%", avg_time_90percentile(df["ver_time"]),
-            avg_time_90percentile(df["mer_time"]),
-            avg_time_90percentile(df["kan_time"]))
-    print("mean delta diff ver", (df["kan_delta"]-df["ver_delta"]).mean())
-    print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).mean())
-
-    #worst_perf = df["kan_time"].sort_values(ascending=False).index[0:10]
-    #print(worst_perf)
-    #print(df.iloc[worst_perf,:])
-
+    #print("how often ver exact", sum(df["ver_delta"]==df["kan_delta"]),df.shape[0])
+    #print("how often mer exact", sum(df["mer_delta"]==df["kan_delta"]),df.shape[0])
+    #print("mean times", df["ver_time"].mean(), df["mer_time"].mean(), df["kan_time"].mean())
+    #print("mean times 90%", avg_time_90percentile(df["ver_time"]),
+    #        avg_time_90percentile(df["mer_time"]),
+    #        avg_time_90percentile(df["kan_time"]))
+    #print("mean delta diff ver", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
+    #print("mean delta diff ver2", (df["kan_delta"]-df["ver_delta"]).abs().mean())
+    #print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
 
     plot(jsons)
+    plot(jsons[188:191])
     #plot([jsons[i] for i in ver_worse.index])

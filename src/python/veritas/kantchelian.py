@@ -36,6 +36,7 @@ class KantchelianAttackBase:
         self.total_time_p = None
         self.bounds = []
         self.times = []
+        self.force_stop = False
 
     def stats(self):
         return {
@@ -43,7 +44,8 @@ class KantchelianAttackBase:
             "times": self.times,
             "max_time": self.max_time,
             "time": self.total_time,
-            "time_p": self.total_time_p
+            "time_p": self.total_time_p,
+            "force_stop": self.force_stop
         }
 
     def optimize(self):
@@ -56,6 +58,7 @@ class KantchelianAttackBase:
     def _check_time(self, model):
         if self.start_time_p + self.max_time < time.process_time():
             print(f"Terminating Gurobi after {self.max_time} processor seconds")
+            self.force_stop = True
             model.terminate()
 
     def _optimize_callback_fn(self, model, where):

@@ -278,102 +278,37 @@ class Optimizer:
     # Information Processing Systems (pp. 12317-12328).
     def merge(self, max_time=10, max_merge_depth=9999):
         self.max_time = max_time
-        def merge_worker_fun(self, conn, max_merge_depth):
-            g = self.g1
-            g.add_with_negated_leaf_values(self.g0)
-
-            t = 0.0
-            b = g.basic_bound()
-            m = g.get_used_mem_size()
-            v = g.num_vertices()
-            conn.send(("point", t, b, m, v))
-            start = timeit.default_timer()
-            try:
-                for merge_step in range(max_merge_depth):
-                    try:
-                        print("MERGE worker: num_independent_sets:",
-                                g.num_independent_sets(), g.num_vertices())
-                        g.merge(2)
-                    except Exception as e:
-                        m = g.get_used_mem_size()
-                        print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
-                        conn.send(("oom", m))
-                        break
-
-                    t = timeit.default_timer() - start
-                    b = g.basic_bound()
-                    m = g.get_used_mem_size()
-                    v = g.num_vertices()
-                    conn.send(("point", t, b, m, v))
-
-                    if g.num_independent_sets() <= 1:
-                        conn.send(("optimal",))
-                        break
-            finally:
-                print("MERGE worker: closing")
-                conn.close()
 
         times, bounds, memory, vertices = [], [], [], []
         start = timeit.default_timer()
         start_p = time.process_time()
         data = {"oot": True, "oom": False, "optimal": False}
 
-        if max_merge_depth > 3:
-            cparent, cchild = mp.Pipe()
-            p = mp.Process(target=merge_worker_fun, name="Merger", args=(self, cchild, max_merge_depth))
-            p.start()
-            while timeit.default_timer() - start < max_time:
-                has_data = cparent.poll(0.1)
-                if has_data:
-                    msg = cparent.recv()
-                    if msg[0] == "point":
-                        t, b, m, v = msg[1:]
-                        print("MERGE host: data", t, b, m, v)
-                        times.append(t)
-                        bounds.append(b)
-                        memory.append(m)
-                        vertices.append(v)
-                    elif msg[0] == "optimal":
-                        print("MERGE host: optimal found")
-                        data["optimal"] = True
-                    elif msg[0] == "oom":
-                        m = msg[1]
-                        print(f"MERGE host: oom ({m/(1024*1024):.2f} MiB)")
-                        data["oom"] = True
-                        data["oom_value"] = m
-                elif p.exitcode is not None:
-                    data["oot"] = False
-                    break
+        g = self.g1
+        g.add_with_negated_leaf_values(self.g0)
+        for merge_step in range(max_merge_depth):
+            try:
+                print("MERGE worker: num_independent_sets:",
+                        g.num_independent_sets(), g.num_vertices())
+                can_continue = g.merge(2, self.max_time)
 
-            if data["oot"]:
-                print("MERGE host: timeout")
+            except Exception as e:
+                m = g.get_used_mem_size()
+                print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
+                data["oom"] = True
+                data["oom_value"] = m
+                break
 
-            print("MERGE host: terminating")
-            p.terminate()
-            cparent.close()
-        else:
-            g = self.g1
-            g.add_with_negated_leaf_values(self.g0)
-            for merge_step in range(max_merge_depth):
-                try:
-                    print("MERGE worker: num_independent_sets:",
-                            g.num_independent_sets(), g.num_vertices())
-                    g.merge(2)
-                except Exception as e:
-                    m = g.get_used_mem_size()
-                    print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
-                    data["oom"] = True
-                    data["oom_value"] = m
-                    break
+            times.append(timeit.default_timer() - start)
+            bounds.append(g.basic_bound())
+            memory.append(g.get_used_mem_size())
+            vertices.append(g.num_vertices())
 
-                times.append(timeit.default_timer() - start)
-                bounds.append(g.basic_bound())
-                memory.append(g.get_used_mem_size())
-                vertices.append(g.num_vertices())
-
-                if g.num_independent_sets() <= 1:
-                    data["optimal"] = True
-                    break
+            if g.num_independent_sets() <= 1:
+                data["optimal"] = True
+                break
+            if not can_continue: # merge stopped early because out of time
+                break
 
         dur = timeit.default_timer() - start
         dur_p = time.process_time() - start_p

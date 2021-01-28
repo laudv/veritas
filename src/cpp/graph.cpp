@@ -749,9 +749,11 @@ namespace veritas {
         return {min_bound, max_bound};
     }
 
-    void
-    KPartiteGraph::merge(int K)
+    bool
+    KPartiteGraph::merge(int K, float max_time)
     {
+        max_time *= 1000; /* milliseconds */
+        std::chrono::steady_clock::time_point begin = std::chrono::steady_clock::now();
         std::vector<IndependentSet> new_sets;
 
         for (auto it = sets_.cbegin(); it != sets_.cend(); )
@@ -766,6 +768,10 @@ namespace veritas {
                 {
                     for (const auto& v1 : it->vertices)
                     {
+                        std::chrono::steady_clock::time_point end = std::chrono::steady_clock::now();
+                        float dur = std::chrono::duration_cast<std::chrono::milliseconds>(end - begin).count();
+                        if (dur > max_time) { return false; }
+
                         if (v0.box.overlaps(v1.box))
                         {
                             DomainBox box = store_.combine_and_push(v0.box, v1.box);
@@ -784,6 +790,7 @@ namespace veritas {
         }
 
         std::swap(new_sets, sets_);
+        return true;
     }
 
     //void
