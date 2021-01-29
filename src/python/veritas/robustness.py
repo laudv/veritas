@@ -1,7 +1,9 @@
 import timeit, time
 import numpy as np
 
-from veritas import Optimizer
+from veritas import Optimizer, AddTree
+
+DUMMY_AT = AddTree()
 
 class RobustnessSearch:
 
@@ -108,8 +110,8 @@ class OptimizerRobustnessSearch(RobustnessSearch):
             optimizer_kwargs={}, **kwargs):
         super().__init__(example, **kwargs)
 
-        self.source_at = source_at
-        self.target_at = target_at
+        self.source_at = source_at if source_at is not None else DUMMY_AT
+        self.target_at = target_at if target_at is not None else DUMMY_AT
         self.optimizer_kwargs = optimizer_kwargs
 
         self.opt = None

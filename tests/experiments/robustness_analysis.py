@@ -76,10 +76,10 @@ def plot(jsons):
             ver2_times = np.linspace(0, j["veritas_ara_time"], len(ver2_y))
 
 
-        for l in j["veritas_log"]:
-            print("A*", l["bounds"][-1], l["solutions"])
-        for l in j["veritas_ara_log"]:
-            print("ARA*", l["bounds"][-1], l["solutions"])
+        #for l in j["veritas_log"]:
+        #    print("A*", l["bounds"][-1], l["solutions"])
+        #for l in j["veritas_ara_log"]:
+        #    print("ARA*", l["bounds"][-1], l["solutions"])
         ver_total_opt_time = sum(b["total_time"] for b in j["veritas_log"])
         l, = ax.plot(ver_times, ver_y, label="veritas")
         ax.plot(ver2_times, ver2_y, label="veritas2", c=l.get_color(), ls="--")
@@ -121,18 +121,28 @@ if __name__ == "__main__":
     jsons = [parse_file(f) for f in filenames]
     jsons = combine_results(*jsons)
     df = get_df(jsons)
-    print("how often ver better than mer", sum(df["ver_delta"]>df["mer_delta"]),df.shape[0])
-    print("how often mer better than ver", sum(df["ver_delta"]<df["mer_delta"]),df.shape[0])
+    #print("how often ver better than mer", sum(df["ver_delta"]>df["mer_delta"]),df.shape[0])
+    #print("how often mer better than ver", sum(df["ver_delta"]<df["mer_delta"]),df.shape[0])
     #print("how often ver exact", sum(df["ver_delta"]==df["kan_delta"]),df.shape[0])
     #print("how often mer exact", sum(df["mer_delta"]==df["kan_delta"]),df.shape[0])
     #print("mean times", df["ver_time"].mean(), df["mer_time"].mean(), df["kan_time"].mean())
     #print("mean times 90%", avg_time_90percentile(df["ver_time"]),
     #        avg_time_90percentile(df["mer_time"]),
     #        avg_time_90percentile(df["kan_time"]))
-    #print("mean delta diff ver", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
-    #print("mean delta diff ver2", (df["kan_delta"]-df["ver_delta"]).abs().mean())
-    #print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
+    print("mean delta diff ver", (df["kan_delta"]-df["ver_delta"]).abs().mean())
+    print("mean delta diff ver2", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
+    print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
+    print("ver closer to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() <
+            (df["kan_delta"]-df["mer_delta"]).abs()))
+    print("ver2 closer to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() <
+            (df["kan_delta"]-df["mer_delta"]).abs()))
+    print("ver farther to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() >
+            (df["kan_delta"]-df["mer_delta"]).abs()))
+    print("ver2 farther to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() >
+            (df["kan_delta"]-df["mer_delta"]).abs()))
+    print("mean time ver", df["ver_time"].mean())
+    print("mean time ver2", df["ver2_time"].mean())
+    print("mean time mer", df["mer_time"].mean())
 
-    plot(jsons)
-    plot(jsons[188:191])
+    #plot(jsons)
     #plot([jsons[i] for i in ver_worse.index])

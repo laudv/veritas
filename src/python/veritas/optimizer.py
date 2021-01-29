@@ -278,6 +278,7 @@ class Optimizer:
     # Information Processing Systems (pp. 12317-12328).
     def merge(self, max_time=10, max_merge_depth=9999):
         self.max_time = max_time
+        rem_time = self.max_time
 
         times, bounds, memory, vertices = [], [], [], []
         start = timeit.default_timer()
@@ -288,13 +289,16 @@ class Optimizer:
         g.add_with_negated_leaf_values(self.g0)
         for merge_step in range(max_merge_depth):
             try:
-                print("MERGE worker: num_independent_sets:",
-                        g.num_independent_sets(), g.num_vertices())
-                can_continue = g.merge(2, self.max_time)
+                print("MERGE: num_independent_sets:",
+                        g.num_independent_sets(), g.num_vertices(),
+                        "rem_time:", rem_time)
+                s = timeit.default_timer()
+                can_continue = g.merge(2, rem_time)
+                rem_time -= timeit.default_timer() - s
 
             except Exception as e:
                 m = g.get_used_mem_size()
-                print(f"MERGE worker: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
+                print(f"MERGE: OUT OF MEMORY: {m/(1024*1024):.2f} MiB", type(e))
                 data["oom"] = True
                 data["oom_value"] = m
                 break
@@ -307,7 +311,7 @@ class Optimizer:
             if g.num_independent_sets() <= 1:
                 data["optimal"] = True
                 break
-            if not can_continue: # merge stopped early because out of time
+            if not can_continue or rem_time < 0.0: # merge stopped early because out of time
                 break
 
         dur = timeit.default_timer() - start

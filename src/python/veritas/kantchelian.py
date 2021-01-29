@@ -12,6 +12,9 @@
 import timeit, time
 import gurobipy as gu
 import numpy as np
+from veritas import AddTree
+
+DUMMY_AT = AddTree()
 
 class NodeInfo:
     def __init__(self, var, leafs_in_subtree):
@@ -315,8 +318,8 @@ class KantchelianAttack(KantchelianAttackBase):
 class KantchelianTargetedAttack(KantchelianAttackBase):
 
     def __init__(self, source_at, target_at, example, **kwargs):
-        self.source_at = source_at
-        self.target_at = target_at
+        self.source_at = source_at if source_at is not None else DUMMY_AT
+        self.target_at = target_at if target_at is not None else DUMMY_AT
         self.example = example
 
         super().__init__(self._combine_split_values(), **kwargs)
