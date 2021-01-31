@@ -92,6 +92,11 @@ namespace veritas {
         void set_max_mem_size(size_t max_mem);
 
         DomainStore();
+        DomainStore(const DomainStore& other);
+        DomainStore(DomainStore&& other);
+
+        DomainStore& operator=(const DomainStore& other);
+        DomainStore& operator=(DomainStore&& other);
 
         inline std::vector<DomainPair>& workspace() { return workspace_; };
 
@@ -167,7 +172,7 @@ namespace veritas {
 
     public:
         KPartiteGraph();
-        //KPartiteGraph(const AddTree& addtree);
+        KPartiteGraph(const KPartiteGraph& other);
         KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap);
         KPartiteGraph(const AddTree& addtree, const FeatInfo& finfo, int instance);
 

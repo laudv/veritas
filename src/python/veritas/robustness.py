@@ -114,10 +114,20 @@ class OptimizerRobustnessSearch(RobustnessSearch):
         self.target_at = target_at if target_at is not None else DUMMY_AT
         self.optimizer_kwargs = optimizer_kwargs
 
-        self.opt = None
+        self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
+                matches=set(), match_is_reuse=False)
         self.prev_delta = None
 
         self.log = []
+
+    def get_opt(self, delta):
+        # Share all variables between source and target model
+        if self.prev_delta is None or self.prev_delta > delta:
+            pass  # reuse self.opt, and prune further
+        else:
+            self.opt.reset_graphs_and_optimizer()
+        self.opt.prune_example(list(self.example), delta)
+        self.prev_delta = delta
 
     def _log_opt(self, delta):
         if self.opt is not None: 
@@ -139,16 +149,6 @@ class VeritasRobustnessSearch(OptimizerRobustnessSearch):
 
         self.steps_kwargs = { "min_output_difference": 0.0 }
         #self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
-
-    def get_opt(self, delta):
-        # Share all variables between source and target model
-        if self.opt is not None and self.prev_delta > delta:
-            pass  # reuse self.opt, and prune further
-        else:
-            self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
-                    matches=set(), match_is_reuse=False)
-        self.opt.prune_example(list(self.example), delta)
-        self.prev_delta = delta
 
     def get_max_output_difference(self, delta):
         self.get_opt(delta)
@@ -194,11 +194,7 @@ class MergeRobustnessSearch(OptimizerRobustnessSearch):
         self.merge_kwargs = { "max_merge_depth": max_merge_depth }
 
     def get_max_output_difference(self, delta):
-        # Share all variables between source and target model
-        # Can't reuse opts because g0 and g1 are modified by the merge process!
-        self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
-                matches=set(), match_is_reuse=False)
-        self.opt.prune_example(list(self.example), delta)
+        self.get_opt(delta)
 
         rem_time = self.max_time - timeit.default_timer() + self.start_time
         #rem_time = min(rem_time / 2, 2.0 * self.max_time / self.num_steps)

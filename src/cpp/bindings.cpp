@@ -192,6 +192,7 @@ PYBIND11_MODULE(pyveritas, m) {
 
     py::class_<KPartiteGraph>(m, "KPartiteGraph")
         .def(py::init<const AddTree&, const FeatInfo&, int>())
+        .def("copy", [](const KPartiteGraph& g) { return KPartiteGraph(g); })
         .def("set_max_mem_size", [](KPartiteGraph& g, size_t m) { g.store().set_max_mem_size(m); })
         .def("get_max_mem_size", [](const KPartiteGraph& o) { return o.store().get_max_mem_size(); })
         .def("get_mem_size", [](const KPartiteGraph& o) { return o.store().get_mem_size(); })

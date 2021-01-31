@@ -159,6 +159,34 @@ namespace veritas {
         store_.push_back(std::move(block));
     }
 
+    DomainStore::DomainStore(const DomainStore& other)
+        : store_{other.store_}
+        , workspace_{other.workspace_}
+        , max_mem_size_{other.max_mem_size_} { }
+
+    DomainStore::DomainStore(DomainStore&& other)
+        : store_{std::move(other.store_)}
+        , workspace_{std::move(other.workspace_)}
+        , max_mem_size_{other.max_mem_size_} { }
+
+    DomainStore&
+    DomainStore::operator=(const DomainStore& other)
+    {
+        store_ = other.store_;
+        workspace_ = other.workspace_;
+        max_mem_size_ = other.max_mem_size_;
+        return *this;
+    }
+
+    DomainStore&
+    DomainStore::operator=(DomainStore&& other)
+    {
+        store_ = std::move(other.store_);
+        workspace_ = std::move(other.workspace_);
+        max_mem_size_ = std::move(other.max_mem_size_);
+        return *this;
+    }
+
     DomainStore::Block&
     DomainStore::get_block_with_capacity(size_t cap)
     {
@@ -589,6 +617,9 @@ namespace veritas {
         //    std::vector<Vertex>{{{}, 0.0}} // one dummy vertex
         //});
     }
+    KPartiteGraph::KPartiteGraph(const KPartiteGraph& other)
+        : store_{other.store_}
+        , sets_{other.sets_} { }
 
     KPartiteGraph::KPartiteGraph(const AddTree& addtree, FeatIdMapper fmap)
     {

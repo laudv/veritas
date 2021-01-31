@@ -25,8 +25,8 @@ class Optimizer:
 
         self.box_checker = BoxChecker(self.feat_info.num_ids(), 5)
 
-        self.g0 = KPartiteGraph(self.at0, self.feat_info, 0)
-        self.g1 = KPartiteGraph(self.at1, self.feat_info, 1)
+        self._g0_backup = KPartiteGraph(self.at0, self.feat_info, 0)
+        self._g1_backup = KPartiteGraph(self.at1, self.feat_info, 1)
 
         self.max_memory = 1024*1024*1024*1 # 1 gb default
         if "max_memory" in kwargs:
@@ -49,6 +49,11 @@ class Optimizer:
         for k, v in kwargs.items():
             raise RuntimeError(f"invalid argument '{k}'")
 
+        self.reset_graphs_and_optimizer()
+
+    def reset_graphs_and_optimizer(self):
+        self.g0 = self._g0_backup.copy()
+        self.g1 = self._g1_backup.copy()
         self.reset_optimizer()
 
     def reset_optimizer(self):
@@ -285,7 +290,7 @@ class Optimizer:
         start_p = time.process_time()
         data = {"oot": True, "oom": False, "optimal": False}
 
-        g = self.g1
+        g = self.g1.copy()
         g.add_with_negated_leaf_values(self.g0)
         for merge_step in range(max_merge_depth):
             try:
