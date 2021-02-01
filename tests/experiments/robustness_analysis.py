@@ -20,13 +20,16 @@ def combine_results(*jsons):
 def get_df(jsons):
     mnist = datasets.Mnist()
     mnist.load_dataset()
-    colnames = ["example_i", "label", "target_label", "ver_delta", "ver2_delta", "mer_delta",
-            "tck_delta", "kan_delta", "ver_time", "ver2_time", "mer_time", "tck_time", "kan_time"]
+    colnames = ["example_i", "label", "target_label", "ver_delta",
+            "ver2_delta", "mer_delta", "mer_ext_delta", "tck_delta",
+            "kan_delta", "ver_time", "ver2_time", "mer_time", "mer_ext_time",
+            "tck_time", "kan_time"]
     example_is = []
     example_labels = []
     target_labels = []
     ver_deltas, ver2_deltas, mer_deltas, tck_deltas, kan_deltas = [], [], [], [], []
     ver_times, ver2_times, mer_times, tck_times, kan_times = [], [], [], [], []
+    mer_ext_deltas, mer_ext_times = [], []
     for j in jsons:
         example_is.append(j["example_i"])
         example_labels.append(j["example_label"])
@@ -47,6 +50,9 @@ def get_df(jsons):
             #print(list(j["kantchelian"].keys()))
             kan_deltas.append(np.round(j["kantchelian_delta"]))
             kan_times.append(j["kantchelian"]["time_p"])
+        if "merge_ext" in j:
+            mer_ext_times.append(j["merge_ext"]["times"][-1])
+            mer_ext_deltas.append(j["merge_ext"]["deltas"][-1])
 
         try:
             if ver_deltas[-1] > kan_deltas[-1]:
@@ -54,8 +60,9 @@ def get_df(jsons):
         except: pass
 
     columns = { k: v for k, v in zip(colnames, [example_is, example_labels,
-        target_labels, ver_deltas, ver2_deltas, mer_deltas, tck_deltas, kan_deltas,
-        ver_times, ver2_times, mer_times, tck_times, kan_times]) if len(v) > 0 }
+        target_labels, ver_deltas, ver2_deltas, mer_deltas, mer_ext_deltas,
+        tck_deltas, kan_deltas, ver_times, ver2_times, mer_times,
+        mer_ext_times, tck_times, kan_times]) if len(v) > 0 }
 
     return pd.DataFrame(columns)
             
@@ -94,6 +101,9 @@ def plot(jsons):
             ax.plot(kan_times_lo, kan_lo_y, label="milp lo")
             ax.axhline(y=j["kantchelian_delta"], color="gray", ls=":")
 
+        if "merge_ext" in j:
+            ax.plot(j["merge_ext"]["times"], j["merge_ext"]["deltas"], label="merge ext")
+
         mer_y = [b[0] for b in j["merge_deltas"]]
         mer_times = np.linspace(0, j["merge_time"], len(mer_y))
         ax.plot(mer_times, mer_y, label="merge")
@@ -129,9 +139,12 @@ if __name__ == "__main__":
     #print("mean times 90%", avg_time_90percentile(df["ver_time"]),
     #        avg_time_90percentile(df["mer_time"]),
     #        avg_time_90percentile(df["kan_time"]))
+    #print(df)
     print("mean delta diff ver", (df["kan_delta"]-df["ver_delta"]).abs().mean())
     print("mean delta diff ver2", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
     print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
+    if "mer_ext_time" in df:
+        print("mean delta diff mer ext", (df["kan_delta"]-df["mer_ext_delta"]).abs().mean())
     print("ver closer to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() <
             (df["kan_delta"]-df["mer_delta"]).abs()))
     print("ver2 closer to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() <
@@ -143,6 +156,9 @@ if __name__ == "__main__":
     print("mean time ver", df["ver_time"].mean())
     print("mean time ver2", df["ver2_time"].mean())
     print("mean time mer", df["mer_time"].mean())
+    if "mer_ext_time" in df:
+        print("mean time mer ext", df["mer_ext_time"].mean())
+    print("mean time kan", df["kan_time"].mean())
 
     #plot(jsons)
     #plot([jsons[i] for i in ver_worse.index])

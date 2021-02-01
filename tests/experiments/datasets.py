@@ -179,6 +179,15 @@ class Covtype(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+        
+class CovtypeNormalized(Covtype):
+    def __init__(self):
+        super().__init__()
+
+    def load_dataset(self):
+        if self.X is None or self.y is None:
+            super().load_dataset()
+            self.minmax_normalize()
 
 class Higgs(Dataset):
     def __init__(self):
@@ -247,6 +256,7 @@ class LargeHiggs(Dataset):
             self.X = data.drop(columns=[0])
             columns = [f"a{i}" for i in range(self.X.shape[1])]
             self.X.columns = columns
+            self.minmax_normalize()
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)
@@ -403,7 +413,7 @@ class FashionMnist(Dataset):
     def load_dataset(self):
         if self.X is None or self.y is None:
             self.X, self.y = util.load_openml("fashion_mnist", data_id=40996)
-            self.minmax_normalize()
+            #self.minmax_normalize()
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)
@@ -457,6 +467,7 @@ class Ijcnn1(Dataset):
             self.Xtest.columns = columns
             self.y = pd.read_hdf(ijcnn1_data_path, "ytrain")
             self.ytest = pd.read_hdf(ijcnn1_data_path, "ytest")
+            self.minmax_normalize()
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)
@@ -506,6 +517,7 @@ class Webspam(Dataset):
             self.X = pd.read_hdf(data_path, "X")
             self.X.columns = [f"a{i}" for i in range(self.X.shape[1])]
             self.y = pd.read_hdf(data_path, "y")
+            self.minmax_normalize()
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)

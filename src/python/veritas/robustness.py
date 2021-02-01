@@ -51,8 +51,8 @@ class RobustnessSearch:
                 upper = min(delta, best_example_delta)
                 delta = upper - 0.5 * (upper - lower)
                 maybe_sat_str = "maybe SAT" if len(generated_examples) == 0 else "SAT"
-                print(f"[{i}]: {maybe_sat_str} delta update: {old_delta:.3f}/{best_example_delta:.3f}"
-                      f" -> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
+                print(f"[{i}]: {maybe_sat_str} delta update: {old_delta:.5f}/{best_example_delta:.5f}"
+                      f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
             else: # no adv. can exist
                 if delta == upper:
                     lower = delta
@@ -62,7 +62,7 @@ class RobustnessSearch:
                     lower = delta
                     delta = lower + 0.5 * (upper - lower)
                 print(f"[{i}]: UNSAT delta update: {old_delta:.3f}"
-                      f" -> {delta:.3f} [{lower:.3f}, {upper:.3f}]")
+                      f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
 
             if self.stop_condition(lower, upper):
                 print(f"done early {lower} <= {delta} <= {upper}")

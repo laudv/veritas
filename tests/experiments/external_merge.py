@@ -6,7 +6,7 @@ from sklearn.datasets import dump_svmlight_file
 MERGE_EXECUTABLE = os.path.join(os.environ["HOME"], "repos", "treeVerification", "treeVerify")
 MERGE_CRAP_DIR = "/tmp/merge_crap"
 
-def rename_features(xgbjson, columns):
+def prepare_xgb_model_json(xgbjson, columns, negate_leaf=False):
     out = []
     fmap = { n: i for i, n in enumerate(columns) }
     for j in xgbjson:
@@ -20,9 +20,19 @@ def rename_features(xgbjson, columns):
                 left_id = n["yes"]
                 right_id = n["no"]
                 stack += [children[right_id], children[left_id]]
+            elif negate_leaf and "leaf" in n:
+                #print("neg leaf", n["leaf"])
+                n["leaf"] = -n["leaf"]
     return out
 
-def run_process(config_file, max_mem=1*1024*1024*1024, max_time=10.0):
+def prepare_xgb_model_json_multiclass(xgbjson, columns, label, target_label, num_classes):
+    xgbjson0 = [xgbjson[i] for i in range(label, len(xgbjson), num_classes)]
+    xgbjson1 = [xgbjson[i] for i in range(target_label, len(xgbjson), num_classes)]
+    print("num_trees", len(xgbjson0), len(xgbjson1))
+    return prepare_xgb_model_json(xgbjson1, columns, negate_leaf=True)\
+        + prepare_xgb_model_json(xgbjson0, columns, negate_leaf=False)
+
+def run_process(config_file, max_mem=4*1024*1024*1024, max_time=10.0):
     # https://gist.github.com/s3rvac/f97d6cbdfdb15c0a32e7e941f7f4a3fa
     def limit_virtual_memory():
         resource.setrlimit(resource.RLIMIT_AS, (max_mem, max_mem))
@@ -51,32 +61,34 @@ def process_merge_output(out):
         if line.startswith("Can model be guaranteed robust within eps"):
             delta = float(line[42:line.find("?")])
             is_robust_for_delta = bool(int(line[-1]))
-
-            print(f"Merge: is robust for {delta}? {is_robust_for_delta}")
+            if len(deltas) == 0: # add the first delta, which is not announced with "next eps:..."
+                deltas.append(delta)
+            print(f"External merge: is robust for {delta}? {is_robust_for_delta}")
+        elif line.startswith("**************** this eps ends, next eps:"):
+            delta = float(line[41:line.find(" *********************")])
             deltas.append(delta)
 
-        if line.startswith("time="):
+        elif line.startswith("time="):
             t = float(line[5:])
             times.append(t)
     return deltas, times
 
-def external_merge(xgbmodel, columns, examples, labels, start_delta):
+def external_merge(xgbmodel, columns, example, label, target_label, start_delta, max_clique, max_level, num_classes=2):
     if not os.path.isdir(MERGE_CRAP_DIR):
         os.makedirs(MERGE_CRAP_DIR)
     input_file = os.path.join(MERGE_CRAP_DIR, "inputs.libsvm")
     model_file = os.path.join(MERGE_CRAP_DIR, "model.json")
     config_file = os.path.join(MERGE_CRAP_DIR, "config.json")
-    num_attack = len(examples)
     config = f"""
 {{
     "inputs":       "{input_file}",
     "model":        "{model_file}",
     "start_idx":    0,
-    "num_attack":   {num_attack},
+    "num_attack":   1,
     "eps_init":     {start_delta},
-    "max_clique":   2,
+    "max_clique":   {max_clique},
     "max_search":   10,
-    "max_level":    3,
+    "max_level":    {max_level},
     "num_classes":  2,
     "feature_start": 0
 }}
@@ -88,14 +100,18 @@ def external_merge(xgbmodel, columns, examples, labels, start_delta):
     if xgbmodel is not None: # if none, reuse model at {model_file}
         with open(model_file, "w") as f:
             dump = xgbmodel.get_dump(dump_format="json")
-            dump = rename_features(dump, columns)
+            if target_label is not None:
+                dump = prepare_xgb_model_json_multiclass(dump, columns, label,
+                        target_label, num_classes)
+            else:
+                dump = prepare_xgb_model_json(dump, columns)
+                print("num_trees", len(dump))
             json.dump(dump, f)
     with open(input_file, "w") as f:
         # somehow struggles with sparse svm format?? let's write it all out
-        for x, l in zip(examples, labels):
-            vs = ' '.join(f"{i}:{v}" for i, v in enumerate(x))
-            print(f"{l} {vs}", file=f)
-        #dump_svmlight_file(examples, labels, f, zero_based=True)
+        vs = ' '.join(f"{i}:{v}" for i, v in enumerate(example))
+        print(f"{label} {vs}", file=f)
+        #dump_svmlight_file([example], [label], f, zero_based=True)
 
     #out = subprocess.run([MERGE_EXECUTABLE, config_file])
     out, exception = run_process(config_file)

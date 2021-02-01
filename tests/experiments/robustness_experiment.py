@@ -5,9 +5,8 @@ from veritas import Optimizer
 from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
+from external_merge import external_merge
 import numpy as np
-
-MAX_TIME = 4.0
 
 def robustness_experiment(num_trees, tree_depth, example_is, max_time, outfile, algos):
     mnist = datasets.Mnist()
@@ -58,15 +57,27 @@ def robustness_experiment(num_trees, tree_depth, example_is, max_time, outfile, 
 
             if algos[1] == "1":
                 print("\n== MERGE ========================================")
-                #mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=999,
-                #        max_time=max_time,
-                #        start_delta=20, stop_condition=RobustnessSearch.NO_STOP_COND)
-                #mer_norm, mer_lo, mer_hi = mer.search()
-                #result["merge_deltas"] = mer.delta_log
-                #result["merge_log"] = mer.log
-                #result["merge_time"] = mer.total_time
-                #result["merge_time_p"] = mer.total_time_p
-                #print("merge time", mer.total_time, mer.total_time)
+                mer = MergeRobustnessSearch(at0, at1, example, max_merge_depth=999,
+                        max_time=max_time,
+                        start_delta=20, stop_condition=RobustnessSearch.NO_STOP_COND)
+                mer_norm, mer_lo, mer_hi = mer.search()
+                result["merge_deltas"] = mer.delta_log
+                result["merge_log"] = mer.log
+                result["merge_time"] = mer.total_time
+                result["merge_time_p"] = mer.total_time_p
+                print("merge time", mer.total_time, mer.total_time)
+
+            if algos[1] == "e": # external
+                print("\n== MERGE (external) =============================")
+                deltas, times, exc = external_merge(mnist.model,
+                        mnist.meta["columns"], example, example_label,
+                        target_label, start_delta=40, max_level=2,
+                        num_classes=10)
+                result["merge_ext"] = {
+                        "deltas": deltas,
+                        "times": times,
+                        "exc": exc
+                }
 
             #if algos[1] == "3":
             #    print("\n== MERGE ========================================")
