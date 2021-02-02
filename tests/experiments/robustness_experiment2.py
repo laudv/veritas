@@ -4,7 +4,6 @@ from veritas import Optimizer
 from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 from treeck_robust import TreeckRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
-from external_merge import external_merge
 import numpy as np
 
 def write_result(result, outfile):
@@ -61,7 +60,7 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         print("kantchelian time", kan.total_time, kan.total_time_p)
 
 def robustness_experiment_multiclass(dataset, example_is, max_time,
-        start_delta, num_classes, T, L, outfile, algos):
+        start_delta, num_classes, outfile, algos):
     for example_i in example_is:
         example = list(dataset.X.iloc[example_i,:])
         example_label = int(dataset.y[example_i])
@@ -78,20 +77,9 @@ def robustness_experiment_multiclass(dataset, example_is, max_time,
                 "algos": algos,
             }
             run(at0, at1, example, start_delta, max_time, algos, result)
-            if algos[1] == "e": # external
-                print("\n== MERGE (external) =============================", f"({time.ctime()})")
-                deltas, times, exc = external_merge(dataset.model,
-                        dataset.meta["columns"], example, example_label, target_label,
-                        start_delta=start_delta, max_clique=T, max_level=L,
-                        num_classes=num_classes)
-                result["merge_ext"] = {
-                        "deltas": deltas,
-                        "times": times,
-                        "exc": exc }
-                print("merge external time", times[-1] if len(times) > 0 else -1.0)
             write_result(result, outfile)
 
-def robustness_experiment_binary(dataset, example_is, max_time, start_delta, T, L,
+def robustness_experiment_binary(dataset, example_is, max_time, start_delta,
         outfile, algos):
     for example_i in example_is:
         example = list(dataset.X.iloc[example_i,:])
@@ -114,28 +102,9 @@ def robustness_experiment_binary(dataset, example_is, max_time, start_delta, T, 
             "algos": algos,
         }
         run(at0, at1, example, start_delta, max_time, algos, result)
-        if algos[1] == "e": # external
-            print("\n== MERGE (external) =============================", f"({time.ctime()})")
-            deltas, times, exc = external_merge(dataset.model,
-                    dataset.meta["columns"], example, example_label, None,
-                    start_delta=start_delta, max_clique=T, max_level=L,
-                    num_classes=2)
-            result["merge_ext"] = {
-                    "deltas": deltas,
-                    "times": times,
-                    "exc": exc }
-            print("merge external time", times[-1] if len(times) > 0 else -1.0)
         write_result(result, outfile)
 
-def main():
-    dataset = sys.argv[1]
-    example_is = range(*(int(i) for i in sys.argv[2].split(":")))
-    outfile_base = sys.argv[3]
-    max_time = int(sys.argv[4])
-    algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
-    assert len(algos) == 4
-    outfile = f"{outfile_base}-{dataset}-time{max_time}-{example_is.start}:{example_is.stop}-{algos}.gz"
-
+def parse_dataset(dataset):
     if dataset == "covtype":
         dataset = datasets.CovtypeNormalized() # normalized
         dataset.load_dataset()
@@ -188,6 +157,19 @@ def main():
     else:
         raise ValueError("invalid dataset")
 
+    return dataset, start_delta, num_classes, T, L
+
+def main():
+    dataset = sys.argv[1]
+    example_is = range(*(int(i) for i in sys.argv[2].split(":")))
+    outfile_base = sys.argv[3]
+    max_time = int(sys.argv[4])
+    algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
+    assert len(algos) == 4
+    outfile = f"{outfile_base}-{dataset}-time{max_time}-{example_is.start}:{example_is.stop}-{algos}.gz"
+
+    dataset, start_delta, num_classes, T, L = parse_dataset(dataset)
+
     if "--yes" not in sys.argv and os.path.isfile(outfile):
         if input(f"override {outfile}? ") != "y":
             print("OK BYE")
@@ -197,10 +179,10 @@ def main():
         try:
             if num_classes == 2:
                 robustness_experiment_binary(dataset, example_is, max_time,
-                        start_delta, T, L, f, algos)
+                        start_delta, f, algos)
             else:
                 robustness_experiment_multiclass(dataset, example_is, max_time,
-                        start_delta, num_classes, T, L, f, algos)
+                        start_delta, num_classes, f, algos)
         finally: 
             print("results written to", outfile, f"({time.ctime()})")
 
