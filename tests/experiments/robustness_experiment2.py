@@ -111,12 +111,12 @@ def parse_dataset(dataset):
         dataset.load_model(80, 8)
         start_delta = 0.2
         num_classes = 2
-        T, L = 2, 3
+        T, L = 2, 2 # from 2, 3, too slow!
     elif dataset == "f-mnist":
         dataset = datasets.FashionMnist() # non-normalized (0-255)
         dataset.load_dataset()
         dataset.load_model(200, 8)
-        start_delta = 30
+        start_delta = 20
         num_classes = 10
         T, L = 2, 1
     elif dataset == "mnist":
@@ -147,11 +147,11 @@ def parse_dataset(dataset):
         start_delta = 0.05
         num_classes = 2
         T, L = 2, 1
-    elif dataset == "mnist2v6":      # normalized! (0-1)
+    elif dataset == "mnist2v6":      # non-normalized! (0-255)
         dataset = datasets.Mnist2v6()
         dataset.load_dataset()
         dataset.load_model(1000, 4)
-        start_delta = 0.3
+        start_delta = 40
         num_classes = 2
         T, L = 4, 1
     else:

@@ -347,7 +347,7 @@ class MnistNormalized(Mnist):
             super().load_dataset()
             self.minmax_normalize()
 
-class Mnist2v6(MnistNormalized):
+class Mnist2v6(Mnist):
     def __init__(self):
         super().__init__()
         self.params = {
@@ -355,7 +355,9 @@ class Mnist2v6(MnistNormalized):
             "eval_metric": "error",
             "tree_method": "hist",
             "seed": 235,
-            "nthread": 1,
+            "nthread": 4,
+            "subsample": 0.5,
+            "colsample_bytree": 0.8,
         }
 
     def load_dataset(self):

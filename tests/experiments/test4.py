@@ -9,12 +9,12 @@ import matplotlib.pyplot as plt
 
 from external_merge import external_merge_binary, external_merge_multiclass
 
-test = "multi"
+test = "binary"
 
 if test == "binary":
     dataset = datasets.CovtypeNormalized()
     dataset.load_dataset()
-    dataset.load_model(20, 4)
+    dataset.load_model(80, 8)
     example_is = range(115,120)
     examples = [list(dataset.X.iloc[example_i,:]) for example_i in example_is]
     example_labels = [int(dataset.y[example_i]) for example_i in example_is]

@@ -145,7 +145,7 @@ def external_merge_binary(dataset, example_is, start_delta,
     out, exception = run_process()
     deltas, times = process_merge_output(out)
     clear_crap()
-    return deltas, times, exception
+    return deltas, times
 
 def external_merge_multiclass(dataset, example_is, start_delta, max_clique,
         max_level, num_classes):
@@ -168,7 +168,7 @@ def external_merge_multiclass(dataset, example_is, start_delta, max_clique,
 
     for l0 in range(num_classes):
         ex_filtered = [ex for ex, l in zip(examples, example_labels) if l==l0]
-        ex_is = [i for i, l in enumerate(example_labels) if l==l0]
+        ex_is = [i for i, l in zip(example_is, example_labels) if l==l0]
         if len(ex_filtered) == 0: continue
         for l1 in [l for l in range(num_classes) if l != l0]:
             print(f"{l0} -> {l1} ({len(ex_filtered)}, {ex_is})")
