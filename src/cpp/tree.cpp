@@ -5,6 +5,7 @@
 */
 
 #include "tree.hpp"
+#include <algorithm>
 
 namespace veritas {
 
