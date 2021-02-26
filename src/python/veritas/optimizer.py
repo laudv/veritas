@@ -31,8 +31,8 @@ class Optimizer:
         self.max_memory = 1024*1024*1024*1 # 1 gb default
         if "max_memory" in kwargs:
             self.max_memory = kwargs["max_memory"]
-            self.g0.set_max_mem_size(self.max_memory)
-            self.g1.set_max_mem_size(self.max_memory)
+            self._g0_backup.set_max_mem_size(self.max_memory)
+            self._g1_backup.set_max_mem_size(self.max_memory)
             del kwargs["max_memory"]
 
         self.ara_eps = 1.0 # just A*
