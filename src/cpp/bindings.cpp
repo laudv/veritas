@@ -219,7 +219,7 @@ PYBIND11_MODULE(pyveritas, m) {
             for (FeatId fid : finfo.feat_ids1())
             {
                 const py::handle& o = example[fid];
-                if (py::isinstance<py::float_>(o))
+                if (py::isinstance<py::float_>(o) || py::isinstance<py::int_>(o))
                 {
                     FloatT v = o.cast<FloatT>();
                     auto f = [=](FeatId i) { return finfo.get_id(1, i); };

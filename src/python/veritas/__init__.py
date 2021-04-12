@@ -109,6 +109,16 @@ AddTree.predict = __addtree_predict
 AddTree.write = __addtree_write
 AddTree.read = __addtree_read
 
+def __solution_output(self, instance):
+    if instance==0:
+        return self.output0
+    elif instance==1:
+        return self.output1
+    else:
+        return (self.output0, self.output1)
+
+Solution.output = __solution_output
+
 
 class AddTreeFeatureTypes:
     def __init__(self, at):
