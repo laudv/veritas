@@ -49,7 +49,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def(py::init<FloatT, FloatT>())
         .def_static("from_lo", &RealDomain::from_lo)
         .def_static("from_hi_exclusive", &RealDomain::from_hi_exclusive)
-        .def_static("from_hi_exclusive", &RealDomain::from_hi_inclusive)
+        .def_static("from_hi_inclusive", &RealDomain::from_hi_inclusive)
         .def_static("exclusive", &RealDomain::exclusive)
         .def_static("inclusive", &RealDomain::inclusive)
         .def_readwrite("lo", &RealDomain::lo)
