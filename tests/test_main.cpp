@@ -275,6 +275,69 @@ void test_box_checker2()
 }
 */
 
+void assert(bool c)
+{
+    if (!c)
+        throw std::runtime_error("not true");
+}
+
+void test_tree1()
+{
+    Tree tree;
+    auto n = tree.root();
+    n.split({1, 12.3});
+    n.left().set_leaf_value(4);
+    n.right().set_leaf_value(9.4);
+
+    assert(n.is_root());
+    assert(!n.left().is_root());
+    assert(n.left().is_leaf());
+    assert(n.left().leaf_value() == 4);
+    assert(n.num_leafs() == 2);
+    assert(n.tree_size() == 3);
+}
+
+void test_tree2()
+{
+    AddTree at;
+    Tree& t = at.add_tree();
+    t.root().split({1, 2.0});
+    t.root().left().split({2, 4.0});
+    t.root().left().right().split({2, 8.0});
+    auto splits = at.get_splits();
+
+    assert(splits[1][0] == 2.0);
+    assert(splits[2][0] == 4.0);
+    assert(splits[2][1] == 8.0);
+    assert(splits[1].size() == 1);
+    assert(splits[2].size() == 2);
+}
+
+void test_tree3()
+{
+    AddTree at;
+    Tree& t = at.add_tree();
+    t.root().split({1, 8.0});
+    t.root().left().split({1, 2.0});
+    t.root().left().right().split({1, 4.0});
+
+    {
+        auto n = at[0].root().left().right().left();
+        auto doms = n.compute_domains();
+        assert(doms[1] == Domain::exclusive(2.0, 4.0));
+    }
+    {
+        auto n = at[0].root().left().right().right();
+        auto doms = n.compute_domains();
+        assert(doms[1] == Domain::exclusive(4.0, 8.0));
+    }
+    {
+        auto n = at[0].root().left();
+        auto doms = n.compute_domains();
+        assert(doms[1] == Domain::from_hi_exclusive(8.0));
+    }
+}
+
 int main()
 {
     //test_very_simple();
@@ -286,13 +349,7 @@ int main()
     //test_box_checker1();
     //test_box_checker2();
 
-    std::cout << "yo" << std::endl;
-
-    Tree tree;
-    auto n = tree.root();
-    n.split({1, 12.3});
-    //n.left().set_leaf_value(12.4);
-    //n.right().set_leaf_value(9.4);
-    std::cout << "is root? " << n.is_root() << std::endl;
-    std::cout << "number of leafs " << n.num_leafs() << std::endl;
+    test_tree1();
+    test_tree2();
+    test_tree3();
 }

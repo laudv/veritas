@@ -9,18 +9,14 @@
 
 #include "domain.hpp"
 #include <vector>
+#include <unordered_map>
 
 namespace veritas {
 
     using NodeId = int;
     using FeatId = int;
 
-
-    struct LtSplit;
-    std::ostream& operator<<(std::ostream& strm, const LtSplit& s);
-
     class Tree;
-    std::ostream& operator<<(std::ostream& strm, const Tree& s);
 
     struct LtSplit {
         FeatId feat_id;
@@ -39,11 +35,7 @@ namespace veritas {
         { return feat_id == o.feat_id && split_value == o.split_value; }
     };
 
-    inline std::ostream& operator<<(std::ostream& strm, const LtSplit& s)
-    {
-        strm << "LtSplit(" << s.feat_id << ", " << s.split_value << ')';
-        return strm;
-    }
+    std::ostream& operator<<(std::ostream& strm, const LtSplit& s);
 
 
 
@@ -87,11 +79,15 @@ namespace veritas {
         };
     } // namespace inner
 
+
+
+
     template <typename RefT /* inner::ConstRef or inner::MutRef */>
     class NodeRef {
     public:
         using TreeRef = typename RefT::TreeRef;
-    
+        using DomainsT = std::unordered_map<FeatId, Domain>;
+
     private:
         TreeRef tree_;
         NodeId node_id_;
@@ -102,11 +98,12 @@ namespace veritas {
         inline std::enable_if_t<T::is_mut_type::value, inner::Node&> node() { return tree_.nodes_[node_id_]; }
 
     public:
-
         inline NodeRef(TreeRef tree, NodeId node_id) : tree_(tree), node_id_(node_id) {}
         inline NodeRef(const NodeRef<RefT>& o) : tree_(o.tree_), node_id_(o.node_id_) {}
         inline NodeRef<RefT> operator=(const NodeRef<RefT>& o)
         { tree_ = o.tree_; node_id_ = o.node_id_; return *this; }
+
+        inline NodeRef<inner::ConstRef> to_const() const { return { tree_, node_id_ }; }
 
         inline bool is_root() const { return node().parent == node().id; }
         inline bool is_leaf() const { return node().is_leaf(); }
@@ -175,7 +172,7 @@ namespace veritas {
 
             inner::Node left(left_id,      id());
             inner::Node right(left_id + 1, id());
-            
+
             tree_.nodes_.push_back(left);
             tree_.nodes_.push_back(right);
 
@@ -193,7 +190,15 @@ namespace veritas {
 
         inline size_t num_leafs() const
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
-    };
+
+        /** Get the domain restrictions on the features in this node. */
+        DomainsT compute_domains() const;
+
+        void print_node(std::ostream& strm, int depth);
+    }; // NodeRef
+
+
+
 
     class Tree {
     public:
@@ -237,8 +242,45 @@ namespace veritas {
         }
 
         inline size_t num_leafs() const { return root().num_leafs(); }
-    };
+        inline size_t num_nodes() const { return root().tree_size(); }
+    }; // Tree
 
+    std::ostream& operator<<(std::ostream& strm, const Tree& t);
+
+
+
+
+    class AddTree {
+    public:
+        using const_iterator = std::vector<Tree>::const_iterator;
+        using iterator = std::vector<Tree>::iterator;
+        using SplitMapT = std::unordered_map<FeatId, std::vector<FloatT>>;
+    private:
+        std::vector<Tree> trees_;
+
+    public:
+        FloatT base_score;
+        inline AddTree() : base_score{0.0} {} ;
+
+        inline Tree& add_tree() { return trees_.emplace_back(); }
+
+        inline Tree& operator[](size_t i) { return trees_[i]; }
+        inline const Tree& operator[](size_t i) const { return trees_[i]; }
+
+        inline iterator begin() { return trees_.begin(); }
+        inline const_iterator cbegin() const { return trees_.cbegin(); }
+        inline iterator end() { return trees_.end(); }
+        inline const_iterator cend() const { return trees_.cend(); }
+
+        inline size_t size() const { return trees_.size(); }
+
+        size_t num_nodes() const;
+        size_t num_leafs() const;
+
+        SplitMapT get_splits() const;
+    }; // AddTree
+
+    std::ostream& operator<<(std::ostream& strm, const AddTree& at);
 
 } // namespace veritas
 
