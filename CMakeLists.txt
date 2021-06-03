@@ -8,9 +8,9 @@ set(SOURCE_DIR "src/cpp")
 include_directories(${SOURCE_DIR})
 set(SOURCES
     "${SOURCE_DIR}/domain.cpp"
-    "${SOURCE_DIR}/tree.cpp"
-    "${SOURCE_DIR}/graph.cpp"
-    "${SOURCE_DIR}/boxchecker.cpp"
+    #"${SOURCE_DIR}/tree.cpp"
+    #"${SOURCE_DIR}/graph.cpp"
+    #"${SOURCE_DIR}/boxchecker.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -24,21 +24,6 @@ else()
     add_compile_options(-Wall -Wextra -pedantic)
     add_compile_options(-march=native)
 endif()
-
-option(USE_Z3 "Prune using Z3's SMT" OFF)
-set(Z3_INSTALL "" CACHE PATH "Custom Z3 install path; leave empty when not required")
-if (USE_Z3)
-    if (NOT "${Z3_INSTALL}" STREQUAL "")
-        link_directories("${Z3_INSTALL}/build")
-        include_directories("${Z3_INSTALL}/src/api")
-        include_directories("${Z3_INSTALL}/src/api/c++")
-        #add_compile_definitions("VERITAS_FEATURE_SMT") # only in 3.12
-        add_definitions("-DVERITAS_FEATURE_SMT")
-        set(SOURCES "${SOURCES}" "${SOURCE_DIR}/smt.cpp")
-    else ()
-        include_directories("/usr/include/z3")
-    endif ()
-endif ()
 
 # GProf
 #cmake -DCMAKE_CXX_FLAGS=-pg -DCMAKE_EXE_LINKER_FLAGS=-pg -DCMAKE_SHARED_LINKER_FLAGS=-pg <SOURCE_DIR>
@@ -64,12 +49,6 @@ if (BUILD_PYTHON_BINDINGS)
     pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
     target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
 
-    # Use Ubuntu's z3 (libz3-dev) install
-    if (USE_Z3)
-        #find_package(Z3 REQUIRED)
-        target_link_libraries("py${PROJECT_NAME}" PRIVATE -lz3)
-    endif ()
-
 endif (BUILD_PYTHON_BINDINGS)
 
 option(BUILD_TESTS "Build C++ test files" OFF)
@@ -82,7 +61,4 @@ if (BUILD_TESTS)
     #include_directories(lib/catch/include)
     add_executable("test${PROJECT_NAME}" ${TESTS})
     target_link_libraries("test${PROJECT_NAME}" PRIVATE "${PROJECT_NAME}")
-    if (USE_Z3)
-        target_link_libraries("test${PROJECT_NAME}" PRIVATE -lz3)
-    endif ()
 endif (BUILD_TESTS)

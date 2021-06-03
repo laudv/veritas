@@ -1,14 +1,10 @@
-#include <functional>
 #include <iostream>
-#include <chrono>
-#include <cmath>
-#include <iomanip>
-#include "tree.h"
-#include "graph.h"
-#include "boxchecker.h"
+#include "new_tree.hpp"
+
 
 using namespace veritas;
 
+/*
 void test_very_simple()
 {
     AddTree at;
@@ -277,6 +273,7 @@ void test_box_checker2()
         std::cout << "box: " << p.first << ", " << p.second << std::endl;
     }
 }
+*/
 
 int main()
 {
@@ -287,5 +284,15 @@ int main()
     //test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
     //test_parallel("tests/models/xgb-calhouse-hard.json");
     //test_box_checker1();
-    test_box_checker2();
+    //test_box_checker2();
+
+    std::cout << "yo" << std::endl;
+
+    Tree tree;
+    auto n = tree.root();
+    n.split({1, 12.3});
+    //n.left().set_leaf_value(12.4);
+    //n.right().set_leaf_value(9.4);
+    std::cout << "is root? " << n.is_root() << std::endl;
+    std::cout << "number of leafs " << n.num_leafs() << std::endl;
 }
