@@ -1,6 +1,8 @@
-#include <iostream>
 #include "new_tree.hpp"
+#include "new_graph.hpp"
 
+#include <iostream>
+#include <assert.h>
 
 using namespace veritas;
 
@@ -275,12 +277,6 @@ void test_box_checker2()
 }
 */
 
-void assert(bool c)
-{
-    if (!c)
-        throw std::runtime_error("not true");
-}
-
 void test_tree1()
 {
     Tree tree;
@@ -338,6 +334,97 @@ void test_tree3()
     }
 }
 
+void test_domain_store1()
+{
+    DomainStore store;
+    store.refine_workspace({0, 0.5}, false);
+    {
+        const Box& box = store.get_workspace_box();
+        DomainPair p = *box.begin();
+        assert(p.feat_id == 0);
+        assert(p.domain == Domain::from_lo(0.5));
+    }
+
+    store.refine_workspace({0, 1.0}, true);
+    {
+        const Box& box = store.get_workspace_box();
+        DomainPair p = *box.begin();
+        assert(p.feat_id == 0);
+        assert(p.domain == Domain::exclusive(0.5, 1.0));
+        assert(box.size() == 1);
+    }
+
+    store.push_workspace();
+
+    assert(store.get_used_mem_size() == sizeof(DomainPair));
+}
+
+void test_domain_store2()
+{
+    DomainStore store;
+
+    store.refine_workspace({1, 2.0}, false); // >= 2.0
+    store.refine_workspace({2, 4.0}, false); // >= 4.0
+    store.refine_workspace({1, 8.0}, true); // < 4.0
+
+    Box b1 = store.push_workspace();
+
+    store.refine_workspace({1, 4.0}, false); // >= 4.0
+    store.refine_workspace({2, 8.0}, false); // >= 8.0
+
+    Box b2 = store.push_workspace();
+
+    Box b3 = store.combine_and_push(b1, b2, true);
+
+    //std::cout << "b1: " << b1 << std::endl;
+    //std::cout << "b2: " << b2 << std::endl;
+    //std::cout << "b1 & b2: " << b3 << std::endl;
+
+    assert(b3.begin()[0].domain == Domain::exclusive(4.0, 8.0));
+    assert(b3.begin()[1].domain == Domain::from_lo(8.0));
+}
+
+void test_graph1()
+{
+    AddTree at;
+    {
+        Tree& t = at.add_tree();
+        t.root().split({1, 8.0});
+        t.root().left().split({2, 2.0});
+        t.root().left().left().set_leaf_value(1.0);
+        t.root().left().right().set_leaf_value(2.0);
+        t.root().right().set_leaf_value(3.0);
+    }
+    {
+        Tree& t = at.add_tree();
+        t.root().split({1, 16.0});
+        t.root().left().split({2, 4.0});
+        t.root().left().right().split({1, 6.0});
+
+        t.root().left().left().set_leaf_value(1.0);
+        t.root().left().right().left().set_leaf_value(2.0);
+        t.root().left().right().right().set_leaf_value(3.0);
+        t.root().right().set_leaf_value(4.0);
+    }
+
+    std::cout << at[0] << std::endl;
+    std::cout << at[1] << std::endl;
+
+    Graph g(at);
+
+    g.store.refine_workspace({1, 9.0}, true);
+    Box b = g.store.get_workspace_box();
+
+    std::cout << g << std::endl;
+    std::cout << b << std::endl;
+    g.prune([b](const Box& box) {
+            bool res =  b.overlaps(box); 
+            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
+            return !res;
+            });
+    std::cout << g << std::endl;
+}
+
 int main()
 {
     //test_very_simple();
@@ -352,4 +439,8 @@ int main()
     test_tree1();
     test_tree2();
     test_tree3();
+    test_domain_store1();
+    test_domain_store2();
+
+    test_graph1();
 }

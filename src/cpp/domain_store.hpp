@@ -57,6 +57,16 @@ namespace veritas {
         inline size_t size() const { return end_ - begin_; }
     };
 
+    std::ostream&
+    operator<<(std::ostream& s, const Box& box)
+    {
+        s << "Box { ";
+        for (auto&& [id, dom] : box)
+            s << id << ":" << dom << " ";
+        s << '}';
+        return s;
+    }
+
     /**
      * The search generates many states. Organize memory in big Blocks for
      * efficiency. The `workspace_` is reused, and is used during the

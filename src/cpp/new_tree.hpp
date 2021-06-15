@@ -70,10 +70,12 @@ namespace veritas {
         };
 
         struct ConstRef {
+            using TreePtr = const Tree *;
             using TreeRef = const Tree&;
             using is_mut_type = std::false_type;
         };
         struct MutRef {
+            using TreePtr = Tree *;
             using TreeRef = Tree&;
             using is_mut_type = std::true_type;
         };
@@ -85,22 +87,25 @@ namespace veritas {
     template <typename RefT /* inner::ConstRef or inner::MutRef */>
     class NodeRef {
     public:
+        using TreePtr = typename RefT::TreePtr;
         using TreeRef = typename RefT::TreeRef;
         using DomainsT = std::unordered_map<FeatId, Domain>;
 
     private:
-        TreeRef tree_;
+        TreePtr tree_;
         NodeId node_id_;
 
-        inline const inner::Node& node() const { return tree_.nodes_[node_id_]; };
+        inline const inner::Node& node() const { return tree_->nodes_[node_id_]; };
 
         template <typename T=RefT>
-        inline std::enable_if_t<T::is_mut_type::value, inner::Node&> node() { return tree_.nodes_[node_id_]; }
+        inline std::enable_if_t<T::is_mut_type::value, inner::Node&> node()
+        { return tree_->nodes_[node_id_]; }
 
     public:
-        inline NodeRef(TreeRef tree, NodeId node_id) : tree_(tree), node_id_(node_id) {}
+        inline NodeRef(TreePtr tree, NodeId node_id) : tree_(tree), node_id_(node_id) {}
+        inline NodeRef(TreeRef tree, NodeId node_id) : tree_(&tree), node_id_(node_id) {}
         inline NodeRef(const NodeRef<RefT>& o) : tree_(o.tree_), node_id_(o.node_id_) {}
-        inline NodeRef<RefT> operator=(const NodeRef<RefT>& o)
+        inline NodeRef<RefT>& operator=(const NodeRef<RefT>& o)
         { tree_ = o.tree_; node_id_ = o.node_id_; return *this; }
 
         inline NodeRef<inner::ConstRef> to_const() const { return { tree_, node_id_ }; }
@@ -168,13 +173,13 @@ namespace veritas {
         {
             if (is_internal()) throw std::runtime_error("split internal");
 
-            NodeId left_id = tree_.nodes_.size();
+            NodeId left_id = tree_->nodes_.size();
 
             inner::Node left(left_id,      id());
             inner::Node right(left_id + 1, id());
 
-            tree_.nodes_.push_back(left);
-            tree_.nodes_.push_back(right);
+            tree_->nodes_.push_back(left);
+            tree_->nodes_.push_back(right);
 
             node().internal.split = split;
             node().internal.left = left_id;
@@ -268,8 +273,10 @@ namespace veritas {
         inline const Tree& operator[](size_t i) const { return trees_[i]; }
 
         inline iterator begin() { return trees_.begin(); }
+        inline const_iterator begin() const { return trees_.begin(); }
         inline const_iterator cbegin() const { return trees_.cbegin(); }
         inline iterator end() { return trees_.end(); }
+        inline const_iterator end() const { return trees_.end(); }
         inline const_iterator cend() const { return trees_.cend(); }
 
         inline size_t size() const { return trees_.size(); }
