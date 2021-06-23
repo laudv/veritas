@@ -1,5 +1,4 @@
-#include "new_tree.hpp"
-#include "new_graph.hpp"
+#include "search.hpp"
 
 #include <iostream>
 #include <assert.h>
@@ -319,72 +318,118 @@ void test_tree3()
 
     {
         auto n = at[0].root().left().right().left();
-        auto doms = n.compute_domains();
-        assert(doms[1] == Domain::exclusive(2.0, 4.0));
+        auto doms = n.compute_box();
+        assert(doms[0].feat_id == 1);
+        std::cout << at[0] << std::endl << doms[0].domain << std::endl;
+        assert(doms[0].domain == Domain::exclusive(2.0, 4.0));
     }
     {
         auto n = at[0].root().left().right().right();
-        auto doms = n.compute_domains();
-        assert(doms[1] == Domain::exclusive(4.0, 8.0));
+        auto doms = n.compute_box();
+        assert(doms[0].feat_id == 1);
+        assert(doms[0].domain == Domain::exclusive(4.0, 8.0));
     }
     {
         auto n = at[0].root().left();
-        auto doms = n.compute_domains();
-        assert(doms[1] == Domain::from_hi_exclusive(8.0));
+        auto doms = n.compute_box();
+        assert(doms[0].feat_id == 1);
+        assert(doms[0].domain == Domain::from_hi_exclusive(8.0));
     }
 }
 
-void test_domain_store1()
-{
-    DomainStore store;
-    store.refine_workspace({0, 0.5}, false);
-    {
-        const Box& box = store.get_workspace_box();
-        DomainPair p = *box.begin();
-        assert(p.feat_id == 0);
-        assert(p.domain == Domain::from_lo(0.5));
-    }
+//void test_domain_store1()
+//{
+//    DomainStore store;
+//    store.refine_workspace({0, 0.5}, false);
+//    {
+//        const Box& box = store.get_workspace_box();
+//        DomainPair p = *box.begin();
+//        assert(p.feat_id == 0);
+//        assert(p.domain == Domain::from_lo(0.5));
+//    }
+//
+//    store.refine_workspace({0, 1.0}, true);
+//    {
+//        const Box& box = store.get_workspace_box();
+//        DomainPair p = *box.begin();
+//        assert(p.feat_id == 0);
+//        assert(p.domain == Domain::exclusive(0.5, 1.0));
+//        assert(box.size() == 1);
+//    }
+//
+//    store.push_workspace();
+//
+//    assert(store.get_used_mem_size() == sizeof(DomainPair));
+//}
+//
+//void test_domain_store2()
+//{
+//    DomainStore store;
+//
+//    store.refine_workspace({1, 2.0}, false); // >= 2.0
+//    store.refine_workspace({2, 4.0}, false); // >= 4.0
+//    store.refine_workspace({1, 8.0}, true); // < 4.0
+//
+//    Box b1 = store.push_workspace();
+//
+//    store.refine_workspace({1, 4.0}, false); // >= 4.0
+//    store.refine_workspace({2, 8.0}, false); // >= 8.0
+//
+//    Box b2 = store.push_workspace();
+//
+//    Box b3 = store.combine_and_push(b1, b2, true);
+//
+//    //std::cout << "b1: " << b1 << std::endl;
+//    //std::cout << "b2: " << b2 << std::endl;
+//    //std::cout << "b1 & b2: " << b3 << std::endl;
+//
+//    assert(b3.begin()[0].domain == Domain::exclusive(4.0, 8.0));
+//    assert(b3.begin()[1].domain == Domain::from_lo(8.0));
+//}
 
-    store.refine_workspace({0, 1.0}, true);
-    {
-        const Box& box = store.get_workspace_box();
-        DomainPair p = *box.begin();
-        assert(p.feat_id == 0);
-        assert(p.domain == Domain::exclusive(0.5, 1.0));
-        assert(box.size() == 1);
-    }
+//void test_graph1()
+//{
+//    AddTree at;
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({1, 8.0});
+//        t.root().left().split({2, 2.0});
+//        t.root().left().left().set_leaf_value(1.0);
+//        t.root().left().right().set_leaf_value(2.0);
+//        t.root().right().set_leaf_value(3.0);
+//    }
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({1, 16.0});
+//        t.root().left().split({2, 4.0});
+//        t.root().left().right().split({1, 6.0});
+//
+//        t.root().left().left().set_leaf_value(1.0);
+//        t.root().left().right().left().set_leaf_value(2.0);
+//        t.root().left().right().right().set_leaf_value(3.0);
+//        t.root().right().set_leaf_value(4.0);
+//    }
+//
+//    std::cout << at[0] << std::endl;
+//    std::cout << at[1] << std::endl;
+//
+//    Graph g(at);
+//
+//    g.store.refine_workspace({1, 9.0}, true);
+//    const Box b = g.store.get_workspace_box();
+//
+//    std::cout << g << std::endl;
+//    std::cout << b << std::endl;
+//    //g.prune([b](const Box& box) {
+//    //            bool res = b.overlaps(box); 
+//    //            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
+//    //            return !res;
+//    //        });
+//    g.prune_by_box(b, true);
+//    std::cout << g << std::endl;
+//}
 
-    store.push_workspace();
-
-    assert(store.get_used_mem_size() == sizeof(DomainPair));
-}
-
-void test_domain_store2()
-{
-    DomainStore store;
-
-    store.refine_workspace({1, 2.0}, false); // >= 2.0
-    store.refine_workspace({2, 4.0}, false); // >= 4.0
-    store.refine_workspace({1, 8.0}, true); // < 4.0
-
-    Box b1 = store.push_workspace();
-
-    store.refine_workspace({1, 4.0}, false); // >= 4.0
-    store.refine_workspace({2, 8.0}, false); // >= 8.0
-
-    Box b2 = store.push_workspace();
-
-    Box b3 = store.combine_and_push(b1, b2, true);
-
-    //std::cout << "b1: " << b1 << std::endl;
-    //std::cout << "b2: " << b2 << std::endl;
-    //std::cout << "b1 & b2: " << b3 << std::endl;
-
-    assert(b3.begin()[0].domain == Domain::exclusive(4.0, 8.0));
-    assert(b3.begin()[1].domain == Domain::from_lo(8.0));
-}
-
-void test_graph1()
+void test_search1()
 {
     AddTree at;
     {
@@ -410,37 +455,28 @@ void test_graph1()
     std::cout << at[0] << std::endl;
     std::cout << at[1] << std::endl;
 
-    Graph g(at);
+    Search s(at);
+    while (!s.step()) { } 
 
-    g.store.refine_workspace({1, 9.0}, true);
-    Box b = g.store.get_workspace_box();
-
-    std::cout << g << std::endl;
-    std::cout << b << std::endl;
-    g.prune([b](const Box& box) {
-            bool res =  b.overlaps(box); 
-            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
-            return !res;
-            });
-    std::cout << g << std::endl;
+    std::cout << "number of steps " << s.stats.num_steps << std::endl;
+    std::cout << "number of impossible " << s.stats.num_impossible << std::endl;
+    std::cout << "number of solutions " << s.num_solutions() << std::endl;
+    for (size_t i = 0; i < s.num_solutions(); ++i)
+    {
+        Solution sol = s.get_solution(i);
+        std::cout << sol << std::endl;
+    }
 }
 
 int main()
 {
-    //test_very_simple();
-    //test_simple();
-    //test_img();
-    //test_unconstrained_bounds("tests/models/xgb-calhouse-hard.json");
-    //test_unconstrained_bounds("tests/models/xgb-mnist-yis0-hard.json");
-    //test_parallel("tests/models/xgb-calhouse-hard.json");
-    //test_box_checker1();
-    //test_box_checker2();
+    //test_tree1();
+    //test_tree2();
+    //test_tree3();
+    //test_domain_store1();
+    //test_domain_store2();
 
-    test_tree1();
-    test_tree2();
-    test_tree3();
-    test_domain_store1();
-    test_domain_store2();
+    //test_graph1();
 
-    test_graph1();
+    test_search1();
 }

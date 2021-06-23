@@ -1,6 +1,8 @@
 #include "new_tree.hpp"
 #include <algorithm>
 
+#include <iostream>
+
 namespace veritas {
 
     inline std::ostream& operator<<(std::ostream& strm, const LtSplit& s)
@@ -12,49 +14,44 @@ namespace veritas {
     namespace inner {
 
         static void
-        compute_domains(
+        compute_box(
                 Tree::ConstRef node,
-                Tree::ConstRef::DomainsT& domains,
+                Box& box,
                 bool from_left_child)
         {
-            const LtSplit& split = node.get_split();
-
-            Domain dom; // if not in domains already, assume full real domain
-            const auto it = domains.find(split.feat_id);
-            if (it != domains.end()) // already a domain for feat_id in `domains`...
-                dom = it->second;    // ..., refine that domain
-
-            if (from_left_child)
-                 dom = dom.intersect(std::get<0>(split.get_domains()));
-            else
-                 dom = dom.intersect(std::get<1>(split.get_domains()));
-
-            domains[split.feat_id] = dom;
-
+            refine_box(box, node.get_split(), from_left_child);
+            
             // repeat this for each internal node on the node-to-root path
             if (!node.is_root())
-                compute_domains(node.parent(), domains, node.is_left_child());
+                compute_box(node.parent(), box, node.is_left_child());
         }
 
     } // namespace inner
 
     template <typename RefT>
-    typename NodeRef<RefT>::DomainsT
-    NodeRef<RefT>::compute_domains() const
+    Box
+    NodeRef<RefT>::compute_box() const
     {
-        DomainsT doms;
+        Box box;
+        compute_box(box);
+        return box;
+    }
+
+    template <typename RefT>
+    void
+    NodeRef<RefT>::compute_box(Box& box) const
+    {
         if (!is_root())
-            inner::compute_domains(parent().to_const(), doms, is_left_child());
-        return doms;
+            inner::compute_box(parent().to_const(), box, is_left_child());
     }
 
     template // manual template instantiation
-    typename NodeRef<inner::ConstRef>::DomainsT
-    NodeRef<inner::ConstRef>::compute_domains() const;
+    Box
+    NodeRef<inner::ConstRef>::compute_box() const;
 
     template // manual template instantiation
-    typename NodeRef<inner::MutRef>::DomainsT
-    NodeRef<inner::MutRef>::compute_domains() const;
+    Box
+    NodeRef<inner::MutRef>::compute_box() const;
 
     template <typename RefT>
     void

@@ -13,9 +13,6 @@
 
 namespace veritas {
 
-    using NodeId = int;
-    using FeatId = int;
-
     class Tree;
 
     struct LtSplit {
@@ -34,6 +31,16 @@ namespace veritas {
         inline bool operator==(const LtSplit& o) const
         { return feat_id == o.feat_id && split_value == o.split_value; }
     };
+
+    // overload of refine_box from domain.hpp
+    inline void refine_box(Box& doms, const LtSplit& split, bool from_left_child)
+    {
+        Domain dom = from_left_child
+            ? std::get<0>(split.get_domains())
+            : std::get<1>(split.get_domains());
+
+        refine_box(doms, split.feat_id, dom);
+    }
 
     std::ostream& operator<<(std::ostream& strm, const LtSplit& s);
 
@@ -89,7 +96,6 @@ namespace veritas {
     public:
         using TreePtr = typename RefT::TreePtr;
         using TreeRef = typename RefT::TreeRef;
-        using DomainsT = std::unordered_map<FeatId, Domain>;
 
     private:
         TreePtr tree_;
@@ -197,7 +203,8 @@ namespace veritas {
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
 
         /** Get the domain restrictions on the features in this node. */
-        DomainsT compute_domains() const;
+        Box compute_box() const;
+        void compute_box(Box& box) const;
 
         void print_node(std::ostream& strm, int depth);
     }; // NodeRef
@@ -225,7 +232,7 @@ namespace veritas {
         inline MutRef operator[] (NodeId id) { return { *this, id }; }
 
         inline bool is_valid_node_id(NodeId id) const
-        { return id < 0 || static_cast<size_t>(id) >= nodes_.size(); }
+        { return id >= 0 && static_cast<size_t>(id) < nodes_.size(); }
 
         inline void check_node_id(NodeId id) const
         { if (!is_valid_node_id(id)) throw std::runtime_error("invalid node id"); }

@@ -1,4 +1,3 @@
-
 /*
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
@@ -13,59 +12,6 @@
 #include <iostream>
 
 namespace veritas {
-
-    struct DomainPair {
-        FeatId feat_id;
-        Domain domain;
-    };
-
-    /** An iterator of `Domain`s sorted asc by their feature ids
-     *  This represents a hypercube in the input space. */
-    class Box {
-    public:
-        using const_iterator = const DomainPair *;
-
-    private:
-        const_iterator begin_, end_;
-
-    public:
-        inline Box(const_iterator b, const_iterator e) : begin_(b), end_(e) {}
-        inline static Box null_box() { return {nullptr, nullptr}; }
-        inline const_iterator begin() const { return begin_; }
-        inline const_iterator end() const { return end_; }
-
-        bool overlaps(const Box& other) const
-        {
-            auto it0 = begin_;
-            auto it1 = other.begin_;
-
-            while (it0 != end_ && it1 != other.end_)
-            {
-                if (it0->feat_id == it1->feat_id)
-                {
-                    if (!it0->domain.overlaps(it1->domain))
-                        return false;
-                    ++it0; ++it1;
-                }
-                else if (it0->feat_id < it1->feat_id) ++it0;
-                else ++it1;
-            }
-
-            return true;
-        }
-
-        inline size_t size() const { return end_ - begin_; }
-    };
-
-    std::ostream&
-    operator<<(std::ostream& s, const Box& box)
-    {
-        s << "Box { ";
-        for (auto&& [id, dom] : box)
-            s << id << ":" << dom << " ";
-        s << '}';
-        return s;
-    }
 
     /**
      * The search generates many states. Organize memory in big Blocks for
@@ -142,48 +88,13 @@ namespace veritas {
 
         void refine_workspace(LtSplit split, bool from_left_child)
         {
-            int id = split.feat_id;
-            Domain dom;
-
-            auto it = std::find_if(workspace_.begin(), workspace_.end(),
-                    [id](const DomainPair& p) { return p.feat_id == id; });
-
-            if (it != workspace_.end())
-                dom = it->domain;
-
-            if (from_left_child)
-                 dom = dom.intersect(std::get<0>(split.get_domains()));
-            else
-                 dom = dom.intersect(std::get<1>(split.get_domains()));
-
-            if (it == workspace_.end())
-            {
-                // push domain for feat_id, and make sure box remains sorted
-                workspace_.push_back({ id, dom });
-                for (int i = workspace_.size() - 1; i > 0; --i) // ids sorted
-                    if (workspace_[i-1].feat_id > workspace_[i].feat_id)
-                        std::swap(workspace_[i-1], workspace_[i]);
-                //std::sort(workspace_.begin(), workspace_.end(),
-                //        [](const DomainPair& a, const DomainPair& b) {
-                //            return a.first < b.first;
-                //        })
-            }
-            else
-            {
-                it->domain = dom;
-            }
+            Domain dom = from_left_child
+                ? std::get<0>(split.get_domains())
+                : std::get<1>(split.get_domains());
+            refine_domains(workspace_, split.feat_id, dom);
         }
 
-        Box get_workspace_box() const
-        {
-            size_t len = workspace_.size();
-            if (len > 0)
-            {
-                const DomainPair *front = &workspace_[0];
-                return { front, front + len };
-            }
-            else return Box::null_box();
-        }
+        Box get_workspace_box() const { return Box(workspace_); }
 
         Box push_workspace()
         {

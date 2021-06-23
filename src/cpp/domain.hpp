@@ -7,15 +7,16 @@
 #ifndef VERITAS_DOMAIN_HPP
 #define VERITAS_DOMAIN_HPP
 
+#include "basics.hpp"
+
 #include <limits>
 #include <sstream>
 #include <cmath>
 #include <tuple>
+#include <vector>
+#include <algorithm>
 
 namespace veritas {
-
-    using FloatT = float;
-    static const FloatT FLOATT_INF = std::numeric_limits<FloatT>::infinity();
 
     struct Domain;
     std::ostream& operator<<(std::ostream& s, const Domain& d);
@@ -94,6 +95,101 @@ namespace veritas {
         if (d.lo_is_inf())
             return s << "Dom(< " << d.hi << ')';
         return s << "Dom(" << d.lo << ',' << d.hi << ')';
+    }
+
+
+
+
+    struct DomainPair {
+        FeatId feat_id;
+        Domain domain;
+    };
+
+    /** A sorted list of pairs */
+    using Box = std::vector<DomainPair>;
+
+    inline void refine_box(Box& doms, FeatId feat_id, const Domain& dom)
+    {
+        Domain new_dom;
+        auto it = std::find_if(doms.begin(), doms.end(), [feat_id](const DomainPair& p)
+                { return p.feat_id == feat_id; });
+
+        if (it != doms.end())
+            new_dom = it->domain;
+        new_dom = new_dom.intersect(dom);
+
+        if (it == doms.end())
+        {
+            doms.push_back({ feat_id, new_dom });
+            for (int i = doms.size() - 1; i > 0; --i) // ids sorted
+                if (doms[i-1].feat_id > doms[i].feat_id)
+                    std::swap(doms[i-1], doms[i]);
+            //std::sort(workspace_.begin(), workspace_.end(),
+            //        [](const DomainPair& a, const DomainPair& b) {
+            //            return a.first < b.first;
+            //        })
+        }
+        else
+        {
+            it->domain = new_dom;
+        }
+    }
+
+    /** An iterator of `Domain`s sorted asc by their feature ids
+     *  This represents a hypercube in the input space. */
+    class BoxRef {
+    public:
+        using const_iterator = const DomainPair *;
+
+    private:
+        const_iterator begin_, end_;
+
+    public:
+        inline BoxRef(const_iterator b, const_iterator e) : begin_(b), end_(e) {}
+        inline BoxRef(const Box& d) : BoxRef(nullptr, nullptr)
+        {
+            if (d.size() != 0)
+            {
+                begin_ = &d[0];
+                end_ = begin_ + d.size();
+            }
+        }
+        inline static BoxRef null_box() { return {nullptr, nullptr}; }
+        inline const_iterator begin() const { return begin_; }
+        inline const_iterator end() const { return end_; }
+
+        inline bool overlaps(const BoxRef& other) const
+        {
+            auto it0 = begin_;
+            auto it1 = other.begin_;
+
+            while (it0 != end_ && it1 != other.end_)
+            {
+                if (it0->feat_id == it1->feat_id)
+                {
+                    if (!it0->domain.overlaps(it1->domain))
+                        return false;
+                    ++it0; ++it1;
+                }
+                else if (it0->feat_id < it1->feat_id) ++it0;
+                else ++it1;
+            }
+
+            return true;
+        }
+
+        inline size_t size() const { return end_ - begin_; }
+    };
+
+    inline
+    std::ostream&
+    operator<<(std::ostream& s, const BoxRef& box)
+    {
+        s << "Box { ";
+        for (auto&& [id, dom] : box)
+            s << id << ":" << dom << " ";
+        s << '}';
+        return s;
     }
 
 

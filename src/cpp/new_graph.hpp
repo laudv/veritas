@@ -26,7 +26,7 @@ namespace veritas {
      */
     class Graph {
 
-        struct Vertex { Box box; FloatT output; };
+        struct Vertex { BoxRef box; FloatT output; };
         using IndepSet = std::vector<Vertex>; // independent set
 
         std::vector<IndepSet> sets_; // all indep sets in graph
@@ -47,7 +47,7 @@ namespace veritas {
                     node = node.parent();
                     store.refine_workspace(node.get_split(), child_node.is_left_child());
                 }
-                Box box = store.push_workspace();
+                BoxRef box = store.push_workspace();
                 set.push_back({ box, leaf_value });
             }
         }
@@ -67,7 +67,7 @@ namespace veritas {
         Graph(const AddTree& at)
         {
             // pseudo vertex with empty box for the base_score
-            sets_.push_back({ { Box::null_box(), at.base_score } });
+            sets_.push_back({ { BoxRef::null_box(), at.base_score } });
             for (const Tree& tree : at)
                 sets_.push_back(fill_indep_set(tree));
         }
@@ -83,9 +83,9 @@ namespace veritas {
                 set.erase(std::remove_if(set.begin(), set.end(), g), set.end());
         }
 
-        void prune_by_box(const Box& box, bool intersect_with_box)
+        void prune_by_box(const BoxRef& box, bool intersect_with_box)
         {
-            prune([box](const Box& b) { return b.overlaps(box); });
+            prune([box](const BoxRef& b) { return !b.overlaps(box); });
 
             if (!intersect_with_box) return;
 
@@ -176,7 +176,7 @@ namespace veritas {
 
                             if (v0.box.overlaps(v1.box))
                             {
-                                Box box = store.combine_and_push(v0.box, v1.box, true);
+                                BoxRef box = store.combine_and_push(v0.box, v1.box, true);
                                 FloatT output = v0.output + v1.output;
                                 set1.push_back({box, output});
                             }
