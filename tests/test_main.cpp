@@ -355,6 +355,36 @@ void test_prune1()
     assert(new_at.num_nodes() == 3);
 }
 
+void test_rename_id1()
+{
+    AddTree at;
+    Tree& t0 = at.add_tree();
+    t0.root().split({1, 8.0});
+    t0.root().left().split({1, 2.0});
+    t0.root().left().right().split({2, 4.0});
+    Tree& t1 = at.add_tree();
+    t1.root().split({3, 8.0});
+    t1.root().left().split({1, 2.0});
+    t1.root().left().right().split({2, 4.0});
+
+    std::cout << "before:" <<std::endl;
+    std::cout << at[0] << std::endl;
+    std::cout << at[1] << std::endl;
+
+
+    size_t count = at.replace_feat_id(1, 125);
+
+    std::cout << "after:" <<std::endl;
+    std::cout << at[0] << std::endl;
+    std::cout << at[1] << std::endl;
+
+    std::cout << "count = " << count << std::endl;
+
+    assert(count == 3);
+    assert(at[0].root().get_split().feat_id == 125);
+
+}
+
 //void test_domain_store1()
 //{
 //    DomainStore store;
@@ -493,6 +523,7 @@ int main()
     //test_tree3();
 
     test_prune1();
+    test_rename_id1();
     //test_domain_store1();
     //test_domain_store2();
 

@@ -168,6 +168,24 @@ namespace veritas {
             }
         }
 
+        template <typename T=RefT>
+        inline std::enable_if_t<T::is_mut_type::value, size_t>
+        replace_feat_id(FeatId old_id, FeatId new_id)
+        {
+            size_t res = 0;
+            if (is_internal())
+            {
+                if (get_split().feat_id == old_id)
+                {
+                    node().internal.split.feat_id = new_id;
+                    ++res;
+                }
+                res += left().replace_feat_id(old_id, new_id);
+                res += right().replace_feat_id(old_id, new_id);
+            }
+            return res;
+        }
+
         inline size_t num_leafs() const
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
 
@@ -226,6 +244,9 @@ namespace veritas {
         inline size_t num_nodes() const { return root().tree_size(); }
 
         Tree prune(BoxRef box) const;
+
+        size_t replace_feat_id(FeatId old_id, FeatId new_id)
+        { return root().replace_feat_id(old_id, new_id); }
     }; // Tree
 
     std::ostream& operator<<(std::ostream& strm, const Tree& t);
@@ -266,6 +287,8 @@ namespace veritas {
 
         SplitMapT get_splits() const;
         AddTree prune(BoxRef box) const;
+
+        size_t replace_feat_id(FeatId old_id, FeatId new_id);
 
     }; // AddTree
 

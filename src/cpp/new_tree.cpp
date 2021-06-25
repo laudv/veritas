@@ -198,6 +198,15 @@ namespace veritas {
         return new_at;
     }
 
+    size_t
+    AddTree::replace_feat_id(FeatId old_id, FeatId new_id)
+    {
+        size_t res = 0;
+        for (Tree& t : *this)
+            res += t.root().replace_feat_id(old_id, new_id);
+        return res;
+    }
+
     std::ostream&
     operator<<(std::ostream& strm, const AddTree& at)
     {
