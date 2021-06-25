@@ -108,6 +108,31 @@ namespace veritas {
     /** A sorted list of pairs */
     using Box = std::vector<DomainPair>;
 
+
+
+    struct LtSplit {
+        FeatId feat_id;
+        FloatT split_value;
+
+        inline LtSplit(FeatId f, FloatT v) : feat_id(f), split_value(v) {}
+
+        /**  true goes left, false goes right */
+        inline bool test(FloatT v) const { return v < split_value; }
+
+        /** strict less than, so eq goes right */
+        inline std::tuple<Domain, Domain> get_domains() const
+        { return Domain().split(split_value); }
+
+        inline bool operator==(const LtSplit& o) const
+        { return feat_id == o.feat_id && split_value == o.split_value; }
+    };
+    
+    inline
+    std::ostream& operator<<(std::ostream& strm, const LtSplit& s)
+    { return strm << "LtSplit(" << s.feat_id << ", " << s.split_value << ')'; }
+
+
+
     inline void refine_box(Box& doms, FeatId feat_id, const Domain& dom)
     {
         Domain new_dom;
@@ -133,6 +158,15 @@ namespace veritas {
         {
             it->domain = new_dom;
         }
+    }
+
+    inline void refine_box(Box& doms, const LtSplit& split, bool from_left_child)
+    {
+        Domain dom = from_left_child
+            ? std::get<0>(split.get_domains())
+            : std::get<1>(split.get_domains());
+
+        refine_box(doms, split.feat_id, dom);
     }
 
     /** An iterator of `Domain`s sorted asc by their feature ids
@@ -178,6 +212,37 @@ namespace veritas {
             return true;
         }
 
+        // slow linear scan
+        inline bool overlaps(FeatId feat_id, const Domain& dom) const
+        {
+            for (auto it = begin_; it < end_; ++it)
+            {
+                if (it->feat_id == feat_id)
+                    return it->domain.overlaps(dom);
+            }
+            return true;
+        }
+
+        const static int OVERLAPS_LEFT = 1;
+        const static int OVERLAPS_RIGHT = 2;
+
+        // slow linear scan
+        inline int overlaps(const LtSplit& split) const
+        {
+            for (auto it = begin_; it < end_; ++it)
+            {
+                if (it->feat_id == split.feat_id)
+                {
+                    Domain dom = it->domain;
+                    Domain ldom, rdom;
+                    std::tie(ldom, rdom) = split.get_domains();
+                    return static_cast<int>(dom.overlaps(ldom))*OVERLAPS_LEFT
+                        | static_cast<int>(dom.overlaps(rdom))*OVERLAPS_RIGHT;
+                }
+            }
+            return OVERLAPS_LEFT | OVERLAPS_RIGHT;
+        }
+
         inline size_t size() const { return end_ - begin_; }
     };
 
@@ -191,6 +256,9 @@ namespace veritas {
         s << '}';
         return s;
     }
+
+
+
 
 
 } // namespace veritas

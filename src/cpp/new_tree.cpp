@@ -2,14 +2,9 @@
 #include <algorithm>
 
 #include <iostream>
+#include <stack>
 
 namespace veritas {
-
-    inline std::ostream& operator<<(std::ostream& strm, const LtSplit& s)
-    {
-        strm << "LtSplit(" << s.feat_id << ", " << s.split_value << ')';
-        return strm;
-    }
 
     namespace inner {
 
@@ -81,12 +76,61 @@ namespace veritas {
     }
 
 
+    Tree
+    Tree::prune(BoxRef box) const
+    {
+        std::stack<ConstRef, std::vector<ConstRef>> stack1;
+        std::stack<MutRef, std::vector<MutRef>> stack2;
+
+        Tree new_tree;
+        stack1.push(root());
+        stack2.push(new_tree.root());
+
+        while (stack1.size() != 0)
+        {
+            ConstRef n1 = stack1.top();
+            stack1.pop();
+            MutRef n2 = stack2.top();
+
+            if (n1.is_leaf())
+            {
+                stack2.pop();
+                n2.set_leaf_value(n1.leaf_value());
+            }
+            else
+            {
+                Domain ldom, rdom;
+                int flag = box.overlaps(n1.get_split());
+
+                if (flag == (BoxRef::OVERLAPS_LEFT | BoxRef::OVERLAPS_RIGHT))
+                {
+                    stack2.pop();
+                    n2.split(n1.get_split());
+                    stack2.push(n2.right());
+                    stack2.push(n2.left());
+                }
+
+                if ((flag & BoxRef::OVERLAPS_RIGHT) != 0)
+                {
+                    stack1.push(n1.right());
+                }
+                if ((flag & BoxRef::OVERLAPS_LEFT) != 0)
+                {
+                    stack1.push(n1.left());
+                }
+            }
+        }
+
+        return new_tree;
+    }
+
     std::ostream&
     operator<<(std::ostream& strm, const Tree& t)
     {
         t.root().print_node(strm, 0);
         return strm;
     }
+
 
     size_t AddTree::num_nodes() const
     {
@@ -143,6 +187,15 @@ namespace veritas {
         }
 
         return splits;
+    }
+
+    AddTree
+    AddTree::prune(BoxRef box) const
+    {
+        AddTree new_at;
+        for (const Tree& t : *this)
+            new_at.add_tree(t.prune(box));
+        return new_at;
     }
 
     std::ostream&

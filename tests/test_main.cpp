@@ -337,6 +337,24 @@ void test_tree3()
     }
 }
 
+void test_prune1()
+{
+    AddTree at;
+    Tree& t = at.add_tree();
+    t.root().split({1, 8.0});
+    t.root().left().split({1, 2.0});
+    t.root().left().right().split({1, 4.0});
+
+    Box box = {{1, {2.5, 5.0}}};
+
+    //std::cout << at[0] << std::endl;
+    AddTree new_at = at.prune(box);
+    //std::cout << new_at[0] << std::endl;
+
+    assert(new_at.num_leafs() == 2);
+    assert(new_at.num_nodes() == 3);
+}
+
 //void test_domain_store1()
 //{
 //    DomainStore store;
@@ -473,10 +491,12 @@ int main()
     //test_tree1();
     //test_tree2();
     //test_tree3();
+
+    test_prune1();
     //test_domain_store1();
     //test_domain_store2();
 
     //test_graph1();
 
-    test_search1();
+    //test_search1();
 }

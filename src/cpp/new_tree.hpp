@@ -15,37 +15,6 @@ namespace veritas {
 
     class Tree;
 
-    struct LtSplit {
-        FeatId feat_id;
-        FloatT split_value;
-
-        inline LtSplit(FeatId f, FloatT v) : feat_id(f), split_value(v) {}
-
-        /**  true goes left, false goes right */
-        inline bool test(FloatT v) const { return v < split_value; }
-
-        /** strict less than, so eq goes right */
-        inline std::tuple<Domain, Domain> get_domains() const
-        { return Domain().split(split_value); }
-
-        inline bool operator==(const LtSplit& o) const
-        { return feat_id == o.feat_id && split_value == o.split_value; }
-    };
-
-    // overload of refine_box from domain.hpp
-    inline void refine_box(Box& doms, const LtSplit& split, bool from_left_child)
-    {
-        Domain dom = from_left_child
-            ? std::get<0>(split.get_domains())
-            : std::get<1>(split.get_domains());
-
-        refine_box(doms, split.feat_id, dom);
-    }
-
-    std::ostream& operator<<(std::ostream& strm, const LtSplit& s);
-
-
-
     namespace inner {
         struct NodeLeaf { FloatT leaf_value; };
         struct NodeInternal {
@@ -255,6 +224,8 @@ namespace veritas {
 
         inline size_t num_leafs() const { return root().num_leafs(); }
         inline size_t num_nodes() const { return root().tree_size(); }
+
+        Tree prune(BoxRef box) const;
     }; // Tree
 
     std::ostream& operator<<(std::ostream& strm, const Tree& t);
@@ -275,6 +246,8 @@ namespace veritas {
         inline AddTree() : base_score{0.0} {} ;
 
         inline Tree& add_tree() { return trees_.emplace_back(); }
+        inline void add_tree(Tree&& t) { trees_.emplace_back(std::move(t)); }
+        inline void add_tree(const Tree& t) { trees_.push_back(t); }
 
         inline Tree& operator[](size_t i) { return trees_[i]; }
         inline const Tree& operator[](size_t i) const { return trees_[i]; }
@@ -292,6 +265,8 @@ namespace veritas {
         size_t num_leafs() const;
 
         SplitMapT get_splits() const;
+        AddTree prune(BoxRef box) const;
+
     }; // AddTree
 
     std::ostream& operator<<(std::ostream& strm, const AddTree& at);
