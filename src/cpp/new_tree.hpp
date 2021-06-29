@@ -10,6 +10,7 @@
 #include "domain.hpp"
 #include <vector>
 #include <unordered_map>
+#include <iostream>
 
 namespace veritas {
 

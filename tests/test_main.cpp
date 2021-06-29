@@ -1,3 +1,4 @@
+#include "features.hpp"
 #include "search.hpp"
 
 #include <iostream>
@@ -367,73 +368,30 @@ void test_rename_id1()
     t1.root().left().split({1, 2.0});
     t1.root().left().right().split({2, 4.0});
 
-    std::cout << "before:" <<std::endl;
-    std::cout << at[0] << std::endl;
-    std::cout << at[1] << std::endl;
-
-
     size_t count = at.replace_feat_id(1, 125);
-
-    std::cout << "after:" <<std::endl;
-    std::cout << at[0] << std::endl;
-    std::cout << at[1] << std::endl;
-
-    std::cout << "count = " << count << std::endl;
 
     assert(count == 3);
     assert(at[0].root().get_split().feat_id == 125);
-
 }
 
-//void test_domain_store1()
-//{
-//    DomainStore store;
-//    store.refine_workspace({0, 0.5}, false);
-//    {
-//        const Box& box = store.get_workspace_box();
-//        DomainPair p = *box.begin();
-//        assert(p.feat_id == 0);
-//        assert(p.domain == Domain::from_lo(0.5));
-//    }
-//
-//    store.refine_workspace({0, 1.0}, true);
-//    {
-//        const Box& box = store.get_workspace_box();
-//        DomainPair p = *box.begin();
-//        assert(p.feat_id == 0);
-//        assert(p.domain == Domain::exclusive(0.5, 1.0));
-//        assert(box.size() == 1);
-//    }
-//
-//    store.push_workspace();
-//
-//    assert(store.get_used_mem_size() == sizeof(DomainPair));
-//}
-//
-//void test_domain_store2()
-//{
-//    DomainStore store;
-//
-//    store.refine_workspace({1, 2.0}, false); // >= 2.0
-//    store.refine_workspace({2, 4.0}, false); // >= 4.0
-//    store.refine_workspace({1, 8.0}, true); // < 4.0
-//
-//    Box b1 = store.push_workspace();
-//
-//    store.refine_workspace({1, 4.0}, false); // >= 4.0
-//    store.refine_workspace({2, 8.0}, false); // >= 8.0
-//
-//    Box b2 = store.push_workspace();
-//
-//    Box b3 = store.combine_and_push(b1, b2, true);
-//
-//    //std::cout << "b1: " << b1 << std::endl;
-//    //std::cout << "b2: " << b2 << std::endl;
-//    //std::cout << "b1 & b2: " << b3 << std::endl;
-//
-//    assert(b3.begin()[0].domain == Domain::exclusive(4.0, 8.0));
-//    assert(b3.begin()[1].domain == Domain::from_lo(8.0));
-//}
+void test_block_store1()
+{
+    size_t max_mem = 1024*1024; // 1mb
+    BlockStore<int> store;
+
+    std::vector<int> v {1, 2, 3, 4, 5};
+
+    auto r = store.store(v, max_mem-store.get_used_mem_size());
+
+    assert(r.begin[0] == 1);
+    assert(r.begin[1] == 2);
+    assert(r.begin[2] == 3);
+    assert(r.begin[3] == 4);
+    assert(r.begin[4] == 5);
+    assert(r.end == r.begin+5);
+
+    assert(store.get_used_mem_size() == 5*4);
+}
 
 //void test_graph1()
 //{
@@ -516,6 +474,15 @@ void test_search1()
     }
 }
 
+void test_feat_map1()
+{
+    std::vector<std::string> features = {"feat16", "feat2", "feat3=4", "feat4"};
+    FeatMap map(features);
+
+    std::cout << map << std::endl;
+
+}
+
 int main()
 {
     //test_tree1();
@@ -524,10 +491,11 @@ int main()
 
     test_prune1();
     test_rename_id1();
-    //test_domain_store1();
-    //test_domain_store2();
+    test_block_store1();
 
     //test_graph1();
 
     //test_search1();
+    
+    test_feat_map1();
 }

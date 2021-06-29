@@ -15,19 +15,14 @@ namespace veritas {
 
     /**
      * The search generates many states. Organize memory in big Blocks for
-     * efficiency. The `workspace_` is reused, and is used during the
-     * construction of a `Box`.
+     * efficiency.
+     * Pointers into the DomainStore must be stable -> no vector resizing!.
      *
-     * Pointers into the DomainStore must be stable.
-     *
-     * Everything in the `DomainStore` is immutable. Modify in the workspace,
-     * and when finished, push to the store.
+     * Everything in the `DomainStore` is immutable.
      */
     class DomainStore {
         using Block = std::vector<DomainPair>;
-
         std::vector<Block> store_;
-        Block workspace_;
 
         Block& get_block_with_remaining_capacity(size_t cap)
         {
@@ -86,82 +81,82 @@ namespace veritas {
             return mem;
         }
 
-        void refine_workspace(LtSplit split, bool from_left_child)
-        {
-            Domain dom = from_left_child
-                ? std::get<0>(split.get_domains())
-                : std::get<1>(split.get_domains());
-            refine_domains(workspace_, split.feat_id, dom);
-        }
+        //void refine_workspace(LtSplit split, bool from_left_child)
+        //{
+        //    Domain dom = from_left_child
+        //        ? std::get<0>(split.get_domains())
+        //        : std::get<1>(split.get_domains());
+        //    refine_domains(workspace_, split.feat_id, dom);
+        //}
+//
+//        Box get_workspace_box() const { return Box(workspace_); }
+//
+//        Box push_workspace()
+//        {
+//            // this store_ block has enough space to accomodate the workspace DomainBox
+//            Box workspace = get_workspace_box();
+//            Block& block = get_block_with_remaining_capacity(workspace.size());
+//
+//            // push a copy of the workspace DomainBox
+//            size_t start_index = block.size();
+//            for (auto&& [id, domain] : workspace)
+//                block.push_back({ id, domain });
+//
+//            DomainPair *ptr = &block[start_index];
+//            Box box = { ptr, ptr + workspace_.size() };
+//
+//            workspace_.clear();
+//
+//            return box;
+//        }
 
-        Box get_workspace_box() const { return Box(workspace_); }
+        //void combine_in_workspace(const BoxRef& a, const BoxRef& b, bool copy_b)
+        //{
+        //    if (!workspace_.empty())
+        //        throw std::runtime_error("workspace not empty");
 
-        Box push_workspace()
-        {
-            // this store_ block has enough space to accomodate the workspace DomainBox
-            Box workspace = get_workspace_box();
-            Block& block = get_block_with_remaining_capacity(workspace.size());
+        //    const DomainPair *it0 = a.begin();
+        //    const DomainPair *it1 = b.begin();
 
-            // push a copy of the workspace DomainBox
-            size_t start_index = block.size();
-            for (auto&& [id, domain] : workspace)
-                block.push_back({ id, domain });
+        //    // assume sorted
+        //    while (it0 != a.end() && it1 != b.end())
+        //    {
+        //        if (it0->feat_id == it1->feat_id)
+        //        {
+        //            Domain dom = it0->domain.intersect(it1->domain);
+        //            workspace_.push_back({ it0->feat_id, dom });
+        //            ++it0; ++it1;
+        //        }
+        //        else if (it0->feat_id < it1->feat_id)
+        //        {
+        //            workspace_.push_back(*it0); // copy
+        //            ++it0;
+        //        }
+        //        else
+        //        {
+        //            if (copy_b)
+        //                workspace_.push_back(*it1); // copy
+        //            ++it1;
+        //        }
+        //    }
 
-            DomainPair *ptr = &block[start_index];
-            Box box = { ptr, ptr + workspace_.size() };
+        //    // push all remaining items (one of them is already at the end, no need to compare anymore)
+        //    for (; it0 != a.end(); ++it0)
+        //        workspace_.push_back(*it0); // copy
+        //    for (; copy_b && it1 != b.end(); ++it1)
+        //        workspace_.push_back(*it1); // copy
+        //}
 
-            workspace_.clear();
+        //Box combine_and_push(const Box& a, const Box& b, bool copy_b)
+        //{
+        //    combine_in_workspace(a, b, copy_b);
+        //    return push_workspace();
+        //}
 
-            return box;
-        }
-
-        void combine_in_workspace(const Box& a, const Box& b, bool copy_b)
-        {
-            if (!workspace_.empty())
-                throw std::runtime_error("workspace not empty");
-
-            const DomainPair *it0 = a.begin();
-            const DomainPair *it1 = b.begin();
-
-            // assume sorted
-            while (it0 != a.end() && it1 != b.end())
-            {
-                if (it0->feat_id == it1->feat_id)
-                {
-                    Domain dom = it0->domain.intersect(it1->domain);
-                    workspace_.push_back({ it0->feat_id, dom });
-                    ++it0; ++it1;
-                }
-                else if (it0->feat_id < it1->feat_id)
-                {
-                    workspace_.push_back(*it0); // copy
-                    ++it0;
-                }
-                else
-                {
-                    if (copy_b)
-                        workspace_.push_back(*it1); // copy
-                    ++it1;
-                }
-            }
-
-            // push all remaining items (one of them is already at the end, no need to compare anymore)
-            for (; it0 != a.end(); ++it0)
-                workspace_.push_back(*it0); // copy
-            for (; copy_b && it1 != b.end(); ++it1)
-                workspace_.push_back(*it1); // copy
-        }
-
-        Box combine_and_push(const Box& a, const Box& b, bool copy_b)
-        {
-            combine_in_workspace(a, b, copy_b);
-            return push_workspace();
-        }
-
-        void clear_workspace()
-        {
-            workspace_.clear();
-        }
+        //void clear_workspace()
+        //{
+        //    workspace_.clear();
+        //}
 
     };
 

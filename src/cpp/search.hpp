@@ -9,6 +9,7 @@
 
 #include "domain.hpp"
 #include "new_tree.hpp"
+#include "block_store.hpp"
 #include <iostream>
 #include <chrono>
 
@@ -17,7 +18,7 @@ namespace veritas {
     using time_point = std::chrono::time_point<std::chrono::system_clock>;
 
     struct State {
-        size_t parent; // index into Search::states_ vector
+        size_t parent; // index into 'Search::states_` vector
 
         TreeId tree_id; // the split of the node (tree_id, node_id) was added ...
         NodeId node_id; // ... to this state's box
@@ -25,7 +26,14 @@ namespace veritas {
         FloatT g; // sum of 'certain' leaf values
         FloatT h; // heuristic value
 
+        size_t cache; // index into `Search::caches_`, or NO_CACHE
+
         inline FloatT fscore(FloatT eps = 1.0) const { return g + eps * h; }
+    };
+
+    struct Cache {
+        BlockStore<DomainPair>::Ref box;
+        BlockStore<NodeId>::Ref node_ids;
     };
 
     std::ostream&
@@ -48,6 +56,11 @@ namespace veritas {
         double time;
     };
 
+    struct SolutionRef {
+        size_t state_index;
+        double time;
+    };
+
     std::ostream&
     operator<<(std::ostream& strm, const Solution& s)
     {
@@ -66,7 +79,7 @@ namespace veritas {
 
         return strm
             << std::endl
-            << "   - box: " << s.box << std::endl
+            << "   - box: " << BoxRef(s.box) << std::endl
             << "   - time: " << s.time << std::endl
             << "}";
     }
@@ -100,20 +113,24 @@ namespace veritas {
     };
 
     class Search {
-        const AddTree& at_;
+        AddTree at_; // copy of the tree so we can modify freely
         StateCmp cmp_;
-        StateCmp ara_cmp_;
+        StateCmp ara_cmp_; // TODO have two heaps, one for A*, one for ARA*
         SearchWorkspace workspace_;
         SearchWorkspace workspace_backup_;
 
         std::vector<State> states_;
+        std::vector<Cache> caches_;
         std::vector<size_t> heap_; // indices into states_
-        std::vector<size_t> solutions_; // indices into states_
-        std::vector<double> solution_times_;
+        std::vector<SolutionRef> solutions_; // indices into states_
 
         time_point start_time;
 
+        const FeatId FEAT_ID_SENTINEL = static_cast<FeatId>((1l<<31)-1);
+        const size_t NO_CACHE = static_cast<size_t>(-1);
+
     public:
+        size_t max_mem_size = static_cast<size_t>(4)*1024*1024*1024; // 4GB
         Stats stats;
 
         friend StateCmp;
@@ -125,7 +142,7 @@ namespace veritas {
             , start_time{std::chrono::system_clock::now()}
         {
             // root state with self reference
-            states_.push_back({0, -1, -1, at.base_score, 0.0f});
+            states_.push_back({0, -1, -1, at.base_score, 0.0f, NO_CACHE});
             heap_.push_back(0);
             workspace_.node_ids.resize(at.size());
         }
@@ -175,8 +192,7 @@ namespace veritas {
             }
             else
             {
-                solutions_.push_back(state_index);
-                solution_times_.push_back(time_since_start());
+                solutions_.push_back({ state_index, time_since_start() });
             }
 
             ++stats.num_steps;
@@ -190,7 +206,7 @@ namespace veritas {
 
     Solution get_solution(size_t solution_index)
     {
-        size_t state_index = solutions_.at(solution_index);
+        auto&& [state_index, time] = solutions_.at(solution_index);
         visit_ancestors(state_index);
 
         return {
@@ -199,7 +215,7 @@ namespace veritas {
             states_[state_index].g,
             workspace_.node_ids, // copy
             workspace_.box,      // copy
-            solution_times_.at(solution_index),
+            time,
         };
     }
 
@@ -233,6 +249,7 @@ namespace veritas {
             while (state_index != 0)
             {
                 const State& state = states_[state_index];
+
                 NodeId& node_id = workspace_.node_ids[state.tree_id];
                 if (node_id == 0) node_id = state.node_id;
 
@@ -289,6 +306,7 @@ namespace veritas {
                 -1,  // node_id different for left & right
                 at_.base_score, // g, needs to be recomputed with h (= sum of leaf values in this state)
                 0.0, // h, needs to be recomputed
+                NO_CACHE,
             };
 
             new_left_state.node_id = at_[next_tree].node_const(node_id).left().id();
@@ -296,8 +314,6 @@ namespace veritas {
 
             return true; // successfully expanded
         }
-
-        const FeatId FEAT_ID_SENTINEL = static_cast<FeatId>((1l<<31)-1);
 
         // assumes valid `workspace_` for parent state
         void compute_fscore(State& child_state)
@@ -313,7 +329,7 @@ namespace veritas {
             catch (const std::runtime_error& e) { child_state.g = FLOATT_INF; return; }
 
             copy_box_feat_ids(); // for search in `compute_heuristic_at`
-            workspace_.box_feat_ids.push_back(FEAT_ID_SENTINEL); // sentinel
+            workspace_.box_feat_ids.push_back(FEAT_ID_SENTINEL);
 
             for (TreeId tree_id = 0; tree_id < static_cast<TreeId>(at_.size()); ++tree_id)
             {
@@ -336,6 +352,7 @@ namespace veritas {
             const LtSplit& split = n.get_split();
             size_t r = linear_search(workspace_.box_feat_ids, split.feat_id);
 
+            // a domain for split.feat_id found
             if (workspace_.box_feat_ids[r] == split.feat_id) // safe because FEAT_ID_SENTINEL
             {
                 Domain ldom, rdom;
@@ -353,7 +370,7 @@ namespace veritas {
                 }
                 return h;
             }
-            else // no restrictions found in domain, continue in both subtrees
+            else // no restrictions for split.feat_id, continue in both subtrees
             {
                 return std::max(compute_heuristic_at(n.left()),
                         compute_heuristic_at(n.right()));
