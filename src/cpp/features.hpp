@@ -12,18 +12,29 @@
 
 #include <vector>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <iostream>
+#include <functional>
 
 namespace veritas {
 
+    /**
+     * A dataset has a list of features, usually with names.
+     * Internally, an index is used to refer to a particular feature, going
+     * from 0 for the first feature name, and len(features) for the last
+     * feature name.
+     *
+     * 
+     *
+     */
     class FeatMap {
         const std::vector<std::string> names_;
-        std::unordered_map<const std::string&, FeatId> internal_ids_;
+        std::map<std::reference_wrapper<const std::string>, FeatId, std::less<const std::string>> index_map_;
 
-        // disjoint set data structure mapping internal id -> feat id
-        std::vector<FeatId> feat_ids_;
+        // disjoint set data structure mapping index -> feat id
+        // vector is twice the length of names_, first set for first instance, second set for second instance
+        mutable std::vector<FeatId> feat_ids_;
 
         using IterValueType = std::tuple<const std::string&, FeatId>;
 
@@ -33,58 +44,100 @@ namespace veritas {
         explicit
         FeatMap(Args... feature_names) : names_(feature_names...)
         {
-            FeatId internal_count = 0;
             for (const std::string& name : names_)
             {
-                internal_ids_[name] = internal_count;
-                feat_ids_[internal_count] = internal_count;
+                index_map_.insert({name, feat_ids_.size()});
+                feat_ids_.push_back(feat_ids_.size());
             }
+
+            // add len(names) to feat_ids_ for second instance
+            for (size_t i = 0; i < names_.size(); ++i)
+                feat_ids_.push_back(feat_ids_.size());
         }
 
         size_t num_features() const { return names_.size(); }
 
-        AddTree transform(const AddTree& at) const
+        FeatId get_index(const std::string& feature_name, int instance) const
         {
+            // second instance's indexes are offset by number of features
+            int offset = clean_instance(instance) * num_features();
+
+            auto it = index_map_.find(feature_name);
+            if (it != index_map_.end())
+                return it->second + offset;
+
+            return -1;
+        }
+
+        int get_instance(FeatId index) const
+        {
+            return static_cast<size_t>(index) > num_features();
+        }
+
+        void share_all_features_between_instances()
+        {
+            for (FeatId index = 0; static_cast<size_t>(index) < names_.size(); ++index)
+                uf_union(index, index+num_features());
+        }
+
+        FeatId get_feat_id(FeatId index) const { return uf_find(index); } 
+        FeatId get_feat_id(const std::string& feat_name, int instance=0) const
+        { return get_feat_id(get_index(feat_name, instance)); }
+
+        void use_same_id_for(FeatId index1, FeatId index2) { uf_union(index1, index2); }
+
+        AddTree transform(const AddTree& at, int instance=0) const
+        {
+            // TODO
             return {};
         }
 
-        /*
-        // https://en.cppreference.com/w/cpp/iterator/iterator
-        // member typedefs provided through inheriting from std::iterator
-        class iterator: public std::iterator<
-                            std::input_iterator_tag,   // iterator_category
-                            IterValueType, // value_type
-                            size_t,                      // difference_type
-                            const IterValueType*, // pointer
-                            IterValueType                       // reference
-                                          >
-        {
-
-            int iid_;
+        class iterator { // simple range iter over indexes
+            friend FeatMap;
+            FeatId index;
 
         public:
-            explicit iterator(int iid) : iid_(iid) {}
-            iterator& operator++() {iid_ += 1; return *this;}
-            //iterator operator++(int) {iterator retval = *this; ++(*this); return retval;}
-            bool operator==(iterator other) const {return iid_ == other.iid_;}
-            bool operator!=(iterator other) const {return !(*this == other);}
-            reference operator*() const {
+            iterator(FeatId index) : index(index) {}
+            iterator& operator++() { ++index; return *this; }
+            iterator operator++(int) { iterator retval = *this; ++(*this); return retval; }
+            bool operator==(iterator other) const { return index == other.index; }
+            bool operator!=(iterator other) const { return !(*this == other); }
+            FeatId operator*() { return index; }
 
-            }
+            // iterator traits
+            using value_type = FeatId;
+            using difference_type = size_t;
+            using pointer = const FeatId*;
+            using reference = const FeatId&;
+            using iterator_category = std::forward_iterator_tag;
         };
 
-        decltype(FeatMap::feat2id_)::const_iterator
-        begin() const { return feat2id_.begin(); }
+        iterator begin(int instance = 0) const
+        {
+            return {static_cast<FeatId>(clean_instance(instance) * num_features())};
+        }
 
-        decltype(FeatMap::feat2id_)::const_iterator
-        end() const { return feat2id_.end(); }
-        */
+        iterator end(int instance = 1) const
+        {
+            return {static_cast<FeatId>((1+clean_instance(instance)) * num_features())};
+        }
 
-        //Feature operator[](const std::string& feat_name);
+        struct instance_iter_helper {
+            FeatId begin_, end_;
+
+            iterator begin() const { return {begin_}; }
+            iterator end() const { return {end_}; }
+        };
+
+        instance_iter_helper iter_instance(int instance) const
+        {
+            return { begin(instance).index, end(instance).index };
+        }
+
     private:
 
         // https://en.wikipedia.org/wiki/Disjoint-set_data_structure
-        FeatId uf_find(FeatId internal_id)
+        FeatId uf_find(FeatId index) const
         {
             // function Find(x) is
             //     while x.parent ≠ x do
@@ -94,63 +147,49 @@ namespace veritas {
             //     return x
             // end function
 
-            while (feat_ids_[internal_id] != internal_id)
+            while (feat_ids_[index] != index)
             {
-                feat_ids_[internal_id] = feat_ids_[feat_ids_[internal_id]];
-                internal_id = feat_ids_[internal_id];
+                feat_ids_[index] = feat_ids_[feat_ids_[index]];
+                index = feat_ids_[index];
             }
-            return internal_id;
+            return index;
         }
 
-        void uf_union(FeatId internal_id1, FeatId internal_id2)
-        {
-            // function Union(x, y) is
-            //     // Replace nodes by roots
-            //     x := Find(x)
-            //     y := Find(y)
+        void uf_union(FeatId index1, FeatId index2) {
+          // function Union(x, y) is
+          //     // Replace nodes by roots
+          //     x := Find(x)
+          //     y := Find(y)
 
-            //     if x = y then
-            //         return  // x and y are already in the same set
-            //     end if
+          //     if x = y then
+          //         return  // x and y are already in the same set
+          //     end if
 
-            //     // If necessary, rename variables to ensure that
-            //     // x has at least as many descendants as y
-            //     if x.size < y.size then
-            //         (x, y) := (y, x)
-            //     end if
+          //     // If necessary, rename variables to ensure that
+          //     // x has at least as many descendants as y
+          //     if x.size < y.size then
+          //         (x, y) := (y, x)
+          //     end if
 
-            //     // Make x the new root
-            //     y.parent := x
-            //     // Update the size of x
-            //     x.size := x.size + y.size
-            // end function
+          //     // Make x the new root
+          //     y.parent := x
+          //     // Update the size of x
+          //     x.size := x.size + y.size
+          // end function
 
-            FeatId x = uf_find(internal_id1);
-            FeatId y = uf_find(internal_id2);
+          index1 = uf_find(index1);
+          index2 = uf_find(index2);
 
-            if (x == y) return;
+          if (index1 == index2)
+            return;
+          if (index1 > index2)
+            std::swap(index1, index2);
 
-            feat_ids_[x] = y;
+          feat_ids_[index2] = index1;
         }
 
+        int clean_instance(int instance) const { return std::min(1, std::max(0, instance)); }
     };
-
-    /*class Feature {
-        FeatMap& map_;
-        FeatId feat_id_;
-
-    public:
-        Feature(const FeatMap& map) : map_(map), feat_id_(0)
-        {
-
-        }
-    };
-
-    Feature
-    FeatMap::operator[](const std::string& feat_name) const
-    {
-        return {*this};
-    }*/
 
     //std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
     //{

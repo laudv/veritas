@@ -478,9 +478,21 @@ void test_feat_map1()
 {
     std::vector<std::string> features = {"feat16", "feat2", "feat3=4", "feat4"};
     FeatMap map(features);
+    map.share_all_features_between_instances();
+    map.use_same_id_for(map.get_feat_id("feat3=4"), map.get_feat_id("feat4"));
 
-    std::cout << map << std::endl;
+    assert(map.get_feat_id("feat2") == 1);
+    std::vector<FeatId> expected {0, 1, 2, 2, 0, 1, 2, 2};
+    for (auto index : map)
+        assert(map.get_feat_id(index) == expected[index]);
 
+    for (auto index : map.iter_instance(0))
+        assert(map.get_feat_id(index) == expected[index]);
+    for (auto index : map.iter_instance(1))
+    {
+        assert(index >= 4);
+        assert(map.get_feat_id(index) == expected[index]);
+    }
 }
 
 int main()

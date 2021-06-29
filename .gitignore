@@ -10,3 +10,4 @@ sync.sh
 .clangd
 .ipynb_checkpoints
 gmon.out
+venv
