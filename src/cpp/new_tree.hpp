@@ -172,11 +172,27 @@ namespace veritas {
         inline size_t num_leafs() const
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
 
+        bool operator==(const NodeRef<inner::ConstRef>& other) const
+        {
+            if (is_internal() && other.is_internal())
+                return get_split() == other.get_split()
+                    && left() == other.left()
+                    && right() == other.right();
+            else if (is_leaf() && other.is_leaf())
+                return leaf_value() == other.leaf_value();
+            return false;
+        }
+
         /** Get the domain restrictions on the features in this node. */
         Box compute_box() const;
         void compute_box(Box& box) const;
 
-        void print_node(std::ostream& strm, int depth);
+        void print_node(std::ostream& strm, int depth) const;
+        void to_json(std::ostream& strm, int depth) const;
+
+        template <typename T=RefT>
+        std::enable_if_t<T::is_mut_type::value, void>
+        from_json(std::istream& strm);
     }; // NodeRef
 
 
@@ -194,9 +210,10 @@ namespace veritas {
         std::vector<inner::Node> nodes_;
 
     public:
-        inline Tree() { nodes_.push_back({0, 0}); }
+        inline Tree() { clear(); }
         inline ConstRef root() const { return (*this)[0]; }
         inline MutRef root() { return (*this)[0]; }
+        inline void clear() { nodes_.clear(); nodes_.push_back({0, 0}); }
 
         inline ConstRef operator[] (NodeId id) const { return { *this, id }; }
         inline MutRef operator[] (NodeId id) { return { *this, id }; }
@@ -226,7 +243,12 @@ namespace veritas {
         inline size_t num_leafs() const { return root().num_leafs(); }
         inline size_t num_nodes() const { return root().tree_size(); }
 
+        inline void to_json(std::ostream& strm) const { root().to_json(strm, 0); }
+        inline void from_json(std::istream& strm) { root().from_json(strm); };
+
         Tree prune(BoxRef box) const;
+
+        bool operator==(const Tree& other) const { return root() == other.root(); }
     }; // Tree
 
     std::ostream& operator<<(std::ostream& strm, const Tree& t);
@@ -267,6 +289,18 @@ namespace veritas {
 
         SplitMapT get_splits() const;
         AddTree prune(BoxRef box) const;
+
+        void to_json(std::ostream& strm) const;
+        void from_json(std::istream& strm);
+
+        bool operator==(const AddTree& other) const
+        {
+            auto it1 = begin(), it2 = other.begin();
+            for (; it1 != end() && it2 != other.end(); ++it1, ++it2)
+                if (!it1->operator==(*it2)) return false;
+            return base_score == other.base_score
+                && it1 == end() && it2 == other.end();
+        }
 
     }; // AddTree
 

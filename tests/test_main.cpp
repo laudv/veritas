@@ -338,6 +338,58 @@ void test_tree3()
     }
 }
 
+void test_json1() {
+  std::stringstream s;
+
+  Tree tree;
+  auto n = tree.root();
+  n.split({1, 12.3});
+  n.left().set_leaf_value(4);
+  n.right().split({2, 1351});
+  n.right().left().set_leaf_value(9.4);
+  n.right().right().set_leaf_value(9.5);
+
+  tree.to_json(s);
+
+  Tree tree2;
+  tree2.from_json(s);
+
+  assert(tree == tree2);
+}
+
+void test_json2() {
+  std::stringstream s;
+
+  AddTree at;
+  at.base_score = 124.2;
+  {
+      Tree& tree = at.add_tree();
+      auto n = tree.root();
+      n.split({1, 12.3});
+      n.left().set_leaf_value(4);
+      n.right().split({2, 1351});
+      n.right().left().set_leaf_value(9.4);
+      n.right().right().set_leaf_value(9.5);
+  }
+  {
+      Tree& tree = at.add_tree();
+      tree.root().set_leaf_value(14.129);
+  }
+  {
+      Tree& tree = at.add_tree();
+      tree.root().split({1, 23.4});
+      tree.root().left().set_leaf_value(-124.2);
+      tree.root().right().set_leaf_value(-8.2);
+  }
+
+  at.to_json(s);
+  AddTree at2;
+  //std::cout << s.str() << std::endl;
+  at2.from_json(s);
+
+  assert(at == at2);
+}
+
 void test_prune1()
 {
     AddTree at;
@@ -532,6 +584,8 @@ int main()
     //test_tree1();
     //test_tree2();
     //test_tree3();
+    test_json1();
+    test_json2();
 
     test_prune1();
     test_block_store1();

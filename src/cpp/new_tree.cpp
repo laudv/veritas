@@ -15,7 +15,7 @@ namespace veritas {
                 bool from_left_child)
         {
             refine_box(box, node.get_split(), from_left_child);
-            
+
             // repeat this for each internal node on the node-to-root path
             if (!node.is_root())
                 compute_box(node.parent(), box, node.is_left_child());
@@ -50,7 +50,7 @@ namespace veritas {
 
     template <typename RefT>
     void
-    NodeRef<RefT>::print_node(std::ostream& strm, int depth)
+    NodeRef<RefT>::print_node(std::ostream& strm, int depth) const
     {
         for (int i = 0; i < depth; ++i)
             strm << "│  ";
@@ -75,6 +75,92 @@ namespace veritas {
         }
     }
 
+    template <typename RefT>
+    void
+    NodeRef<RefT>::to_json(std::ostream& s, int depth) const
+    {
+        if (is_leaf())
+        {
+            s << "{\"leaf_value\": " << leaf_value() << "}";
+        }
+        else
+        {
+            s << "{\"feat_id\": " << get_split().feat_id
+                << ", \"split_value\": " << get_split().split_value
+                << ',' << std::endl;
+            for (int i = 0; i <= depth; ++i) s << "  ";
+            s << "\"lt\": ";
+            left().to_json(s, depth+1);
+            s << ',' << std::endl;
+            for (int i = 0; i <= depth; ++i) s << "  ";
+            s << "\"gteq\": ";
+            right().to_json(s, depth+1);
+            s << std::endl;
+            for (int i = 0; i < depth; ++i) s << "  ";
+            s << '}';
+        }
+    }
+
+    template void NodeRef<inner::ConstRef>::to_json(std::ostream&, int) const;
+    template void NodeRef<inner::MutRef>::to_json(std::ostream&, int) const;
+
+    template <typename RefT>
+    template <typename T>
+    std::enable_if_t<T::is_mut_type::value, void>
+    NodeRef<RefT>::from_json(std::istream& s)
+    {
+        std::string buf;
+        FloatT leaf_value, split_value;
+        FeatId feat_id;
+        char c;
+
+        while (s.get(c))
+        {
+            switch (c)
+            {
+                case ' ':
+                case '\n':
+                case '{':
+                case ',':
+                    break;
+                case '"':
+                    buf.clear();
+                    while (s.get(c))
+                        if (c != '"') buf.push_back(c); else break;
+                    break;
+                case '}':
+                    goto the_end;
+                case ':':
+                    if (buf == "feat_id")
+                        s >> feat_id;
+                    else if (buf == "split_value")
+                        s >> split_value;
+                    else if (buf == "leaf_value")
+                    {
+                        s >> leaf_value;
+                        set_leaf_value(leaf_value);
+                    }
+                    else if (buf == "lt") // left branch
+                    {
+                        split({feat_id, split_value});
+                        left().from_json(s);
+                    }
+                    else if (buf == "gteq") // expected after lt (split already applied)
+                    {
+                        right().from_json(s);
+                    }
+                    else
+                        throw std::runtime_error("tree parse error: unknown key");
+                    break;
+                default:
+                    throw std::runtime_error("tree parse error: unexpected char");
+            }
+        }
+
+        the_end: return;
+    }
+
+    template void NodeRef<inner::MutRef>::from_json(std::istream&);
 
     Tree
     Tree::prune(BoxRef box) const
@@ -203,7 +289,59 @@ namespace veritas {
     {
         return
             strm << "AddTree with " << at.size() << " trees and base_score "
-                 << at.base_score << std::endl;
+                 << at.base_score;
+    }
+
+    void
+    AddTree::to_json(std::ostream& s) const
+    {
+        s << "[\"base_score\": " << base_score;
+
+        for (auto it = begin(); it != end(); ++it)
+        {
+            s << ',' << std::endl;
+            it->to_json(s);
+        }
+
+        s << ']';
+    }
+
+    void
+    AddTree::from_json(std::istream& s)
+    {
+        std::string buf;
+        char c;
+        Tree tree;
+
+        while (s.get(c))
+        {
+            switch (c)
+            {
+                case ' ':
+                case '\n':
+                case '[':
+                case ']':
+                    break;
+                case '"':
+                    buf.clear();
+                    while (s.get(c))
+                        if (c != '"') buf.push_back(c); else break;
+                    break;
+                case ',':
+                    tree.from_json(s);
+                    add_tree(std::move(tree));
+                    tree.clear();
+                    break;
+                case ':':
+                    if (buf == "base_score")
+                        s >> base_score;
+                    else
+                        throw std::runtime_error("addtree parse error: unknown key");
+                    break;
+                default:
+                    throw std::runtime_error("addtree parse error: unexpected char");
+            }
+        }
     }
 
 
