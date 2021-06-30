@@ -29,7 +29,7 @@ namespace veritas {
      *
      */
     class FeatMap {
-        const std::vector<std::string> names_;
+        std::vector<std::string> names_;
         std::map<std::reference_wrapper<const std::string>, FeatId, std::less<const std::string>> index_map_;
 
         // disjoint set data structure mapping index -> feat id
@@ -42,36 +42,65 @@ namespace veritas {
 
         template <typename ...Args>
         explicit
-        FeatMap(Args... feature_names) : names_(feature_names...)
-        {
-            for (const std::string& name : names_)
-            {
-                index_map_.insert({name, feat_ids_.size()});
-                feat_ids_.push_back(feat_ids_.size());
-            }
+        FeatMap(Args... feature_names) : names_(feature_names...) { init(); }
 
-            // add len(names) to feat_ids_ for second instance
-            for (size_t i = 0; i < names_.size(); ++i)
-                feat_ids_.push_back(feat_ids_.size());
+        FeatMap(FeatId num_features)
+        {
+            for (FeatId index = 0; index < num_features; ++index)
+            {
+                std::stringstream buffer;
+                buffer << "feature" << index;
+                names_.push_back(buffer.str());
+            }
+            init();
         }
 
         size_t num_features() const { return names_.size(); }
 
         FeatId get_index(const std::string& feature_name, int instance) const
         {
-            // second instance's indexes are offset by number of features
-            int offset = clean_instance(instance) * num_features();
 
             auto it = index_map_.find(feature_name);
             if (it != index_map_.end())
-                return it->second + offset;
+                return get_index(it->second, instance);
 
             return -1;
         }
 
+        FeatId get_index(FeatId index, int instance) const
+        {
+            // second instance's indexes are offset by number of features
+            int offset = clean_instance(instance) * num_features();
+            return index + offset;
+        }
+
         int get_instance(FeatId index) const
         {
-            return static_cast<size_t>(index) > num_features();
+            return static_cast<size_t>(index) >= num_features();
+        }
+
+        const std::string& get_name(FeatId index) const
+        {
+            return names_.at(index % num_features());
+        }
+
+        void get_indices_map(std::multimap<FeatId, FeatId>& out, int instance=-1) const
+        {
+            FeatId begin = (instance==1) * static_cast<FeatId>(num_features());
+            FeatId end = (static_cast<FeatId>(instance!=0) + 1) * static_cast<FeatId>(num_features());
+
+            for (FeatId index = begin; index < end; ++index)
+            {
+                FeatId feat_id = get_feat_id(index);
+                out.insert({feat_id, index});
+            }
+        }
+
+        std::multimap<FeatId, FeatId> get_indices_map(int instance=-1) const
+        {
+            std::multimap<FeatId, FeatId> mmap;
+            get_indices_map(mmap, instance);
+            return mmap;
         }
 
         void share_all_features_between_instances()
@@ -86,10 +115,18 @@ namespace veritas {
 
         void use_same_id_for(FeatId index1, FeatId index2) { uf_union(index1, index2); }
 
+        /** Replace the feature ids used in the given at by the replacements in this FeatMap. */
         AddTree transform(const AddTree& at, int instance=0) const
         {
-            // TODO
-            return {};
+            instance = clean_instance(instance);
+            AddTree new_at;
+            for (const Tree& t : at)
+            {
+                Tree& new_t = new_at.add_tree();
+                transform(t.root(), new_t.root(), instance);
+            }
+
+            return new_at;
         }
 
         class iterator { // simple range iter over indexes
@@ -139,14 +176,6 @@ namespace veritas {
         // https://en.wikipedia.org/wiki/Disjoint-set_data_structure
         FeatId uf_find(FeatId index) const
         {
-            // function Find(x) is
-            //     while x.parent ≠ x do
-            //         x.parent := x.parent.parent
-            //         x := x.parent
-            //     end while
-            //     return x
-            // end function
-
             while (feat_ids_[index] != index)
             {
                 feat_ids_[index] = feat_ids_[feat_ids_[index]];
@@ -156,27 +185,6 @@ namespace veritas {
         }
 
         void uf_union(FeatId index1, FeatId index2) {
-          // function Union(x, y) is
-          //     // Replace nodes by roots
-          //     x := Find(x)
-          //     y := Find(y)
-
-          //     if x = y then
-          //         return  // x and y are already in the same set
-          //     end if
-
-          //     // If necessary, rename variables to ensure that
-          //     // x has at least as many descendants as y
-          //     if x.size < y.size then
-          //         (x, y) := (y, x)
-          //     end if
-
-          //     // Make x the new root
-          //     y.parent := x
-          //     // Update the size of x
-          //     x.size := x.size + y.size
-          // end function
-
           index1 = uf_find(index1);
           index2 = uf_find(index2);
 
@@ -189,16 +197,57 @@ namespace veritas {
         }
 
         int clean_instance(int instance) const { return std::min(1, std::max(0, instance)); }
+
+        void init()
+        {
+            for (const std::string& name : names_)
+            {
+                index_map_.insert({name, feat_ids_.size()});
+                feat_ids_.push_back(feat_ids_.size());
+            }
+
+            // add len(names) to feat_ids_ for second instance
+            for (size_t i = 0; i < names_.size(); ++i)
+                feat_ids_.push_back(feat_ids_.size());
+
+        }
+
+        /**
+         * Replace the feat_ids in the given AddTree.
+         *
+         * Assumed is that the AddTree uses indexes as feature_ids not yet
+         * offset for instance0 or instance1.
+         */
+        void transform(Tree::ConstRef n, Tree::MutRef m, int instance) const
+        {
+            if (n.is_internal())
+            {
+                LtSplit s = n.get_split();
+                FeatId index = get_index(s.feat_id, instance);
+                if (static_cast<size_t>(index) >= feat_ids_.size())
+                    throw std::runtime_error("feature index out of bounds");
+                FeatId feat_id = get_feat_id(index);
+                m.split({feat_id, s.split_value});
+                transform(n.right(), m.right(), instance);
+                transform(n.left(), m.left(), instance);
+            }
+            else
+            {
+                m.set_leaf_value(n.leaf_value());
+            }
+        }
     };
 
-    //std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
-    //{
-    //    s << "FeatMap {" << std::endl;
-    //    for (auto&& [f, id] : fm)
-    //        std::cout << "   - `" << f << "` -> " << id << std::endl;
-    //    s << '}';
-    //    return s;
-    //}
+    std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
+    {
+        s << "FeatMap {" << std::endl;
+        for (auto index : fm)
+            std::cout << "    [" << index << "] `" << fm.get_name(index)
+                << "` -> " << fm.get_feat_id(index)
+                << " (instance " << fm.get_instance(index) << ')' << std::endl;
+        s << '}';
+        return s;
+    }
 }
 
 #endif // VERITAS_FEAT_MAP_HPP

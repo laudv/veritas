@@ -493,6 +493,56 @@ void test_feat_map1()
         assert(index >= 4);
         assert(map.get_feat_id(index) == expected[index]);
     }
+
+    //std::cout << map << std::endl;
+
+    for (auto&&[k,v]:map.get_indices_map(0)) { assert(k < 4); assert(v < 4); }
+    for (auto&&[k,v]:map.get_indices_map(1)) { assert(k < 4); assert(v >= 4); }
+}
+
+void test_feat_map2()
+{
+    FeatMap map(5);
+    map.use_same_id_for(0, 2);
+    map.use_same_id_for(0, 8);
+
+    assert(map.get_feat_id("feature0", 0) == 0);
+    assert(map.get_feat_id("feature2", 0) == 0);
+    assert(map.get_feat_id("feature3", 1) == 0);
+    assert(map.get_feat_id("feature0", 1) == 5);
+}
+
+void test_feat_map3()
+{
+    FeatMap map(3);
+    map.use_same_id_for(0, 0);
+    map.use_same_id_for(1, 0);
+    map.use_same_id_for(map.get_index(0, 1), 0);
+
+    AddTree at;
+    {
+        Tree& t = at.add_tree();
+        t.root().split({0, 0.3});
+        t.root().left().split({1, 0.3});
+        t.root().left().right().split({2, 0.3});
+    }
+
+    AddTree renamed0 = map.transform(at, 0);
+    AddTree renamed1 = map.transform(at, 1);
+
+    //std::cout << at[0] << std::endl;
+    //std::cout << renamed0[0] << std::endl;
+    //std::cout << renamed1[0] << std::endl;
+
+    //std::cout << map << std::endl;
+
+    assert(renamed0[0].root().get_split().feat_id == 0);
+    assert(renamed0[0].root().left().get_split().feat_id == 0);
+    assert(renamed0[0].root().left().right().get_split().feat_id == 2);
+
+    assert(renamed1[0].root().get_split().feat_id == 0);
+    assert(renamed1[0].root().left().get_split().feat_id == 4);
+    assert(renamed1[0].root().left().right().get_split().feat_id == 5);
 }
 
 int main()
@@ -510,4 +560,6 @@ int main()
     //test_search1();
     
     test_feat_map1();
+    test_feat_map2();
+    test_feat_map3();
 }
