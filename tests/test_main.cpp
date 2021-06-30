@@ -356,24 +356,6 @@ void test_prune1()
     assert(new_at.num_nodes() == 3);
 }
 
-void test_rename_id1()
-{
-    AddTree at;
-    Tree& t0 = at.add_tree();
-    t0.root().split({1, 8.0});
-    t0.root().left().split({1, 2.0});
-    t0.root().left().right().split({2, 4.0});
-    Tree& t1 = at.add_tree();
-    t1.root().split({3, 8.0});
-    t1.root().left().split({1, 2.0});
-    t1.root().left().right().split({2, 4.0});
-
-    size_t count = at.replace_feat_id(1, 125);
-
-    assert(count == 3);
-    assert(at[0].root().get_split().feat_id == 125);
-}
-
 void test_block_store1()
 {
     size_t max_mem = 1024*1024; // 1mb
@@ -552,7 +534,6 @@ int main()
     //test_tree3();
 
     test_prune1();
-    test_rename_id1();
     test_block_store1();
 
     //test_graph1();
