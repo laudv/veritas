@@ -242,9 +242,9 @@ namespace veritas {
     {
         s << "FeatMap {" << std::endl;
         for (auto index : fm)
-            std::cout << "    [" << index << "] `" << fm.get_name(index)
-                << "` -> " << fm.get_feat_id(index)
-                << " (instance " << fm.get_instance(index) << ')' << std::endl;
+            s << "    [" << index << "] `" << fm.get_name(index)
+              << "` -> " << fm.get_feat_id(index)
+              << " (instance " << fm.get_instance(index) << ')' << std::endl;
         s << '}';
         return s;
     }

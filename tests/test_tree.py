@@ -1,15 +1,16 @@
 import unittest, pickle, math
+import numpy as np
 from veritas import *
 
 class TestTree(unittest.TestCase):
 
     def myAssertAlmostEqual(self, a, b, eps=1e-6):
         self.assertTrue(type(a) == type(b))
-        if isinstance(a, list) or isinstance(a, tuple):
+        if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, np.ndarray):
             self.assertEqual(len(a), len(b))
             for x, y in zip(a, b):
                 self.myAssertAlmostEqual(x, y, eps=eps)
-        elif isinstance(a, float):
+        elif isinstance(a, float) or isinstance(a, np.float32) or isinstance(a, np.float64):
             self.assertAlmostEqual(a, b, delta=eps)
         else:
             self.assertEqual(a, b)
@@ -21,14 +22,14 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.root()), 1.1)
         t.set_leaf_value(t.right(t.root()), 2.2)
 
-        y = t.predict([[1.0, 1.0 ,3.0], [1.0, 22.0, 3.0]])
+        y = at.eval(np.array([[1.0, 1.0, 3.0], [1.0, 22.0, 3.0]], dtype=np.float32))
+        print(y)
 
-        self.myAssertAlmostEqual([1.1, 2.2], y)
+        self.myAssertAlmostEqual(np.array([1.1, 2.2], dtype=np.float32), y)
 
-        self.assertRaises(RuntimeError, at.get_domains, [0])
-        self.assertRaises(RuntimeError, at.get_domains, [1, 2])
-        self.assertEqual(at.get_domains([1]), {1: RealDomain(-math.inf, 16.0)})
-        self.assertEqual(at.get_domains([2]), {1: RealDomain(16.0, math.inf)})
+        self.assertRaises(RuntimeError, at.compute_box, [1, 2])
+        self.assertEqual(at.compute_box([1]), {1: Domain.from_hi_exclusive(16.0)})
+        self.assertEqual(at.compute_box([2]), {1: Domain.from_lo(16.0)})
 
     def test_tree_json(self):
         at = AddTree()

@@ -118,6 +118,8 @@ namespace veritas {
 
         /**  true goes left, false goes right */
         inline bool test(FloatT v) const { return v < split_value; }
+        template <typename D>
+        inline bool test(const row<D>& row) { return test(row[feat_id]); }
 
         /** strict less than, so eq goes right */
         inline std::tuple<Domain, Domain> get_domains() const

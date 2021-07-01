@@ -11,6 +11,7 @@
 #include <vector>
 #include <unordered_map>
 #include <iostream>
+#include <numeric>
 
 namespace veritas {
 
@@ -193,6 +194,9 @@ namespace veritas {
         template <typename T=RefT>
         std::enable_if_t<T::is_mut_type::value, void>
         from_json(std::istream& strm);
+
+        template <typename D>
+        FloatT eval(const row<D>& data) const;
     }; // NodeRef
 
 
@@ -248,6 +252,9 @@ namespace veritas {
 
         Tree prune(BoxRef box) const;
 
+        template <typename D>
+        FloatT eval(const row<D>& data) const { return root().eval(data); }
+
         bool operator==(const Tree& other) const { return root() == other.root(); }
     }; // Tree
 
@@ -292,6 +299,15 @@ namespace veritas {
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);
+
+        template <typename D>
+        FloatT eval(const row<D>& r) const
+        {
+            auto op = [&r](FloatT v, const Tree& t) { return v + t.eval(r); };
+            return std::accumulate(begin(), end(), 0.0, op) + base_score;
+        }
+
+        void compute_box(Box& box, const std::vector<NodeId> node_ids) const;
 
         bool operator==(const AddTree& other) const
         {

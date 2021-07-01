@@ -14,8 +14,10 @@
 #include <pybind11/stl.h>
 #include <pybind11/cast.h>
 #include <pybind11/functional.h>
+#include <pybind11/numpy.h>
 
 #include "domain.hpp"
+#include "features.hpp"
 #include "new_tree.hpp"
 
 #ifdef VERITAS_FEATURE_SMT
@@ -68,11 +70,16 @@ PYBIND11_MODULE(pyveritas, m) {
         //    }))
         ;
 
+    py::class_<DomainPair>(m, "DomainPair")
+        .def_readonly("feat_id", &DomainPair::feat_id)
+        .def_readonly("domain", &DomainPair::domain)
+        ;
+
     py::class_<LtSplit>(m, "LtSplit")
         .def(py::init<FeatId, FloatT>())
         .def_readonly("feat_id", &LtSplit::feat_id)
         .def_readonly("split_value", &LtSplit::split_value)
-        .def("test", &LtSplit::test)
+        .def("test", [](const LtSplit& s, FloatT v) { return s.test(v); })
         .def("__eq__", [](const LtSplit& s, const LtSplit& t) { return s == t; })
         .def("__repr__", [](const LtSplit& s) { return tostr(s); })
         //.def(py::pickle(
@@ -125,7 +132,85 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("num_nodes", &AddTree::num_nodes)
         .def("num_leafs", &AddTree::num_leafs)
         .def("get_splits", &AddTree::get_splits)
-        .def("prune", &AddTree::prune)
+        .def("add_tree", [](const std::shared_ptr<AddTree>& at) {
+                at->add_tree(); return TreeRef{at, at->size()-1}; })
+        .def("prune", [](AddTree& at, const py::list& pybox) {
+            Box box;
+            FeatId count = 0;
+            for (const auto& x : pybox)
+            {
+                if (py::isinstance<py::tuple>(x)) {
+                    py::tuple t = py::cast<py::tuple>(x);
+                    FeatId id = py::cast<FeatId>(t[0]);
+                    Domain dom = py::cast<Domain>(t[1]);
+                    box.push_back({id, dom});
+                    count = id;
+                }
+                else if (py::isinstance<Domain>(x)) {
+                    Domain dom = py::cast<Domain>(x);
+                    box.push_back({count, dom});
+                }
+                ++count;
+            }
+            BoxRef b(box);
+            py::print("pruning using box", tostr(b));
+            return at.prune(b);
+        })
+        .def("to_json", [](const AddTree& at) {
+            std::stringstream s;
+            at.to_json(s);
+            return s.str();
+        })
+        .def_static("from_json", [](const std::string& json) {
+            AddTree at;
+            std::stringstream s(json);
+            at.from_json(s);
+            return at;
+        })
+        .def("eval", [](const AddTree& at, py::array_t<FloatT> arr) {
+            py::buffer_info buf = arr.request();
+            if (buf.ndim > 2) py::value_error("invalid data");
+
+            std::cout << "eval: array strides: " << buf.strides[0] << ", " << buf.strides[1] << std::endl;
+
+            row_major_data data {{ static_cast<FloatT *>(buf.ptr),
+                                   static_cast<size_t>(buf.shape[0]),
+                                   static_cast<size_t>(buf.shape[1]) }};
+
+            auto result = py::array_t<FloatT>(buf.shape[0]);
+            py::buffer_info out = result.request();
+            FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
+
+            for (size_t i = 0; i < static_cast<size_t>(buf.shape[0]); ++i)
+                out_ptr[i] = at.eval(row<row_major_data>{data, i});
+
+            return result;
+                
+
+            //for (size_t i = 0; i < buf.shape[0]; ++i)
+            //    for (size_t j = 0; j < buf.shape[1]; ++j)
+            //        py::print(i, j, "=>", data.get_elem(i, j));
+        })
+        .def("compute_box", [](const AddTree& at, const std::vector<NodeId>& leaf_ids) {
+            if (at.size() != leaf_ids.size())
+                throw std::runtime_error("one leaf_id per tree in AddTree");
+
+            Box box;
+            for (size_t tree_index = 0; tree_index < at.size(); ++tree_index)
+            {
+                NodeId leaf_id = leaf_ids[tree_index];
+                const Tree& tree = at[tree_index];
+                auto node = tree[leaf_id];
+                if (!node.is_leaf())
+                    throw std::runtime_error("leaf_id does not point to leaf");
+                node.compute_box(box);
+            }
+
+            std::unordered_map<FeatId, Domain> map;
+            for (auto&& [feat_id, dom] : box)
+                map[feat_id] = dom;
+            return map;
+        })
         .def("__str__", [](const AddTree& at) { return tostr(at); })
     //    .def(py::pickle(
     //        [](const AddTree& at) { // __getstate__
@@ -134,22 +219,48 @@ PYBIND11_MODULE(pyveritas, m) {
     //        [](const std::string& json) { // __setstate__
     //            return AddTree::from_json(json);
     //        }))
-    //    .def("get_domains", [](const AddTree& at, std::vector<NodeId> leaf_ids) {
-    //        if (at.size() != leaf_ids.size())
-    //            throw std::runtime_error("one leaf_id per tree in AddTree");
+        ;
 
-    //        DomainsT domains;
-    //        for (size_t tree_index = 0; tree_index < at.size(); ++tree_index)
-    //        {
-    //            NodeId leaf_id = leaf_ids[tree_index];
-    //            const auto& tree = at[tree_index];
-    //            auto node = tree[leaf_id];
-    //            if (!node.is_leaf())
-    //                throw std::runtime_error("leaf_id does not point to leaf");
-    //            node.get_domains(domains);
-    //        }
-    //        return domains;
-    //    })
+    py::class_<FeatMap>(m, "FeatMap")
+        .def(py::init<FeatId>())
+        .def(py::init<const std::vector<std::string>&>())
+        .def("num_features", &FeatMap::num_features)
+        .def("__len__", &FeatMap::num_features)
+        .def("get_index", [](const FeatMap& fm, FeatId id, int inst) { return fm.get_index(id, inst); })
+        .def("get_index", [](const FeatMap& fm, const std::string& n, int inst) { return fm.get_index(n, inst); })
+        .def("get_instance", &FeatMap::get_instance)
+        .def("get_name", &FeatMap::get_name)
+        .def("get_indices_map", [](const FeatMap& fm) {
+            auto map = fm.get_indices_map();
+            py::object d = py::dict();
+            for (auto&& [id, idx] : map)
+            {
+                if (d.contains(py::int_(id)))
+                {
+                    py::list l = d[py::int_(id)];
+                    l.append(py::int_(idx));
+                }
+                else
+                {
+                    py::list l;
+                    l.append(py::int_(idx));
+                    d[py::int_(id)] = l;
+                }
+            }
+            return d;
+        })
+        .def("share_all_features_between_instances", &FeatMap::share_all_features_between_instances)
+        .def("get_feat_id", [](const FeatMap& fm, FeatId id) { return fm.get_feat_id(id); })
+        .def("get_feat_id", [](const FeatMap& fm, const std::string& n, int i) { return fm.get_feat_id(n, i); })
+        .def("use_same_id_for", &FeatMap::use_same_id_for)
+        .def("transform", [](const FeatMap& fm, const AddTree& at, int i) { return fm.transform(at, i); })
+        .def("__iter__", [](const FeatMap &fm) { return py::make_iterator(fm.begin(), fm.end()); },
+                    py::keep_alive<0, 1>())
+        .def("iter_instance", [](const FeatMap& fm, int i) {
+                auto h = fm.iter_instance(i);
+                return py::make_iterator(h.begin(), h.end()); },
+                py::keep_alive<0, 1>())
+        .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
         ;
 
 

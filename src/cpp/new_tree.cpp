@@ -124,6 +124,7 @@ namespace veritas {
                 case ',':
                     break;
                 case '"':
+                case '\'':
                     buf.clear();
                     while (s.get(c))
                         if (c != '"') buf.push_back(c); else break;
@@ -161,6 +162,20 @@ namespace veritas {
     }
 
     template void NodeRef<inner::MutRef>::from_json(std::istream&);
+
+    template <typename RefT>
+    template <typename D>
+    FloatT
+    NodeRef<RefT>::eval(const row<D>& row) const
+    {
+        if (is_leaf()) return leaf_value();
+        return get_split().test(row) ? left().eval(row) : right().eval(row);
+    }
+
+    template FloatT NodeRef<inner::ConstRef>::eval(const row<row_major_data>&) const;
+    template FloatT NodeRef<inner::ConstRef>::eval(const row<col_major_data>&) const;
+    template FloatT NodeRef<inner::MutRef>::eval(const row<row_major_data>&) const;
+    template FloatT NodeRef<inner::MutRef>::eval(const row<col_major_data>&) const;
 
     Tree
     Tree::prune(BoxRef box) const
@@ -295,15 +310,18 @@ namespace veritas {
     void
     AddTree::to_json(std::ostream& s) const
     {
-        s << "[\"base_score\": " << base_score;
-
-        for (auto it = begin(); it != end(); ++it)
+        s << "{\"base_score\": " << base_score
+            << ", \"trees\": [" << std::endl;
+        auto it = begin();
+        if (it != end())
+            (it++)->to_json(s);
+        for (; it != end(); ++it)
         {
             s << ',' << std::endl;
             it->to_json(s);
         }
 
-        s << ']';
+        s << "]}";
     }
 
     void
@@ -319,22 +337,20 @@ namespace veritas {
             {
                 case ' ':
                 case '\n':
-                case '[':
-                case ']':
+                case ',':
+                case '{':
                     break;
                 case '"':
+                case '\'':
                     buf.clear();
                     while (s.get(c))
                         if (c != '"') buf.push_back(c); else break;
                     break;
-                case ',':
-                    tree.from_json(s);
-                    add_tree(std::move(tree));
-                    tree.clear();
-                    break;
                 case ':':
                     if (buf == "base_score")
                         s >> base_score;
+                    else if (buf == "trees")
+                        goto loop2;
                     else
                         throw std::runtime_error("addtree parse error: unknown key");
                     break;
@@ -342,7 +358,42 @@ namespace veritas {
                     throw std::runtime_error("addtree parse error: unexpected char");
             }
         }
+
+        loop2: while (s.get(c))
+        {
+            switch (c)
+            {
+                case ' ':
+                case ']':
+                case '}':
+                case '\n':
+                    break;
+                case '[':
+                case ',':
+                    tree.from_json(s);
+                    add_tree(std::move(tree));
+                    tree.clear();
+                    break;
+                default:
+                    throw std::runtime_error("addtree parse error (2): unexpected char");
+            }
+        }
+    } 
+
+    void
+    AddTree::compute_box(Box& box, const std::vector<NodeId> node_ids) const
+    {
+        if (size() != node_ids.size())
+            throw std::runtime_error("compute_box: one node_id per tree in AddTree");
+
+        for (size_t tree_index = 0; tree_index < size(); ++tree_index)
+        {
+            NodeId leaf_id = node_ids[tree_index];
+            auto node = trees_[tree_index][leaf_id];
+            node.compute_box(box);
+        }
     }
+
 
 
 } // namespace veritas

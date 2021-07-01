@@ -8,6 +8,10 @@ from io import StringIO
 
 from .pyveritas import *
 
+from .xgb import \
+    addtree_from_xgb_model, \
+    addtrees_from_multiclass_xgb_model
+
 #from .optimizer import *
 #from .robustness import *
 #

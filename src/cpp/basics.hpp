@@ -7,6 +7,7 @@
 #ifndef VERITAS_BASICS_HPP
 #define VERITAS_BASICS_HPP
 
+#include <iostream>
 #include <cstdint>
 #include <vector>
 #include <limits>
@@ -33,6 +34,34 @@ namespace veritas {
             cnt += (v < x);
         return cnt;
     }
+
+    struct data {
+        FloatT *ptr;
+        size_t num_rows, num_cols;
+    };
+
+    struct row_major_data : public data {
+        inline FloatT get_elem(size_t row, size_t col) const {
+            FloatT v = ptr[row * num_cols + col];
+            return v;
+        }
+    };
+
+    struct col_major_data : public data {
+        inline FloatT get_elem(size_t row, size_t col) const {
+            FloatT v = ptr[col * num_rows + row];
+            return v;
+        }
+    };
+
+    template <typename D>
+    struct row {
+        D data;
+        size_t row;
+        inline FloatT operator[](size_t col) const {
+            return data.get_elem(row, col);
+        }
+    };
 
 
 }

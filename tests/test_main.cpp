@@ -390,6 +390,74 @@ void test_json2() {
   assert(at == at2);
 }
 
+void test_eval1()
+{
+    AddTree at;
+    Tree& t = at.add_tree();;
+    t.root().split({0, 1.5});
+    t.root().left().split({1, 1.5});
+    t.root().left().left().split({2, 1.5});
+    t.root().left().left().left().set_leaf_value(1.0);
+    t.root().left().left().right().set_leaf_value(2.0);
+    t.root().left().right().set_leaf_value(3.0);
+    t.root().right().set_leaf_value(4.0);
+
+    std::vector<FloatT> data = {1, 1, 1,  // 1
+                                2, 1, 1,  // 4
+                                2, 2, 1,  // 4
+                                2, 2, 2,  // 4
+                                1, 2, 2,  // 3
+                                1, 1, 2,  // 2
+                                1, 2, 1, // 3
+                                2, 1, 2}; // 4
+    row_major_data d1 {{&data[0], 8, 3}};
+
+    std::vector<FloatT> expected {1, 4, 4, 4, 3, 2, 3, 4};
+
+    for (size_t i = 0; i < 8; ++i)
+    {
+        FloatT v = at.eval<row_major_data>({d1, i});
+        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
+        assert(v == expected.at(i));
+    }
+}
+
+void test_eval2()
+{
+    AddTree at;
+    {
+        Tree& t = at.add_tree();;
+        t.root().split({0, 1.5});
+        t.root().left().split({1, 1.5});
+        t.root().left().left().split({2, 1.5});
+        t.root().left().left().left().set_leaf_value(1.0);
+        t.root().left().left().right().set_leaf_value(2.0);
+        t.root().left().right().set_leaf_value(3.0);
+        t.root().right().set_leaf_value(4.0);
+    }
+    {
+        Tree& t = at.add_tree();
+        t.root().set_leaf_value(10.0);
+    }
+
+    std::vector<FloatT> data = {1, 2, 2, 2, 1, 1, 1, 2,
+                                1, 1, 2, 2, 2, 1, 2, 1,
+                                1, 1, 1, 2, 2, 2, 1, 2};
+    col_major_data d {{&data[0], 8, 3}};
+
+    std::vector<FloatT> expected0 {1, 4, 4, 4, 3, 2, 3, 4};
+    std::vector<FloatT> expected {11, 14, 14, 14, 13, 12, 13, 14};
+
+    for (size_t i = 0; i < 8; ++i)
+    {
+        FloatT v = at.eval<col_major_data>({d, i});
+        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
+        assert(v == expected.at(i));
+        v = at[0].eval<col_major_data>({d, i});
+        assert(v == expected0.at(i));
+    }
+}
+
 void test_prune1()
 {
     AddTree at;
@@ -586,6 +654,9 @@ int main()
     //test_tree3();
     test_json1();
     test_json2();
+
+    test_eval1();
+    test_eval2();
 
     test_prune1();
     test_block_store1();

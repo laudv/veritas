@@ -51,7 +51,8 @@ def _parse_tree(at, tree_dump, feat2id_map):
                 split_value = node_json["split_condition"]
                 tree.split(node, feat_id, split_value)
             else:
-                tree.split(node, feat_id) # binary split
+                #tree.split(node, feat_id) # binary split
+                raise RuntimeError("not supported")
 
             # let's hope the ordering of "children" is [left,right]
             left_id = node_json["yes"]

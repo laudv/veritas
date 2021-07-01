@@ -51,7 +51,7 @@ namespace veritas {
         size_t state_index;
         size_t solution_index;
         FloatT output;
-        std::vector<NodeId> nodes;
+        std::vector<NodeId> nodes; // one leaf node id per tree in addtree
         Box box;
         double time;
     };
