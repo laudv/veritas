@@ -48,6 +48,15 @@ namespace veritas {
     Box
     NodeRef<inner::MutRef>::compute_box() const;
 
+    template // manual template instantiation
+    void
+    NodeRef<inner::ConstRef>::compute_box(Box&) const;
+
+    template // manual template instantiation
+    void
+    NodeRef<inner::MutRef>::compute_box(Box&) const;
+
+
     template <typename RefT>
     void
     NodeRef<RefT>::print_node(std::ostream& strm, int depth) const
