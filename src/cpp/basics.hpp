@@ -35,6 +35,8 @@ namespace veritas {
         return cnt;
     }
 
+    // https://docs.python.org/3/c-api/buffer.html#buffer-structure
+    // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
     struct data {
         FloatT *ptr;
         size_t num_rows, num_cols;

@@ -62,12 +62,12 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("split", &Domain::split)
         .def("__eq__", [](const Domain& s, const Domain& t) { return s == t; })
         .def("__repr__", [](const Domain& d) { return tostr(d); })
-        //.def(py::pickle(
-        //    [](const Domain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
-        //    [](py::tuple t) { // __setstate__
-        //        if (t.size() != 2) throw std::runtime_error("invalid pickle state");
-        //        return Domain(t[0].cast<FloatT>(), t[1].cast<FloatT>());
-        //    }))
+        .def(py::pickle(
+            [](const Domain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
+            [](py::tuple t) { // __setstate__
+                if (t.size() != 2) throw std::runtime_error("invalid pickle state");
+                return Domain(t[0].cast<FloatT>(), t[1].cast<FloatT>());
+            }))
         ;
 
     py::class_<DomainPair>(m, "DomainPair")
@@ -82,12 +82,12 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("test", [](const LtSplit& s, FloatT v) { return s.test(v); })
         .def("__eq__", [](const LtSplit& s, const LtSplit& t) { return s == t; })
         .def("__repr__", [](const LtSplit& s) { return tostr(s); })
-        //.def(py::pickle(
-        //    [](const LtSplit& s) { return py::make_tuple(s.feat_id, s.split_value); }, // __getstate__
-        //    [](py::tuple t) -> LtSplit { // __setstate__
-        //        if (t.size() != 2) throw std::runtime_error("invalid pickle state");
-        //        return { t[0].cast<FeatId>(), t[1].cast<FloatT>() };
-        //    }))
+        .def(py::pickle(
+            [](const LtSplit& s) { return py::make_tuple(s.feat_id, s.split_value); }, // __getstate__
+            [](py::tuple t) -> LtSplit { // __setstate__
+                if (t.size() != 2) throw std::runtime_error("invalid pickle state");
+                return { t[0].cast<FeatId>(), t[1].cast<FloatT>() };
+            }))
         ;
 
 
@@ -212,13 +212,18 @@ PYBIND11_MODULE(pyveritas, m) {
             return map;
         })
         .def("__str__", [](const AddTree& at) { return tostr(at); })
-    //    .def(py::pickle(
-    //        [](const AddTree& at) { // __getstate__
-    //            return at.to_json();
-    //        },
-    //        [](const std::string& json) { // __setstate__
-    //            return AddTree::from_json(json);
-    //        }))
+        .def(py::pickle(
+            [](const AddTree& at) { // __getstate__
+                std::stringstream s;
+                at.to_json(s);
+                return s.str();
+            },
+            [](const std::string& json) { // __setstate__
+                AddTree at;
+                std::stringstream s(json);
+                at.from_json(s);
+                return at;
+            }))
         ;
 
     py::class_<FeatMap>(m, "FeatMap")
