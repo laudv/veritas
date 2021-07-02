@@ -560,8 +560,8 @@ void test_search1()
         t.root().right().set_leaf_value(4.0);
     }
 
-    std::cout << at[0] << std::endl;
-    std::cout << at[1] << std::endl;
+    //std::cout << at[0] << std::endl;
+    //std::cout << at[1] << std::endl;
 
     Search s(at);
     while (!s.step()) { } 
@@ -569,10 +569,13 @@ void test_search1()
     std::cout << "number of steps " << s.stats.num_steps << std::endl;
     std::cout << "number of impossible " << s.stats.num_impossible << std::endl;
     std::cout << "number of solutions " << s.num_solutions() << std::endl;
+
+    std::vector<FloatT> expected {7, 6, 5, 4, 4, 3, 2};
     for (size_t i = 0; i < s.num_solutions(); ++i)
     {
         Solution sol = s.get_solution(i);
-        std::cout << sol << std::endl;
+        //std::cout << sol << std::endl;
+        assert(sol.output == expected.at(i));
     }
 }
 
@@ -663,7 +666,7 @@ int main()
 
     //test_graph1();
 
-    //test_search1();
+    test_search1();
     
     test_feat_map1();
     test_feat_map2();

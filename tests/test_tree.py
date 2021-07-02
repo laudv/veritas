@@ -23,13 +23,48 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.right(t.root()), 2.2)
 
         y = at.eval(np.array([[1.0, 1.0, 3.0], [1.0, 22.0, 3.0]], dtype=np.float32))
-        print(y)
+        #print(y)
 
         self.myAssertAlmostEqual(np.array([1.1, 2.2], dtype=np.float32), y)
 
         self.assertRaises(RuntimeError, at.compute_box, [1, 2])
         self.assertEqual(at.compute_box([1]), {1: Domain.from_hi_exclusive(16.0)})
         self.assertEqual(at.compute_box([2]), {1: Domain.from_lo(16.0)})
+
+    def test_boolsplit(self):
+        at = AddTree()
+        t = at.add_tree()
+        t.split(t.root(), 0, 2.0)
+        t.split(t.left(t.root()), 1, 1.0)
+        t.split(t.right(t.root()), 2)
+        t.set_leaf_value(t.left(t.left(t.root())), 1.0)
+        t.set_leaf_value(t.right(t.left(t.root())), 2.0)
+        t.set_leaf_value(t.left(t.right(t.root())), 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
+
+        #print(at[0])
+
+        self.assertEqual(t.get_split(        t.root() ), LtSplit(0, 2.0))
+        self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
+        self.assertEqual(t.get_split(t.right(t.root())), LtSplit(2, BOOL_SPLIT_VALUE))
+
+        self.assertEqual(at.compute_box([5]), {0: Domain.from_lo(2.0), 2: FALSE_DOMAIN})
+        self.assertEqual(at.compute_box([6]), {0: Domain.from_lo(2.0), 2: TRUE_DOMAIN})
+
+        T, F = 1.0, 0.0
+
+        y = at.eval(np.array([
+            [0.0, 0.5, F], [0.0, 1.5, T],
+            [2.5, 0.5, T], [2.5, 0.5, F]], dtype=np.float32))
+
+        self.myAssertAlmostEqual(y, np.array([1.0, 2.0, 8.0, 4.0], dtype=np.float32))
+
+        s = at.to_json();
+        att = AddTree.from_json(s)
+        t = att[0]
+
+        self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
+        self.assertEqual(t.get_split(t.right(t.root())), LtSplit(2, BOOL_SPLIT_VALUE))
 
     def test_tree_json(self):
         at = AddTree()

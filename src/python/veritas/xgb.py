@@ -9,13 +9,13 @@ from xgboost.core import Booster
 
 from . import AddTree
 
-def addtrees_from_multiclass_xgb_model(model, nclasses, feat2id_map=lambda x: int(x[1:])):
+def addtrees_from_multiclass_xgb_model(model, nclasses, feat2id_map=int):
     return [
         addtree_from_xgb_model(model, feat2id_map, multiclass=(clazz, nclasses))
         for clazz in range(nclasses)
     ]
 
-def addtree_from_xgb_model(model, feat2id_map=lambda x: int(x[1:]),
+def addtree_from_xgb_model(model, feat2id_map=int,
         multiclass=(0, 1)):
     """
     mulclass=(offset, num_classes): only loads tree offset, offset+num_classes,
@@ -46,25 +46,22 @@ def _parse_tree(at, tree_dump, feat2id_map):
     while len(stack) > 0:
         node, node_json = stack.pop()
         if "leaf" not in node_json:
+            children = { child["nodeid"]: child for child in node_json["children"] }
+
             feat_id = feat2id_map(node_json["split"])
             if "split_condition" in node_json:
-                split_value = node_json["split_condition"]
+                split_value = float(node_json["split_condition"])
                 tree.split(node, feat_id, split_value)
+                left_id = node_json["yes"]
+                right_id = node_json["no"]
             else:
-                #tree.split(node, feat_id) # binary split
-                raise RuntimeError("not supported")
-
-            # let's hope the ordering of "children" is [left,right]
-            left_id = node_json["yes"]
-            right_id = node_json["no"]
-            # xgboost 1.0.2 changed behavior
-            #if "missing" in node_json:
-            #    assert node_json["missing"] == left_id, "XGB sparse not supported, set missing=None"
-
-            children = { child["nodeid"]: child for child in node_json["children"] }
+                tree.split(node, feat_id) # binary split
+                left_id = node_json["no"] # (!) this is reversed -> LtSplit(_, 1.0) -> 0.0 goes left
+                right_id = node_json["yes"]
 
             stack.append((tree.right(node), children[right_id]))
             stack.append((tree.left(node), children[left_id]))
+
         else:
             leaf_value = node_json["leaf"]
             tree.set_leaf_value(node, leaf_value)

@@ -141,6 +141,9 @@ namespace veritas {
             , ara_cmp_{*this, 0.1}
             , start_time{std::chrono::system_clock::now()}
         {
+            if (at.size() == 0)
+                throw std::runtime_error("Search: empty AddTree");
+
             // root state with self reference
             states_.push_back({0, -1, -1, at.base_score, 0.0f, NO_CACHE});
             heap_.push_back(0);
@@ -199,25 +202,33 @@ namespace veritas {
             return false;
         }
 
-    size_t num_solutions() const
-    {
-        return solutions_.size();
-    }
+        bool steps(size_t num_steps)
+        {
+            for (size_t i = 0; i < num_steps; ++i)
+                if (step())
+                    return true; // we're done
+            return false;
+        }
 
-    Solution get_solution(size_t solution_index)
-    {
-        auto&& [state_index, time] = solutions_.at(solution_index);
-        visit_ancestors(state_index);
+        size_t num_solutions() const
+        {
+            return solutions_.size();
+        }
 
-        return {
-            state_index,
-            solution_index,
-            states_[state_index].g,
-            workspace_.node_ids, // copy
-            workspace_.box,      // copy
-            time,
-        };
-    }
+        Solution get_solution(size_t solution_index)
+        {
+            auto&& [state_index, time] = solutions_.at(solution_index);
+            visit_ancestors(state_index);
+
+            return {
+                state_index,
+                solution_index,
+                states_[state_index].g,
+                workspace_.node_ids, // copy
+                workspace_.box,      // copy
+                time,
+            };
+        }
 
     private:
         void pq_push(size_t index)

@@ -97,8 +97,9 @@ namespace veritas {
         return s << "Dom(" << d.lo << ',' << d.hi << ')';
     }
 
-
-
+    const FloatT BOOL_SPLIT_VALUE = 1.0;
+    const Domain FALSE_DOMAIN = Domain::from_hi_exclusive(BOOL_SPLIT_VALUE);
+    const Domain TRUE_DOMAIN = Domain::from_lo(BOOL_SPLIT_VALUE);
 
     struct DomainPair {
         FeatId feat_id;

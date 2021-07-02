@@ -170,6 +170,10 @@ namespace veritas {
             }
         }
 
+        template <typename T=RefT>
+        inline std::enable_if_t<T::is_mut_type::value, void>
+        split(FeatId feat_id) { split({feat_id, BOOL_SPLIT_VALUE}); } // bool split
+
         inline size_t num_leafs() const
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
 

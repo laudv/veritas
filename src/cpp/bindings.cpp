@@ -19,6 +19,7 @@
 #include "domain.hpp"
 #include "features.hpp"
 #include "new_tree.hpp"
+#include "search.hpp"
 
 #ifdef VERITAS_FEATURE_SMT
     #include <z3++.h>
@@ -70,6 +71,10 @@ PYBIND11_MODULE(pyveritas, m) {
             }))
         ;
 
+    m.attr("BOOL_SPLIT_VALUE") = BOOL_SPLIT_VALUE;
+    m.attr("TRUE_DOMAIN") = TRUE_DOMAIN;
+    m.attr("FALSE_DOMAIN") = FALSE_DOMAIN;
+
     py::class_<DomainPair>(m, "DomainPair")
         .def_readonly("feat_id", &DomainPair::feat_id)
         .def_readonly("domain", &DomainPair::domain)
@@ -116,11 +121,13 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("get_split", [](const TreeRef& r, NodeId n) { return r.get()[n].get_split(); })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })
+        .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(fid); })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
         ;
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
+        .def_readwrite("base_score", &AddTree::base_score)
         .def("__getitem__", [](std::shared_ptr<AddTree> at, size_t i) {
                 if (i < at->size())
                     return TreeRef{at, i};
@@ -206,10 +213,10 @@ PYBIND11_MODULE(pyveritas, m) {
                 node.compute_box(box);
             }
 
-            std::unordered_map<FeatId, Domain> map;
+            py::dict d;
             for (auto&& [feat_id, dom] : box)
-                map[feat_id] = dom;
-            return map;
+                d[py::int_(feat_id)] = dom;
+            return d;
         })
         .def("__str__", [](const AddTree& at) { return tostr(at); })
         .def(py::pickle(
@@ -266,6 +273,36 @@ PYBIND11_MODULE(pyveritas, m) {
                 return py::make_iterator(h.begin(), h.end()); },
                 py::keep_alive<0, 1>())
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
+        ;
+
+    py::class_<Search>(m, "Search")
+        .def(py::init<const AddTree&>())
+        .def("step", &Search::step)
+        .def("steps", &Search::steps)
+        .def("num_solutions", &Search::num_solutions)
+        .def("get_solution", &Search::get_solution)
+        .def_readwrite("max_mem_size", &Search::max_mem_size)
+        .def_readonly("stats", &Search::stats)
+        ;
+
+    py::class_<Stats>(m, "Stats")
+        .def_readonly("num_steps", &Stats::num_steps)
+        .def_readonly("num_impossible", &Stats::num_impossible)
+        ;
+
+    py::class_<Solution>(m, "Solution")
+        .def_readonly("state_index", &Solution::state_index)
+        .def_readonly("solution_index", &Solution::solution_index)
+        .def_readonly("output", &Solution::output)
+        .def_readonly("nodes", &Solution::nodes)
+        .def_readonly("time", &Solution::time)
+        .def("box", [](const Solution& s) {
+            py::dict d;
+            for (auto&& [feat_id, dom] : s.box)
+                d[py::int_(feat_id)] = dom;
+            return d;
+        })
+        .def("__str__", [](const Solution& s) { return tostr(s); })
         ;
 
 
