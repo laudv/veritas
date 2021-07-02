@@ -1,5 +1,5 @@
 import time, timeit
-from veritas import *
+from . import *
 
 class Optimizer:
     def __init__(self, **kwargs):

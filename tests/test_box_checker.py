@@ -1,6 +1,6 @@
 import unittest, json
 import numpy as np
-from veritas import *
+from veritas0 import *
 
 def update_bc(workspace, bc):
     bc.copy_from_workspace(workspace)

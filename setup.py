@@ -81,7 +81,7 @@ def test_suite():
 
 
 setup(
-    name='veritas',
+    name='veritas0',
     version='0.1',
     author='Laurens Devos',
     author_email='',
@@ -89,7 +89,7 @@ setup(
     packages=find_packages('src/python'),
     install_requires=[],
     package_dir={'':'src/python'},
-    ext_modules=[CMakeExtension('veritas/veritas')],
+    ext_modules=[CMakeExtension('veritas0/veritas')],
     cmdclass=dict(build_ext=CMakeBuild),
     test_suite='setup.test_suite',
     zip_safe=False,

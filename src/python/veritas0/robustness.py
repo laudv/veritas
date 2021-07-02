@@ -1,7 +1,7 @@
 import timeit, time
 import numpy as np
 
-from veritas import Optimizer, AddTree
+from . import Optimizer, AddTree
 
 DUMMY_AT = AddTree()
 

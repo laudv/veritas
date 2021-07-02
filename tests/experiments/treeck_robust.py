@@ -1,6 +1,6 @@
 import sys, timeit
-from veritas import LtSplit
-from veritas import RobustnessSearch
+from veritas0 import LtSplit
+from veritas0 import RobustnessSearch
 
 import treeck
 from treeck.verifier import Verifier

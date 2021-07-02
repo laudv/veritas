@@ -1,5 +1,5 @@
 import unittest, pickle, math
-from veritas import *
+from veritas0 import *
 
 class TestTree(unittest.TestCase):
 

@@ -11,8 +11,8 @@ except:
     pass
 import util
 
-from veritas import *
-from veritas.xgb import addtree_from_xgb_model
+from veritas0 import *
+from veritas0.xgb import addtree_from_xgb_model
 
 plt.rcParams['svg.fonttype'] = 'none'
 plt.rcParams['text.usetex'] = False

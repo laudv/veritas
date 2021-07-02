@@ -1,7 +1,7 @@
 import datasets, sys
-from veritas import Optimizer
-from veritas import RobustnessSearch, VeritasRobustnessSearch
-from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
+from veritas0 import Optimizer
+from veritas0 import RobustnessSearch, VeritasRobustnessSearch
+from veritas0.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 import matplotlib.pyplot as plt
 

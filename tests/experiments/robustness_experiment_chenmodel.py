@@ -1,13 +1,13 @@
 import os, sys, json, gzip
 import datasets
-from veritas import Optimizer
-from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
+from veritas0 import Optimizer
+from veritas0 import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 from treeck_robust import TreeckRobustnessSearch
-from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
+from veritas0.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 
 import xgboost as xgb
-from veritas.xgb import addtrees_from_multiclass_xgb_model
+from veritas0.xgb import addtrees_from_multiclass_xgb_model
 
 MAX_TIME = 4.0
 

@@ -12,7 +12,7 @@
 import timeit, time
 import gurobipy as gu
 import numpy as np
-from veritas import AddTree
+from . import AddTree
 
 DUMMY_AT = AddTree()
 

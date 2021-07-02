@@ -1,8 +1,8 @@
 import os, sys, json, gzip
 import datasets
-from veritas import Optimizer
-from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
-from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack, KantchelianOutputOpt
+from veritas0 import Optimizer
+from veritas0 import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
+from veritas0.kantchelian import KantchelianAttack, KantchelianTargetedAttack, KantchelianOutputOpt
 import numpy as np
 
 MAX_TIME = 120

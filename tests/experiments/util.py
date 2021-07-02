@@ -7,7 +7,7 @@ import xgboost as xgb
 import math
 from sklearn.datasets import fetch_openml
 
-from veritas import Optimizer, RealDomain
+from veritas0 import Optimizer, RealDomain
 
 def load_openml(name, data_id, task="classification", force=False):
     """

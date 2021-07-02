@@ -1,10 +1,10 @@
 import os, sys, json, gzip
 import util
 import datasets
-from veritas import Optimizer
-from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
+from veritas0 import Optimizer
+from veritas0 import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 from treeck_robust import TreeckRobustnessSearch
-from veritas.kantchelian import KantchelianOutputOpt
+from veritas0.kantchelian import KantchelianOutputOpt
 import numpy as np
 
 MAX_TIME = 20

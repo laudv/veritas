@@ -1,9 +1,9 @@
 import os, sys, json, gzip, time
 import datasets
-from veritas import Optimizer
-from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
+from veritas0 import Optimizer
+from veritas0 import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 from treeck_robust import TreeckRobustnessSearch
-from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
+from veritas0.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 
 def write_result(result, outfile):

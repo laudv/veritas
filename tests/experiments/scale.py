@@ -10,8 +10,8 @@ import numpy as np
 import sklearn.metrics as metrics
 from scipy.special import logit, expit as logistic
 
-from veritas import *
-from veritas.xgb import addtree_from_xgb_model
+from veritas0 import *
+from veritas0.xgb import addtree_from_xgb_model
 
 import util
 

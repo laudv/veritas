@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import timeit
 
-from veritas import *
+from veritas0 import *
 
 from experiments.util import get_ara_bound, filter_solutions
 
