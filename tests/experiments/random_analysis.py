@@ -33,9 +33,9 @@ def get_df(jsons):
         if "veritas" in j:
             #print(list(j["veritas"].keys()))
             if len(j["veritas"]["solutions"]) > 0:
-                bnd = j["veritas"]["solutions"][0][1]
+                bnd = j["veritas"]["solutions"][0]
             else:
-                bnd = j["veritas"]["bounds"][-1][1]
+                bnd = j["veritas"]["bounds"][-1]
             ver_bnd.append(bnd)
             ver_time.append(j["veritas"]["times"][-1])
 
@@ -71,9 +71,10 @@ def plot(jsons):
         if "num_vertices_before" in j:
             extra=f" prune {j['num_vertices_before']}->{j['num_vertices_after']}"
         ax.set_title(f"num_trees {j['num_trees']}, depth {j['tree_depth']}{extra}")
-        ver_bnds = [b[1] for b in j["veritas"]["bounds"]]
+        ver_bnds = [b for b in j["veritas"]["bounds"]]
         if len(j["veritas"]["solutions"]) > 0:
-            ax.axhline(y=j["veritas"]["solutions"][0][1], color="gray", ls=":")
+            print("veritas solution", j["veritas"]["solutions"][0], j["kantchelian_output"])
+            ax.axhline(y=j["veritas"]["solutions"][0], color="gray", ls=":")
         kan_lo_bnds = [b[0] for b in j["kantchelian"]["bounds"]]
         #kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_output"]]
         kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]]
@@ -81,20 +82,28 @@ def plot(jsons):
         kan_times_hi = (kan_times_lo + [j["kantchelian"]["time_p"]])[0:len(kan_hi_bnds)]
         lv, = ax.plot(j["veritas"]["times"], ver_bnds, label="veritas")
         m = min(ver_bnds)
-        if "veritas_ara" in j and len(j["veritas_ara"]["solutions"]) > 0:
-            ax.plot(j["veritas_ara"]["sol_times"], [s[1] for s in
-                j["veritas_ara"]["solutions"]], label="veritas lo",
-                color=lv.get_color(), ls="--", marker="x")
-            m = min(s[1] for s in j["veritas_ara"]["solutions"])
-            M = max(s[1] for s in j["veritas_ara"]["solutions"])
-            ax.plot([j["veritas_ara"]["sol_times"][-1],
-                j["veritas"]["times"][-1]], [M, M], color=lv.get_color(), ls="--")
         if "merge" in j:
             ax.plot(j["merge"]["times"], [b[1] for b in j["merge"]["bounds"]], label="merge")
+
+        if "veritas0" in j:
+            ver0_bnds = [b[1] for b in j["veritas0"]["bounds"]]
+            lv0, = ax.plot(j["veritas0"]["times"], ver0_bnds, label="veritas0")
+
+            if "veritas0_ara" in j and len(j["veritas0_ara"]["solutions"]) > 0:
+                ax.plot(j["veritas0_ara"]["sol_times"], [s[1] for s in
+                    j["veritas0_ara"]["solutions"]], label="veritas0 lo",
+                    color=lv0.get_color(), ls="--", marker="x")
+                #m = min(s for s in j["veritas0_ara"]["solutions"])
+                #M = max(s for s in j["veritas0_ara"]["solutions"])
+                #ax.plot([j["veritas0_ara"]["sol_times"][-1],
+                #    j["veritas0"]["times"][-1]], [M, M], color=lv.get_color(), ls="--")
+
+
         lk, = ax.plot(kan_times_hi, kan_hi_bnds, label="milp")
         ax.plot(kan_times_lo, kan_lo_bnds, label="milp lo", c=lk.get_color(), ls="--")
         #ax.axhline(j["kantchelian_output"], ls="--", color="lightgray")
         #ax.set_ylim([kan_lo_bnds[10], max(ver_bnds)])
+        print(m)
         ax.set_ylim([0.9*min(m, min(kan_hi_bnds)), max(ver_bnds)])
         ax.set_xlabel("time")
         ax.set_ylabel("model output")
@@ -108,16 +117,17 @@ def parse_file(filename):
         return [json.loads(line) for line in lines]
 
 if __name__ == "__main__":
-    task = sys.argv[1]
-    filenames = [f for f in sys.argv[2:] if not f.startswith("--")]
+    filenames = [f for f in sys.argv[1:] if not f.startswith("--")]
     jsons = [parse_file(f) for f in filenames]
+    #print(jsons)
     jsons = combine_results(*jsons)
-    df = get_df(jsons)
-    print(df)
-    print(df.head(20))
-    print(f"Veritas faster than MILP:  {100.0*sum(df['ver_faster'])/len(df):4.0f}%   n={len(df)}")
-    print(f"Veritas better than MILP:  {100.0*sum(df['ver_better'])/len(df):4.0f}%")
-    print(f"Veritas worse than MILP:   {100.0*sum(df['ver_worse'])/len(df):4.0f}%")
-    print(f"Veritas as good as MILP:   {100.0*sum(df['ver_equal'])/len(df):4.0f}%")
-    print(f"Veritas better and faster: {100.0*sum(df['ver_better'] & df['ver_faster'])/len(df):4.0f}%")
+    #print(jsons)
+    #df = get_df(jsons)
+    #print(df)
+    #print(df.head(20))
+    #print(f"Veritas faster than MILP:  {100.0*sum(df['ver_faster'])/len(df):4.0f}%   n={len(df)}")
+    #print(f"Veritas better than MILP:  {100.0*sum(df['ver_better'])/len(df):4.0f}%")
+    #print(f"Veritas worse than MILP:   {100.0*sum(df['ver_worse'])/len(df):4.0f}%")
+    #print(f"Veritas as good as MILP:   {100.0*sum(df['ver_equal'])/len(df):4.0f}%")
+    #print(f"Veritas better and faster: {100.0*sum(df['ver_better'] & df['ver_faster'])/len(df):4.0f}%")
     plot(jsons)

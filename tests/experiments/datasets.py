@@ -7,8 +7,7 @@ import pandas as pd
 import sklearn.metrics as metrics
 from sklearn import preprocessing
 
-from veritas import Optimizer
-from veritas.xgb import addtree_from_xgb_model, addtrees_from_multiclass_xgb_model
+from veritas import addtree_from_xgb_model, addtrees_from_multiclass_xgb_model
 
 class Dataset:
     models_dir = "tests/experiments/models"

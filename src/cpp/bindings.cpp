@@ -63,6 +63,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("split", &Domain::split)
         .def("__eq__", [](const Domain& s, const Domain& t) { return s == t; })
         .def("__repr__", [](const Domain& d) { return tostr(d); })
+        .def("__iter__", [](const Domain& d) { return py::iter(py::make_tuple(d.lo, d.hi)); })
         .def(py::pickle(
             [](const Domain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
             [](py::tuple t) { // __setstate__
@@ -128,6 +129,7 @@ PYBIND11_MODULE(pyveritas, m) {
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
         .def_readwrite("base_score", &AddTree::base_score)
+        .def("copy", [](const AddTree& at) { return AddTree(at); })
         .def("__getitem__", [](std::shared_ptr<AddTree> at, size_t i) {
                 if (i < at->size())
                     return TreeRef{at, i};
@@ -176,7 +178,7 @@ PYBIND11_MODULE(pyveritas, m) {
         })
         .def("eval", [](const AddTree& at, py::array_t<FloatT> arr) {
             py::buffer_info buf = arr.request();
-            if (buf.ndim > 2) py::value_error("invalid data");
+            if (buf.ndim != 2) py::value_error("invalid data");
 
             std::cout << "eval: array strides: " << buf.strides[0] << ", " << buf.strides[1] << std::endl;
 
@@ -279,8 +281,11 @@ PYBIND11_MODULE(pyveritas, m) {
         .def(py::init<const AddTree&>())
         .def("step", &Search::step)
         .def("steps", &Search::steps)
+        .def("step_for", &Search::step_for)
         .def("num_solutions", &Search::num_solutions)
         .def("get_solution", &Search::get_solution)
+        .def("time_since_start", &Search::time_since_start)
+        .def("current_bound", &Search::current_bound)
         .def_readwrite("max_mem_size", &Search::max_mem_size)
         .def_readonly("stats", &Search::stats)
         ;
@@ -288,6 +293,16 @@ PYBIND11_MODULE(pyveritas, m) {
     py::class_<Stats>(m, "Stats")
         .def_readonly("num_steps", &Stats::num_steps)
         .def_readonly("num_impossible", &Stats::num_impossible)
+        .def_readonly("num_solutions", &Stats::num_solutions)
+        .def_readonly("snapshots", &Stats::snapshots)
+        ;
+
+    py::class_<Snapshot>(m, "Snapshot")
+        .def_readonly("num_steps", &Snapshot::num_steps)
+        .def_readonly("num_impossible", &Snapshot::num_impossible)
+        .def_readonly("num_solutions", &Snapshot::num_solutions)
+        .def_readonly("time", &Snapshot::time)
+        .def_readonly("bound", &Snapshot::bound)
         ;
 
     py::class_<Solution>(m, "Solution")

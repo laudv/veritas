@@ -105,11 +105,33 @@ namespace veritas {
         std::vector<NodeId> node_ids; // which node id was last used for each tree?
     };
 
+    struct Snapshot {
+        double time;
+        size_t num_steps;
+        size_t num_impossible;
+        size_t num_solutions;
+        FloatT bound;
+    };
+
     struct Stats {
         size_t num_steps;
         size_t num_impossible;
+        size_t num_solutions;
 
-        Stats() : num_steps(0), num_impossible(0) {}
+        std::vector<Snapshot> snapshots;
+
+        Stats() : num_steps(0), num_impossible(0), snapshots{} {}
+
+        void push_snapshot(double time, FloatT bound)
+        {
+            snapshots.push_back({
+                time,
+                num_steps,
+                num_impossible,
+                num_solutions,
+                bound
+            });
+        }
     };
 
     class Search {
@@ -196,6 +218,7 @@ namespace veritas {
             else
             {
                 solutions_.push_back({ state_index, time_since_start() });
+                ++stats.num_solutions;
             }
 
             ++stats.num_steps;
@@ -207,7 +230,29 @@ namespace veritas {
             for (size_t i = 0; i < num_steps; ++i)
                 if (step())
                     return true; // we're done
+            stats.push_snapshot(time_since_start(), current_bound());
             return false;
+        }
+
+        bool step_for(double num_seconds)
+        {
+            double start = time_since_start();
+
+            bool done = false;
+            size_t num_steps = 10;
+            const size_t max_num_steps = 1000;
+            size_t current_num_solutions = num_solutions();
+
+            while (!done && current_num_solutions == num_solutions())
+            {
+                double dur = time_since_start() - start;
+                done = steps(num_steps);
+                num_steps = std::min(max_num_steps, num_steps*2);
+                if (dur >= num_seconds)
+                    break;
+            }
+
+            return done;
         }
 
         size_t num_solutions() const
@@ -228,6 +273,20 @@ namespace veritas {
                 workspace_.box,      // copy
                 time,
             };
+        }
+
+        /** seconds since the construction of the search */
+        double time_since_start() const
+        {
+            auto now = std::chrono::system_clock::now();
+            return std::chrono::duration_cast<std::chrono::microseconds>(
+                    now-start_time).count() * 1e-6;
+        }
+
+        FloatT current_bound() const
+        {
+            const State& s = states_[heap_.front()];
+            return s.fscore();
         }
 
     private:
@@ -386,13 +445,6 @@ namespace veritas {
                 return std::max(compute_heuristic_at(n.left()),
                         compute_heuristic_at(n.right()));
             }
-        }
-
-        double time_since_start() const
-        {
-            auto now = std::chrono::system_clock::now();
-            return std::chrono::duration_cast<std::chrono::microseconds>(
-                    now-start_time).count() * 1e-6;
         }
     };
     
