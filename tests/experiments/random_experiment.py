@@ -9,7 +9,7 @@ import veritas0
 from veritas.kantchelian import KantchelianOutputOpt
 import numpy as np
 
-MAX_TIME = 20
+MAX_TIME = 1
 MAX_MEM = 4*1024*1024*1024
 
 def _veritas_at_to_veritas0_at(veritas_at):
@@ -95,11 +95,15 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
         constraints = generate_random_constraints(dataset.X, 120, prune_seed)
         #print(constraints)
         at = at0.prune(constraints)
+        print(at)
+        at = veritas.AddTree(at, 0, 10)
+        print(at)
         print("prune:", at0.num_nodes(), "to", at.num_nodes(), "nodes")
 
         if algos[0] == "1":
             print("\n== VERITAS ======================================")
             search = Search(at)
+            #search.set_eps(1.0) # disable ARA*
             done = search.step_for(MAX_TIME)
             print(done, search.num_solutions(), search.current_bound())
             if search.num_solutions() > 0:
@@ -115,7 +119,13 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
             result["veritas"] = {}
             result["veritas"]["bounds"] = [s.bound for s in search.stats.snapshots]
             result["veritas"]["times"] = [s.time for s in search.stats.snapshots]
-            result["veritas"]["solutions"] = [search.get_solution(i).output for i in range(search.num_solutions())]
+            #result["veritas"]["num_steps"] = [s.num_steps for s in search.stats.snapshots]
+
+            result["veritas"]["solutions"] = []
+            for i in range(search.num_solutions()):
+                s = search.get_solution(i)
+                result["veritas"]["solutions"].append(
+                        {"output": s.output, "time": s.time, "eps": s.eps})
 
         if algos[1] == "1":
             print("\n== VERITAS0 =====================================")

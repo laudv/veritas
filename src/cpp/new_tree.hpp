@@ -278,6 +278,13 @@ namespace veritas {
     public:
         FloatT base_score;
         inline AddTree() : base_score{0.0} {} ;
+        inline AddTree(const AddTree& at, size_t begin, size_t num)
+            : trees_()
+            , base_score(begin == 0 ? at.base_score : 0.0)
+        {
+            if (begin < at.size() && (begin+num) < at.size())
+                trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
+        }
 
         inline Tree& add_tree() { return trees_.emplace_back(); }
         inline void add_tree(Tree&& t) { trees_.emplace_back(std::move(t)); }

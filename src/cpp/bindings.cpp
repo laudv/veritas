@@ -128,6 +128,7 @@ PYBIND11_MODULE(pyveritas, m) {
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
+        .def(py::init<const AddTree&, size_t, size_t>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("copy", [](const AddTree& at) { return AddTree(at); })
         .def("__getitem__", [](std::shared_ptr<AddTree> at, size_t i) {
@@ -148,14 +149,16 @@ PYBIND11_MODULE(pyveritas, m) {
             FeatId count = 0;
             for (const auto& x : pybox)
             {
-                if (py::isinstance<py::tuple>(x)) {
+                if (py::isinstance<py::tuple>(x))
+                {
                     py::tuple t = py::cast<py::tuple>(x);
                     FeatId id = py::cast<FeatId>(t[0]);
                     Domain dom = py::cast<Domain>(t[1]);
                     box.push_back({id, dom});
                     count = id;
                 }
-                else if (py::isinstance<Domain>(x)) {
+                else if (py::isinstance<Domain>(x))
+                {
                     Domain dom = py::cast<Domain>(x);
                     box.push_back({count, dom});
                 }
@@ -286,6 +289,8 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("get_solution", &Search::get_solution)
         .def("time_since_start", &Search::time_since_start)
         .def("current_bound", &Search::current_bound)
+        .def("get_eps", &Search::get_eps)
+        .def("set_eps", &Search::set_eps)
         .def_readwrite("max_mem_size", &Search::max_mem_size)
         .def_readonly("stats", &Search::stats)
         ;
@@ -308,6 +313,7 @@ PYBIND11_MODULE(pyveritas, m) {
     py::class_<Solution>(m, "Solution")
         .def_readonly("state_index", &Solution::state_index)
         .def_readonly("solution_index", &Solution::solution_index)
+        .def_readonly("eps", &Solution::eps)
         .def_readonly("output", &Solution::output)
         .def_readonly("nodes", &Solution::nodes)
         .def_readonly("time", &Solution::time)

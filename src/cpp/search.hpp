@@ -28,6 +28,9 @@ namespace veritas {
 
         size_t cache; // index into `Search::caches_`, or NO_CACHE
 
+        bool is_expanded;
+        FloatT eps;
+
         inline FloatT fscore(FloatT eps = 1.0) const { return g + eps * h; }
     };
 
@@ -44,12 +47,14 @@ namespace veritas {
             << "   - parent: " << s.parent << std::endl
             << "   - tree_id, node_id: " << s.tree_id << ", " << s.node_id << std::endl
             << "   - g, h: " << s.g << ", " << s.h << std::endl
+            << "   - expanded?: " << s.is_expanded << std::endl
             << "}";
     }
 
     struct Solution {
         size_t state_index;
         size_t solution_index;
+        FloatT eps;
         FloatT output;
         std::vector<NodeId> nodes; // one leaf node id per tree in addtree
         Box box;
@@ -135,7 +140,7 @@ namespace veritas {
     };
 
     class Search {
-        AddTree at_; // copy of the tree so we can modify freely
+        AddTree at_;
         StateCmp cmp_;
         StateCmp ara_cmp_; // TODO have two heaps, one for A*, one for ARA*
         SearchWorkspace workspace_;
@@ -144,6 +149,7 @@ namespace veritas {
         std::vector<State> states_;
         std::vector<Cache> caches_;
         std::vector<size_t> heap_; // indices into states_
+        std::vector<size_t> ara_heap_; // indices into states_
         std::vector<SolutionRef> solutions_; // indices into states_
 
         time_point start_time;
@@ -167,7 +173,7 @@ namespace veritas {
                 throw std::runtime_error("Search: empty AddTree");
 
             // root state with self reference
-            states_.push_back({0, -1, -1, at.base_score, 0.0f, NO_CACHE});
+            states_.push_back({0, -1, -1, at.base_score, 0.0f, NO_CACHE, false, 1.0});
             heap_.push_back(0);
             workspace_.node_ids.resize(at.size());
         }
@@ -175,10 +181,17 @@ namespace veritas {
         /** One step in the search, returns TRUE when search is done. */
         bool step()
         {
-            if (heap_.empty())
-                return true;
+            FloatT eps;
+            size_t state_index;
+            while (true)
+            {
+                if (heap_.empty())
+                    return true;
 
-            size_t state_index = pq_pop();
+                std::tie(state_index, eps) = pq_pop();
+                if (!states_[state_index].is_expanded)
+                    break;
+            }
 
             //std::cout << "state index " << state_index << std::endl;
             //std::cout << states_[state_index] << std::endl;
@@ -190,7 +203,7 @@ namespace veritas {
             //std::cout << "next tree " << next_tree << std::endl;
             
             State new_left_state, new_right_state;
-            bool success = expand(state_index, new_left_state, new_right_state);
+            bool success = expand(state_index, eps, new_left_state, new_right_state);
 
             if (success)
             {
@@ -217,8 +230,15 @@ namespace veritas {
             }
             else
             {
-                solutions_.push_back({ state_index, time_since_start() });
-                ++stats.num_solutions;
+                push_solution(state_index);
+
+                ara_cmp_.eps = std::min(1.0, ara_cmp_.eps + 0.1);
+                std::cout << "ARA increase " << ara_cmp_.eps << std::endl;
+                std::cout << "no ARA states " << ara_heap_.size() << ", " << heap_.size() << std::endl;
+                if (ara_cmp_.eps < 1.0)
+                    std::make_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
+                else
+                    ara_heap_.clear();
             }
 
             ++stats.num_steps;
@@ -268,6 +288,7 @@ namespace veritas {
             return {
                 state_index,
                 solution_index,
+                states_[state_index].eps,
                 states_[state_index].g,
                 workspace_.node_ids, // copy
                 workspace_.box,      // copy
@@ -289,13 +310,30 @@ namespace veritas {
             return s.fscore();
         }
 
+        FloatT get_eps() const { return ara_cmp_.eps; }
+
+        void set_eps(FloatT eps)
+        { ara_cmp_.eps = std::max<FloatT>(0.0, std::min<FloatT>(1.0, eps)); }
+
     private:
         void pq_push(size_t index)
         {
             heap_.push_back(index);
             std::push_heap(heap_.begin(), heap_.end(), cmp_);
+            if (states_[index].g != at_.base_score && ara_cmp_.eps < 1.0)
+            {
+                ara_heap_.push_back(index);
+                std::push_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
+            }
         }
-        size_t pq_pop()
+        std::tuple<size_t, FloatT> pq_pop()
+        {
+            if (!ara_heap_.empty() && stats.num_steps%2 == 1)
+                return {pq_pop_arastar(), ara_cmp_.eps};
+            return {pq_pop_astar(), 1.0};
+        }
+
+        size_t pq_pop_astar()
         {
             std::pop_heap(heap_.begin(), heap_.end(), cmp_);
             size_t index = std::move(heap_.back());
@@ -303,7 +341,13 @@ namespace veritas {
             return index;
         }
 
-        void rebuild_heap() { std::make_heap(heap_.begin(), heap_.end(), cmp_); }
+        size_t pq_pop_arastar()
+        {
+            std::pop_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
+            size_t index = std::move(ara_heap_.back());
+            ara_heap_.pop_back();
+            return index;
+        }
 
         /** Visit each previous state to (1) reconstruct current state's box
          * and (2) find the node positions of this state in each tree */
@@ -349,8 +393,10 @@ namespace veritas {
         /** Expand the given state. Returns TRUE on success, FALSE on failure
          * (ie current state cannot be expanded because it is a solution).
          * `new_*_state` args are output arguments. */
-        bool expand(size_t state_index, State& new_left_state, State& new_right_state)
+        bool expand(size_t state_index, FloatT eps, State& new_left_state, State& new_right_state)
         {
+            states_[state_index].is_expanded = true;
+
             // assumes `workspace_` is properly filled, i.e., we called `visit_ancestors` for this state
             const State& state = states_[state_index];
 
@@ -377,6 +423,8 @@ namespace veritas {
                 at_.base_score, // g, needs to be recomputed with h (= sum of leaf values in this state)
                 0.0, // h, needs to be recomputed
                 NO_CACHE,
+                false,
+                eps
             };
 
             new_left_state.node_id = at_[next_tree].node_const(node_id).left().id();
@@ -445,6 +493,21 @@ namespace veritas {
                 return std::max(compute_heuristic_at(n.left()),
                         compute_heuristic_at(n.right()));
             }
+        }
+
+        void push_solution(size_t state_index)
+        {
+            solutions_.push_back({ state_index, time_since_start() });
+
+            for (size_t i = solutions_.size()-1; i > 0; --i)
+            {
+                State& s1 = states_[solutions_[i-1].state_index];
+                State& s2 = states_[solutions_[i].state_index];
+                if (s1.fscore() < s2.fscore())
+                    std::swap(s1, s2);
+            }
+
+            ++stats.num_solutions;
         }
     };
     

@@ -67,21 +67,33 @@ def plot(jsons):
 
     for j in jsons:
         fig, ax = plt.subplots()
-        extra = ""
-        if "num_vertices_before" in j:
-            extra=f" prune {j['num_vertices_before']}->{j['num_vertices_after']}"
-        ax.set_title(f"num_trees {j['num_trees']}, depth {j['tree_depth']}{extra}")
-        ver_bnds = [b for b in j["veritas"]["bounds"]]
-        if len(j["veritas"]["solutions"]) > 0:
-            print("veritas solution", j["veritas"]["solutions"][0], j["kantchelian_output"])
-            ax.axhline(y=j["veritas"]["solutions"][0], color="gray", ls=":")
-        kan_lo_bnds = [b[0] for b in j["kantchelian"]["bounds"]]
-        #kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_output"]]
-        kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]]
-        kan_times_lo = [t[1] for t in j["kantchelian"]["times"]]
-        kan_times_hi = (kan_times_lo + [j["kantchelian"]["time_p"]])[0:len(kan_hi_bnds)]
-        lv, = ax.plot(j["veritas"]["times"], ver_bnds, label="veritas")
-        m = min(ver_bnds)
+        ax.set_title(f"num_trees {j['num_trees']}, depth {j['tree_depth']}")
+
+        if "veritas" in j:
+            ver_bnds = [b for b in j["veritas"]["bounds"]]
+            min_v = min(ver_bnds)
+            lv, = ax.plot(j["veritas"]["times"], ver_bnds, label="veritas")
+
+            print("number of solutions veritas", j["veritas"]["solutions"])
+            if len(j["veritas"]["solutions"]) > 0:
+                print("veritas solution", j["veritas"]["solutions"][0], j["kantchelian_output"])
+                #ax.axhline(y=j["veritas"]["solutions"][0]["output"], color="gray", ls=":", label="ver sol")
+
+                sols = sorted(j["veritas"]["solutions"], key=lambda p: p["time"])
+                ax.plot([s["time"] for s in sols], [s["output"] for s in sols], ":x",
+                        color=lv.get_color(), label="veritas ARA*")
+
+
+        if "kantchelian" in j:
+            kan_lo_bnds = [b[0] for b in j["kantchelian"]["bounds"]]
+            #kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]] + [j["kantchelian_output"]]
+            kan_hi_bnds = [b[1] for b in j["kantchelian"]["bounds"]]
+            kan_times_lo = [t[1] for t in j["kantchelian"]["times"]]
+            kan_times_hi = (kan_times_lo + [j["kantchelian"]["time_p"]])[0:len(kan_hi_bnds)]
+            lk, = ax.plot(kan_times_hi, kan_hi_bnds, label="milp")
+            ax.plot(kan_times_lo, kan_lo_bnds, label="milp lo", c=lk.get_color(), ls="--")
+            ax.axhline(j["kantchelian_output"], ls="--", color="lightgray", label="solution kan")
+
         if "merge" in j:
             ax.plot(j["merge"]["times"], [b[1] for b in j["merge"]["bounds"]], label="merge")
 
@@ -98,13 +110,8 @@ def plot(jsons):
                 #ax.plot([j["veritas0_ara"]["sol_times"][-1],
                 #    j["veritas0"]["times"][-1]], [M, M], color=lv.get_color(), ls="--")
 
-
-        lk, = ax.plot(kan_times_hi, kan_hi_bnds, label="milp")
-        ax.plot(kan_times_lo, kan_lo_bnds, label="milp lo", c=lk.get_color(), ls="--")
-        #ax.axhline(j["kantchelian_output"], ls="--", color="lightgray")
-        #ax.set_ylim([kan_lo_bnds[10], max(ver_bnds)])
-        print(m)
-        ax.set_ylim([0.9*min(m, min(kan_hi_bnds)), max(ver_bnds)])
+        if "kantchelian" in j:
+            ax.set_ylim([0.9*min(min_v, min(kan_hi_bnds)), max(ver_bnds)])
         ax.set_xlabel("time")
         ax.set_ylabel("model output")
         ax.legend()
