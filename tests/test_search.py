@@ -1,4 +1,4 @@
-import unittest
+import unittest, sys
 import imageio
 import numpy as np
 import matplotlib.pyplot as plt
@@ -93,6 +93,13 @@ class TestSearch(unittest.TestCase):
 
         search = Search(at)
         done = search.steps(10000)
+
+        print("still not done", search.stats.num_steps)
+        print("num solutions", search.stats.num_solutions)
+        print("num states", search.stats.num_states)
+        print("bound", search.current_bound())
+        print("done?", done)
+
         self.assertTrue(done)
         outputs_expected = sorted(np.unique(imghat[0:30, 0:30]), reverse=True)
         self.assertEqual(search.num_solutions(), len(outputs_expected));

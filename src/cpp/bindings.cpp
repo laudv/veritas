@@ -286,6 +286,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("steps", &Search::steps)
         .def("step_for", &Search::step_for)
         .def("num_solutions", &Search::num_solutions)
+        .def("num_states", &Search::num_states)
         .def("get_solution", &Search::get_solution)
         .def("time_since_start", &Search::time_since_start)
         .def("current_bound", &Search::current_bound)
@@ -299,6 +300,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readonly("num_steps", &Stats::num_steps)
         .def_readonly("num_impossible", &Stats::num_impossible)
         .def_readonly("num_solutions", &Stats::num_solutions)
+        .def_readonly("num_states", &Stats::num_states)
         .def_readonly("snapshots", &Stats::snapshots)
         ;
 
@@ -306,6 +308,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readonly("num_steps", &Snapshot::num_steps)
         .def_readonly("num_impossible", &Snapshot::num_impossible)
         .def_readonly("num_solutions", &Snapshot::num_solutions)
+        .def_readonly("num_states", &Snapshot::num_states)
         .def_readonly("time", &Snapshot::time)
         .def_readonly("bound", &Snapshot::bound)
         ;

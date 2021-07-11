@@ -31,7 +31,7 @@ namespace veritas {
         bool is_expanded;
         FloatT eps;
 
-        inline FloatT fscore(FloatT eps = 1.0) const { return g + eps * h; }
+        inline FloatT fscore(FloatT the_eps = 1.0) const { return g + the_eps * h; }
     };
 
     struct Cache {
@@ -72,7 +72,7 @@ namespace veritas {
         strm
             << "Solution {" << std::endl
             << "   - state, solution index: " << s.state_index << ", " << s.solution_index << std::endl
-            << "   - output: " << s.output << std::endl
+            << "   - output, eps: " << s.output << ", " << s.eps << std::endl
             << "   - nodes: ";
 
         if (s.nodes.size() > 0)
@@ -106,6 +106,7 @@ namespace veritas {
     /** Buffer for info about state currently being expanded. */
     struct SearchWorkspace {
         Box box; // buffer for the Box of the current state
+        Box box2; // second buffer for compute_fscore
         std::vector<FeatId> box_feat_ids; // feat_ids of box in contiguous memory
         std::vector<NodeId> node_ids; // which node id was last used for each tree?
     };
@@ -115,6 +116,7 @@ namespace veritas {
         size_t num_steps;
         size_t num_impossible;
         size_t num_solutions;
+        size_t num_states;
         FloatT bound;
     };
 
@@ -122,10 +124,11 @@ namespace veritas {
         size_t num_steps;
         size_t num_impossible;
         size_t num_solutions;
+        size_t num_states;
 
         std::vector<Snapshot> snapshots;
 
-        Stats() : num_steps(0), num_impossible(0), snapshots{} {}
+        Stats() : num_steps(0), num_impossible(0), num_solutions(0), num_states(0), snapshots{} {}
 
         void push_snapshot(double time, FloatT bound)
         {
@@ -134,6 +137,7 @@ namespace veritas {
                 num_steps,
                 num_impossible,
                 num_solutions,
+                num_states,
                 bound
             });
         }
@@ -142,9 +146,8 @@ namespace veritas {
     class Search {
         AddTree at_;
         StateCmp cmp_;
-        StateCmp ara_cmp_; // TODO have two heaps, one for A*, one for ARA*
+        StateCmp ara_cmp_; // two heaps, one for A*, one for ARA*
         SearchWorkspace workspace_;
-        SearchWorkspace workspace_backup_;
 
         std::vector<State> states_;
         std::vector<Cache> caches_;
@@ -173,7 +176,8 @@ namespace veritas {
                 throw std::runtime_error("Search: empty AddTree");
 
             // root state with self reference
-            states_.push_back({0, -1, -1, at.base_score, 0.0f, NO_CACHE, false, 1.0});
+            
+            states_.push_back({0, 0, 0, at.base_score, 0.0f, NO_CACHE, false, 1.0});
             heap_.push_back(0);
             workspace_.node_ids.resize(at.size());
         }
@@ -202,39 +206,17 @@ namespace veritas {
             //    std::cout << " * tree " << c << " at node " << workspace_.node_ids[c] << std::endl;
             //std::cout << "next tree " << next_tree << std::endl;
             
-            State new_left_state, new_right_state;
-            bool success = expand(state_index, eps, new_left_state, new_right_state);
-
-            if (success)
+            if (!is_solution()) // current state is solution -> uses info gather in workspace by visit_ancestors
             {
-                compute_fscore(new_left_state);
-                compute_fscore(new_right_state);
-
-                // add left if valid
-                if (!std::isinf(new_left_state.fscore()))
-                {
-                    size_t left_state_index = states_.size();
-                    states_.push_back(new_left_state);
-                    pq_push(left_state_index);
-                }
-                else ++stats.num_impossible;
-
-                // add right if valid
-                if (!std::isinf(new_right_state.fscore()))
-                {
-                    size_t right_state_index = states_.size();
-                    states_.push_back(new_right_state);
-                    pq_push(right_state_index);
-                }
-                else ++stats.num_impossible;
+                expand(state_index, eps);
             }
             else
             {
                 push_solution(state_index);
 
                 ara_cmp_.eps = std::min(1.0, ara_cmp_.eps + 0.1);
-                std::cout << "ARA increase " << ara_cmp_.eps << std::endl;
-                std::cout << "no ARA states " << ara_heap_.size() << ", " << heap_.size() << std::endl;
+                //std::cout << "ARA increase " << ara_cmp_.eps << std::endl;
+                //std::cout << "no ARA states " << ara_heap_.size() << ", " << heap_.size() << std::endl;
                 if (ara_cmp_.eps < 1.0)
                     std::make_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
                 else
@@ -280,6 +262,11 @@ namespace veritas {
             return solutions_.size();
         }
 
+        size_t num_states() const
+        {
+            return states_.size();
+        }
+
         Solution get_solution(size_t solution_index)
         {
             auto&& [state_index, time] = solutions_.at(solution_index);
@@ -320,11 +307,11 @@ namespace veritas {
         {
             heap_.push_back(index);
             std::push_heap(heap_.begin(), heap_.end(), cmp_);
-            if (states_[index].g != at_.base_score && ara_cmp_.eps < 1.0)
-            {
-                ara_heap_.push_back(index);
-                std::push_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
-            }
+            //if (states_[index].g != at_.base_score && ara_cmp_.eps < 1.0)
+            //{
+            //    ara_heap_.push_back(index);
+            //    std::push_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
+            //}
         }
         std::tuple<size_t, FloatT> pq_pop()
         {
@@ -380,46 +367,37 @@ namespace veritas {
             }
         }
 
-        void copy_box_feat_ids()
-        {
-            // copy feat_ids into separate array for fast search
-            workspace_.box_feat_ids.clear();
-            for (auto&& [k, v] : workspace_.box)
-                workspace_.box_feat_ids.push_back(k);
-        }
-
         BoxRef get_workspace_box() const { return { workspace_.box }; }
 
-        /** Expand the given state. Returns TRUE on success, FALSE on failure
-         * (ie current state cannot be expanded because it is a solution).
-         * `new_*_state` args are output arguments. */
-        bool expand(size_t state_index, FloatT eps, State& new_left_state, State& new_right_state)
+        /**
+         * Expand the given state.
+         *
+         * assumes `workspace_` is properly filled, i.e., we called
+         * `visit_ancestors` for this state
+         */
+        void expand(size_t state_index, FloatT eps)
         {
             states_[state_index].is_expanded = true;
 
-            // assumes `workspace_` is properly filled, i.e., we called `visit_ancestors` for this state
-            const State& state = states_[state_index];
-
-            // refine nodes in trees in order
-            size_t num_trees = at_.size();
-            NodeId next_tree = (states_[state.parent].tree_id + 1) % num_trees;
+            // refine to child nodes in each tree
+            TreeId num_trees = static_cast<TreeId>(at_.size());
+            TreeId next_tree = (states_[states_[state_index].parent].tree_id + 1) % num_trees;
             NodeId node_id = workspace_.node_ids[next_tree];
 
-            // the node we expand cannot be a leaf
-            size_t skip_count = 0;
+            int num_leafs = 0;
             while (at_[next_tree].node_const(node_id).is_leaf())
             {
-                // this is a solution! all nodes in all trees are leafs
-                if (++skip_count == num_trees) return false;
+                if (++num_leafs == num_trees) return;
                 next_tree = (next_tree + 1) % num_trees;
                 node_id = workspace_.node_ids[next_tree];
             }
 
-            // construct new states
-            new_left_state = new_right_state = {
+            // construct new states: one moves to the left child node, the other to the right
+            State left_state, right_state;
+            left_state = right_state = {
                 state_index,
                 next_tree,
-                -1,  // node_id different for left & right
+                -1,  // node_id different for left & right, set below
                 at_.base_score, // g, needs to be recomputed with h (= sum of leaf values in this state)
                 0.0, // h, needs to be recomputed
                 NO_CACHE,
@@ -427,39 +405,86 @@ namespace veritas {
                 eps
             };
 
-            new_left_state.node_id = at_[next_tree].node_const(node_id).left().id();
-            new_right_state.node_id = at_[next_tree].node_const(node_id).right().id();
+            left_state.node_id = at_[next_tree].node_const(node_id).left().id();
+            right_state.node_id = at_[next_tree].node_const(node_id).right().id();
 
-            return true; // successfully expanded
+            //std::cout << "left_id " << left_state.node_id
+            //    << " right_id " << right_state.node_id
+            //    << " tree_id " << tree_id
+            //    << std::endl;
+
+            compute_fscore(left_state);
+            //std::cout << "    L " << states_[state_index].fscore() << " => " << left_state.fscore();
+            //std::cout << "\n";
+
+            compute_fscore(right_state);
+            //std::cout << "    R " << states_[state_index].fscore() << " => " << right_state.fscore();
+            //std::cout << "\n";
+
+            if (!std::isinf(left_state.fscore()))
+                push_state(std::move(left_state));
+            else ++stats.num_impossible;
+            if (!std::isinf(right_state.fscore()))
+                push_state(std::move(right_state));
+            else ++stats.num_impossible;
+        }
+
+        /**
+         * If the nodes of this state are all leafs, then this is a solution.
+         *
+         * assumes `workspace_` is properly filled, i.e., we called
+         * `visit_ancestors` for this state
+         */
+        bool is_solution() const 
+        {
+            TreeId num_trees = static_cast<TreeId>(at_.size());
+            for (TreeId tree_id = 0; tree_id < num_trees; ++tree_id)
+            {
+                NodeId node_id = workspace_.node_ids[tree_id];
+                if (at_[tree_id].node_const(node_id).is_internal())
+                    return false;
+            }
+            return true;
         }
 
         // assumes valid `workspace_` for parent state
         void compute_fscore(State& child_state)
         {
-            workspace_backup_ = workspace_; // backup workspace by copy
+            workspace_.box2 = workspace_.box;
             workspace_.node_ids[child_state.tree_id] = child_state.node_id;
             auto n = at_[child_state.tree_id].node_const(child_state.node_id);
             auto p = n.parent();
 
-            // if this refinement fails, added node is incompatible with
-            // parent's box (conflicting paths in trees)
-            try { refine_box(workspace_.box, p.get_split(), n.is_left_child()); }
-            catch (const std::runtime_error& e) { child_state.g = FLOATT_INF; return; }
-
-            copy_box_feat_ids(); // for search in `compute_heuristic_at`
+            // copy feat_ids into separate array for fast search
+            workspace_.box_feat_ids.clear();
+            for (auto&& [k, v] : workspace_.box2)
+                workspace_.box_feat_ids.push_back(k);
             workspace_.box_feat_ids.push_back(FEAT_ID_SENTINEL);
 
-            for (TreeId tree_id = 0; tree_id < static_cast<TreeId>(at_.size()); ++tree_id)
+            // update box for child
+            // if refinement fails, added node is incompatible (conflicting paths)
+            if (!refine_box(workspace_.box2, p.get_split(), n.is_left_child()))
             {
-                auto n = at_[tree_id].node_const(workspace_.node_ids[tree_id]);
-                if (n.is_leaf())
-                    child_state.g += n.leaf_value();
-                else
-                    child_state.h += compute_heuristic_at(n);
+                child_state.g = FLOATT_INF;
+            }
+            else // box valid
+            {
+                TreeId num_trees = static_cast<TreeId>(at_.size());
+                for (TreeId tree_id = 0; tree_id < num_trees; ++tree_id)
+                {
+                    auto n = at_[tree_id].node_const(workspace_.node_ids[tree_id]);
+                    if (n.is_leaf())
+                        child_state.g += n.leaf_value();
+                    else
+                        child_state.h += compute_heuristic_at(n);
+                }
             }
 
-            // restore backup of workspace
-            std::swap(workspace_, workspace_backup_);
+            // recover parent state node id
+            workspace_.node_ids[child_state.tree_id] = at_[child_state.tree_id]
+                .node_const(child_state.node_id)
+                .parent()
+                .id();
         }
 
         FloatT compute_heuristic_at(Tree::ConstRef n)
@@ -475,7 +500,7 @@ namespace veritas {
             {
                 Domain ldom, rdom;
                 std::tie(ldom, rdom) = split.get_domains();
-                Domain box_dom = workspace_.box[r].domain;
+                Domain box_dom = workspace_.box2[r].domain;
 
                 FloatT h = -FLOATT_INF;
                 if (ldom.overlaps(box_dom))
@@ -497,6 +522,7 @@ namespace veritas {
 
         void push_solution(size_t state_index)
         {
+            states_[state_index].is_expanded = true;
             solutions_.push_back({ state_index, time_since_start() });
 
             for (size_t i = solutions_.size()-1; i > 0; --i)
@@ -507,7 +533,15 @@ namespace veritas {
                     std::swap(s1, s2);
             }
 
-            ++stats.num_solutions;
+            stats.num_solutions = solutions_.size();
+        }
+
+        void push_state(State&& state)
+        {
+            size_t state_index = states_.size();
+            states_.push_back(state);
+            pq_push(state_index);
+            stats.num_states = states_.size();
         }
     };
     

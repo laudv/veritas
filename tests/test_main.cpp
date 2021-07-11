@@ -574,7 +574,9 @@ void test_search1()
     for (size_t i = 0; i < s.num_solutions(); ++i)
     {
         Solution sol = s.get_solution(i);
-        //std::cout << sol << std::endl;
+        std::cout << sol << std::endl;
+        for (size_t i = 0; i < at.size(); i++)
+            assert(at[i].node_const(sol.nodes[i]).is_leaf());
         assert(sol.output == expected.at(i));
     }
 }
@@ -655,20 +657,20 @@ int main()
     //test_tree1();
     //test_tree2();
     //test_tree3();
-    test_json1();
-    test_json2();
+    //test_json1();
+    //test_json2();
 
-    test_eval1();
-    test_eval2();
+    //test_eval1();
+    //test_eval2();
 
-    test_prune1();
-    test_block_store1();
+    //test_prune1();
+    //test_block_store1();
 
     //test_graph1();
 
     test_search1();
     
-    test_feat_map1();
-    test_feat_map2();
-    test_feat_map3();
+    //test_feat_map1();
+    //test_feat_map2();
+    //test_feat_map3();
 }

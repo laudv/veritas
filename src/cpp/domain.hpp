@@ -136,7 +136,7 @@ namespace veritas {
 
 
 
-    inline void refine_box(Box& doms, FeatId feat_id, const Domain& dom)
+    inline bool refine_box(Box& doms, FeatId feat_id, const Domain& dom)
     {
         Domain new_dom;
         auto it = std::find_if(doms.begin(), doms.end(), [feat_id](const DomainPair& p)
@@ -144,8 +144,12 @@ namespace veritas {
 
         if (it != doms.end())
             new_dom = it->domain;
+        if (!new_dom.overlaps(dom))
+            return false;
+
         new_dom = new_dom.intersect(dom);
 
+        // ensure sorted
         if (it == doms.end())
         {
             doms.push_back({ feat_id, new_dom });
@@ -161,15 +165,16 @@ namespace veritas {
         {
             it->domain = new_dom;
         }
+        return true;
     }
 
-    inline void refine_box(Box& doms, const LtSplit& split, bool from_left_child)
+    inline bool refine_box(Box& doms, const LtSplit& split, bool from_left_child)
     {
         Domain dom = from_left_child
             ? std::get<0>(split.get_domains())
             : std::get<1>(split.get_domains());
 
-        refine_box(doms, split.feat_id, dom);
+        return refine_box(doms, split.feat_id, dom);
     }
 
     /** An iterator of `Domain`s sorted asc by their feature ids
