@@ -13,8 +13,9 @@
 namespace veritas {
 
     /**
-     * Store arrays of type T in stable memory. Pointers returned by
-     * `BlockStore::save` are stable for as long as this object lives.
+     * Store immutable dynamically-sized arrays of type T in stable memory.
+     * Pointers returned by `BlockStore::save` are stable for as long as this
+     * object lives.
      */
     template <typename T>
     class BlockStore {
@@ -55,7 +56,7 @@ namespace veritas {
             const T *end;
         };
 
-        const size_t MIN_BLOCK_SIZE = 5*1024*1024 / sizeof(T); // 5MB of domains
+        const static size_t MIN_BLOCK_SIZE = 5*1024*1024 / sizeof(T); // 5MB of domains
 
         BlockStore()
         {

@@ -8,7 +8,7 @@
 #define VERITAS_GRAPH_HPP
 
 #include "new_tree.hpp"
-#include "domain_store.hpp"
+#include "block_store.hpp"
 
 #include <iomanip>
 #include <chrono>
@@ -28,8 +28,10 @@ namespace veritas {
 
         struct Vertex { BoxRef box; FloatT output; };
         using IndepSet = std::vector<Vertex>; // independent set
+        using DomainStore = BlockStore<DomainPair>;
 
         std::vector<IndepSet> sets_; // all indep sets in graph
+        Box workspace_;
 
         void fill_indep_set(IndepSet& set, Tree::ConstRef node)
         {
@@ -45,9 +47,10 @@ namespace veritas {
                 {
                     auto child_node = node;
                     node = node.parent();
-                    store.refine_workspace(node.get_split(), child_node.is_left_child());
+                    refine_box(workspace_, node.get_split(), child_node.is_left_child());
                 }
-                BoxRef box = store.push_workspace();
+                BoxRef box = store.store(workspace_, remaining_mem_capacity());
+                workspace_.clear();
                 set.push_back({ box, leaf_value });
             }
         }
@@ -57,6 +60,11 @@ namespace veritas {
             IndepSet set;
             fill_indep_set(set, tree.root());
             return set;
+        }
+
+        size_t remaining_mem_capacity() const
+        {
+            return (size_t(1024)*1024*1024) - store.get_mem_size();
         }
 
 
@@ -75,7 +83,7 @@ namespace veritas {
         std::vector<IndepSet>::const_iterator begin() const { return sets_.begin(); }
         std::vector<IndepSet>::const_iterator end() const { return sets_.end(); }
 
-        template <typename F>
+        template <typename F> /* F : (Box) -> bool */
         void prune(F f)
         {
             auto g = [f](const Vertex& v) { return f(v.box); };
@@ -99,12 +107,14 @@ namespace veritas {
                 for (const Vertex& v : set)
                 {
                     Vertex new_vertex(v);
-                    // use copy_b argument to avoid including irrelevant
+                    // use copy_b argument set to false to avoid including irrelevant
                     // features from `box` into the new vertex's box --> !! order of arguments
-                    new_vertex.box = new_store.combine_and_push(v.box, box, false);
-                    new_set.push_back(new_vertex);
+                    combine_boxes(v.box, box, false, workspace_);
+                    new_vertex.box = new_store.store(workspace_, remaining_mem_capacity());
+                    workspace_.clear();
+                    new_set.push_back(std::move(new_vertex));
                 }
-                new_sets.push_back(new_set);
+                new_sets.push_back(std::move(new_set));
             }
 
             std::swap(store, new_store);
@@ -176,7 +186,10 @@ namespace veritas {
 
                             if (v0.box.overlaps(v1.box))
                             {
-                                BoxRef box = store.combine_and_push(v0.box, v1.box, true);
+                                //BoxRef box = store.combine_and_push(v0.box, v1.box, true);
+                                combine_boxes(v0.box, v1.box, true, workspace_);
+                                BoxRef box = store.store(workspace_, remaining_mem_capacity());
+                                workspace_.clear();
                                 FloatT output = v0.output + v1.output;
                                 set1.push_back({box, output});
                             }

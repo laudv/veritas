@@ -196,6 +196,8 @@ namespace veritas {
                 end_ = begin_ + d.size();
             }
         }
+        template <typename T>
+        inline BoxRef(const T& t) : BoxRef(t.begin, t.end) {}
         inline static BoxRef null_box() { return {nullptr, nullptr}; }
         inline const_iterator begin() const { return begin_; }
         inline const_iterator end() const { return end_; }
@@ -253,6 +255,44 @@ namespace veritas {
 
         inline size_t size() const { return end_ - begin_; }
     };
+
+    inline void
+    combine_boxes(const BoxRef& a, const BoxRef& b, bool copy_b, Box& out)
+    {
+        if (!out.empty())
+            throw std::runtime_error("output box is not empty");
+
+        const DomainPair *it0 = a.begin();
+        const DomainPair *it1 = b.begin();
+
+        // assume sorted
+        while (it0 != a.end() && it1 != b.end())
+        {
+            if (it0->feat_id == it1->feat_id)
+            {
+                Domain dom = it0->domain.intersect(it1->domain);
+                out.push_back({ it0->feat_id, dom });
+                ++it0; ++it1;
+            }
+            else if (it0->feat_id < it1->feat_id)
+            {
+                out.push_back(*it0); // copy
+                ++it0;
+            }
+            else
+            {
+                if (copy_b)
+                    out.push_back(*it1); // copy
+                ++it1;
+            }
+        }
+
+        // push all remaining items (one of them is already at the end, no need to compare anymore)
+        for (; it0 != a.end(); ++it0)
+            out.push_back(*it0); // copy
+        for (; copy_b && it1 != b.end(); ++it1)
+            out.push_back(*it1); // copy
+    }
 
     inline
     std::ostream&

@@ -1,5 +1,6 @@
 #include "features.hpp"
-#include "search.hpp"
+//#include "search.hpp"
+#include "new_graph.hpp"
 
 #include <iostream>
 #include <assert.h>
@@ -495,49 +496,7 @@ void test_block_store1()
     assert(store.get_used_mem_size() == 5*4);
 }
 
-//void test_graph1()
-//{
-//    AddTree at;
-//    {
-//        Tree& t = at.add_tree();
-//        t.root().split({1, 8.0});
-//        t.root().left().split({2, 2.0});
-//        t.root().left().left().set_leaf_value(1.0);
-//        t.root().left().right().set_leaf_value(2.0);
-//        t.root().right().set_leaf_value(3.0);
-//    }
-//    {
-//        Tree& t = at.add_tree();
-//        t.root().split({1, 16.0});
-//        t.root().left().split({2, 4.0});
-//        t.root().left().right().split({1, 6.0});
-//
-//        t.root().left().left().set_leaf_value(1.0);
-//        t.root().left().right().left().set_leaf_value(2.0);
-//        t.root().left().right().right().set_leaf_value(3.0);
-//        t.root().right().set_leaf_value(4.0);
-//    }
-//
-//    std::cout << at[0] << std::endl;
-//    std::cout << at[1] << std::endl;
-//
-//    Graph g(at);
-//
-//    g.store.refine_workspace({1, 9.0}, true);
-//    const Box b = g.store.get_workspace_box();
-//
-//    std::cout << g << std::endl;
-//    std::cout << b << std::endl;
-//    //g.prune([b](const Box& box) {
-//    //            bool res = b.overlaps(box); 
-//    //            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
-//    //            return !res;
-//    //        });
-//    g.prune_by_box(b, true);
-//    std::cout << g << std::endl;
-//}
-
-void test_search1()
+void test_graph1()
 {
     AddTree at;
     {
@@ -560,26 +519,72 @@ void test_search1()
         t.root().right().set_leaf_value(4.0);
     }
 
-    //std::cout << at[0] << std::endl;
-    //std::cout << at[1] << std::endl;
+    Domain c, d;
+    std::swap(c, d);
 
-    Search s(at);
-    while (!s.step()) { } 
+    std::cout << at[0] << std::endl;
+    std::cout << at[1] << std::endl;
 
-    std::cout << "number of steps " << s.stats.num_steps << std::endl;
-    std::cout << "number of impossible " << s.stats.num_impossible << std::endl;
-    std::cout << "number of solutions " << s.num_solutions() << std::endl;
+    Graph g(at);
 
-    std::vector<FloatT> expected {7, 6, 5, 4, 4, 3, 2};
-    for (size_t i = 0; i < s.num_solutions(); ++i)
-    {
-        Solution sol = s.get_solution(i);
-        std::cout << sol << std::endl;
-        for (size_t i = 0; i < at.size(); i++)
-            assert(at[i].node_const(sol.nodes[i]).is_leaf());
-        assert(sol.output == expected.at(i));
-    }
+    //g.store.refine_workspace({1, 9.0}, true);
+    //const Box b = g.store.get_workspace_box();
+    Box b {{1, Domain::from_hi_exclusive(9.0)}};
+
+    std::cout << g << std::endl;
+    std::cout << b << std::endl;
+    //g.prune([b](const Box& box) {
+    //            bool res = b.overlaps(box); 
+    //            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
+    //            return !res;
+    //        });
+    g.prune_by_box(b, true);
+    std::cout << g << std::endl;
 }
+
+//void test_search1()
+//{
+//    AddTree at;
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({1, 8.0});
+//        t.root().left().split({2, 2.0});
+//        t.root().left().left().set_leaf_value(1.0);
+//        t.root().left().right().set_leaf_value(2.0);
+//        t.root().right().set_leaf_value(3.0);
+//    }
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({1, 16.0});
+//        t.root().left().split({2, 4.0});
+//        t.root().left().right().split({1, 6.0});
+//
+//        t.root().left().left().set_leaf_value(1.0);
+//        t.root().left().right().left().set_leaf_value(2.0);
+//        t.root().left().right().right().set_leaf_value(3.0);
+//        t.root().right().set_leaf_value(4.0);
+//    }
+//
+//    //std::cout << at[0] << std::endl;
+//    //std::cout << at[1] << std::endl;
+//
+//    Search s(at);
+//    while (!s.step()) { } 
+//
+//    std::cout << "number of steps " << s.stats.num_steps << std::endl;
+//    std::cout << "number of impossible " << s.stats.num_impossible << std::endl;
+//    std::cout << "number of solutions " << s.num_solutions() << std::endl;
+//
+//    std::vector<FloatT> expected {7, 6, 5, 4, 4, 3, 2};
+//    for (size_t i = 0; i < s.num_solutions(); ++i)
+//    {
+//        Solution sol = s.get_solution(i);
+//        std::cout << sol << std::endl;
+//        for (size_t i = 0; i < at.size(); i++)
+//            assert(at[i].node_const(sol.nodes[i]).is_leaf());
+//        assert(sol.output == expected.at(i));
+//    }
+//}
 
 void test_feat_map1()
 {
@@ -666,9 +671,9 @@ int main()
     //test_prune1();
     //test_block_store1();
 
-    //test_graph1();
+    test_graph1();
 
-    test_search1();
+    //test_search1();
     
     //test_feat_map1();
     //test_feat_map2();
