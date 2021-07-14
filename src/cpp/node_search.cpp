@@ -5,7 +5,7 @@
 */
 
 #include "new_tree.hpp"
-#include "search.hpp"
+#include "node_search.hpp"
 
 namespace veritas {
 } // namespace veritas

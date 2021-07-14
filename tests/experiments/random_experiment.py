@@ -2,14 +2,14 @@ import os, sys, json, gzip
 #import util
 import datasets
 import veritas
-from veritas import Search, Domain
-import veritas0
+from veritas import NodeSearch, Domain
+#import veritas0
 #from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 #from treeck_robust import TreeckRobustnessSearch
-from veritas.kantchelian import KantchelianOutputOpt
+#from veritas.kantchelian import KantchelianOutputOpt
 import numpy as np
 
-MAX_TIME = 1
+MAX_TIME = 10
 MAX_MEM = 4*1024*1024*1024
 
 def _veritas_at_to_veritas0_at(veritas_at):
@@ -95,14 +95,14 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
         constraints = generate_random_constraints(dataset.X, 120, prune_seed)
         #print(constraints)
         at = at0.prune(constraints)
-        print(at)
-        at = veritas.AddTree(at, 0, 10)
-        print(at)
+        #print(at)
+        #at = veritas.AddTree(at, 0, 10)
+        #print(at)
         print("prune:", at0.num_nodes(), "to", at.num_nodes(), "nodes")
 
         if algos[0] == "1":
             print("\n== VERITAS ======================================")
-            search = Search(at)
+            search = NodeSearch(at)
             #search.set_eps(1.0) # disable ARA*
             done = search.step_for(MAX_TIME)
             print(done, search.num_solutions(), search.current_bound())

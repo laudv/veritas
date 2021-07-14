@@ -197,7 +197,7 @@ namespace veritas {
             }
         }
         template <typename T>
-        inline BoxRef(const T& t) : BoxRef(t.begin, t.end) {}
+        explicit inline BoxRef(const T& t) : BoxRef(t.begin, t.end) {}
         inline static BoxRef null_box() { return {nullptr, nullptr}; }
         inline const_iterator begin() const { return begin_; }
         inline const_iterator end() const { return end_; }

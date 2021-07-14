@@ -19,7 +19,7 @@
 #include "domain.hpp"
 #include "features.hpp"
 #include "new_tree.hpp"
-#include "search.hpp"
+#include "node_search.hpp"
 
 #ifdef VERITAS_FEATURE_SMT
     #include <z3++.h>
@@ -280,20 +280,20 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
         ;
 
-    py::class_<Search>(m, "Search")
+    py::class_<NodeSearch>(m, "NodeSearch")
         .def(py::init<const AddTree&>())
-        .def("step", &Search::step)
-        .def("steps", &Search::steps)
-        .def("step_for", &Search::step_for)
-        .def("num_solutions", &Search::num_solutions)
-        .def("num_states", &Search::num_states)
-        .def("get_solution", &Search::get_solution)
-        .def("time_since_start", &Search::time_since_start)
-        .def("current_bound", &Search::current_bound)
-        .def("get_eps", &Search::get_eps)
-        .def("set_eps", &Search::set_eps)
-        .def_readwrite("max_mem_size", &Search::max_mem_size)
-        .def_readonly("stats", &Search::stats)
+        .def("step", &NodeSearch::step)
+        .def("steps", &NodeSearch::steps)
+        .def("step_for", &NodeSearch::step_for)
+        .def("num_solutions", &NodeSearch::num_solutions)
+        .def("num_states", &NodeSearch::num_states)
+        .def("get_solution", &NodeSearch::get_solution)
+        .def("time_since_start", &NodeSearch::time_since_start)
+        .def("current_bound", &NodeSearch::current_bound)
+        .def("get_eps", &NodeSearch::get_eps)
+        .def("set_eps", &NodeSearch::set_eps)
+        .def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
+        .def_readonly("stats", &NodeSearch::stats)
         ;
 
     py::class_<Stats>(m, "Stats")

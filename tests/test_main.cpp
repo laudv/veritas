@@ -1,6 +1,7 @@
 #include "features.hpp"
-//#include "search.hpp"
+//#include "node_search.hpp"
 #include "new_graph.hpp"
+#include "graph_search.hpp"
 
 #include <iostream>
 #include <assert.h>
@@ -542,7 +543,7 @@ void test_graph1()
     std::cout << g << std::endl;
 }
 
-//void test_search1()
+//void test_node_search1()
 //{
 //    AddTree at;
 //    {
@@ -657,6 +658,56 @@ void test_feat_map3()
     assert(renamed1[0].root().left().right().get_split().feat_id == 5);
 }
 
+void test_hash1()
+{
+    AddTree at;
+    GraphSearch s(at);
+
+    u_int64_t h1, h2;
+    h1 = h2 = 0;
+    h1 = s.hash(h1, 0, 1);
+    h1 = s.hash(h1, 1, 5);
+    h1 = s.hash(h1, 10, 24);
+    h2 = s.hash(h2, 1, 5); // reorder
+    h2 = s.hash(h2, 10, 24);
+    h2 = s.hash(h2, 0, 1);
+
+    std::cout << h1 << std::endl;
+    std::cout << h2 << std::endl;
+}
+
+void test_graph_search1()
+{
+    AddTree at;
+    {
+        Tree& t = at.add_tree();
+        t.root().split({1, 8.0});
+        t.root().left().split({2, 4.0});
+        t.root().left().right().split({1, 3.0});
+
+        t.root().left().left().set_leaf_value(1.0);
+        t.root().left().right().left().set_leaf_value(2.0);
+        t.root().left().right().right().set_leaf_value(3.0);
+        t.root().right().set_leaf_value(4.0);
+    }
+    {
+        Tree& t = at.add_tree();
+        t.root().split({1, 16.0});
+        t.root().left().split({2, 4.0});
+        t.root().left().right().split({1, 6.0});
+
+        t.root().left().left().set_leaf_value(1.0);
+        t.root().left().right().left().set_leaf_value(2.0);
+        t.root().left().right().right().set_leaf_value(3.0);
+        t.root().right().set_leaf_value(4.0);
+    }
+    GraphSearch s(at);
+    s.step();
+    s.step();
+    s.step();
+    s.step();
+}
+
 int main()
 {
     //test_tree1();
@@ -671,11 +722,16 @@ int main()
     //test_prune1();
     //test_block_store1();
 
-    test_graph1();
+    //test_graph1();
 
-    //test_search1();
+    //test_node_search1();
     
     //test_feat_map1();
     //test_feat_map2();
     //test_feat_map3();
+
+    //test_hash1();
+
+    test_graph_search1();
+
 }

@@ -4,8 +4,8 @@
  * Author: Laurens Devos
 */
 
-#ifndef VERITAS_SEARCH_HPP
-#define VERITAS_SEARCH_HPP
+#ifndef VERITAS_NODE_SEARCH_HPP
+#define VERITAS_NODE_SEARCH_HPP
 
 #include "domain.hpp"
 #include "new_tree.hpp"
@@ -18,7 +18,7 @@ namespace veritas {
     using time_point = std::chrono::time_point<std::chrono::system_clock>;
 
     struct State {
-        size_t parent; // index into 'Search::states_` vector
+        size_t parent; // index into 'NodeSearch::states_` vector
 
         TreeId tree_id; // the split of the node (tree_id, node_id) was added ...
         NodeId node_id; // ... to this state's box
@@ -26,7 +26,7 @@ namespace veritas {
         FloatT g; // sum of 'certain' leaf values
         FloatT h; // heuristic value
 
-        size_t cache; // index into `Search::caches_`, or NO_CACHE
+        size_t cache; // index into `NodeSearch::caches_`, or NO_CACHE
 
         bool is_expanded;
         FloatT eps;
@@ -91,20 +91,20 @@ namespace veritas {
 
 
 
-    class Search;
+    class NodeSearch;
 
     struct StateCmp {
-        const Search& search;
+        const NodeSearch& search;
         FloatT eps;
 
         bool operator()(size_t i, size_t j) const;
 
         inline bool operator()(const State& a, const State& b) const
-        { return a.fscore() < b.fscore(); }
+        { return a.fscore(eps) < b.fscore(eps); }
     };
 
     /** Buffer for info about state currently being expanded. */
-    struct SearchWorkspace {
+    struct NodeSearchWorkspace {
         Box box; // buffer for the Box of the current state
         Box box2; // second buffer for compute_fscore
         std::vector<FeatId> box_feat_ids; // feat_ids of box in contiguous memory
@@ -143,11 +143,11 @@ namespace veritas {
         }
     };
 
-    class Search {
+    class NodeSearch {
         AddTree at_;
         StateCmp cmp_;
         StateCmp ara_cmp_; // two heaps, one for A*, one for ARA*
-        SearchWorkspace workspace_;
+        NodeSearchWorkspace workspace_;
 
         std::vector<State> states_;
         std::vector<Cache> caches_;
@@ -166,14 +166,14 @@ namespace veritas {
 
         friend StateCmp;
 
-        Search(const AddTree& at)
+        NodeSearch(const AddTree& at)
             : at_(at)
             , cmp_{*this, 1.0}
             , ara_cmp_{*this, 0.1}
             , start_time{std::chrono::system_clock::now()}
         {
             if (at.size() == 0)
-                throw std::runtime_error("Search: empty AddTree");
+                throw std::runtime_error("NodeSearch: empty AddTree");
 
             // root state with self reference
             
@@ -307,11 +307,11 @@ namespace veritas {
         {
             heap_.push_back(index);
             std::push_heap(heap_.begin(), heap_.end(), cmp_);
-            //if (states_[index].g != at_.base_score && ara_cmp_.eps < 1.0)
-            //{
-            //    ara_heap_.push_back(index);
-            //    std::push_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
-            //}
+            if (states_[index].g != at_.base_score && ara_cmp_.eps < 1.0)
+            {
+                ara_heap_.push_back(index);
+                std::push_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
+            }
         }
         std::tuple<size_t, FloatT> pq_pop()
         {
@@ -552,4 +552,4 @@ namespace veritas {
 
 } // namespace veritas
 
-#endif // VERITAS_SEARCH_HPP
+#endif // VERITAS_NODE_SEARCH_HPP

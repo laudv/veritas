@@ -65,6 +65,12 @@ namespace veritas {
             blocks_.push_back(std::move(block));
         }
 
+        // disallow: references change wrt other blockstore, most likely this is a mistake
+        BlockStore(const BlockStore&) = delete;
+        BlockStore& operator=(const BlockStore&) = delete;
+        BlockStore(BlockStore&& o) { std::swap(blocks_, o.blocks_); }
+        BlockStore& operator=(BlockStore&& o) { std::swap(blocks_, o.blocks_); return *this; }
+
         size_t get_mem_size() const
         {
             size_t mem = 0;

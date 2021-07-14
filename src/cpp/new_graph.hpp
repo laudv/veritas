@@ -25,10 +25,14 @@ namespace veritas {
      * independent sets when their boxes overlap
      */
     class Graph {
-
-        struct Vertex { BoxRef box; FloatT output; };
+    public:
+        struct Vertex { NodeId id; BoxRef box; FloatT output; };
         using IndepSet = std::vector<Vertex>; // independent set
         using DomainStore = BlockStore<DomainPair>;
+
+    private:
+
+        DomainStore store_;
 
         std::vector<IndepSet> sets_; // all indep sets in graph
         Box workspace_;
@@ -43,15 +47,16 @@ namespace veritas {
             else // 
             {
                 FloatT leaf_value = node.leaf_value();
+                NodeId id = node.id();
                 while (!node.is_root())
                 {
                     auto child_node = node;
                     node = node.parent();
                     refine_box(workspace_, node.get_split(), child_node.is_left_child());
                 }
-                BoxRef box = store.store(workspace_, remaining_mem_capacity());
+                BoxRef box = BoxRef(store_.store(workspace_, remaining_mem_capacity()));
                 workspace_.clear();
-                set.push_back({ box, leaf_value });
+                set.push_back({ id, box, leaf_value });
             }
         }
 
@@ -64,18 +69,16 @@ namespace veritas {
 
         size_t remaining_mem_capacity() const
         {
-            return (size_t(1024)*1024*1024) - store.get_mem_size();
+            return (size_t(1024)*1024*1024) - store_.get_mem_size();
         }
 
 
     public:
-        DomainStore store;
-
         Graph() {}
         Graph(const AddTree& at)
         {
             // pseudo vertex with empty box for the base_score
-            sets_.push_back({ { BoxRef::null_box(), at.base_score } });
+            sets_.push_back({ { -1, BoxRef::null_box(), at.base_score } });
             for (const Tree& tree : at)
                 sets_.push_back(fill_indep_set(tree));
         }
@@ -110,14 +113,14 @@ namespace veritas {
                     // use copy_b argument set to false to avoid including irrelevant
                     // features from `box` into the new vertex's box --> !! order of arguments
                     combine_boxes(v.box, box, false, workspace_);
-                    new_vertex.box = new_store.store(workspace_, remaining_mem_capacity());
+                    new_vertex.box = BoxRef(new_store.store(workspace_, remaining_mem_capacity()));
                     workspace_.clear();
                     new_set.push_back(std::move(new_vertex));
                 }
                 new_sets.push_back(std::move(new_set));
             }
 
-            std::swap(store, new_store);
+            std::swap(store_, new_store);
             std::swap(sets_, new_sets);
         }
 
@@ -139,6 +142,8 @@ namespace veritas {
             return {min_bound, max_bound};
         }
 
+        const IndepSet& get_vertices(size_t indep_set) const { return sets_.at(indep_set); }
+
         size_t num_independent_sets() const { return sets_.size(); }
         size_t num_vertices() const
         {
@@ -156,7 +161,7 @@ namespace veritas {
 
             for (; index < sets_.size(); ++index)
                 for (Vertex& v : sets_[index])
-                    v = {v.box, -v.output};
+                    v = {v.id, v.box, -v.output};
         }
 
         bool merge(int K, float max_time)
@@ -188,10 +193,10 @@ namespace veritas {
                             {
                                 //BoxRef box = store.combine_and_push(v0.box, v1.box, true);
                                 combine_boxes(v0.box, v1.box, true, workspace_);
-                                BoxRef box = store.store(workspace_, remaining_mem_capacity());
+                                BoxRef box = BoxRef(store_.store(workspace_, remaining_mem_capacity()));
                                 workspace_.clear();
                                 FloatT output = v0.output + v1.output;
-                                set1.push_back({box, output});
+                                set1.push_back({-1, box, output}); // we loose leaf node ids
                             }
                         }
                     }
