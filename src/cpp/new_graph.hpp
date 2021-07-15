@@ -26,7 +26,7 @@ namespace veritas {
      */
     class Graph {
     public:
-        struct Vertex { NodeId id; BoxRef box; FloatT output; };
+        struct Vertex { NodeId leaf_id; BoxRef box; FloatT output; };
         using IndepSet = std::vector<Vertex>; // independent set
         using DomainStore = BlockStore<DomainPair>;
 
@@ -161,7 +161,7 @@ namespace veritas {
 
             for (; index < sets_.size(); ++index)
                 for (Vertex& v : sets_[index])
-                    v = {v.id, v.box, -v.output};
+                    v = {v.leaf_id, v.box, -v.output};
         }
 
         bool merge(int K, float max_time)

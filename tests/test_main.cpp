@@ -4,6 +4,7 @@
 #include "graph_search.hpp"
 
 #include <iostream>
+#include <fstream>
 #include <assert.h>
 
 using namespace veritas;
@@ -663,17 +664,37 @@ void test_hash1()
     AddTree at;
     GraphSearch s(at);
 
-    u_int64_t h1, h2;
-    h1 = h2 = 0;
-    h1 = s.hash(h1, 0, 1);
-    h1 = s.hash(h1, 1, 5);
-    h1 = s.hash(h1, 10, 24);
-    h2 = s.hash(h2, 1, 5); // reorder
-    h2 = s.hash(h2, 10, 24);
-    h2 = s.hash(h2, 0, 1);
+    //size_t h1, h2;
+    //h1 = h2 = 0;
+    //h1 = s.hash(h1, 0, 1);
+    //h1 = s.hash(h1, 1, 5);
+    //h1 = s.hash(h1, 10, 24);
+    //h2 = s.hash(h2, 1, 5); // reorder
+    //h2 = s.hash(h2, 10, 24);
+    //h2 = s.hash(h2, 0, 1);
 
-    std::cout << h1 << std::endl;
-    std::cout << h2 << std::endl;
+    //std::cout << h1 << std::endl;
+    //std::cout << h2 << std::endl;
+    
+
+    // build/testveritas | uniq | wc -l == build/testveritas | wc -l
+    
+    int N = 50;
+
+    for (int v0 = 0; v0 < N; ++v0)
+    for (int v1 = 0; v1 < N; ++v1)
+    for (int v2 = 0; v2 < N; ++v2)
+    for (int v3 = 0; v3 < N; ++v3)
+    //for (int v4 = 0; v4 < N; ++v4)
+    {
+        size_t h = 0;
+        h = s.hash(h, 1, v0);
+        h = s.hash(h, 2, v1);
+        h = s.hash(h, 3, v2);
+        h = s.hash(h, 4, v3);
+        //h = s.hash(h, 5, v4);
+        std::cout << h << std::endl;
+    }
 }
 
 void test_graph_search1()
@@ -701,11 +722,27 @@ void test_graph_search1()
         t.root().left().right().right().set_leaf_value(3.0);
         t.root().right().set_leaf_value(4.0);
     }
+    std::cout << at[0] << std::endl;
+    std::cout << at[1] << std::endl;
     GraphSearch s(at);
-    s.step();
-    s.step();
-    s.step();
-    s.step();
+    while (!s.step());
+}
+
+void test_graph_search2()
+{
+    AddTree at;
+    {
+        std::ifstream f;
+        f.open("tests/models/xgb-img-very-easy.json");
+        at.from_json(f);
+    }
+    for (const Tree& t : at)
+        std::cout << t << std::endl;
+
+    GraphSearch s(at);
+
+    for (size_t i = 0; i < 10; i++)
+        s.step();
 }
 
 int main()
@@ -732,6 +769,6 @@ int main()
 
     //test_hash1();
 
-    test_graph_search1();
+    test_graph_search2();
 
 }

@@ -84,7 +84,8 @@ namespace veritas {
         inline bool operator==(const Domain& other) const {
             return lo == other.lo && hi == other.hi;
         }
-    };
+        inline bool operator!=(const Domain& other) const { return !(*this == other); }
+    }; // sturct Domain
 
     inline std::ostream& operator<<(std::ostream& s, const Domain& d)
     {
@@ -254,7 +255,23 @@ namespace veritas {
         }
 
         inline size_t size() const { return end_ - begin_; }
-    };
+
+        bool operator==(const BoxRef& other) const
+        {
+            auto it0 = begin_;
+            auto it1 = other.begin_;
+
+            for (;it0 != end_ && it1 != other.end_; ++it0, ++it1)
+            {
+                if (it0->feat_id != it1->feat_id)
+                    return false;
+                if (it0->domain != it1->domain)
+                    return false;
+            }
+
+            return true;
+        }
+    }; // class BoxRef
 
     inline void
     combine_boxes(const BoxRef& a, const BoxRef& b, bool copy_b, Box& out)
