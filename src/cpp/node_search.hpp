@@ -155,7 +155,7 @@ namespace veritas {
         std::vector<size_t> ara_heap_; // indices into states_
         std::vector<SolutionRef> solutions_; // indices into states_
 
-        time_point start_time;
+        time_point start_time_;
 
         const FeatId FEAT_ID_SENTINEL = static_cast<FeatId>((1l<<31)-1);
         const size_t NO_CACHE = static_cast<size_t>(-1);
@@ -170,7 +170,7 @@ namespace veritas {
             : at_(at)
             , cmp_{*this, 1.0}
             , ara_cmp_{*this, 0.1}
-            , start_time{std::chrono::system_clock::now()}
+            , start_time_{std::chrono::system_clock::now()}
         {
             if (at.size() == 0)
                 throw std::runtime_error("NodeSearch: empty AddTree");
@@ -288,7 +288,7 @@ namespace veritas {
         {
             auto now = std::chrono::system_clock::now();
             return std::chrono::duration_cast<std::chrono::microseconds>(
-                    now-start_time).count() * 1e-6;
+                    now-start_time_).count() * 1e-6;
         }
 
         FloatT current_bound() const

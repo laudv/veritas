@@ -74,11 +74,11 @@ namespace veritas {
 
 
     public:
-        Graph() {}
-        Graph(const AddTree& at)
+        const FloatT base_score;
+
+        Graph() : base_score(0.0) {}
+        Graph(const AddTree& at) : base_score(at.base_score)
         {
-            // pseudo vertex with empty box for the base_score
-            sets_.push_back({ { -1, BoxRef::null_box(), at.base_score } });
             for (const Tree& tree : at)
                 sets_.push_back(fill_indep_set(tree));
         }
@@ -126,7 +126,7 @@ namespace veritas {
 
         MinMax basic_bound() const
         {
-            FloatT min_bound = 0.0, max_bound = 0.0;
+            FloatT min_bound = base_score, max_bound = base_score;
             for (const auto& set : sets_)
             {
                 FloatT min = +FLOATT_INF;

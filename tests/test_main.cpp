@@ -700,6 +700,7 @@ void test_hash1()
 void test_graph_search1()
 {
     AddTree at;
+    at.base_score = 10;
     {
         Tree& t = at.add_tree();
         t.root().split({1, 8.0});
@@ -725,6 +726,9 @@ void test_graph_search1()
     std::cout << at[0] << std::endl;
     std::cout << at[1] << std::endl;
     GraphSearch s(at);
+    s.step();
+    s.step();
+    s.step();
     while (!s.step());
 }
 
@@ -733,7 +737,7 @@ void test_graph_search2()
     AddTree at;
     {
         std::ifstream f;
-        f.open("tests/models/xgb-img-very-easy.json");
+        f.open("tests/models/xgb-img-hard.json");
         at.from_json(f);
     }
     for (const Tree& t : at)
@@ -741,8 +745,15 @@ void test_graph_search2()
 
     GraphSearch s(at);
 
-    for (size_t i = 0; i < 10; i++)
-        s.step();
+    for (size_t i = 0; i < 100; i++)
+    {
+        if (s.step())
+        {
+            std::cout << "DONE " << i << std::endl;
+            break;
+        }
+    }
+    std::cout << "numsols: " << s.num_solutions() << std::endl;
 }
 
 int main()
@@ -769,6 +780,7 @@ int main()
 
     //test_hash1();
 
-    test_graph_search2();
+    test_graph_search1();
+    //test_graph_search2();
 
 }

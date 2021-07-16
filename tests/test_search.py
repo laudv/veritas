@@ -6,6 +6,8 @@ import matplotlib.patches as patches
 
 from veritas import *
 
+Search = GraphSearch
+
 def plot_img_solutions(imghat, solutions):
     fig, ax = plt.subplots()
     im = ax.imshow(imghat)
@@ -34,11 +36,15 @@ class TestSearch(unittest.TestCase):
         t.set_leaf_value(t.right( t.left(t.root())), 2.0)
         t.set_leaf_value( t.left(t.right(t.root())), 4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
-        #print(at[0])
+        print(at[0])
 
         search = Search(at)
 
-        done = search.steps(100)
+        done = False
+        while not done:
+            done = search.steps(100)
+
+        print(done, search.num_solutions(), search.get_solution(0))
         self.assertTrue(done)
         self.assertEqual(search.num_solutions(), 4)
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
@@ -65,14 +71,16 @@ class TestSearch(unittest.TestCase):
         #img = np.array(ys).reshape((100, 100))
 
         search = Search(at)
-        done = search.steps(1000)
+        done = False
+        while not done:
+            done = search.steps(100)
         self.assertTrue(done)
         self.assertEqual(search.num_solutions(), 32);
 
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
         self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:]))) #sorted?
-        self.assertEqual(solutions[0].output, M)
-        self.assertEqual(solutions[-1].output, m)
+        self.assertAlmostEqual(solutions[0].output, M, 5)
+        self.assertAlmostEqual(solutions[-1].output, m, 5)
 
         plot_img_solutions(imghat, solutions[:3])
         plot_img_solutions(imghat, solutions[-3:])
@@ -84,7 +92,8 @@ class TestSearch(unittest.TestCase):
         X = X.astype(np.float32)
 
         at = AddTree.read("tests/models/xgb-img-easy.json")
-        at = at.prune([Domain(0, 30), Domain(0, 30)])
+        at.base_score = 0.0
+        #at = at.prune([Domain(0, 30), Domain(0, 30)])
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
 
@@ -92,13 +101,10 @@ class TestSearch(unittest.TestCase):
         #img = np.array(ys).reshape((100, 100))
 
         search = Search(at)
-        done = search.steps(10000)
-
-        print("still not done", search.stats.num_steps)
-        print("num solutions", search.stats.num_solutions)
-        print("num states", search.stats.num_states)
-        print("bound", search.current_bound())
-        print("done?", done)
+        search.prune([Domain(0, 30), Domain(0, 30)])
+        done = False
+        while not done:
+            done = search.steps(100)
 
         self.assertTrue(done)
         outputs_expected = sorted(np.unique(imghat[0:30, 0:30]), reverse=True)
@@ -106,10 +112,8 @@ class TestSearch(unittest.TestCase):
 
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
         self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:]))) #sorted?
-        self.assertEqual(solutions[0].output, M)
-        self.assertEqual(solutions[-1].output, m)
         for s, x in zip(solutions, outputs_expected):
-            self.assertEqual(s.output, x)
+            self.assertLess((s.output-x)/2, 1e-5)
 
         plot_img_solutions(imghat, solutions[:3])
         plot_img_solutions(imghat, solutions[-3:])

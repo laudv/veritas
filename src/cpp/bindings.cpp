@@ -19,7 +19,8 @@
 #include "domain.hpp"
 #include "features.hpp"
 #include "new_tree.hpp"
-#include "node_search.hpp"
+//#include "node_search.hpp"
+#include "graph_search.hpp"
 
 #ifdef VERITAS_FEATURE_SMT
     #include <z3++.h>
@@ -280,37 +281,61 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
         ;
 
-    py::class_<NodeSearch>(m, "NodeSearch")
+    py::class_<GraphSearch>(m, "GraphSearch")
         .def(py::init<const AddTree&>())
-        .def("step", &NodeSearch::step)
-        .def("steps", &NodeSearch::steps)
-        .def("step_for", &NodeSearch::step_for)
-        .def("num_solutions", &NodeSearch::num_solutions)
-        .def("num_states", &NodeSearch::num_states)
-        .def("get_solution", &NodeSearch::get_solution)
-        .def("time_since_start", &NodeSearch::time_since_start)
-        .def("current_bound", &NodeSearch::current_bound)
-        .def("get_eps", &NodeSearch::get_eps)
-        .def("set_eps", &NodeSearch::set_eps)
-        .def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
-        .def_readonly("stats", &NodeSearch::stats)
+        .def("step", &GraphSearch::step)
+        .def("steps", &GraphSearch::steps)
+        .def("step_for", &GraphSearch::step_for)
+        .def("num_solutions", &GraphSearch::num_solutions)
+        .def("num_states", &GraphSearch::num_states)
+        .def("get_solution", &GraphSearch::get_solution)
+        .def("time_since_start", &GraphSearch::time_since_start)
+        .def("current_bounds", &GraphSearch::current_bounds)
+        .def("get_eps", &GraphSearch::get_eps)
+        .def("set_eps", &GraphSearch::set_eps)
+        //.def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
+        .def_readonly("snapshots", &GraphSearch::snapshots)
+        .def("prune", [](GraphSearch& s, const py::list& pybox) {
+            Box box;
+            FeatId count = 0;
+            for (const auto& x : pybox)
+            {
+                if (py::isinstance<py::tuple>(x))
+                {
+                    py::tuple t = py::cast<py::tuple>(x);
+                    FeatId id = py::cast<FeatId>(t[0]);
+                    Domain dom = py::cast<Domain>(t[1]);
+                    box.push_back({id, dom});
+                    count = id;
+                }
+                else if (py::isinstance<Domain>(x))
+                {
+                    Domain dom = py::cast<Domain>(x);
+                    box.push_back({count, dom});
+                }
+                ++count;
+            }
+            BoxRef b(box);
+            py::print("pruning GraphSearch using box", tostr(b));
+            return s.prune_by_box(b);
+        })
         ;
 
-    py::class_<Stats>(m, "Stats")
-        .def_readonly("num_steps", &Stats::num_steps)
-        .def_readonly("num_impossible", &Stats::num_impossible)
-        .def_readonly("num_solutions", &Stats::num_solutions)
-        .def_readonly("num_states", &Stats::num_states)
-        .def_readonly("snapshots", &Stats::snapshots)
-        ;
+    //py::class_<Stats>(m, "Stats")
+    //    .def_readonly("num_steps", &Stats::num_steps)
+    //    .def_readonly("num_impossible", &Stats::num_impossible)
+    //    .def_readonly("num_solutions", &Stats::num_solutions)
+    //    .def_readonly("num_states", &Stats::num_states)
+    //    .def_readonly("snapshots", &Stats::snapshots)
+    //    ;
 
     py::class_<Snapshot>(m, "Snapshot")
+        .def_readonly("time", &Snapshot::time)
         .def_readonly("num_steps", &Snapshot::num_steps)
-        .def_readonly("num_impossible", &Snapshot::num_impossible)
+        //.def_readonly("num_impossible", &Snapshot::num_impossible)
         .def_readonly("num_solutions", &Snapshot::num_solutions)
         .def_readonly("num_states", &Snapshot::num_states)
-        .def_readonly("time", &Snapshot::time)
-        .def_readonly("bound", &Snapshot::bound)
+        .def_readonly("bounds", &Snapshot::bounds)
         ;
 
     py::class_<Solution>(m, "Solution")

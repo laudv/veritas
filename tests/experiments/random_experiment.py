@@ -2,14 +2,14 @@ import os, sys, json, gzip
 #import util
 import datasets
 import veritas
-from veritas import NodeSearch, Domain
-#import veritas0
+from veritas import GraphSearch, Domain
+import veritas0
 #from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 #from treeck_robust import TreeckRobustnessSearch
-#from veritas.kantchelian import KantchelianOutputOpt
+from veritas.kantchelian import KantchelianOutputOpt
 import numpy as np
 
-MAX_TIME = 10
+MAX_TIME = 2
 MAX_MEM = 4*1024*1024*1024
 
 def _veritas_at_to_veritas0_at(veritas_at):
@@ -92,7 +92,7 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
         dataset.load_model(num_trees, tree_depth)
         at0 = dataset.at
 
-        constraints = generate_random_constraints(dataset.X, 120, prune_seed)
+        constraints = generate_random_constraints(dataset.X, 10, prune_seed)
         #print(constraints)
         at = at0.prune(constraints)
         #print(at)
@@ -102,10 +102,10 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
 
         if algos[0] == "1":
             print("\n== VERITAS ======================================")
-            search = NodeSearch(at)
-            #search.set_eps(1.0) # disable ARA*
+            search = GraphSearch(at)
+            search.set_eps(1.0) # disable ARA*
             done = search.step_for(MAX_TIME)
-            print(done, search.num_solutions(), search.current_bound())
+            print(done, search.num_solutions(), search.current_bounds())
             if search.num_solutions() > 0:
                 s = search.get_solution(0)
                 print("solution", s.output, s.time)
@@ -117,8 +117,8 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
 #                print(b)
 #                print(p, "->", at.eval(p))
             result["veritas"] = {}
-            result["veritas"]["bounds"] = [s.bound for s in search.stats.snapshots]
-            result["veritas"]["times"] = [s.time for s in search.stats.snapshots]
+            result["veritas"]["bounds"] = [s.bounds for s in search.snapshots]
+            result["veritas"]["times"] = [s.time for s in search.snapshots]
             #result["veritas"]["num_steps"] = [s.num_steps for s in search.stats.snapshots]
 
             result["veritas"]["solutions"] = []

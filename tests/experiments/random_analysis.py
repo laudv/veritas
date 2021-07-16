@@ -70,11 +70,13 @@ def plot(jsons):
         ax.set_title(f"num_trees {j['num_trees']}, depth {j['tree_depth']}")
 
         if "veritas" in j:
-            ver_bnds = [b for b in j["veritas"]["bounds"]]
-            min_v = min(ver_bnds)
-            lv, = ax.plot(j["veritas"]["times"], ver_bnds, label="veritas")
+            ver_lo_bnds = [b[0] for b in j["veritas"]["bounds"]]
+            ver_up_bnds = [b[1] for b in j["veritas"]["bounds"]]
+            min_v = min(ver_up_bnds)
+            lv, = ax.plot(j["veritas"]["times"], ver_up_bnds, label="veritas")
+            ax.plot(j["veritas"]["times"], ver_lo_bnds, label="veritas lo", c=lv.get_color(), ls="--")
 
-            print("number of solutions veritas", j["veritas"]["solutions"])
+            print("number of solutions veritas", len(j["veritas"]["solutions"]))
             if len(j["veritas"]["solutions"]) > 0:
                 print("veritas solution", j["veritas"]["solutions"][0], j["kantchelian_output"])
                 #ax.axhline(y=j["veritas"]["solutions"][0]["output"], color="gray", ls=":", label="ver sol")
@@ -111,7 +113,7 @@ def plot(jsons):
                 #    j["veritas0"]["times"][-1]], [M, M], color=lv.get_color(), ls="--")
 
         if "kantchelian" in j:
-            ax.set_ylim([0.9*min(min_v, min(kan_hi_bnds)), max(ver_bnds)])
+            ax.set_ylim([0.9*min(min_v, min(kan_hi_bnds)), max(ver_up_bnds)])
         ax.set_xlabel("time")
         ax.set_ylabel("model output")
         ax.legend()
