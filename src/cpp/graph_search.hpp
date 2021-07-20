@@ -24,7 +24,8 @@ namespace veritas {
         size_t num_steps = 0;
         size_t num_solutions = 0;
         size_t num_states = 0;
-        std::tuple<FloatT, FloatT> bounds = {-FLOATT_INF, FLOATT_INF};
+        FloatT eps = 0.0;
+        std::tuple<FloatT, FloatT, FloatT> bounds = {-FLOATT_INF, FLOATT_INF, FLOATT_INF}; // lo, up_a, up_ara
     };
 
     struct State {
@@ -103,6 +104,7 @@ namespace veritas {
             << "}";
     }
     class GraphSearch {
+        AddTree at_;
         Graph g_;
 
         BlockStore<DomainPair> store_;
@@ -116,6 +118,7 @@ namespace veritas {
         std::vector<size_t> a_heap_, ara_heap_; // indexes into states_
         std::multimap<size_t, size_t> visited_; // hash -> state_index
         StateCmp a_cmp_, ara_cmp_;
+        FloatT eps_increment_;
         time_point start_time_;
         std::vector<SolutionRef> solutions_; // indices into states_
         size_t num_steps_;
@@ -126,12 +129,15 @@ namespace veritas {
         std::vector<Snapshot> snapshots;
 
         GraphSearch(const AddTree& at)
-            : g_(at)
+            : at_(at.neutralize_negative_leaf_values())
+            , g_(at_)
             , a_cmp_{*this, 1.0}
-            , ara_cmp_{*this, 0.1}
+            , ara_cmp_{*this, 0.01}
+            , eps_increment_{0.01}
             , start_time_{std::chrono::system_clock::now()}
             , num_steps_{0}
         {
+            //std::cout << g_ << std::endl;
             State s = {
                 0, // parent
                 g_.base_score, // g
@@ -144,6 +150,7 @@ namespace veritas {
             find_indep_sets_not_added(0, workspace_.indep_sets);
             compute_heuristic(s, -1);
             push_state(std::move(s));
+            push_snapshot();
         }
 
         void prune_by_box(const BoxRef& box)
@@ -179,17 +186,12 @@ namespace veritas {
 
             if (states_[state_index].next_indep_set == -1)
             {
-                std::cout << "SOLUTION"
+                std::cout << "SOLUTION "
                     << " eps=" << state_eps
-                    << " fscore=" << states_[state_index].fscore(state_eps)
-                    << " box=" << states_[state_index].box
+                    << " output=" << states_[state_index].g
                     << std::endl;
                 push_solution(state_index, state_eps);
-                ara_cmp_.eps = std::min(1.0, ara_cmp_.eps + 0.1);
-                if (ara_cmp_.eps < 1.0)
-                    std::make_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
-                else
-                    ara_heap_.clear();
+                set_eps(ara_cmp_.eps + eps_increment_);
             }
             else
             {
@@ -212,31 +214,115 @@ namespace veritas {
                     break;
                 }
             }
+            push_snapshot();
 
-            snapshots.push_back({
-                time_since_start(),
-                num_steps_,
-                num_solutions(),
-                num_states(),
-                current_bounds()});
+            // TRYING OUT: adjusting A* upper bound based on ARA* upper bound
+            //auto&& [lo, up_a, up_ara] = current_bounds();
+            //if ((up_a - up_ara) / up_ara > 1e-5)
+            //{
+            //    double start = time_since_start();
+            //    size_t count = 0;
+            //    //while (true)
+            //    //{
+            //    //    size_t state_index = pop_from_heap(a_heap_, a_cmp_);
+            //    //    State& state = states_[state_index];
+            //    //    if ((state.fscore() - up_ara) / up_ara > 1e-5)
+            //    //    {
+            //    //        state.h = up_ara - state.g;
+            //    //        ++count;
+            //    //        push_to_heap(a_heap_, state_index, a_cmp_);
+            //    //    }
+            //    //    else
+            //    //    {
+            //    //        push_to_heap(a_heap_, state_index, a_cmp_);
+            //    //        break;
+            //    //    }
+            //    //}
+            //    for (size_t state_index : a_heap_)
+            //    {
+            //        State& s = states_[state_index];
+            //        if (s.g + s.h > up_ara)
+            //        {
+            //            s.h = up_ara - s.g;
+            //            ++count;
+            //        }
+            //    }
+            //    std::make_heap(a_heap_.begin(), a_heap_.end(), a_cmp_);
+            //    auto&& [lo, new_up_a, up_ara] = current_bounds();
+            //    std::cout << "UPDATED! " << count << ": " << up_a << " -> " << new_up_a << " == " << up_ara
+            //        << " (size of heap " << a_heap_.size() << ")"
+            //        << " in " << (time_since_start() - start) << " seconds\n";
+            //}
+
+            //---
+            //if (ara_heap_.size() > 0)
+            //{
+            //    const State& s = states_[ara_heap_.back()];
+            //    std::cout << std::get<2>(snapshots.back().bounds) << " | " << s.fscore()
+            //        << " = " << s.g << "+" << s.h << std::endl;
+            //}
+            //---
 
             return done;
         }
 
-        bool step_for(double num_seconds)
+        bool step_for(double num_seconds, size_t num_steps)
         {
             double start = time_since_start();
             bool done = false;
 
             while (!done)
             {
+                if (solutions_.size() > 0 && solutions_[0].eps == 1.0)
+                {
+                    std::cout << "step_for: stopping early because optimal solution found." << std::endl;
+                    break;
+                }
+
                 double dur = time_since_start() - start;
-                done = steps(100);
+                done = steps(num_steps);
                 if (dur >= num_seconds)
                     break;
             }
 
             return done;
+        }
+
+        //void solve_subset(size_t num_states, size_t num_steps)
+        //{
+        //    std::vector<size_t> ara_heap, a_heap, tmp;
+        //    for (size_t i = 0; i < num_states; ++i)
+        //        tmp.push_back(std::get<0>(pop_state()));
+
+        //    // swap ARA heaps
+        //    std::swap(a_heap_, a_heap);
+        //    std::swap(ara_heap_, ara_heap);
+
+        //    // push states we will focus on
+        //    for (size_t state_index : tmp)
+        //    {
+        //        push_to_heap(a_heap_, state_index, a_cmp_);
+        //        push_to_heap(ara_heap_, state_index, ara_cmp_);
+        //    }
+
+        //    steps(num_steps);
+
+        //    while (
+
+        //    // swap back
+        //    std::swap(a_heap_, a_heap);
+        //    std::swap(ara_heap_, ara_heap);
+        //}
+
+        void push_snapshot()
+        {
+            snapshots.push_back({
+                time_since_start(),
+                num_steps_,
+                num_solutions(),
+                num_states(),
+                num_solutions() > 0 ? solutions_[0].eps : FloatT(0.0),
+                current_bounds()});
         }
 
         size_t num_solutions() const { return solutions_.size(); }
@@ -265,6 +351,11 @@ namespace veritas {
             return states_.size();
         }
 
+        std::tuple<size_t, size_t> heap_size() const
+        {
+            return {a_heap_.size(), ara_heap_.size()};
+        }
+
         /** seconds since the construction of the search */
         double time_since_start() const
         {
@@ -273,19 +364,38 @@ namespace veritas {
                     now-start_time_).count() * 1e-6;
         }
 
-        std::tuple<FloatT, FloatT> current_bounds() const
+        /** ARA* lower, A* upper, ARA* upper */
+        std::tuple<FloatT, FloatT, FloatT> current_bounds() const
         {
-            FloatT lo = FLOATT_INF;
+            FloatT lo = -FLOATT_INF, up_ara = FLOATT_INF;
             if (num_solutions() > 0)
-                lo = states_[solutions_[0].state_index].g; // best solution so far
-            FloatT up = states_[a_heap_.front()].fscore();
-            return {lo, up};
+            {
+                FloatT prev_up_ara = FLOATT_INF;
+                if (snapshots.size() > 0)
+                    prev_up_ara = std::get<2>(snapshots.back().bounds);
+                const SolutionRef& s = solutions_[0];
+                lo = states_[s.state_index].g; // best solution so far, sols are sorted
+                up_ara = std::min(prev_up_ara, lo / s.eps); // upper bound can't suddely grow (but g/eps can)
+            }
+            FloatT up_a = states_[a_heap_.front()].fscore();
+            return {lo, up_a, up_ara};
         }
 
         FloatT get_eps() const { return ara_cmp_.eps; }
 
         void set_eps(FloatT eps)
-        { ara_cmp_.eps = std::max<FloatT>(0.0, std::min<FloatT>(1.0, eps)); }
+        {
+            ara_cmp_.eps = std::max<FloatT>(0.0, std::min<FloatT>(1.0, eps));
+            if (ara_cmp_.eps < 1.0)
+                std::make_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
+            else
+                ara_heap_.clear();
+        }
+
+        void set_eps_increment(FloatT incr)
+        {
+            eps_increment_ = incr;
+        }
 
 
     private:
@@ -296,20 +406,22 @@ namespace veritas {
 
             //std::cout<< "adding " << state_index << " " << states_[state_index] << std::endl;
 
-            a_heap_.push_back(state_index);
-            std::push_heap(a_heap_.begin(), a_heap_.end(), a_cmp_);
+            push_to_heap(a_heap_, state_index, a_cmp_);
 
             // push to ARA* heap if fscore different
             //if (states_[state_index].fscore(a_cmp_.eps)
             //        != states_[state_index].fscore(ara_cmp_.eps))
             if (ara_cmp_.eps < 1.0)
-            {
-                ara_heap_.push_back(state_index);
-                std::push_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
-            }
+                push_to_heap(ara_heap_, state_index, ara_cmp_);
 
             // push state's hash to visited map
             visited_.insert({states_[state_index].hash, state_index});
+        }
+
+        void push_to_heap(std::vector<size_t>& heap, size_t state_index, const StateCmp& cmp)
+        {
+            heap.push_back(state_index);
+            std::push_heap(heap.begin(), heap.end(), cmp);
         }
 
         /** returns {state_index, eps with which state was selected} */
@@ -319,19 +431,23 @@ namespace veritas {
             FloatT eps;
             if (!ara_heap_.empty() && num_steps_%2 == 1)
             {
-                std::pop_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
-                state_index = ara_heap_.back();
-                ara_heap_.pop_back();
+                state_index = pop_from_heap(ara_heap_, ara_cmp_);
                 eps = ara_cmp_.eps;
             }
             else
             {
-                std::pop_heap(a_heap_.begin(), a_heap_.end(), a_cmp_);
-                state_index = a_heap_.back();
-                a_heap_.pop_back();
+                state_index = pop_from_heap(a_heap_, a_cmp_);
                 eps = a_cmp_.eps;
             }
             return {state_index, eps};
+        }
+
+        size_t pop_from_heap(std::vector<size_t>& heap, const StateCmp& cmp)
+        {
+            std::pop_heap(heap.begin(), heap.end(), cmp);
+            size_t state_index = heap.back();
+            heap.pop_back();
+            return state_index;
         }
 
         void push_solution(size_t state_index, FloatT eps)
@@ -346,11 +462,15 @@ namespace veritas {
                 State& s2 = states_[solutions_[i].state_index];
                 if (s1.g < s2.g)
                     std::swap(s1, s2);
+                else
+                    solutions_[i-1].eps = std::max(solutions_[i-1].eps, eps);
             }
         }
 
         bool in_visited(const State& state) const
         {
+            return false; // does not seem to be necessary, need to proof this
+
             //size_t state_hash = hash(state); // buffer this
             auto r = visited_.equal_range(state.hash);
 
@@ -456,6 +576,18 @@ namespace veritas {
                     maxmax = max;
                 }
             }
+
+            // cap heuristic to ARA* upper bound
+            //if (num_solutions() > 0)
+            //{
+            //    FloatT up_ara = std::get<2>(current_bounds());
+            //    if (new_state.fscore() > up_ara)
+            //    {
+            //        //std::cout << "capping H from " << new_state.h << " to ";
+            //        new_state.h = up_ara - new_state.g;
+            //        //std::cout << new_state.h << std::endl;
+            //    }
+            //}
         }
 
         void find_indep_sets_not_added(size_t state_index, std::vector<int>& buffer) const
@@ -508,7 +640,7 @@ namespace veritas {
                 << "State { "
                 << "g=" << s.g << ", "
                 << "h=" << s.h << ", "
-                << "box=" << s.box << ", "
+                //<< "box=" << s.box << ", "
                 << "leafs=";
 
             std::vector<NodeId> buf;
@@ -517,7 +649,7 @@ namespace veritas {
                 if (buf[i] == -1) o << "? ";
                 else o << buf[i] << ' ';
                 
-            o << "hash=" << s.hash << " }";
+            //o << "hash=" << s.hash << " }";
         }
 
 

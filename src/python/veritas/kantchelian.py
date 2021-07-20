@@ -31,6 +31,7 @@ class KantchelianAttackBase:
         try:
             self.model = gu.Model("KantchelianAttack", env=self.env) # requires license
         except:
+            print("Gurobi: could not set env, using defaults")
             self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
         self.pvars = self._construct_pvars()
 
@@ -55,8 +56,12 @@ class KantchelianAttackBase:
         self.start_time = timeit.default_timer()
         self.start_time_p = time.process_time()
         self.model.optimize(self._optimize_callback())
+        up = self.model.getAttr(gu.GRB.Attr.ObjBound)
+        lo = self.model.getAttr(gu.GRB.Attr.ObjVal)
+        self.bounds.append((lo, up))
         self.total_time = timeit.default_timer() - self.start_time
         self.total_time_p = time.process_time() - self.start_time_p
+        self.times.append((self.total_time, self.total_time_p))
 
     def _check_time(self, model):
         if self.start_time_p + self.max_time < time.process_time():
@@ -203,7 +208,7 @@ class KantchelianAttackBase:
             vars += [node_infos[n].var for n in leafs]
             leaf_values += [tree.get_leaf_value(n) for n in leafs]
 
-        return gu.LinExpr(leaf_values, vars)
+        return (gu.LinExpr(leaf_values, vars) + at.base_score)
 
     def _add_robustness_objective(self, example): # uses self.model, split_values, pvars, adds self.bvar
         self.bvar = self.model.addVar(name="b")

@@ -118,6 +118,41 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[:3])
         plot_img_solutions(imghat, solutions[-3:])
 
+    def test_img3(self):
+        img = imageio.imread("tests/data/img.png")
+        X = np.array([[x, y] for x in range(100) for y in range(100)])
+        y = np.array([img[x, y] for x, y in X])
+        X = X.astype(np.float32)
+
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+        print(at.base_score)
+        yhat = at.eval(X)
+        imghat = np.array(yhat).reshape((100, 100))
+
+        at = at.neutralize_negative_leaf_values()
+        print(at.base_score)
+        yhat2 = at.eval(X)
+
+        print("output difference", sum(abs(yhat-yhat2))/len(yhat))
+        self.assertLess(sum(abs(yhat-yhat2))/len(yhat), 1e-5)
+
+        m, M = min(yhat), max(yhat)
+        #img = np.array(ys).reshape((100, 100))
+
+        search = Search(at)
+        done = False
+        while not done:
+            done = search.steps(100)
+        self.assertTrue(done)
+        #self.assertEqual(search.num_solutions(), 32);
+
+        solutions = [search.get_solution(i) for i in range(search.num_solutions())]
+        self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:]))) #sorted?
+        self.assertLess((solutions[0].output-M)/M, 1e-5)
+        self.assertLess((solutions[-1].output-m)/m, 1e-5)
+
+        plot_img_solutions(imghat, solutions[:3])
+        plot_img_solutions(imghat, solutions[-3:])
 
 
 if __name__ == "__main__":

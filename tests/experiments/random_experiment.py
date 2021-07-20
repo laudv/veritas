@@ -2,7 +2,7 @@ import os, sys, json, gzip
 #import util
 import datasets
 import veritas
-from veritas import GraphSearch, Domain
+from veritas import GraphSearch, Domain, TRUE_DOMAIN, FALSE_DOMAIN
 import veritas0
 #from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 #from treeck_robust import TreeckRobustnessSearch
@@ -57,10 +57,11 @@ def generate_random_constraints(X, num_constraints, seed):
 
     for k in rng.randint(0, K, num_constraints):
         if binary[k]:
+            print("yo")
             if rng.rand() < 0.5:
-                constraints[k] = Domain(0.0, 0.5)
+                constraints[k] = FALSE_DOMAIN
             else:
-                constraints[k] = Domain(0.5, 1.0)
+                constraints[k] = TRUE_DOMAIN
         else:
             c = constraints[k]
             split = c.lo + rng.rand() * (c.hi - c.lo)
@@ -92,9 +93,11 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
         dataset.load_model(num_trees, tree_depth)
         at0 = dataset.at
 
-        constraints = generate_random_constraints(dataset.X, 10, prune_seed)
+        constraints = generate_random_constraints(dataset.X, 100, prune_seed)
+        #at = at0.prune(constraints)
+        at = at0
+        #at = at.neutralize_negative_leaf_values()
         #print(constraints)
-        at = at0.prune(constraints)
         #print(at)
         #at = veritas.AddTree(at, 0, 10)
         #print(at)
@@ -103,8 +106,20 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
         if algos[0] == "1":
             print("\n== VERITAS ======================================")
             search = GraphSearch(at)
-            search.set_eps(1.0) # disable ARA*
-            done = search.step_for(MAX_TIME)
+            search.prune(constraints)
+            search.set_eps(0.01)
+            search.set_eps_increment(0.01)
+
+            done = search.step_for(MAX_TIME, 500)
+
+            #done = False
+            #while search.time_since_start() < MAX_TIME:
+            #    done = search.steps(100)
+
+            #done = False
+            #while search.num_solutions() == 0:
+            #    done = search.steps(1000)
+
             print(done, search.num_solutions(), search.current_bounds())
             if search.num_solutions() > 0:
                 s = search.get_solution(0)
@@ -119,7 +134,7 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
             result["veritas"] = {}
             result["veritas"]["bounds"] = [s.bounds for s in search.snapshots]
             result["veritas"]["times"] = [s.time for s in search.snapshots]
-            #result["veritas"]["num_steps"] = [s.num_steps for s in search.stats.snapshots]
+            result["veritas"]["heap_size"] = search.heap_size()
 
             result["veritas"]["solutions"] = []
             for i in range(search.num_solutions()):
@@ -131,7 +146,8 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
             print("\n== VERITAS0 =====================================")
             atcpy = _veritas_at_to_veritas0_at(at)
             opt = veritas0.Optimizer(maximize=atcpy, max_memory=MAX_MEM)
-            #opt.prune_box(box, instance=1)
+            constraints0 = [veritas0.RealDomain(c.lo, c.hi) for c in constraints]
+            opt.prune_box(constraints0, instance=1)
             dur, oom = opt.astar(max_time=MAX_TIME)
             result["veritas0"] = opt.stats()
             result["veritas0_time"] = dur
@@ -141,17 +157,17 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
                 print("    sol:", result["veritas0"]["solutions"][0])
             print("    veritas0 time", dur)
 
-            print("\n== VERITAS ARA* =================================")
-            opt = veritas0.Optimizer(maximize=atcpy, max_memory=MAX_MEM)
-            #opt.prune_box(box, instance=1)
-            dur, oom = opt.arastar(max_time=MAX_TIME)
-            result["veritas0_ara"] = opt.stats()
-            result["veritas0_ara_time"] = dur
-            result["veritas0_ara_oom"] = oom
-            print("   ", result["veritas0_ara"]["bounds"][-1], dur)
-            if len(result["veritas0_ara"]["solutions"]) > 0:
-                print("    sol:", max(result["veritas0_ara"]["solutions"], key=lambda s: s[1])[1])
-            print("    veritas0 time", dur)
+            #print("\n== VERITAS0 ARA* =================================")
+            #opt = veritas0.Optimizer(maximize=atcpy, max_memory=MAX_MEM)
+            ##opt.prune_box(constraints0, instance=1)
+            #dur, oom = opt.arastar(max_time=MAX_TIME)
+            #result["veritas0_ara"] = opt.stats()
+            #result["veritas0_ara_time"] = dur
+            #result["veritas0_ara_oom"] = oom
+            #print("   ", result["veritas0_ara"]["bounds"][-1], dur)
+            #if len(result["veritas0_ara"]["solutions"]) > 0:
+            #    print("    sol:", max(result["veritas0_ara"]["solutions"], key=lambda s: s[1])[1])
+            #print("    veritas0 time", dur)
 
         if algos[2] == "1":
             print("\n== MERGE ========================================")
@@ -163,14 +179,17 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
 
         if algos[3] == "1":
             print("\n== KANTCHELIAN MIPS =============================")
-            kan = KantchelianOutputOpt(at, max_time=MAX_TIME)
-            #kan.constraint_to_box(constraints)
+            #kan_at = at.prune(constraints)
+            #kan_at = kan_at.neutralize_negative_leaf_values()
+            kan_at = at
+            kan = KantchelianOutputOpt(kan_at, max_time=MAX_TIME)
+            kan.constraint_to_box(constraints)
             kan.optimize()
 
             result["kantchelian_output"] = kan.solution()
             result["kantchelian"] = kan.stats()
-            print("   ", result["kantchelian"]["bounds"][-1], kan.total_time_p)
-            print("   ", result["kantchelian_output"])
+            print("   bounds", result["kantchelian"]["bounds"][-1], kan.total_time_p)
+            print("   output", result["kantchelian_output"])
 
         result_str = json.dumps(result)
         result_bytes = result_str.encode('utf-8')

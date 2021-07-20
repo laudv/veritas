@@ -256,6 +256,8 @@ namespace veritas {
 
         Tree prune(BoxRef box) const;
 
+        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const;
+
         template <typename D>
         FloatT eval(const row<D>& data) const { return root().eval(data); }
 
@@ -307,6 +309,10 @@ namespace veritas {
 
         SplitMapT get_splits() const;
         AddTree prune(BoxRef box) const;
+
+        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const;
+        /** (base_score-offset) + ({leafs} + offset) */
+        AddTree neutralize_negative_leaf_values() const;
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);

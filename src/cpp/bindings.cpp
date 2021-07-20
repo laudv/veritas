@@ -38,6 +38,45 @@ std::string tostr(T& o)
     return s.str();
 }
 
+Box
+tobox(py::list pybox)
+{
+    Box box;
+    FeatId count = 0;
+    for (const auto& x : pybox)
+    {
+        Domain d;
+        if (py::isinstance<py::tuple>(x))
+        {
+            py::tuple t = py::cast<py::tuple>(x);
+            FeatId id = py::cast<FeatId>(t[0]);
+            d = py::cast<Domain>(t[1]);
+            //box.push_back({id, dom});
+            count = id;
+        }
+        else if (py::isinstance<Domain>(x))
+        {
+            d = py::cast<Domain>(x);
+            //box.push_back({count, dom});
+        }
+        if (!std::isinf(d.lo))
+            refine_box(box, LtSplit(count, d.lo), false);
+        if (!std::isinf(d.hi))
+            refine_box(box, LtSplit(count, d.hi), true);
+        //for (auto bb : box)//debug print
+        //{
+        //    if (bb.feat_id == count)
+        //    {
+        //        std::cout << "- in box:   " << bb.domain << " equal? "
+        //            << (bb.domain.lo == d.lo) << (bb.domain.hi == d.hi) << std::endl
+        //            << "  in pybox: " << d << std::endl;
+        //    }
+        //}
+        ++count;
+    }
+    return box;
+}
+
 //static AddTree DUMMY_ADDTREE{};
 
 //using TreeD = Tree<Split, FloatT>;
@@ -146,29 +185,12 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("add_tree", [](const std::shared_ptr<AddTree>& at) {
                 at->add_tree(); return TreeRef{at, at->size()-1}; })
         .def("prune", [](AddTree& at, const py::list& pybox) {
-            Box box;
-            FeatId count = 0;
-            for (const auto& x : pybox)
-            {
-                if (py::isinstance<py::tuple>(x))
-                {
-                    py::tuple t = py::cast<py::tuple>(x);
-                    FeatId id = py::cast<FeatId>(t[0]);
-                    Domain dom = py::cast<Domain>(t[1]);
-                    box.push_back({id, dom});
-                    count = id;
-                }
-                else if (py::isinstance<Domain>(x))
-                {
-                    Domain dom = py::cast<Domain>(x);
-                    box.push_back({count, dom});
-                }
-                ++count;
-            }
+            Box box = tobox(pybox);
             BoxRef b(box);
-            py::print("pruning using box", tostr(b));
+            //py::print("pruning AddTree using box", tostr(b));
             return at.prune(b);
         })
+        .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
         .def("to_json", [](const AddTree& at) {
             std::stringstream s;
             at.to_json(s);
@@ -288,35 +310,19 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("step_for", &GraphSearch::step_for)
         .def("num_solutions", &GraphSearch::num_solutions)
         .def("num_states", &GraphSearch::num_states)
+        .def("heap_size", &GraphSearch::heap_size)
         .def("get_solution", &GraphSearch::get_solution)
         .def("time_since_start", &GraphSearch::time_since_start)
         .def("current_bounds", &GraphSearch::current_bounds)
         .def("get_eps", &GraphSearch::get_eps)
         .def("set_eps", &GraphSearch::set_eps)
+        .def("set_eps_increment", &GraphSearch::set_eps_increment)
         //.def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
         .def_readonly("snapshots", &GraphSearch::snapshots)
         .def("prune", [](GraphSearch& s, const py::list& pybox) {
-            Box box;
-            FeatId count = 0;
-            for (const auto& x : pybox)
-            {
-                if (py::isinstance<py::tuple>(x))
-                {
-                    py::tuple t = py::cast<py::tuple>(x);
-                    FeatId id = py::cast<FeatId>(t[0]);
-                    Domain dom = py::cast<Domain>(t[1]);
-                    box.push_back({id, dom});
-                    count = id;
-                }
-                else if (py::isinstance<Domain>(x))
-                {
-                    Domain dom = py::cast<Domain>(x);
-                    box.push_back({count, dom});
-                }
-                ++count;
-            }
+            Box box = tobox(pybox);
             BoxRef b(box);
-            py::print("pruning GraphSearch using box", tostr(b));
+            //py::print("pruning GraphSearch using box", tostr(b));
             return s.prune_by_box(b);
         })
         ;
@@ -335,6 +341,7 @@ PYBIND11_MODULE(pyveritas, m) {
         //.def_readonly("num_impossible", &Snapshot::num_impossible)
         .def_readonly("num_solutions", &Snapshot::num_solutions)
         .def_readonly("num_states", &Snapshot::num_states)
+        .def_readonly("eps", &Snapshot::eps)
         .def_readonly("bounds", &Snapshot::bounds)
         ;
 

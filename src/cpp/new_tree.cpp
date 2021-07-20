@@ -234,6 +234,35 @@ namespace veritas {
         return new_tree;
     }
 
+    std::tuple<FloatT, FloatT>
+    Tree::find_minmax_leaf_value() const
+    {
+        FloatT min = +FLOATT_INF;
+        FloatT max = -FLOATT_INF;
+
+        std::stack<ConstRef, std::vector<ConstRef>> stack;
+        stack.push(root());
+
+        while (stack.size() != 0)
+        {
+            ConstRef n = stack.top();
+            stack.pop();
+
+            if (n.is_internal())
+            {
+                stack.push(n.right());
+                stack.push(n.left());
+            }
+            else
+            {
+                min = std::min(min, n.leaf_value());
+                max = std::max(max, n.leaf_value());
+            }
+        }
+
+        return {min, max};
+    }
+
     std::ostream&
     operator<<(std::ostream& strm, const Tree& t)
     {
@@ -305,6 +334,59 @@ namespace veritas {
         AddTree new_at;
         for (const Tree& t : *this)
             new_at.add_tree(t.prune(box));
+        return new_at;
+    }
+
+    std::tuple<FloatT, FloatT>
+    AddTree::find_minmax_leaf_value() const
+    {
+        FloatT min = +FLOATT_INF;
+        FloatT max = -FLOATT_INF;
+
+        for (const Tree& tree : *this)
+        {
+            auto&& [m, M] = tree.find_minmax_leaf_value();
+            min = std::min(min, m);
+            max = std::max(max, M);
+        }
+
+        return {min, max};
+    }
+
+    AddTree
+    AddTree::neutralize_negative_leaf_values() const
+    {
+        AddTree new_at;
+        new_at.base_score = base_score;
+        for (const Tree& tree : *this)
+        {
+            Tree& new_tree = new_at.add_tree();
+            std::stack<Tree::ConstRef, std::vector<Tree::ConstRef>> stack1;
+            std::stack<Tree::MutRef, std::vector<Tree::MutRef>> stack2;
+            stack1.push(tree.root());
+            stack2.push(new_tree.root());
+
+            FloatT offset = std::min<FloatT>(0.0, std::get<0>(tree.find_minmax_leaf_value()));
+            new_at.base_score += offset;
+
+            while (stack1.size() > 0)
+            {
+                auto n1 = stack1.top(); stack1.pop();
+                auto n2 = stack2.top(); stack2.pop();
+                if (n1.is_internal())
+                {
+                    n2.split(n1.get_split());
+                    stack1.push(n1.right()); stack1.push(n1.left());
+                    stack2.push(n2.right()); stack2.push(n2.left());
+                }
+                else
+                {
+                    n2.set_leaf_value(n1.leaf_value() - offset);
+                }
+            }
+
+        }
+        std::cout << "neutralize_negative_leaf_values: base_score" << base_score << " -> " << new_at.base_score << std::endl;
         return new_at;
     }
 
