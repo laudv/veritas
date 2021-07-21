@@ -77,9 +77,10 @@ def plot(jsons):
             ax.plot(j["veritas"]["times"], ver_lo_bnds, label="veritas lo", c=lv.get_color(), ls="--", marker="v")
             ax.plot(j["veritas"]["times"], ver_up2_bnds, label="veritas up2", c=lv.get_color(), ls=":", marker="^")
 
+            print("== veritas bounds", j["veritas"]["bounds"][-1])
             print("heap_size", j["veritas"]["heap_size"])
-
             print("number of solutions veritas", len(j["veritas"]["solutions"]))
+
             if len(j["veritas"]["solutions"]) > 0:
                 print("veritas solution", j["veritas"]["solutions"][0])
                 #ax.axhline(y=j["veritas"]["solutions"][0]["output"], color="gray", ls=":", label="ver sol")
@@ -97,8 +98,9 @@ def plot(jsons):
             kan_times_hi = (kan_times_lo + [j["kantchelian"]["time_p"]])[0:len(kan_hi_bnds)]
             lk, = ax.plot(kan_times_hi, kan_hi_bnds, label="milp")
             ax.plot(kan_times_lo, kan_lo_bnds, label="milp lo", c=lk.get_color(), ls="--")
-            ax.axhline(j["kantchelian_output"], ls="--", color="lightgray", label="solution kan")
-            print("kantchelian_output", j["kantchelian_output"], j["kantchelian"]["bounds"][-1])
+            if kan_lo_bnds[-1] == kan_hi_bnds[-1]:
+                ax.axhline(j["kantchelian_output"], ls="--", color="lightgray", label="solution kan")
+            print("== kantchelian_bounds", j["kantchelian"]["bounds"][-1], "time", j["kantchelian"]["time_p"])
 
         if "merge" in j:
             ax.plot(j["merge"]["times"], [b[1] for b in j["merge"]["bounds"]], label="merge")
@@ -124,6 +126,8 @@ def plot(jsons):
         ax.set_ylabel("model output")
         ax.legend()
         plt.show()
+
+        print()
 
 def parse_file(filename):
     with gzip.open(filename, "rb") as f:

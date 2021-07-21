@@ -313,7 +313,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("heap_size", &GraphSearch::heap_size)
         .def("get_solution", &GraphSearch::get_solution)
         .def("time_since_start", &GraphSearch::time_since_start)
-        .def("current_bounds", &GraphSearch::current_bounds)
+        .def("current_bounds", &GraphSearch::current_bounds_with_base_score)
         .def("get_eps", &GraphSearch::get_eps)
         .def("set_eps", &GraphSearch::set_eps)
         .def("set_eps_increment", &GraphSearch::set_eps_increment)

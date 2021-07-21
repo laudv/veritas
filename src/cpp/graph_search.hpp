@@ -122,6 +122,7 @@ namespace veritas {
         time_point start_time_;
         std::vector<SolutionRef> solutions_; // indices into states_
         size_t num_steps_;
+        double last_eps_increment_, avg_eps_update_time_;
         
     public:
         friend StateCmp;
@@ -136,11 +137,13 @@ namespace veritas {
             , eps_increment_{0.01}
             , start_time_{std::chrono::system_clock::now()}
             , num_steps_{0}
+            , last_eps_increment_{0.0}
+            , avg_eps_update_time_{0.0}
         {
             //std::cout << g_ << std::endl;
             State s = {
                 0, // parent
-                g_.base_score, // g
+                0.0, // g --> add base score only in solution to avoid negative numbers
                 0.0, // h
                 BoxRef::null_box(), // box
                 0, // next_indep_set
@@ -191,11 +194,44 @@ namespace veritas {
                     << " output=" << states_[state_index].g
                     << std::endl;
                 push_solution(state_index, state_eps);
-                set_eps(ara_cmp_.eps + eps_increment_);
+                update_eps(eps_increment_);
             }
             else
             {
                 expand(state_index);
+
+                // if the previous best suboptimal solution was still in the ara
+                // stack, would it be at the top? if so, increase eps
+                if (num_solutions() > 0 && state_eps != 1.0 && ara_heap_.size() > 0)
+                {
+                    SolutionRef& sol = solutions_[0];
+                    const State& s1 = states_[sol.state_index];
+                    const State& s0 = states_[state_index];
+                    if (sol.eps != 1.0 && s1.fscore(state_eps) > s0.fscore(state_eps))
+                    {
+                        std::cout << "UPDATE PREVOUS SOLUTION " << s1.fscore(state_eps)
+                            << " > " << s0.fscore(state_eps)
+                            << " (" << state_eps << " ==? " << ara_cmp_.eps << ")";
+                        sol.eps = state_eps;
+                        update_eps(eps_increment_);
+                        std::cout << " new eps=" << ara_cmp_.eps << std::endl;
+                    }
+                }
+
+                // if finding another suboptimal solution takes too long,
+                // decrease eps, halve eps_increment_
+                double t = time_since_start();
+                if (last_eps_increment_ > 0.0 && (t-last_eps_increment_) > 20*avg_eps_update_time_)
+                {
+                    std::cout << "HALVING eps_increment_ to " << eps_increment_/2.0
+                        << " avg t: " << avg_eps_update_time_
+                        << " t: " << (t-last_eps_increment_);
+                    eps_increment_ = std::max(0.001, eps_increment_/2.0);
+                    update_eps(-eps_increment_);
+                    std::cout
+                        << " (eps=" << ara_cmp_.eps << ")"
+                        << std::endl;
+                }
             }
 
             ++num_steps_;
@@ -216,28 +252,12 @@ namespace veritas {
             }
             push_snapshot();
 
-            // TRYING OUT: adjusting A* upper bound based on ARA* upper bound
+            // TRYING OUT: cap heuristic based on ARA* upper bound
             //auto&& [lo, up_a, up_ara] = current_bounds();
             //if ((up_a - up_ara) / up_ara > 1e-5)
             //{
             //    double start = time_since_start();
             //    size_t count = 0;
-            //    //while (true)
-            //    //{
-            //    //    size_t state_index = pop_from_heap(a_heap_, a_cmp_);
-            //    //    State& state = states_[state_index];
-            //    //    if ((state.fscore() - up_ara) / up_ara > 1e-5)
-            //    //    {
-            //    //        state.h = up_ara - state.g;
-            //    //        ++count;
-            //    //        push_to_heap(a_heap_, state_index, a_cmp_);
-            //    //    }
-            //    //    else
-            //    //    {
-            //    //        push_to_heap(a_heap_, state_index, a_cmp_);
-            //    //        break;
-            //    //    }
-            //    //}
             //    for (size_t state_index : a_heap_)
             //    {
             //        State& s = states_[state_index];
@@ -247,21 +267,22 @@ namespace veritas {
             //            ++count;
             //        }
             //    }
+            //    for (size_t state_index : ara_heap_)
+            //    {
+            //        State& s = states_[state_index];
+            //        if (s.g + s.h > up_ara)
+            //        {
+            //            s.h = up_ara - s.g;
+            //            ++count;
+            //        }
+            //    }
             //    std::make_heap(a_heap_.begin(), a_heap_.end(), a_cmp_);
+            //    std::make_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
             //    auto&& [lo, new_up_a, up_ara] = current_bounds();
             //    std::cout << "UPDATED! " << count << ": " << up_a << " -> " << new_up_a << " == " << up_ara
             //        << " (size of heap " << a_heap_.size() << ")"
             //        << " in " << (time_since_start() - start) << " seconds\n";
             //}
-
-            //---
-            //if (ara_heap_.size() > 0)
-            //{
-            //    const State& s = states_[ara_heap_.back()];
-            //    std::cout << std::get<2>(snapshots.back().bounds) << " | " << s.fscore()
-            //        << " = " << s.g << "+" << s.h << std::endl;
-            //}
-            //---
 
             return done;
         }
@@ -322,7 +343,7 @@ namespace veritas {
                 num_solutions(),
                 num_states(),
                 num_solutions() > 0 ? solutions_[0].eps : FloatT(0.0),
-                current_bounds()});
+                current_bounds_with_base_score()});
         }
 
         size_t num_solutions() const { return solutions_.size(); }
@@ -339,7 +360,7 @@ namespace veritas {
                 state_index,
                 solution_index,
                 eps,
-                state.g,
+                at_.base_score + state.g,
                 node_ids, // copy
                 {state.box.begin(), state.box.end()},
                 time,
@@ -364,23 +385,6 @@ namespace veritas {
                     now-start_time_).count() * 1e-6;
         }
 
-        /** ARA* lower, A* upper, ARA* upper */
-        std::tuple<FloatT, FloatT, FloatT> current_bounds() const
-        {
-            FloatT lo = -FLOATT_INF, up_ara = FLOATT_INF;
-            if (num_solutions() > 0)
-            {
-                FloatT prev_up_ara = FLOATT_INF;
-                if (snapshots.size() > 0)
-                    prev_up_ara = std::get<2>(snapshots.back().bounds);
-                const SolutionRef& s = solutions_[0];
-                lo = states_[s.state_index].g; // best solution so far, sols are sorted
-                up_ara = std::min(prev_up_ara, lo / s.eps); // upper bound can't suddely grow (but g/eps can)
-            }
-            FloatT up_a = states_[a_heap_.front()].fscore();
-            return {lo, up_a, up_ara};
-        }
-
         FloatT get_eps() const { return ara_cmp_.eps; }
 
         void set_eps(FloatT eps)
@@ -397,6 +401,14 @@ namespace veritas {
             eps_increment_ = incr;
         }
 
+        /** ARA* lower, A* upper, ARA* upper */
+        std::tuple<FloatT, FloatT, FloatT> current_bounds_with_base_score() const
+        {
+            auto &&[lo, up_a, up_ara] = current_bounds();
+            return {lo+at_.base_score, up_a+at_.base_score, up_ara+at_.base_score};
+        }
+
+
 
     private:
         void push_state(State&& state)
@@ -408,9 +420,6 @@ namespace veritas {
 
             push_to_heap(a_heap_, state_index, a_cmp_);
 
-            // push to ARA* heap if fscore different
-            //if (states_[state_index].fscore(a_cmp_.eps)
-            //        != states_[state_index].fscore(ara_cmp_.eps))
             if (ara_cmp_.eps < 1.0)
                 push_to_heap(ara_heap_, state_index, ara_cmp_);
 
@@ -450,20 +459,61 @@ namespace veritas {
             return state_index;
         }
 
+        /** ARA* lower, A* upper, ARA* upper */
+        std::tuple<FloatT, FloatT, FloatT> current_bounds() const
+        {
+            FloatT lo = -FLOATT_INF, up_ara = FLOATT_INF;
+            if (num_solutions() > 0)
+            {
+                const SolutionRef& s = solutions_[0];
+                lo = states_[s.state_index].g; // best solution so far, sols are sorted
+                up_ara = lo / s.eps;
+            }
+            FloatT up_a = states_[a_heap_.front()].fscore();
+            return {lo, up_a, up_ara};
+        }
+
+
+        void update_eps(FloatT added_value) // this updates time, set_eps does not
+        {
+            set_eps(ara_cmp_.eps + added_value);
+
+            double t = time_since_start();
+            double time_since_previous_incr = t - last_eps_increment_;
+            //if (time_since_previous_incr*10 < avg_eps_update_time_)
+            //{
+            //    eps_increment_ *= 2;
+            //    std::cout << "DOUBLING eps_increment_ to " << eps_increment_
+            //        << " avg t: " << avg_eps_update_time_
+            //        << " t: " << (t - last_eps_increment_)
+            //        << std::endl;
+            //}
+            last_eps_increment_ = t;
+            avg_eps_update_time_ = 0.2*avg_eps_update_time_ + 0.8*time_since_previous_incr;
+        }
+
         void push_solution(size_t state_index, FloatT eps)
         {
             states_[state_index].is_expanded = true;
             solutions_.push_back({ state_index, eps, time_since_start() });
 
             // sort solutions
-            for (size_t i = solutions_.size()-1; i > 0; --i)
+            size_t i = solutions_.size()-1;
+            for (; i > 0; --i)
             {
-                State& s1 = states_[solutions_[i-1].state_index];
-                State& s2 = states_[solutions_[i].state_index];
-                if (s1.g < s2.g)
-                    std::swap(s1, s2);
+                SolutionRef& sol1 = solutions_[i-1];
+                SolutionRef& sol2 = solutions_[i];
+                if (states_[sol1.state_index].g < states_[sol2.state_index].g)
+                {
+                    std::swap(sol1, sol2);
+                }
                 else
-                    solutions_[i-1].eps = std::max(solutions_[i-1].eps, eps);
+                {
+                    std::cout << "- updating solution eps from " << sol1.eps;
+                    sol1.eps = std::max(sol1.eps, eps);
+                    std::cout << " to " <<  std::max(solutions_[i-1].eps, eps)
+                        << " with s1.g=" << states_[sol1.state_index].g << " >= " << states_[state_index].g << std::endl;
+                }
             }
         }
 

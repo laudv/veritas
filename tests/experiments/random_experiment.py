@@ -9,14 +9,14 @@ import veritas0
 from veritas.kantchelian import KantchelianOutputOpt
 import numpy as np
 
-MAX_TIME = 2
+MAX_TIME = 100
 MAX_MEM = 4*1024*1024*1024
 
 def _veritas_at_to_veritas0_at(veritas_at):
     at0 = veritas_at
     at1 = veritas0.AddTree()
 
-    at1.base_score = at1.base_score
+    at1.base_score = at0.base_score
 
     for tree_index in range(len(at0)):
         tree0 = at0[tree_index]
@@ -94,21 +94,20 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
         at0 = dataset.at
 
         constraints = generate_random_constraints(dataset.X, 100, prune_seed)
-        #at = at0.prune(constraints)
-        at = at0
-        #at = at.neutralize_negative_leaf_values()
-        #print(constraints)
-        #print(at)
-        #at = veritas.AddTree(at, 0, 10)
-        #print(at)
-        print("prune:", at0.num_nodes(), "to", at.num_nodes(), "nodes")
+        at_prune = at0.prune(constraints)
+        if True:
+            at = at0
+        else:
+            at = at0.neutralize_negative_leaf_values()
+            at.base_score = 0.0
+        print("prune:", at0.num_nodes(), "to", at_prune.num_nodes(), "nodes")
 
         if algos[0] == "1":
             print("\n== VERITAS ======================================")
             search = GraphSearch(at)
             search.prune(constraints)
-            search.set_eps(0.01)
-            search.set_eps_increment(0.01)
+            search.set_eps(0.1)
+            search.set_eps_increment(0.1)
 
             done = search.step_for(MAX_TIME, 500)
 
@@ -179,11 +178,11 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
 
         if algos[3] == "1":
             print("\n== KANTCHELIAN MIPS =============================")
-            #kan_at = at.prune(constraints)
+            kan_at = at.prune(constraints)
             #kan_at = kan_at.neutralize_negative_leaf_values()
-            kan_at = at
+            #kan_at = at
             kan = KantchelianOutputOpt(kan_at, max_time=MAX_TIME)
-            kan.constraint_to_box(constraints)
+            #kan.constraint_to_box(constraints)
             kan.optimize()
 
             result["kantchelian_output"] = kan.solution()
@@ -221,6 +220,8 @@ if __name__ == "__main__":
         dataset = datasets.Covtype()
     elif dataset == "higgs":
         dataset = datasets.Higgs()
+    elif dataset == "mnist2v6":
+        dataset = datasets.Mnist2v6()
     else:
         raise RuntimeError("invalid dataset")
 
