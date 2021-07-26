@@ -234,33 +234,63 @@ namespace veritas {
         return new_tree;
     }
 
-    std::tuple<FloatT, FloatT>
-    Tree::find_minmax_leaf_value() const
-    {
-        FloatT min = +FLOATT_INF;
-        FloatT max = -FLOATT_INF;
+    //std::tuple<FloatT, FloatT>
+    //Tree::find_minmax_leaf_value() const
+    //{
+    //    FloatT min = +FLOATT_INF;
+    //    FloatT max = -FLOATT_INF;
 
-        std::stack<ConstRef, std::vector<ConstRef>> stack;
-        stack.push(root());
+    //    std::stack<ConstRef, std::vector<ConstRef>> stack;
+    //    stack.push(root());
+
+    //    while (stack.size() != 0)
+    //    {
+    //        ConstRef n = stack.top();
+    //        stack.pop();
+
+    //        if (n.is_internal())
+    //        {
+    //            stack.push(n.right());
+    //            stack.push(n.left());
+    //        }
+    //        else
+    //        {
+    //            min = std::min(min, n.leaf_value());
+    //            max = std::max(max, n.leaf_value());
+    //        }
+    //    }
+
+    //    return {min, max};
+    //}
+
+    Tree
+    Tree::limit_depth(int max_depth) const
+    {
+        Tree new_tree;
+
+        std::stack<std::tuple<ConstRef, MutRef, int>,
+            std::vector<std::tuple<ConstRef, MutRef, int>>> stack;
+        stack.push({root(), new_tree.root(), 0});
 
         while (stack.size() != 0)
         {
-            ConstRef n = stack.top();
+            auto [n, m, depth] = stack.top();
             stack.pop();
 
-            if (n.is_internal())
+            if (depth < max_depth && n.is_internal())
             {
-                stack.push(n.right());
-                stack.push(n.left());
+                m.split(n.get_split());
+                stack.push({n.right(), m.right(), depth+1});
+                stack.push({n.left(), m.left(), depth+1});
             }
             else
             {
-                min = std::min(min, n.leaf_value());
-                max = std::max(max, n.leaf_value());
+                // set leaf value to maximum leaf value in subtree
+                m.set_leaf_value(std::get<1>(n.find_minmax_leaf_value()));
             }
         }
 
-        return {min, max};
+        return new_tree;
     }
 
     std::ostream&
@@ -388,6 +418,16 @@ namespace veritas {
         }
         std::cout << "neutralize_negative_leaf_values: base_score "
             << base_score << " -> " << new_at.base_score << std::endl;
+        return new_at;
+    }
+
+    AddTree
+    AddTree::limit_depth(int max_depth) const
+    {
+        AddTree new_at;
+        new_at.base_score = base_score;
+        for (const Tree& tree : *this)
+            new_at.add_tree(tree.limit_depth(max_depth));
         return new_at;
     }
 

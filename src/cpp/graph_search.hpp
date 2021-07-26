@@ -129,7 +129,7 @@ namespace veritas {
 
         std::vector<Snapshot> snapshots;
 
-        GraphSearch(const AddTree& at)
+        GraphSearch(const AddTree& at, int merge = 0)
             : at_(at.neutralize_negative_leaf_values())
             , g_(at_)
             , a_cmp_{*this, 1.0}
@@ -140,7 +140,9 @@ namespace veritas {
             , last_eps_increment_{0.0}
             , avg_eps_update_time_{0.0}
         {
-            //std::cout << g_ << std::endl;
+            if (merge > 1)
+                g_.merge(merge, 1.000);
+
             State s = {
                 0, // parent
                 0.0, // g --> add base score only in solution to avoid negative numbers
@@ -191,7 +193,7 @@ namespace veritas {
             {
                 std::cout << "SOLUTION "
                     << " eps=" << state_eps
-                    << " output=" << states_[state_index].g
+                    << " output=" << (states_[state_index].g+at_.base_score)
                     << std::endl;
                 push_solution(state_index, state_eps);
                 update_eps(eps_increment_);

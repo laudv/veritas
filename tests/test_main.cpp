@@ -756,6 +756,52 @@ void test_graph_search2()
     std::cout << "numsols: " << s.num_solutions() << std::endl;
 }
 
+void test_graph_simplify()
+{
+    AddTree at;
+    {
+        std::ifstream f;
+        f.open("tests/models/xgb-allstate.json");
+        at.from_json(f);
+    }
+    //for (const Tree& t : at)
+    //    std::cout << t << std::endl;
+    std::cout << "---------" << std::endl;
+    AddTree at_lim = at.limit_depth(1);
+    for (const Tree& t : at_lim)
+        std::cout << t << std::endl;
+
+    GraphSearch s(at);
+    GraphSearch s_lim(at_lim, 0);
+
+    while (s.num_solutions() == 0)
+        s.steps(50);
+    std::cout << "---------" << std::endl;
+    while (s_lim.num_solutions() == 0)
+        s_lim.steps(50);
+
+    for (size_t i = 0; i < s.num_solutions(); ++i)
+        std::cout << s.get_solution(i) << std::endl;
+    std::cout << "---------" << std::endl;
+    for (size_t i = 0; i < s_lim.num_solutions(); ++i)
+        std::cout << s_lim.get_solution(i) << std::endl;
+
+    std::cout << "--------- PRUNED" << std::endl;
+    GraphSearch s2(at);
+    s2.prune_by_box(s_lim.get_solution(0).box);
+
+    while (s2.num_solutions() == 0)
+        s2.steps(50);
+    for (size_t i = 0; i < s2.num_solutions(); ++i)
+        std::cout << s2.get_solution(i) << std::endl;
+    std::cout << "---------" << std::endl;
+
+    for (auto s : s.snapshots)
+        std::cout << "s:    " << std::get<1>(s.bounds) << std::endl;
+    for (auto s : s_lim.snapshots)
+        std::cout << "slim: " << std::get<1>(s.bounds) << std::endl;
+}
+
 int main()
 {
     //test_tree1();
@@ -780,7 +826,9 @@ int main()
 
     //test_hash1();
 
-    test_graph_search1();
+    //test_graph_search1();
     //test_graph_search2();
+
+    test_graph_simplify();
 
 }

@@ -12,6 +12,8 @@
 
 #include <iomanip>
 #include <chrono>
+#include <map>
+#include <set>
 
 namespace veritas {
 
@@ -205,14 +207,15 @@ namespace veritas {
                     std::swap(set0, set1);
                 }
 
-                //std::cout << "merge new_set of size " << set0.size() << std::endl;
+                std::cout << "merge new_set of size " << set0.size() << std::endl;
                 new_sets.push_back(std::move(set0));
             }
 
             std::swap(new_sets, sets_);
             return true;
         }
-    };
+
+    }; // class Graph
 
     std::ostream&
     operator<<(std::ostream& s, const Graph& graph)

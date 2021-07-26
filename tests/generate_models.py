@@ -105,6 +105,31 @@ def generate_img():
     #with open("tests/models/xgb-img-hard-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
 
+def generate_allstate():
+    allstate_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "allstate.h5")
+    data = pd.read_hdf(allstate_data_path)
+    X = data.drop(columns=["loss"]).to_numpy()
+    y = data.loss.to_numpy()
+
+    max_depth, num_trees = 5, 100
+    print(f"training model depth={max_depth}, num_trees={num_trees}")
+
+    params = {
+        "objective": "reg:squarederror",
+        "tree_method": "hist",
+        "seed": 14,
+        "nthread": 4,
+        "max_depth": max_depth
+    }
+
+    dtrain = xgb.DMatrix(X, y, missing=None)
+    model = xgb.train(params, dtrain, num_boost_round=num_trees,
+                      evals=[(dtrain, "train")])
+    at = addtree_from_xgb_model(model)
+    mae = sum((model.predict(dtrain) - at.eval(X))**2)/len(X)
+    print(f"allstate: mae model difference {mae}")
+    at.write("tests/models/xgb-allstate.json", compress=False)
+
 #def generate_california_housing():
 #    calhouse = fetch_california_housing()
 #
@@ -331,7 +356,8 @@ def generate_img():
 
 
 if __name__ == "__main__":
-    generate_img()
+    #generate_img()
+    generate_allstate()
     #generate_california_housing()
     #generate_covertype()
     #generate_mnist()

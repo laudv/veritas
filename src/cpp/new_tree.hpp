@@ -188,6 +188,17 @@ namespace veritas {
             return false;
         }
 
+        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const
+        {
+            if (is_internal())
+            {
+                auto &&[lm, lM] = left().find_minmax_leaf_value();
+                auto &&[rm, rM] = right().find_minmax_leaf_value();
+                return {std::min(lm, rm), std::max(lM, rM)};
+            }
+            else return {leaf_value(), leaf_value()};
+        }
+
         /** Get the domain restrictions on the features in this node. */
         Box compute_box() const;
         void compute_box(Box& box) const;
@@ -255,8 +266,8 @@ namespace veritas {
         inline void from_json(std::istream& strm) { root().from_json(strm); };
 
         Tree prune(BoxRef box) const;
-
-        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const;
+        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
+        Tree limit_depth(int max_depth) const;
 
         template <typename D>
         FloatT eval(const row<D>& data) const { return root().eval(data); }
@@ -313,6 +324,8 @@ namespace veritas {
         std::tuple<FloatT, FloatT> find_minmax_leaf_value() const;
         /** (base_score-offset) + ({leafs} + offset) */
         AddTree neutralize_negative_leaf_values() const;
+        /** replace internal nodes at deeper depths by leaf node with maximum leaf value in subtree */
+        AddTree limit_depth(int max_depth) const;
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);
