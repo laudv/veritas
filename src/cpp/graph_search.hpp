@@ -36,8 +36,6 @@ namespace veritas {
         int next_indep_set; // index of the NEXT indep_set to expand into
         bool is_expanded;
 
-        size_t hash;
-
         inline FloatT fscore(FloatT eps=1.0) const { return g + eps*h; }
     };
 
@@ -51,7 +49,6 @@ namespace veritas {
             << "   - box: " << s.box << std::endl
             << "   - next_indep_set: " << s.next_indep_set << std::endl
             << "   - expanded?: " << s.is_expanded << std::endl
-            << "   - hash: " << s.hash << std::endl
             << "}";
     }
 
@@ -116,7 +113,6 @@ namespace veritas {
 
         std::vector<State> states_;
         std::vector<size_t> a_heap_, ara_heap_; // indexes into states_
-        std::multimap<size_t, size_t> visited_; // hash -> state_index
         StateCmp a_cmp_, ara_cmp_;
         FloatT eps_increment_;
         time_point start_time_;
@@ -150,7 +146,6 @@ namespace veritas {
                 BoxRef::null_box(), // box
                 0, // next_indep_set
                 false, // is_expanded
-                0, // hash
             };
             find_indep_sets_not_added(0, workspace_.indep_sets);
             compute_heuristic(s, -1);
@@ -181,13 +176,6 @@ namespace veritas {
             //print_state(std::cout, states_[state_index]);
             //std::cout << " eps=" << state_eps;
             //std::cout << " fscore=" << states_[state_index].fscore(state_eps) << std::endl;
-            //std::cout << " -> hash history:" << std::endl;
-            //size_t si = state_index;
-            //while (si != 0)
-            //{
-            //    std::cout << "    - " << states_[si].hash << std::endl;
-            //    si = states_[si].parent;
-            //}
 
             if (states_[state_index].next_indep_set == -1)
             {
@@ -424,9 +412,6 @@ namespace veritas {
 
             if (ara_cmp_.eps < 1.0)
                 push_to_heap(ara_heap_, state_index, ara_cmp_);
-
-            // push state's hash to visited map
-            visited_.insert({states_[state_index].hash, state_index});
         }
 
         void push_to_heap(std::vector<size_t>& heap, size_t state_index, const StateCmp& cmp)
@@ -509,45 +494,15 @@ namespace veritas {
                 {
                     std::swap(sol1, sol2);
                 }
-                else
+                else if (sol1.eps < eps)
                 {
                     std::cout << "- updating solution eps from " << sol1.eps;
                     sol1.eps = std::max(sol1.eps, eps);
                     std::cout << " to " <<  std::max(solutions_[i-1].eps, eps)
-                        << " with s1.g=" << states_[sol1.state_index].g << " >= " << states_[state_index].g << std::endl;
+                        << " with s1.g=" << states_[sol1.state_index].g << " >= "
+                        << states_[state_index].g << std::endl;
                 }
             }
-        }
-
-        bool in_visited(const State& state) const
-        {
-            return false; // does not seem to be necessary, need to proof this
-
-            //size_t state_hash = hash(state); // buffer this
-            auto r = visited_.equal_range(state.hash);
-
-            for (auto it = r.first; it != r.second; ++it)
-                if (is_same_state(states_[it->second], state))
-                    return true;
-
-            return false;
-        }
-
-        bool is_same_state(const State& s0, const State& s1) const
-        {
-            std::cout << " (!) hash collision " << std::endl;
-            std::cout << "   - ";
-            print_state(std::cout, s0);
-            std::cout << std::endl << "   - ";
-            print_state(std::cout, s1);
-            std::cout << std::endl;
-
-            // compare boxes
-            // maybe possible? different paths, but same box -> should be very
-            // rare, and they are effectively the same -> previous still is still able to expand
-            bool is_same = s0.box == s1.box;
-
-            return is_same;
         }
 
         void expand(size_t state_index)
@@ -557,7 +512,6 @@ namespace veritas {
             states_[state_index].is_expanded = true;
             BoxRef state_box = states_[state_index].box;
             FloatT g = states_[state_index].g;
-            size_t prev_hash = states_[state_index].hash;
             int next_indep_set = states_[state_index].next_indep_set;
 
             // expand by adding vertexes from `next_indep_set`
@@ -578,26 +532,14 @@ namespace veritas {
                         box,
                         -1, // indep_sets, set later with h in `compute_heuristic`
                         false, // is_expanded
-                        hash(prev_hash, next_indep_set, vertex),
                     };
-                    if (!in_visited(new_state))
+
+                    compute_heuristic(new_state, next_indep_set);
+                    if (!std::isinf(new_state.h))
                     {
-                        compute_heuristic(new_state, next_indep_set);
-                        if (!std::isinf(new_state.h))
-                        {
-                            //std::cout << "pushing with hash " << prev_hash << " -> " << new_state.hash
-                            //    << " (" << next_indep_set << ", " << vertex << ")"
-                            //    << std::endl;
-                            push_state(std::move(new_state));
-                        }
-                        else std::cout << " -> inf h, skipping" << std::endl;
+                        push_state(std::move(new_state));
                     }
-                    else
-                    {
-                        std::cout << "ALREADY SEEN ";
-                        print_state(std::cout, new_state);
-                        std::cout << std::endl;
-                    }
+                    else std::cout << " -> inf h, skipping" << std::endl;
                 }
             }
         }
@@ -651,7 +593,6 @@ namespace veritas {
             while (state_index != 0)
             {
                 state_index = states_[state_index].parent;
-
                 const State& s = states_[state_index];
                 buffer[s.next_indep_set] = -1; // set to 0 to indicate already in state
             }
@@ -668,7 +609,8 @@ namespace veritas {
         {
             buffer.clear();
             buffer.resize(g_.num_independent_sets(), -1);
-            if (s.hash == 0) return; // => state_index == 0
+
+            // TODO: fix for state 0
 
             size_t state_index = s.parent;
             while (true)
@@ -707,17 +649,6 @@ namespace veritas {
 
 
     public:
-        // generate a hash that is (hopefully) unique for each state
-        // state with state_index 0 has hash 0
-        // order in which (indep_sets, vertex) pairs are added does not matter
-        size_t hash(size_t h, int indep_set, int vertex) const
-        {
-            size_t a = (67'280'421'310'721 * (std::hash<int>()(indep_set) + 29))
-                + (999'999'000'001 * (std::hash<int>()(vertex) + 71));
-            h = h ^ a;
-            //std::cout << "  hash round: " << indep_set << ", " << vertex << " => " << h << std::endl;
-            return h;
-        }
 
         size_t remaining_mem_capacity() const
         {

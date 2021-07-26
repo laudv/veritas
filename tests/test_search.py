@@ -113,7 +113,7 @@ class TestSearch(unittest.TestCase):
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
         self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:]))) #sorted?
         for s, x in zip(solutions, outputs_expected):
-            self.assertLess((s.output-x)/2, 1e-5)
+            self.assertLess((s.output-x)/x, 1e-5)
 
         plot_img_solutions(imghat, solutions[:3])
         plot_img_solutions(imghat, solutions[-3:])

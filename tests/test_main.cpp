@@ -659,44 +659,6 @@ void test_feat_map3()
     assert(renamed1[0].root().left().right().get_split().feat_id == 5);
 }
 
-void test_hash1()
-{
-    AddTree at;
-    GraphSearch s(at);
-
-    //size_t h1, h2;
-    //h1 = h2 = 0;
-    //h1 = s.hash(h1, 0, 1);
-    //h1 = s.hash(h1, 1, 5);
-    //h1 = s.hash(h1, 10, 24);
-    //h2 = s.hash(h2, 1, 5); // reorder
-    //h2 = s.hash(h2, 10, 24);
-    //h2 = s.hash(h2, 0, 1);
-
-    //std::cout << h1 << std::endl;
-    //std::cout << h2 << std::endl;
-    
-
-    // build/testveritas | uniq | wc -l == build/testveritas | wc -l
-    
-    int N = 50;
-
-    for (int v0 = 0; v0 < N; ++v0)
-    for (int v1 = 0; v1 < N; ++v1)
-    for (int v2 = 0; v2 < N; ++v2)
-    for (int v3 = 0; v3 < N; ++v3)
-    //for (int v4 = 0; v4 < N; ++v4)
-    {
-        size_t h = 0;
-        h = s.hash(h, 1, v0);
-        h = s.hash(h, 2, v1);
-        h = s.hash(h, 3, v2);
-        h = s.hash(h, 4, v3);
-        //h = s.hash(h, 5, v4);
-        std::cout << h << std::endl;
-    }
-}
-
 void test_graph_search1()
 {
     AddTree at;
@@ -824,11 +786,10 @@ int main()
     //test_feat_map2();
     //test_feat_map3();
 
-    //test_hash1();
 
-    //test_graph_search1();
+    test_graph_search1();
     //test_graph_search2();
 
-    test_graph_simplify();
+    //test_graph_simplify();
 
 }
