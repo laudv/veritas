@@ -246,6 +246,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 d[py::int_(feat_id)] = dom;
             return d;
         })
+        .def("concat_negated", &AddTree::concat_negated)
         .def("__str__", [](const AddTree& at) { return tostr(at); })
         .def(py::pickle(
             [](const AddTree& at) { // __getstate__
@@ -308,6 +309,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("step", &GraphSearch::step)
         .def("steps", &GraphSearch::steps)
         .def("step_for", &GraphSearch::step_for)
+        .def("stop_conditions_met", &GraphSearch::stop_conditions_met)
         .def("num_solutions", &GraphSearch::num_solutions)
         .def("num_states", &GraphSearch::num_states)
         .def("heap_size", &GraphSearch::heap_size)
@@ -325,6 +327,10 @@ PYBIND11_MODULE(pyveritas, m) {
             //py::print("pruning GraphSearch using box", tostr(b));
             return s.prune_by_box(b);
         })
+        .def_readwrite("use_dynprog_heuristic", &GraphSearch::use_dynprog_heuristic)
+        .def_readwrite("stop_when_solution_eps_equals", &GraphSearch::stop_when_solution_eps_equals)
+        .def_readwrite("stop_when_num_solutions_equals", &GraphSearch::stop_when_num_solutions_equals)
+        .def_readwrite("stop_when_up_bound_less_than", &GraphSearch::stop_when_up_bound_less_than)
         ;
 
     //py::class_<Stats>(m, "Stats")

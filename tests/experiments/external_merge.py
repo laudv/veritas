@@ -145,7 +145,7 @@ def external_merge_binary(dataset, example_is, start_delta,
     out, exception = run_process()
     deltas, times = process_merge_output(out)
     clear_crap()
-    return deltas, times
+    return list(example_is), example_labels, deltas, times
 
 def external_merge_multiclass(dataset, example_is, start_delta, max_clique,
         max_level, num_classes):
@@ -174,7 +174,7 @@ def external_merge_multiclass(dataset, example_is, start_delta, max_clique,
             print(f"{l0} -> {l1} ({len(ex_filtered)}, {ex_is})")
             write_model(l0, l1)
 
-            permutation += [(i, l1) for i in ex_is]
+            permutation += [(i, l0, l1) for i in ex_is]
 
             write_inputs(ex_filtered, [1.0]*len(ex_filtered))
 
@@ -193,8 +193,8 @@ def external_merge_multiclass(dataset, example_is, start_delta, max_clique,
 
     permutation, deltas, times = zip(*x)
     print(permutation, len(permutation))
-    example_is, target_labels = zip(*permutation)
-    print("DEBUG2", example_is, target_labels)
+    example_is, example_labels, target_labels = zip(*permutation)
+    print("DEBUG2", example_is, example_labels, target_labels)
 
     clear_crap()
-    return example_is, target_labels, deltas, times
+    return example_is, example_labels, target_labels, deltas, times

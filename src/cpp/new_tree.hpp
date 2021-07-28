@@ -269,6 +269,7 @@ namespace veritas {
         std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
         Tree limit_depth(int max_depth) const;
         FloatT leaf_value_variance() const;
+        Tree negate_leaf_values() const;
 
         template <typename D>
         FloatT eval(const row<D>& data) const { return root().eval(data); }
@@ -330,6 +331,7 @@ namespace veritas {
         /** replace internal nodes at deeper depths by leaf node with maximum leaf value in subtree */
         AddTree limit_depth(int max_depth) const;
         AddTree sort_by_leaf_value_variance() const;
+        AddTree concat_negated(const AddTree& other) const;
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);

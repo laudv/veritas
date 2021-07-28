@@ -18,17 +18,16 @@ def combine_results(*jsons):
     return jsons0
 
 def get_df(jsons):
-    mnist = datasets.Mnist()
-    mnist.load_dataset()
-    colnames = ["example_i", "label", "target_label", "ver_delta",
-            "ver2_delta", "mer_delta", "mer_ext_delta", "tck_delta",
-            "kan_delta", "ver_time", "ver2_time", "mer_time", "mer_ext_time",
-            "tck_time", "kan_time"]
+    #mnist = datasets.Mnist()
+    #mnist.load_dataset()
+    colnames = ["example_i", "label", "target_label",
+            "ver_delta", "mer_ext_delta", "kan_delta", "milp_delta",
+            "ver_time", "mer_ext_time", "kan_time", "milp_time"]
     example_is = []
     example_labels = []
     target_labels = []
-    ver_deltas, ver2_deltas, mer_deltas, tck_deltas, kan_deltas = [], [], [], [], []
-    ver_times, ver2_times, mer_times, tck_times, kan_times = [], [], [], [], []
+    ver_deltas, kan_deltas, milp_deltas = [], [], []
+    ver_times, kan_times, milp_times = [], [], []
     mer_ext_deltas, mer_ext_times = [], []
     for j in jsons:
         example_is.append(j["example_i"])
@@ -37,15 +36,6 @@ def get_df(jsons):
         if "veritas_deltas" in j:
             ver_deltas.append(np.ceil(j["veritas_deltas"][-1][1]))
             ver_times.append(j["veritas_time"])
-        if "veritas_ara_deltas" in j:
-            ver2_deltas.append(np.ceil(j["veritas_ara_deltas"][-1][1]))
-            ver2_times.append(j["veritas_ara_time"])
-        if "merge_deltas" in j:
-            mer_deltas.append(np.ceil(j["merge_deltas"][-1][1]))
-            mer_times.append(j["merge_time"])
-        if "treeck_deltas" in j:
-            tck_deltas.append(np.ceil(j["treeck_deltas"][-1][1]))
-            tck_times.append(j["treeck_time"])
         if "kantchelian" in j:
             #print(list(j["kantchelian"].keys()))
             kan_deltas.append(np.round(j["kantchelian_delta"]))
@@ -53,6 +43,9 @@ def get_df(jsons):
         if "merge_ext" in j:
             mer_ext_times.append(j["merge_ext"]["times"][-1])
             mer_ext_deltas.append(j["merge_ext"]["deltas"][-1])
+        if "milp_deltas" in j:
+            milp_deltas.append(np.ceil(j["milp_deltas"][-1][1]))
+            milp_times.append(j["milp_time"])
 
         try:
             if ver_deltas[-1] > kan_deltas[-1]:
@@ -60,11 +53,10 @@ def get_df(jsons):
         except: pass
 
     columns = { k: v for k, v in zip(colnames, [example_is, example_labels,
-        target_labels, ver_deltas, ver2_deltas, mer_deltas, mer_ext_deltas,
-        tck_deltas, kan_deltas, ver_times, ver2_times, mer_times,
-        mer_ext_times, tck_times, kan_times]) if len(v) > 0 }
+        target_labels, ver_deltas, mer_ext_deltas, milp_deltas, kan_deltas,
+        ver_times, mer_ext_times, kan_times, milp_times]) if len(v) > 0 }
 
-    return pd.DataFrame(columns)
+    return pd.DataFrame(data=columns)
             
 def plot(jsons):
 
@@ -116,6 +108,7 @@ def plot(jsons):
 
 
 def parse_file(filename):
+    print("parsing", filename)
     with gzip.open(filename, "rb") as f:
         lines = f.readlines()
         return [json.loads(line) for line in lines]
@@ -139,26 +132,30 @@ if __name__ == "__main__":
     #print("mean times 90%", avg_time_90percentile(df["ver_time"]),
     #        avg_time_90percentile(df["mer_time"]),
     #        avg_time_90percentile(df["kan_time"]))
-    #print(df)
-    print("mean delta diff ver", (df["kan_delta"]-df["ver_delta"]).abs().mean())
-    print("mean delta diff ver2", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
-    print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
+    pd.set_option('display.max_rows', 100)
+    print(df)
+    #print(df[(df["kan_delta"]-df["ver_delta"]).abs()>1e-4])
+    print("mean delta diff ver/kan", (df["kan_delta"]-df["ver_delta"]).abs().mean())
+    #print("mean delta diff ver2", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
+    #print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
     if "mer_ext_time" in df:
         print("mean delta diff mer ext", (df["kan_delta"]-df["mer_ext_delta"]).abs().mean())
-    print("ver closer to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() <
-            (df["kan_delta"]-df["mer_delta"]).abs()))
-    print("ver2 closer to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() <
-            (df["kan_delta"]-df["mer_delta"]).abs()))
-    print("ver farther to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() >
-            (df["kan_delta"]-df["mer_delta"]).abs()))
-    print("ver2 farther to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() >
-            (df["kan_delta"]-df["mer_delta"]).abs()))
+    #print("ver closer to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() <
+    #        (df["kan_delta"]-df["mer_delta"]).abs()))
+    #print("ver2 closer to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() <
+    #        (df["kan_delta"]-df["mer_delta"]).abs()))
+    #print("ver farther to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() >
+    #        (df["kan_delta"]-df["mer_delta"]).abs()))
+    #print("ver2 farther to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() >
+    #        (df["kan_delta"]-df["mer_delta"]).abs()))
     print("mean time ver", df["ver_time"].mean())
-    print("mean time ver2", df["ver2_time"].mean())
-    print("mean time mer", df["mer_time"].mean())
+    #print("mean time ver2", df["ver2_time"].mean())
+    #print("mean time mer", df["mer_time"].mean())
     if "mer_ext_time" in df:
-        print("mean time mer ext", df["mer_ext_time"].mean())
+        print("mean time ext", df["mer_ext_time"].mean())
     print("mean time kan", df["kan_time"].mean())
+    if "milp_time" in df:
+        print("mean time mip", df["milp_time"].mean())
 
     #plot(jsons)
     #plot([jsons[i] for i in ver_worse.index])

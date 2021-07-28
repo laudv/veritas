@@ -19,11 +19,12 @@ def main():
         try:
             if num_classes == 2:
                 print("\n== MERGE (external) =============================", f"({time.ctime()})")
-                deltas, times = external_merge_binary(dataset, example_is,
-                        start_delta, T, L)
-                for i, ds, ts in zip(example_is, deltas, times):
+                example_is, example_labels, deltas, times = external_merge_binary(
+                        dataset, example_is, start_delta, T, L)
+                for i, el, ds, ts in zip(example_is, example_labels, deltas, times):
                     result = {
                         "example_i": i,
+                        "example_label": el,
                         "merge_ext": {
                             "deltas": ds,
                             "times": ts,
@@ -34,12 +35,14 @@ def main():
                     write_result(result, f)
             else:
                 print("\n== MERGE (external) multiclass ==================", f"({time.ctime()})")
-                example_is, target_labels, deltas, times = external_merge_multiclass(
+                example_is, example_labels, target_labels, deltas, times = external_merge_multiclass(
                         dataset, example_is, start_delta, T, L, num_classes)
-                print("DEBUG", example_is, target_labels)
-                for i, tl, ds, ts in zip(example_is, target_labels, deltas, times):
+                print("DEBUG", example_is, example_labels, target_labels)
+                for i, el, tl, ds, ts in zip(example_is, example_labels,
+                        target_labels, deltas, times):
                     result = {
                         "example_i": i,
+                        "example_label": el,
                         "target_label": tl,
                         "merge_ext": {
                             "deltas": ds,

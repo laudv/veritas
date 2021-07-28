@@ -1,8 +1,6 @@
 import os, sys, json, gzip, time
 import datasets
-from veritas import Optimizer
-from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
-from treeck_robust import TreeckRobustnessSearch
+from veritas.robustness import RobustnessSearch, VeritasRobustnessSearch, MilpRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
 
@@ -20,7 +18,6 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
     if algos[0] == "1":
         print("\n== VERITAS ======================================", f"({time.ctime()})")
         ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta,
-                eps_start=1.0, eps_incr=0.1,
                 max_time=max_time,
                 stop_condition=RobustnessSearch.NO_STOP_COND)
         ver_norm, ver_lo, ver_hi = ver.search()
@@ -31,25 +28,8 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         result["veritas_examples"] = ver.generated_examples
         print("veritas time", ver.total_time, ver.total_time_p)
 
-    if algos[0] == "2":
-        print("\n== VERITAS ARA* =================================", f"({time.ctime()})")
-        ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta,
-                eps_start=0.01, eps_incr=0.1,
-                max_time=max_time,
-                stop_condition=RobustnessSearch.NO_STOP_COND)
-        ver_norm, ver_lo, ver_hi = ver.search()
-        result["veritas_ara_deltas"] = ver.delta_log
-        result["veritas_ara_log"] = ver.log
-        result["veritas_ara_time"] = ver.total_time
-        result["veritas_ara_time_p"] = ver.total_time_p
-        result["veritas_ara_examples"] = ver.generated_examples
-        print("veritas ARA* time", ver.total_time, ver.total_time_p)
-
-    if algos[2] != "0": # treeck
-        print("skip", algos[2])
-
-    if algos[3] == "1":
-        print("\n== KANTCHELIAN MIPS =============================", f"({time.ctime()})")
+    if algos[1] == "1":
+        print("\n== KANTCHELIAN MILP =============================", f"({time.ctime()})")
         kan = KantchelianTargetedAttack(at0, at1, example=example)
         kan.optimize()
         kan_example, kan_pred0, kan_pred1, kan_norm = kan.solution()
@@ -58,6 +38,17 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         result["kantchelian_pred"] = (kan_pred0, kan_pred1)
         result["kantchelian_delta"] = kan_norm
         print("kantchelian time", kan.total_time, kan.total_time_p)
+
+    if algos[2] == "1":
+        print("\n== MILP BINARY SEARCH ===========================", f"({time.ctime()})")
+        milp = MilpRobustnessSearch(at0, at1, example, start_delta=start_delta,
+                max_time=max_time, stop_condition=RobustnessSearch.NO_STOP_COND)
+        ver_norm, ver_lo, ver_hi = milp.search()
+        result["milp_deltas"] = milp.delta_log
+        result["milp_time"] = milp.total_time
+        result["milp_time_p"] = milp.total_time_p
+        result["milp_examples"] = milp.generated_examples
+        print("MILP BIN SEARCH time", milp.total_time, milp.total_time_p)
 
 def robustness_experiment_multiclass(dataset, example_is, max_time,
         start_delta, num_classes, outfile, algos):
@@ -126,6 +117,13 @@ def parse_dataset(dataset):
         start_delta = 40
         num_classes = 10
         T, L = 2, 2
+    elif dataset == "mnist_small":
+        dataset = datasets.Mnist() # non-normalized (0-255)
+        dataset.load_dataset()
+        dataset.load_model(20, 4)
+        start_delta = 40
+        num_classes = 10
+        T, L = 2, 2
     elif dataset == "higgs":
         dataset = datasets.LargeHiggs() # normalized
         dataset.load_dataset()
@@ -165,7 +163,7 @@ def main():
     outfile_base = sys.argv[3]
     max_time = int(sys.argv[4])
     algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
-    assert len(algos) == 4
+    assert len(algos) == 3
     outfile = f"{outfile_base}-{dataset}-time{max_time}-{example_is.start}:{example_is.stop}-{algos}.gz"
 
     dataset, start_delta, num_classes, T, L = parse_dataset(dataset)

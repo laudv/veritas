@@ -154,18 +154,6 @@ namespace veritas {
             return count;
         }
 
-        void add_with_negated_leaf_values(const Graph& rhs)
-        {
-            // CAREFUL: rhs.sets_ might be equal to this->sets_ -> don't use iterators
-            size_t index = sets_.size();
-            for (size_t i = 0; i < rhs.sets_.size(); ++i)
-                sets_.push_back(rhs.sets_[i]); // copy!
-
-            for (; index < sets_.size(); ++index)
-                for (Vertex& v : sets_[index])
-                    v = {v.leaf_id, v.box, -v.output};
-        }
-
         bool merge(int K, float max_time)
         {
             using ms = std::chrono::milliseconds;

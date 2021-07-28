@@ -323,6 +323,32 @@ namespace veritas {
         return (sum2 - (sum*sum) / count) / count;
     }
 
+    Tree
+    Tree::negate_leaf_values() const
+    {
+        Tree new_tree;
+
+        std::stack<std::tuple<ConstRef, MutRef>,
+            std::vector<std::tuple<ConstRef, MutRef>>> stack;
+        stack.push({root(), new_tree.root()});
+
+        while (stack.size() != 0)
+        {
+            auto [n, m] = stack.top();
+            stack.pop();
+
+            if (n.is_internal())
+            {
+                m.split(n.get_split());
+                stack.push({n.right(), m.right()});
+                stack.push({n.left(), m.left()});
+            }
+            else m.set_leaf_value(-n.leaf_value());
+        }
+
+        return new_tree;
+    }
+
     std::ostream&
     operator<<(std::ostream& strm, const Tree& t)
     {
@@ -477,6 +503,15 @@ namespace veritas {
             std::cout << "id: " << id << ", var: " << x << std::endl;
             new_at.add_tree(trees_[id]);
         }
+        return new_at;
+    }
+    AddTree
+    AddTree::concat_negated(const AddTree& other) const
+    {
+        AddTree new_at(*this);
+        new_at.base_score -= other.base_score;
+        for (const Tree& t : other)
+            new_at.add_tree(t.negate_leaf_values());
         return new_at;
     }
 

@@ -124,9 +124,16 @@ namespace veritas {
         friend StateCmp;
 
         std::vector<Snapshot> snapshots;
-        bool use_dynprog_heuristic = true;
 
-        GraphSearch(const AddTree& at, int merge = 0)
+        // SETTINGS
+        bool use_dynprog_heuristic = false;
+
+        FloatT stop_when_solution_eps_equals = 1.0; // default: when optimal
+        size_t stop_when_num_solutions_equals = 999'999'999; // default: de facto disabled
+        FloatT stop_when_up_bound_less_than = -FLOATT_INF; // default: disabled
+
+
+        GraphSearch(const AddTree& at)
             : at_(at.neutralize_negative_leaf_values())
             , g_(at_)
             , a_cmp_{*this, 1.0}
@@ -137,9 +144,6 @@ namespace veritas {
             , last_eps_increment_{0.0}
             , avg_eps_update_time_{0.0}
         {
-            if (merge > 1)
-                g_.merge(merge, 1.000);
-
             State s = {
                 0, // parent
                 0.0, // g --> add base score only in solution to avoid negative numbers
@@ -203,12 +207,12 @@ namespace veritas {
                     const State& s0 = states_[state_index];
                     if (sol.eps != 1.0 && s1.fscore(state_eps) > s0.fscore(state_eps))
                     {
-                        std::cout << "UPDATE PREVOUS SOLUTION " << s1.fscore(state_eps)
-                            << " > " << s0.fscore(state_eps)
-                            << " (" << state_eps << " ==? " << ara_cmp_.eps << ")";
+                        //std::cout << "UPDATE PREVIOUS SOLUTION " << s1.fscore(state_eps)
+                        //    << " > " << s0.fscore(state_eps)
+                        //    << " (" << state_eps << " ==? " << ara_cmp_.eps << ")";
                         sol.eps = state_eps;
                         update_eps(eps_increment_);
-                        std::cout << " new eps=" << ara_cmp_.eps << std::endl;
+                        //std::cout << " new eps=" << ara_cmp_.eps << std::endl;
                     }
                 }
 
@@ -288,11 +292,8 @@ namespace veritas {
 
             while (!done)
             {
-                if (solutions_.size() > 0 && solutions_[0].eps == 1.0)
-                {
-                    std::cout << "step_for: stopping early because optimal solution found." << std::endl;
+                if (stop_conditions_met())
                     break;
-                }
 
                 double dur = time_since_start() - start;
                 done = steps(num_steps);
@@ -301,6 +302,40 @@ namespace veritas {
             }
 
             return done;
+        }
+
+        bool stop_conditions_met() const
+        {
+            if (solutions_.size() > 0 && solutions_[0].eps == stop_when_solution_eps_equals)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << "solution with eps " << stop_when_solution_eps_equals
+                    << " found." << std::endl;
+                return true;
+            }
+
+            if (solutions_.size() >= stop_when_solution_eps_equals)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << num_solutions() << " >= "
+                    << stop_when_solution_eps_equals
+                    << " solutions found"
+                    << std::endl;
+                return true;
+            }
+
+            auto [lo, up_a, up_ara] = current_bounds_with_base_score();
+            if (std::min(up_a, up_ara) < stop_when_up_bound_less_than)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << "upper bound " << stop_when_up_bound_less_than
+                    << " reached (" << up_a << ", " << up_ara << ")"
+                    << std::endl;
+                return true;
+            }
+
+
+            return false;
         }
 
         //void solve_subset(size_t num_states, size_t num_steps)
@@ -500,11 +535,11 @@ namespace veritas {
                 }
                 else if (sol1.eps < eps)
                 {
-                    std::cout << "- updating solution eps from " << sol1.eps;
+                    //std::cout << "- updating solution eps from " << sol1.eps;
                     sol1.eps = std::max(sol1.eps, eps);
-                    std::cout << " to " <<  std::max(solutions_[i-1].eps, eps)
-                        << " with s1.g=" << states_[sol1.state_index].g << " >= "
-                        << states_[state_index].g << std::endl;
+                    //std::cout << " to " <<  std::max(solutions_[i-1].eps, eps)
+                    //    << " with s1.g=" << states_[sol1.state_index].g << " >= "
+                    //    << states_[state_index].g << std::endl;
                 }
             }
         }

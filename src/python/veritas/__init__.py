@@ -14,9 +14,6 @@ from .xgb import \
 
 del xgb
 
-#from .optimizer import *
-#from .robustness import *
-
 def __addtree_write(self, f, compress=False):
     if compress:
         with gzip.open(f, "wb") as fh:
@@ -36,6 +33,37 @@ def __addtree_read(f, compressed=False):
             return AddTree.from_json(fh.read())
 setattr(AddTree, "write", __addtree_write)
 setattr(AddTree, "read", __addtree_read)
+
+def get_closest_example(solution, example, guard=1e-4, featmap=None):
+    num_attributes = len(example)
+    #intervals = self.solution_to_intervals(solution, num_attributes)[instance]
+
+    if featmap is None:
+        featmap = {i: [i] for i in range(num_attributes)}
+    else:
+        featmap = featmap.get_indices_map()
+
+    closest = example.copy()
+
+    for index, dom in solution.box().items():
+        for feat_id in featmap[index]:
+            x = example[feat_id]
+            if dom.lo <= x and x < dom.hi:
+                continue # keep the value x
+
+            dist_lo = abs(dom.lo - x)
+            dist_hi = abs(x - dom.hi)
+            if dist_lo > dist_hi:
+                closest[feat_id] = dom.hi - guard
+            else:
+                closest[feat_id] = dom.lo
+
+            #print(f"dom {feat_id}:", dom, x, "->", closest[feat_id])
+
+    return closest
+
+from . import kantchelian
+from . import robustness
 
 #
 #def __realdomain__str(self):

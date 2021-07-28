@@ -177,7 +177,7 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
             print("    merge time", data["total_time"])
 
         if algos[3] == "1":
-            print("\n== KANTCHELIAN MIPS =============================")
+            print("\n== KANTCHELIAN MILP =============================")
             kan_at = at.prune(constraints)
             #kan_at = kan_at.neutralize_negative_leaf_values()
             #kan_at = at
