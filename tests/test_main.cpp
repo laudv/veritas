@@ -718,6 +718,58 @@ void test_graph_search2()
     std::cout << "numsols: " << s.num_solutions() << std::endl;
 }
 
+void test_graph_search3()
+{
+    AddTree at;
+    {
+        std::ifstream f;
+        f.open("tests/models/xgb-allstate.json");
+        //f.open("tests/models/xgb-img-hard.json");
+        at.from_json(f);
+    }
+
+    //at = at.limit_depth(3);
+    //at = at.neutralize_negative_leaf_values();
+    //at = at.sort_by_leaf_value_variance();
+    //AddTree at10 = AddTree(at, 0, 10);
+    //at = at.limit_depth(3);
+
+
+
+    //for (auto&&[k, v] : at.get_splits())
+    //{
+    //    std::cout << k << ":";
+    //    for (auto vv : v)
+    //        std::cout << " " << vv;
+    //    std::cout << std::endl;
+    //}
+    
+    for (size_t i = 0; i < 2; ++i)
+    {
+        GraphSearch s(at);
+        s.use_dynprog_heuristic=i;
+
+        s.steps(100);
+        while (s.snapshots.back().num_steps < 1000)
+            s.steps(100);
+
+        //bool done = s.steps(100);
+        //while (!done)
+        //    done = s.steps(100);
+
+        std::cout << "DYNPROG?" << i << std::endl;
+        std::cout << "numsols: " << s.num_solutions() << std::endl;
+        std::cout << "lo bound: " << std::get<0>(s.current_bounds_with_base_score())
+            << std::endl;
+        std::cout << "up bound: " << std::get<1>(s.current_bounds_with_base_score())
+            << std::endl;
+        std::cout << "time: " << s.time_since_start() << std::endl;
+        std::cout << "eps: " << s.get_eps() << std::endl;
+        std::cout << "num_steps: " << s.snapshots.back().num_steps << std::endl;
+        std::cout << "-------------\n";
+    }
+}
+
 void test_graph_simplify()
 {
     AddTree at;
@@ -787,8 +839,9 @@ int main()
     //test_feat_map3();
 
 
-    test_graph_search1();
+    //test_graph_search1();
     //test_graph_search2();
+    test_graph_search3();
 
     //test_graph_simplify();
 

@@ -293,6 +293,36 @@ namespace veritas {
         return new_tree;
     }
 
+    FloatT
+    Tree::leaf_value_variance() const
+    {
+        std::stack<ConstRef, std::vector<ConstRef>> stack;
+        stack.push(root());
+
+        double sum = 0.0, sum2 = 0.0;
+        int count = 0;
+        while (!stack.empty())
+        {
+            ConstRef n = stack.top();
+            stack.pop();
+
+            if (n.is_internal())
+            {
+                stack.push(n.right());
+                stack.push(n.left());
+            }
+            else
+            {
+                double lv = static_cast<double>(n.leaf_value());
+                sum += lv;
+                sum2 += lv * lv;
+                count += 1;
+            }
+        }
+
+        return (sum2 - (sum*sum) / count) / count;
+    }
+
     std::ostream&
     operator<<(std::ostream& strm, const Tree& t)
     {
@@ -428,6 +458,25 @@ namespace veritas {
         new_at.base_score = base_score;
         for (const Tree& tree : *this)
             new_at.add_tree(tree.limit_depth(max_depth));
+        return new_at;
+    }
+
+    AddTree
+    AddTree::sort_by_leaf_value_variance() const
+    {
+        std::vector<std::tuple<TreeId, FloatT>> v;
+        for (TreeId i = 0; i < static_cast<TreeId>(size()); ++i)
+            v.push_back({i, trees_[i].leaf_value_variance()});
+        std::sort(v.begin(), v.end(), [](const auto& v, const auto& w) {
+            return std::get<1>(v) > std::get<1>(w); // sort desc
+        });
+
+        AddTree new_at;
+        for (auto [id, x] : v)
+        {
+            std::cout << "id: " << id << ", var: " << x << std::endl;
+            new_at.add_tree(trees_[id]);
+        }
         return new_at;
     }
 

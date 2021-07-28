@@ -268,6 +268,7 @@ namespace veritas {
         Tree prune(BoxRef box) const;
         std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
         Tree limit_depth(int max_depth) const;
+        FloatT leaf_value_variance() const;
 
         template <typename D>
         FloatT eval(const row<D>& data) const { return root().eval(data); }
@@ -295,8 +296,10 @@ namespace veritas {
             : trees_()
             , base_score(begin == 0 ? at.base_score : 0.0)
         {
-            if (begin < at.size() && (begin+num) < at.size())
+            if (begin < at.size() && (begin+num) <= at.size())
                 trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
+            else
+                throw std::runtime_error("out of bounds");
         }
 
         inline Tree& add_tree() { return trees_.emplace_back(); }
@@ -326,6 +329,7 @@ namespace veritas {
         AddTree neutralize_negative_leaf_values() const;
         /** replace internal nodes at deeper depths by leaf node with maximum leaf value in subtree */
         AddTree limit_depth(int max_depth) const;
+        AddTree sort_by_leaf_value_variance() const;
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);

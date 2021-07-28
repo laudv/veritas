@@ -124,6 +124,7 @@ namespace veritas {
         friend StateCmp;
 
         std::vector<Snapshot> snapshots;
+        bool use_dynprog_heuristic = true;
 
         GraphSearch(const AddTree& at, int merge = 0)
             : at_(at.neutralize_negative_leaf_values())
@@ -184,7 +185,10 @@ namespace veritas {
                     << " output=" << (states_[state_index].g+at_.base_score)
                     << std::endl;
                 push_solution(state_index, state_eps);
-                update_eps(eps_increment_);
+                if (state_eps != 1.0)
+                    update_eps(eps_increment_);
+                else
+                    set_eps(1.0);
             }
             else
             {
@@ -535,6 +539,7 @@ namespace veritas {
                     };
 
                     compute_heuristic(new_state, next_indep_set);
+
                     if (!std::isinf(new_state.h))
                     {
                         push_state(std::move(new_state));
@@ -544,13 +549,25 @@ namespace veritas {
             }
         }
 
-        // assume valid state for parent state in `workspace_.indep_sets`
         void compute_heuristic(State& new_state, int skip_indep_set) const
         {
             // set next indep_set to expand into
             // if it stays -1, then this is a solution state (nothing more to expand into)
             new_state.next_indep_set = -1;
 
+            if (use_dynprog_heuristic)
+            {
+                compute_heuristic_dynprog(new_state, skip_indep_set);
+            }
+            else
+            {
+                compute_heuristic_simple(new_state, skip_indep_set);
+            }
+        }
+
+        // assume valid state for parent state in `workspace_.indep_sets`
+        void compute_heuristic_simple(State& new_state, int skip_indep_set) const
+        {
             FloatT maxmax = -FLOATT_INF;
             for (int i : workspace_.indep_sets) // filled by `find_indep_sets_not_added`
             {
@@ -571,6 +588,21 @@ namespace veritas {
                 }
             }
 
+            // test
+            //if (t && new_state.parent != 0)
+            //{
+            //    GraphSearch s(at_);
+            //    s.t = false;
+            //    s.set_eps(1.0);
+            //    s.prune_by_box(new_state.box);
+            //    s.steps(50);
+            //    num_steps_ += 50;
+            //    auto [lo, up_a, up_ara] = s.current_bounds();
+            //    std::cout << "heuristic: " << new_state.fscore() << " <-> " <<
+            //        up_a << ", " << (new_state.fscore() < up_a) << std::endl;
+            //    new_state.h = up_a-new_state.g;
+            //}
+
             // cap heuristic to ARA* upper bound
             //if (num_solutions() > 0)
             //{
@@ -583,6 +615,94 @@ namespace veritas {
             //    }
             //}
         }
+
+        // assume valid state for parent state in `workspace_.indep_sets`
+        void compute_heuristic_dynprog(State& new_state, int skip_indep_set) const
+        {
+            std::vector<FloatT> d0, d1;
+            FloatT maxmax = -FLOATT_INF;
+
+            // fill d0 with first indep_set's output values
+            int prev_indep_set = -1;
+
+            // compute heuristic using dynamic programming
+            for (size_t i = 0; i < workspace_.indep_sets.size(); ++i)
+            {
+                FloatT tree_max = -FLOATT_INF;
+
+                int indep_set = workspace_.indep_sets[i];
+                if (indep_set == skip_indep_set)
+                    continue;
+
+                // fill d0 with the first indep_set
+                if (d0.empty())
+                {
+                    for (const auto& v : g_.get_vertices(indep_set))
+                    {
+                        if (v.box.overlaps(new_state.box))
+                        {
+                            d0.push_back(v.output);
+                            tree_max = std::max(tree_max, v.output);
+                        }
+                        else
+                        {
+                            d0.push_back(-FLOATT_INF);
+                        }
+                    }
+                }
+                else
+                {
+                    const auto& set0 = g_.get_vertices(prev_indep_set);
+                    const auto& set1 = g_.get_vertices(indep_set);
+                    for (const auto& v1 : set1)
+                    {
+                        FloatT max = -FLOATT_INF;
+
+                        if (v1.box.overlaps(new_state.box))
+                        {
+                            tree_max = std::max(tree_max, v1.output);
+                            for (size_t j = 0; j < d0.size(); ++j)
+                            {
+                                const auto& v0 = set0[j];
+                                if (v0.box.overlaps(v1.box) && max < d0[j])
+                                    max = d0[j];
+                            }
+                            d1.push_back(max + v1.output);
+                        }
+                        else
+                        {
+                            d1.push_back(-FLOATT_INF);
+                        }
+                    }
+
+                    d0.clear();
+                    std::swap(d0, d1);
+                }
+
+                if (maxmax < tree_max)
+                {
+                    maxmax = tree_max;
+                    new_state.next_indep_set = indep_set;
+                }
+
+                prev_indep_set = indep_set;
+            }
+
+            // find max of d0 --> thats the heuristic value
+            if (new_state.next_indep_set != -1)
+            {
+                FloatT max = -FLOATT_INF;
+                for (auto v : d0)
+                    max = (v > max) ? v : max;
+                new_state.h = max;
+            }
+            else // this is a final state with no heuristic estimate
+            {
+                new_state.h = 0.0;
+            }
+        }
+
+        //bool t = true;
 
         void find_indep_sets_not_added(size_t state_index, std::vector<int>& buffer) const
         {
