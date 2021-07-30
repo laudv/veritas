@@ -7,8 +7,7 @@
 #ifndef VERITAS_BOX_CHECKER_H
 #define VERITAS_BOX_CHECKER_H
 
-#include "domain.h"
-#include "graph.h" // DomainT, DomainPair
+#include "domain.hpp"
 
 #include <vector>
 #include <cfloat>

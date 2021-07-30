@@ -786,7 +786,7 @@ void test_graph_simplify()
         std::cout << t << std::endl;
 
     GraphSearch s(at);
-    GraphSearch s_lim(at_lim, 0);
+    GraphSearch s_lim(at_lim);
 
     while (s.num_solutions() == 0)
         s.steps(50);

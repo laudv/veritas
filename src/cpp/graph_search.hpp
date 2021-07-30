@@ -10,6 +10,7 @@
 #include "domain.hpp"
 #include "new_tree.hpp"
 #include "new_graph.hpp"
+#include "constraints.hpp"
 #include <iostream>
 #include <chrono>
 #include <map>
@@ -18,6 +19,7 @@ namespace veritas {
     using time_point = std::chrono::time_point<std::chrono::system_clock>;
 
     class GraphSearch;
+    class ConstraintPropagator;
 
     struct Snapshot {
         double time = 0.0;
@@ -119,6 +121,8 @@ namespace veritas {
         std::vector<SolutionRef> solutions_; // indices into states_
         size_t num_steps_;
         double last_eps_increment_, avg_eps_update_time_;
+
+        std::unique_ptr<ConstraintPropagator> constr_prop;
         
     public:
         friend StateCmp;
@@ -160,6 +164,8 @@ namespace veritas {
 
         void prune_by_box(const BoxRef& box)
         {
+            if (states_.size() > 1)
+                throw std::runtime_error("invalid state: pruning with more than 1 state");
             g_.prune_by_box(box, false);
         }
 
@@ -441,6 +447,15 @@ namespace veritas {
 
     private:
         void push_state(State&& state)
+        {
+            if (constr_prop)
+            {
+
+            }
+            else push_state(std::move(state));
+        }
+
+        void push_state_aux(State&& state)
         {
             size_t state_index = states_.size();
             states_.push_back(std::move(state));
