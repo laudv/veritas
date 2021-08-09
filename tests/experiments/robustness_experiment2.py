@@ -74,15 +74,18 @@ def robustness_experiment_binary(dataset, example_is, max_time, start_delta,
         outfile, algos):
     for example_i in example_is:
         example = list(dataset.X.iloc[example_i,:])
+        example_np = np.array([example])
         example_label = int(dataset.y[example_i])
         at = dataset.at
+        predicted_value = at.eval(example_np)[0]
 
         print("example", example)
+        print("misclassified?", not (example_label == (predicted_value >= 0.0)))
         if example_label == 1:  # label is POS, MINIMIZE at output
-            print("POS:", at.predict_single(example), example_label)
+            print("POS:", predicted_value, "with true label", example_label)
             at0, at1 = at, None
         else:                   # label is NEG, MAXIMIZE at output
-            print("NEG:", at.predict_single(example), example_label)
+            print("NEG:", predicted_value, "with true label", example_label)
             at0, at1 = None, at
 
         print(f"\n\n== EXAMPLE {example_i}: {example_label} ({algos}) ===========")
@@ -90,6 +93,7 @@ def robustness_experiment_binary(dataset, example_is, max_time, start_delta,
             "max_time": max_time,
             "example_i": example_i,
             "example_label": example_label,
+            "target_label": abs(example_label-1),
             "algos": algos,
         }
         run(at0, at1, example, start_delta, max_time, algos, result)
@@ -100,6 +104,13 @@ def parse_dataset(dataset):
         dataset = datasets.CovtypeNormalized() # normalized
         dataset.load_dataset()
         dataset.load_model(80, 8)
+        start_delta = 0.2
+        num_classes = 2
+        T, L = 2, 2 # from 2, 3, too slow!
+    elif dataset == "covtype_small":
+        dataset = datasets.CovtypeNormalized() # normalized
+        dataset.load_dataset()
+        dataset.load_model(20, 4)
         start_delta = 0.2
         num_classes = 2
         T, L = 2, 2 # from 2, 3, too slow!

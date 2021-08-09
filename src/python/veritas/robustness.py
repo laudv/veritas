@@ -113,7 +113,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         elif source_at is None:
             self.at = target_at
         elif target_at is None:
-            self.at = source_at.negate_leaf_values()
+            self.at = AddTree().concat_negated(source_at)
         else:
             raise RuntimeError("source_at and target_at None")
 
@@ -162,7 +162,7 @@ class MilpRobustnessSearch(RobustnessSearch):
         elif source_at is None:
             self.at = target_at
         elif target_at is None:
-            self.at = source_at.negate_leaf_values()
+            self.at = AddTree().concat_negated(source_at)
         else:
             raise RuntimeError("source_at and target_at None")
 

@@ -34,17 +34,17 @@ def get_df(jsons):
         example_labels.append(j["example_label"])
         target_labels.append(j["target_label"])
         if "veritas_deltas" in j:
-            ver_deltas.append(np.ceil(j["veritas_deltas"][-1][1]))
+            ver_deltas.append(j["veritas_deltas"][-1][1])
             ver_times.append(j["veritas_time"])
         if "kantchelian" in j:
             #print(list(j["kantchelian"].keys()))
-            kan_deltas.append(np.round(j["kantchelian_delta"]))
+            kan_deltas.append(j["kantchelian_delta"])
             kan_times.append(j["kantchelian"]["time_p"])
         if "merge_ext" in j:
             mer_ext_times.append(j["merge_ext"]["times"][-1])
             mer_ext_deltas.append(j["merge_ext"]["deltas"][-1])
         if "milp_deltas" in j:
-            milp_deltas.append(np.ceil(j["milp_deltas"][-1][1]))
+            milp_deltas.append(j["milp_deltas"][-1][1])
             milp_times.append(j["milp_time"])
 
         try:
@@ -119,8 +119,7 @@ def avg_time_90percentile(x):
     return np.mean(x)
 
 if __name__ == "__main__":
-    task = sys.argv[1]
-    filenames = [f for f in sys.argv[2:] if not f.startswith("--")]
+    filenames = [f for f in sys.argv[1:] if not f.startswith("--")]
     jsons = [parse_file(f) for f in filenames]
     jsons = combine_results(*jsons)
     df = get_df(jsons)
