@@ -19,7 +19,6 @@ namespace veritas {
     using time_point = std::chrono::time_point<std::chrono::system_clock>;
 
     class GraphSearch;
-    class ConstraintPropagator;
 
     struct Snapshot {
         double time = 0.0;
@@ -121,13 +120,12 @@ namespace veritas {
         std::vector<SolutionRef> solutions_; // indices into states_
         size_t num_steps_;
         double last_eps_increment_, avg_eps_update_time_;
-
-        std::unique_ptr<ConstraintPropagator> constr_prop;
         
     public:
         friend StateCmp;
 
         std::vector<Snapshot> snapshots;
+        std::unique_ptr<ConstraintPropagator> constr_prop;
 
         // SETTINGS
         bool use_dynprog_heuristic = false;
@@ -446,16 +444,21 @@ namespace veritas {
 
 
     private:
+        //void push_state(State&& state)
+        //{
+        //    if (constr_prop)
+        //    {
+        //        constr_prop->check(workspace_.box, [this, &state](const Box& box) {
+        //            State state1 = state;
+        //            state1.box = BoxRef(store_.store(box, remaining_mem_capacity()));
+        //            std::cout << "push_box_fun: pushing state " << state1 << std::endl;
+        //            push_state_aux(std::move(state1));
+        //        });
+        //    }
+        //    else push_state_aux(std::move(state));
+        //}
+
         void push_state(State&& state)
-        {
-            if (constr_prop)
-            {
-
-            }
-            else push_state(std::move(state));
-        }
-
-        void push_state_aux(State&& state)
         {
             size_t state_index = states_.size();
             states_.push_back(std::move(state));
@@ -564,8 +567,7 @@ namespace veritas {
             find_indep_sets_not_added(state_index, workspace_.indep_sets);
 
             states_[state_index].is_expanded = true;
-            BoxRef state_box = states_[state_index].box;
-            FloatT g = states_[state_index].g;
+            BoxRef parent_box = states_[state_index].box;
             int next_indep_set = states_[state_index].next_indep_set;
 
             // expand by adding vertexes from `next_indep_set`
@@ -574,29 +576,50 @@ namespace veritas {
             for (int vertex = 0; vertex < num_vertices; ++vertex) // filled by `find_indep_sets_not_added`
             {
                 const Graph::Vertex& v = set[vertex];
-                if (v.box.overlaps(state_box))
+                if (v.box.overlaps(parent_box))
                 {
-                    combine_boxes(v.box, state_box, true, workspace_.box);
-                    BoxRef box = BoxRef(store_.store(workspace_.box, remaining_mem_capacity()));
-                    workspace_.box.clear();
-                    State new_state = {
-                        state_index, // parent
-                        g+v.output,
-                        0.0, // heuristic, set later, after `in_visited` check, in `compute_heuristic`
-                        box,
-                        -1, // indep_sets, set later with h in `compute_heuristic`
-                        false, // is_expanded
-                    };
-
-                    compute_heuristic(new_state, next_indep_set);
-
-                    if (!std::isinf(new_state.h))
-                    {
-                        push_state(std::move(new_state));
-                    }
-                    else std::cout << " -> inf h, skipping" << std::endl;
+                    combine_boxes(v.box, parent_box, true, workspace_.box);
+                    construct_and_push_states(state_index, v);
                 }
             }
+        }
+
+        void construct_and_push_states(size_t parent_state_index, const Graph::Vertex& v)
+        {
+            auto push_workspace_box_fun = [this, parent_state_index, &v](Box& b){
+                FloatT g = states_[parent_state_index].g;
+                int next_indep_set = states_[parent_state_index].next_indep_set;
+
+                BoxRef box = BoxRef(store_.store(b, remaining_mem_capacity()));
+                State new_state = {
+                    parent_state_index,
+                    g+v.output,
+                    0.0, // heuristic, set later, after `in_visited` check, in `compute_heuristic`
+                    box,
+                    -1, // indep_sets, set later with h in `compute_heuristic`
+                    false, // is_expanded
+                };
+
+                compute_heuristic(new_state, next_indep_set);
+
+                if (!std::isinf(new_state.h))
+                {
+                    push_state(std::move(new_state));
+                }
+                else std::cout << " -> inf h, skipping" << std::endl;
+
+            };
+
+            if (constr_prop)
+            {
+                constr_prop->check(workspace_.box, push_workspace_box_fun);
+            }
+            else
+            {
+                push_workspace_box_fun(workspace_.box);
+            }
+
+            workspace_.box.clear();
         }
 
         void compute_heuristic(State& new_state, int skip_indep_set) const

@@ -12,7 +12,7 @@ set(SOURCES
     #"${SOURCE_DIR}/graph.cpp"
     #"${SOURCE_DIR}/boxchecker.cpp"
     "${SOURCE_DIR}/new_tree.cpp"
-    "${SOURCE_DIR}/node_search.cpp"
+    "${SOURCE_DIR}/constraints.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)

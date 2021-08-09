@@ -816,6 +816,29 @@ void test_graph_simplify()
         std::cout << "slim: " << std::get<1>(s.bounds) << std::endl;
 }
 
+void test_constraints1()
+{
+    AddTree at;
+    {
+        std::ifstream f;
+        f.open("tests/models/xgb-img-very-easy.json");
+        at.from_json(f);
+    }
+
+    GraphSearch s(at);
+    s.constr_prop = std::make_unique<ConstraintPropagator>();
+    s.constr_prop->add_eq(0, 1);
+
+    bool done = s.steps(10);
+
+    std::cout << "ops:" << s.num_solutions() << " done? " << done << std::endl;
+    for (size_t i = 0; i < s.num_solutions(); ++i)
+    {
+        Solution sol = s.get_solution(i);
+        std::cout << sol.output << " box " << sol.box << std::endl;
+    }
+}
+
 int main()
 {
     //test_tree1();
@@ -841,8 +864,10 @@ int main()
 
     //test_graph_search1();
     //test_graph_search2();
-    test_graph_search3();
+    //test_graph_search3();
 
     //test_graph_simplify();
+
+    test_constraints1();
 
 }
