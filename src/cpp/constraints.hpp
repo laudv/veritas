@@ -71,9 +71,13 @@ namespace veritas {
         std::vector<AnyComp> comps_;
         //std::vector<BinaryConstraint> bin_constraints_;
         
-        FeatId max_feat_id_;
-        int num_additional_expr_; /* non-vars */
+        int num_features_;
 
+    public:
+        ConstraintPropagator(int num_features)
+            : num_features_(num_features) {}
+
+    private:
         void process_feat_id(std::initializer_list<FeatId> ids);
         void copy_from_box(const Box&);
         void copy_to_box(Box& box) const;
@@ -141,7 +145,6 @@ namespace veritas {
         }
 
     public:
-
         int max_num_updates = 10;
 
         void add_eq(int left, int right);

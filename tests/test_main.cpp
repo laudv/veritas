@@ -826,7 +826,7 @@ void test_constraints1()
     }
 
     GraphSearch s(at);
-    s.constr_prop = std::make_unique<ConstraintPropagator>();
+    s.constr_prop = std::make_unique<ConstraintPropagator>(2);
     s.constr_prop->add_eq(0, 1);
 
     bool done = s.steps(10);

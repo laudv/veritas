@@ -102,20 +102,11 @@ namespace veritas {
     }
 
     void
-    ConstraintPropagator::process_feat_id(std::initializer_list<FeatId> ids)
-    {
-        for (auto id : ids)
-            max_feat_id_ = std::max(max_feat_id_, id);
-    }
-
-    void
     ConstraintPropagator::copy_from_box(const Box& box)
     {
-        // workspace is ordered by .feat_id
-        exprs_.clear();
-
-        size_t j = 0;
-        for (int i = 0; i <= max_feat_id_; ++i)
+        /*
+        size_t i = 0, j = 0;
+        for (int i = 0; i < num_features_; ++i) // box is sorted by item.feat_id
         {
             AnyExpr e;
             e.tag = AnyExpr::VAR;
@@ -129,11 +120,13 @@ namespace veritas {
 
         // add dependent_exprs
         exprs_.insert(exprs_.end(), dependent_exprs_.begin(), dependent_exprs_.end());
+        */
     }
 
     void
     ConstraintPropagator::copy_to_box(Box& workspace) const
     {
+        /*
         size_t j = 0;
         size_t sz = workspace.size();
         for (int i = 0; i <= max_feat_id_; ++i)
@@ -157,6 +150,7 @@ namespace veritas {
                         return a.feat_id < b.feat_id;
                     });
         }
+        */
     }
 
     UpdateResult 
@@ -176,7 +170,6 @@ namespace veritas {
     void
     ConstraintPropagator::add_eq(int left, int right)
     {
-        process_feat_id({left, right});
         AnyComp c;
         c.left = left;
         c.right = right;
@@ -188,7 +181,6 @@ namespace veritas {
     void
     ConstraintPropagator::add_lteq(int left, int right)
     {
-        process_feat_id({left, right});
         AnyComp c;
         c.left = left;
         c.right = right;
