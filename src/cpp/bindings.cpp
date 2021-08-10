@@ -204,19 +204,26 @@ PYBIND11_MODULE(pyveritas, m) {
         })
         .def("eval", [](const AddTree& at, py::array_t<FloatT> arr) {
             py::buffer_info buf = arr.request();
-            if (buf.ndim != 2) py::value_error("invalid data");
-
-            std::cout << "eval: array strides: " << buf.strides[0] << ", " << buf.strides[1] << std::endl;
-
             row_major_data data {{ static_cast<FloatT *>(buf.ptr),
                                    static_cast<size_t>(buf.shape[0]),
                                    static_cast<size_t>(buf.shape[1]) }};
+            if (buf.ndim == 1)
+            {
+                data.num_rows = 1;
+                data.num_cols = buf.shape[0];
+            }
+            else if (buf.ndim == 2)
+            {
+                data.num_rows = buf.shape[0];
+                data.num_cols = buf.shape[1];
+            }
+            else throw py::value_error("invalid data");
 
             auto result = py::array_t<FloatT>(buf.shape[0]);
             py::buffer_info out = result.request();
             FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
 
-            for (size_t i = 0; i < static_cast<size_t>(buf.shape[0]); ++i)
+            for (size_t i = 0; i < static_cast<size_t>(data.num_rows); ++i)
                 out_ptr[i] = at.eval(row<row_major_data>{data, i});
 
             return result;
