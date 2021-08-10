@@ -2,7 +2,11 @@ import timeit, time
 import numpy as np
 
 from . import AddTree, GraphSearch, get_closest_example, Domain
-from .kantchelian import KantchelianOutputOpt
+
+try:
+    from .kantchelian import KantchelianOutputOpt
+except:
+    pass
 
 DUMMY_AT = AddTree()
 
@@ -54,6 +58,9 @@ class RobustnessSearch:
                 maybe_sat_str = "maybe SAT" if len(generated_examples) == 0 else "SAT"
                 print(f"[{self.i}]: {maybe_sat_str} delta update: {old_delta:.5f}/{best_example_delta:.5f}"
                       f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
+                if len(generated_examples):
+                    print(f"   -> generated adv.example w/ delta",
+                            best_example_delta-self.guard)
             else: # no adv. can exist
                 if delta == upper:
                     lower = delta
@@ -100,7 +107,6 @@ class RobustnessSearch:
         #print(f"Adv.example target {pred_target:.6f}")#, ({up:.6f}, {pred_target-up:.3g})")
         #print(f"Adv.example source {pred_source:.6f}")#, ({lo:.6f}, {pred_source-lo:.3g})")
         example_delta = max(abs(x-y) for x, y in zip(generated_example, self.example))
-        print(f"Adv.example delta", example_delta)
         return example_delta
 
 
@@ -133,7 +139,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         rem_time = self.max_time - timeit.default_timer() + self.start_time
         #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
         rem_time /= (self.num_steps - self.i)
-        print("step time", rem_time, self.max_time, self.num_steps)
+        #print("step time", rem_time, self.max_time, self.num_steps)
 
         if rem_time < 0.0:
             return None
@@ -141,15 +147,15 @@ class VeritasRobustnessSearch(RobustnessSearch):
         s.step_for(rem_time, 50)
 
         upper_bound = min(s.current_bounds()[1:])
+        max_output_diff = upper_bound
+        generated_examples = []
         if s.num_solutions() > 0:
             best_sol = s.get_solution(0)
-            #print(f"Veritas generated example", best_sol)
-            max_output_diff = upper_bound if best_sol.eps != 1.0 else best_sol.output
-            closest = get_closest_example(best_sol, self.example)
-            generated_examples = [closest]
-        else:
-            max_output_diff = upper_bound
-            generated_examples = []
+            if best_sol.output > 0.0:
+                #print(f"Veritas generated example", best_sol)
+                max_output_diff = upper_bound if best_sol.eps != 1.0 else best_sol.output
+                closest = get_closest_example(best_sol, self.example)
+                generated_examples = [closest]
 
         return max_output_diff, generated_examples
 

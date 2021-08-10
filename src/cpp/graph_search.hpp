@@ -188,10 +188,10 @@ namespace veritas {
 
             if (states_[state_index].next_indep_set == -1)
             {
-                std::cout << "SOLUTION "
-                    << " eps=" << state_eps
-                    << " output=" << (states_[state_index].g+at_.base_score)
-                    << std::endl;
+                //std::cout << "SOLUTION "
+                //    << " eps=" << state_eps
+                //    << " output=" << (states_[state_index].g+at_.base_score)
+                //    << std::endl;
                 push_solution(state_index, state_eps);
                 if (state_eps != 1.0)
                     update_eps(eps_increment_);
@@ -318,11 +318,11 @@ namespace veritas {
                 return true;
             }
 
-            if (solutions_.size() >= stop_when_solution_eps_equals)
+            if (solutions_.size() >= stop_when_num_solutions_equals)
             {
                 std::cout << "stop_conditions_met: stopping early: "
                     << num_solutions() << " >= "
-                    << stop_when_solution_eps_equals
+                    << stop_when_num_solutions_equals
                     << " solutions found"
                     << std::endl;
                 return true;
@@ -613,6 +613,7 @@ namespace veritas {
             if (constr_prop)
             {
                 constr_prop->check(workspace_.box, push_workspace_box_fun);
+                constr_prop->print();
             }
             else
             {
@@ -801,24 +802,11 @@ namespace veritas {
         void find_node_ids(const State& s, std::vector<NodeId>& buffer) const
         {
             buffer.clear();
-            buffer.resize(g_.num_independent_sets(), -1);
 
-            // TODO: fix for state 0
-
-            size_t state_index = s.parent;
-            while (true)
-            {
-                const State& s = states_[state_index];
-                Graph::IndepSet set = g_.get_vertices(s.next_indep_set);
-                int num_vertices = static_cast<int>(set.size());
-                for (int vertex = 0 ; vertex < num_vertices; ++vertex)
-                    if (set[vertex].box.overlaps(s.box))
-                        buffer[s.next_indep_set] = set[vertex].leaf_id;
-
-                if (state_index == 0) break;
-
-                state_index = s.parent;
-            }
+            for (const Graph::IndepSet& set : g_)
+                for (const Graph::Vertex& v : set)
+                    if (v.box.overlaps(s.box))
+                    { buffer.push_back(v.leaf_id); continue; }
         }
 
         void print_state(std::ostream& o, const State& s) const

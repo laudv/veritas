@@ -191,6 +191,7 @@ PYBIND11_MODULE(pyveritas, m) {
             return at.prune(b);
         })
         .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
+        .def("negate_leaf_values", &AddTree::negate_leaf_values)
         .def("to_json", [](const AddTree& at) {
             std::stringstream s;
             at.to_json(s);
@@ -219,7 +220,10 @@ PYBIND11_MODULE(pyveritas, m) {
             }
             else throw py::value_error("invalid data");
 
-            auto result = py::array_t<FloatT>(buf.shape[0]);
+            //std::cout << "evaluating row_major_data "
+            //    << data.num_rows << "x" << data.num_cols << std::endl;
+
+            auto result = py::array_t<FloatT>(data.num_rows);
             py::buffer_info out = result.request();
             FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
 

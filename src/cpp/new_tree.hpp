@@ -332,6 +332,7 @@ namespace veritas {
         AddTree limit_depth(int max_depth) const;
         AddTree sort_by_leaf_value_variance() const;
         AddTree concat_negated(const AddTree& other) const;
+        AddTree negate_leaf_values() const;
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);

@@ -133,7 +133,7 @@ namespace veritas {
     
     inline
     std::ostream& operator<<(std::ostream& strm, const LtSplit& s)
-    { return strm << "LtSplit(" << s.feat_id << ", " << s.split_value << ')'; }
+    { return strm << "F" << s.feat_id << " < " << s.split_value; }
 
 
 

@@ -75,7 +75,7 @@ namespace veritas {
         {
             strm << "├─ Node("
                 << "id=" << id()
-                << ", split=" << get_split()
+                << ", split=[" << get_split() << ']'
                 << ", left=" << left().id()
                 << ", right=" << right().id()
                 << ')' << std::endl;
@@ -472,8 +472,8 @@ namespace veritas {
             }
 
         }
-        std::cout << "neutralize_negative_leaf_values: base_score "
-            << base_score << " -> " << new_at.base_score << std::endl;
+        //std::cout << "neutralize_negative_leaf_values: base_score "
+        //    << base_score << " -> " << new_at.base_score << std::endl;
         return new_at;
     }
 
@@ -513,6 +513,12 @@ namespace veritas {
         for (const Tree& t : other)
             new_at.add_tree(t.negate_leaf_values());
         return new_at;
+    }
+
+    AddTree
+    AddTree::negate_leaf_values() const
+    {
+        return AddTree().concat_negated(*this);
     }
 
     std::ostream&

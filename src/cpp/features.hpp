@@ -63,8 +63,7 @@ namespace veritas {
             auto it = index_map_.find(feature_name);
             if (it != index_map_.end())
                 return get_index(it->second, instance);
-
-            return -1;
+            throw std::runtime_error("invalid feature name");
         }
 
         FeatId get_index(FeatId index, int instance) const

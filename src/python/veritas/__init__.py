@@ -2,8 +2,7 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit, gzip, types
-import multiprocessing as mp
+import gzip, types
 from io import StringIO
 
 from .pyveritas import *
@@ -11,7 +10,6 @@ from .pyveritas import *
 from .xgb import \
     addtree_from_xgb_model, \
     addtrees_from_multiclass_xgb_model
-
 del xgb
 
 def __addtree_write(self, f, compress=False):
@@ -62,7 +60,11 @@ def get_closest_example(solution, example, guard=1e-4, featmap=None):
 
     return closest
 
-from . import kantchelian
+try:
+    from . import kantchelian
+except:
+    print("Veritas: install `gurobipy` for MILP support")
+
 from . import robustness
 
 #

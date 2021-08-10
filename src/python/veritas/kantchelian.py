@@ -264,7 +264,7 @@ class KantchelianAttackBase:
         return adv_example
 
     def _extract_ensemble_output(self, at, node_info_per_tree):
-        ensemble_output = 0.0
+        ensemble_output = at.base_score
         for tree_index in range(len(at)):
             tree = at[tree_index]
             node_infos = node_info_per_tree[tree_index]
