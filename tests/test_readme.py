@@ -137,7 +137,7 @@ print("output for example", example, "is", at.eval(example)[0])
 
 from veritas.robustness import VeritasRobustnessSearch
 rob = VeritasRobustnessSearch(None, at, example, start_delta=5.0)
-rob.search()
+delta, delta_lo, delta_up = rob.search()
 
 print("adversarial examples:", rob.generated_examples,
         "with outputs", at.eval(np.array(rob.generated_examples)))
@@ -149,4 +149,3 @@ kan = KantchelianAttack(at, target_output=True, example=example)
 kan.optimize()
 adv_example, adv_output = kan.solution()[:2]
 print("Kantchelian adversarial example", adv_example, "with output", adv_output)
-

@@ -12,7 +12,7 @@
 import timeit, time
 import gurobipy as gu
 import numpy as np
-from veritas import AddTree
+from veritas import AddTree, Domain
 
 DUMMY_AT = AddTree()
 
@@ -21,7 +21,7 @@ class NodeInfo:
         self.leafs_in_subtree = leafs_in_subtree
         self.var = var
 
-class KantchelianAttackBase:
+class KantchelianBase:
 
     def __init__(self, split_values, max_time=1e100):
         self.guard = 1e-4
@@ -263,6 +263,26 @@ class KantchelianAttackBase:
                     # pick last active pvar we encouter!
         return adv_example
 
+    def _extract_intervals(self):
+        # (!) these intervals can be more specific than strictly necessary
+        # because it assigns values to pvars even when they don't occur in the
+        # taken paths
+        intervals = {}
+        for attribute, split_values in self.split_values.items():
+            pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
+            lo, hi = -np.inf, np.inf
+            for split_value in split_values:
+                # pvar true means go left (ie less than split value)
+                pvar = self.pvars[(attribute, split_value)]
+                if pvar.x > 0.5 and hi == np.inf: # greater than or equal to split_value
+                    #print("POS ", attribute, split_value)
+                    hi = split_value # pick the first active pvar (lowest split value)
+                if pvar.x <= 0.5:
+                    #print("NEG ", attribute, split_value)
+                    lo = split_value # pick last active pvar we encouter!
+            intervals[attribute] = Domain.exclusive(lo, hi)
+        return {attr: intervals[attr] for attr in sorted(intervals)}
+
     def _extract_ensemble_output(self, at, node_info_per_tree):
         ensemble_output = at.base_score
         for tree_index in range(len(at)):
@@ -277,7 +297,7 @@ class KantchelianAttackBase:
 
 
 
-class KantchelianAttack(KantchelianAttackBase):
+class KantchelianAttack(KantchelianBase):
 
     def __init__(self, at, target_output, example, **kwargs):
         self.at = at
@@ -320,7 +340,7 @@ class KantchelianAttack(KantchelianAttackBase):
         return adv_example, ensemble_output, self.bvar.x
 
 
-class KantchelianTargetedAttack(KantchelianAttackBase):
+class KantchelianTargetedAttack(KantchelianBase):
 
     def __init__(self, source_at, target_at, example, **kwargs):
         self.source_at = source_at if source_at is not None else DUMMY_AT
@@ -384,7 +404,7 @@ class KantchelianTargetedAttack(KantchelianAttackBase):
                 name="multiclass_mislabel")
 
 
-class KantchelianOutputOpt(KantchelianAttackBase):
+class KantchelianOutputOpt(KantchelianBase):
     def __init__(self, at, **kwargs):
         self.at = at
         super().__init__(self.at.get_splits(), **kwargs)
@@ -398,7 +418,7 @@ class KantchelianOutputOpt(KantchelianAttackBase):
 
         self.model.update()
     
-    def constraint_to_box(self, box):
+    def constrain_to_box(self, box):
         for attribute, dom in enumerate(box):
             lo, hi = dom.lo, dom.hi
             if attribute not in self.split_values:
@@ -415,4 +435,5 @@ class KantchelianOutputOpt(KantchelianAttackBase):
     def solution(self):
         ensemble_output = self._extract_ensemble_output(self.at,
                 self.node_info_per_tree)
-        return ensemble_output
+        intervals = self._extract_intervals()
+        return ensemble_output, intervals

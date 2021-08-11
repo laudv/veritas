@@ -175,7 +175,7 @@ class MilpRobustnessSearch(RobustnessSearch):
     def get_milp(self, delta, rem_time):
         milp = KantchelianOutputOpt(self.at, max_time=rem_time)
         box = [Domain(x-delta, x+delta) for x in self.example]
-        milp.constraint_to_box(box)
+        milp.constrain_to_box(box)
         return milp
 
     def get_max_output_difference(self, delta):
@@ -190,118 +190,8 @@ class MilpRobustnessSearch(RobustnessSearch):
         milp = self.get_milp(delta, rem_time)
         milp.optimize()
 
-        # TODO extract suboptimal solutions, and return
-
-        return milp.solution(), []
-
-
-
-
-
-#class OptimizerRobustnessSearch(RobustnessSearch):
-#    def __init__(self, source_at, target_at, example,
-#            optimizer_kwargs={}, **kwargs):
-#        super().__init__(example, **kwargs)
-#
-#        self.source_at = source_at if source_at is not None else DUMMY_AT
-#        self.target_at = target_at if target_at is not None else DUMMY_AT
-#        self.optimizer_kwargs = optimizer_kwargs
-#
-#        self.opt = Optimizer(minimize=self.source_at, maximize=self.target_at,
-#                matches=set(), match_is_reuse=False)
-#        self.prev_delta = None
-#
-#        self.log = []
-#
-#    def get_opt(self, delta):
-#        # Share all variables between source and target model
-#        if self.prev_delta is None or self.prev_delta > delta:
-#            pass  # reuse self.opt, and prune further
-#        else:
-#            self.opt.reset_graphs_and_optimizer()
-#        self.opt.prune_example(list(self.example), delta)
-#        self.prev_delta = delta
-#
-#    def _log_opt(self, delta):
-#        if self.opt is not None: 
-#            stats = self.opt.stats()
-#            self.log.append(stats)
-#
-#
-#
-#
-#class VeritasRobustnessSearch(OptimizerRobustnessSearch):
-#
-#    def __init__(self, source_at, target_at, example,
-#            optimizer_kwargs={}, eps_start=1.0, eps_incr=0.05, **kwargs):
-#        super().__init__(source_at, target_at, example, optimizer_kwargs,
-#                **kwargs)
-#
-#        self.eps_start = eps_start
-#        self.eps_incr = eps_incr
-#
-#        self.steps_kwargs = { "min_output_difference": 0.0 }
-#        #self.steps_kwargs = { "max_output": 0.0, "min_output": 0.0 }
-#
-#    def get_max_output_difference(self, delta):
-#        self.get_opt(delta)
-#
-#        rem_time = self.max_time - timeit.default_timer() + self.start_time
-#        #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
-#        rem_time /= (self.num_steps - len(self.log))
-#        print("step time", rem_time, self.max_time, self.num_steps)
-#
-#        if rem_time < 0.0:
-#            return None
-#
-#        if self.eps_start == 1.0:
-#            self.opt.astar(rem_time, steps_kwargs=self.steps_kwargs, max_num_steps=100)
-#        else:
-#            self.opt.arastar(rem_time, self.eps_start, self.eps_incr,
-#                    steps_kwargs=self.steps_kwargs, max_num_steps=100)
-#
-#        if self.opt.num_solutions() > 0:
-#            sol = max(self.opt.solutions(), key=lambda s: s.output_difference())
-#            print(f"Veritas generated example {sol.output0} {sol.output1}")
-#            max_output_diff = sol.output_difference()
-#            closest = self.opt.get_closest_example(sol, self.example, instance=0)
-#            closest = self.opt.get_closest_example(sol, closest, instance=1)
-#            generated_examples = [closest]
-#        else:
-#            lo, up = self.opt.bounds[-1]
-#            max_output_diff = (up - lo) / self.opt.get_eps()
-#            generated_examples = []
-#
-#        super()._log_opt(delta)
-#
-#        return max_output_diff, generated_examples
-#
-#
-#
-#
-#class MergeRobustnessSearch(OptimizerRobustnessSearch):
-#    def __init__(self, source_at, target_at, example, max_merge_depth=9999,
-#            optimizer_kwargs={}, **kwargs):
-#        super().__init__(source_at, target_at, example, optimizer_kwargs,
-#                **kwargs)
-#        self.merge_kwargs = { "max_merge_depth": max_merge_depth }
-#
-#    def get_max_output_difference(self, delta):
-#        self.get_opt(delta)
-#
-#        rem_time = self.max_time - timeit.default_timer() + self.start_time
-#        #rem_time = min(rem_time / 2, 2.0 * self.max_time / self.num_steps)
-#        rem_time /= (self.num_steps - len(self.log))
-#        print("step time", rem_time, self.max_time, self.num_steps)
-#
-#        if rem_time < 0.0:
-#            return None
-#
-#        result = self.opt.merge(rem_time, **self.merge_kwargs)
-#
-#        try: max_output_diff = result["bounds"][-1][1]
-#        except: max_output_diff = np.inf
-#
-#        super()._log_opt(delta)
-#
-#        return max_output_diff, [] # merge cannot generate examples
+        delta, intervals = milp.solution()
+        generated_examples = []
+        if delta > 0.0:
+            generated_examples = [get_closest_example(intervals, self.example)]
+        return delta, generated_examples

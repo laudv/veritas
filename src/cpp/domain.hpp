@@ -45,7 +45,7 @@ namespace veritas {
         static inline Domain from_hi_exclusive(FloatT hi) { return Domain::exclusive(-FLOATT_INF, hi); }
         static inline Domain inclusive(FloatT lo, FloatT hi) { return {lo, hi}; }
         static inline Domain exclusive(FloatT lo, FloatT hi)
-        { return {lo, std::nextafter(hi, -FLOATT_INF)}; }
+        { return {lo, std::isinf(hi) ? FLOATT_INF : std::nextafter(hi, -FLOATT_INF)}; }
 
         inline bool is_everything() const { return *this == Domain(); };
         inline bool contains(FloatT v) const { return lo >= v && v <= hi; }

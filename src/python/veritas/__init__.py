@@ -32,9 +32,8 @@ def __addtree_read(f, compressed=False):
 setattr(AddTree, "write", __addtree_write)
 setattr(AddTree, "read", __addtree_read)
 
-def get_closest_example(solution, example, guard=1e-4, featmap=None):
+def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
     num_attributes = len(example)
-    #intervals = self.solution_to_intervals(solution, num_attributes)[instance]
 
     if featmap is None:
         featmap = {i: [i] for i in range(num_attributes)}
@@ -43,7 +42,19 @@ def get_closest_example(solution, example, guard=1e-4, featmap=None):
 
     closest = example.copy()
 
-    for index, dom in solution.box().items():
+    if isinstance(solution_or_box, Solution):
+        box = solution_or_box.box()
+    elif isinstance(solution_or_box, list):
+        if isinstance(solution_or_box[0], tuple):
+            box = {x[0]: x[1] for x in solution_or_box}
+        else:
+            box = {i: x for i, x in enumerate(solution_or_box)}
+    elif isinstance(solution_or_box, dict):
+        box = solution_or_box
+    else:
+        raise ValueError("invalid first argument")
+
+    for index, dom in box.items():
         for feat_id in featmap[index]:
             x = example[feat_id]
             if dom.lo <= x and x < dom.hi:

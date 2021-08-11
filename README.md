@@ -173,7 +173,7 @@ if s.num_solutions() > 0:
           [at[i].get_leaf_value(n) for i, n in enumerate(sol.nodes)])
 ```
 
-The output is
+The output is:
 
 ```
 Minimum with feature0 in [3, 5]
@@ -367,7 +367,7 @@ We now try to find the distance to the closest adversarial example for which the
 ```python
 from veritas.robustness import VeritasRobustnessSearch
 rob = VeritasRobustnessSearch(None, at, example, start_delta=5.0)
-rob.search()
+delta, delta_lo, delta_up = rob.search()
 
 print("adversarial examples:", rob.generated_examples,
         "with outputs", at.eval(np.array(rob.generated_examples)))
