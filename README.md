@@ -34,9 +34,6 @@ Veritas should work on Linux (GCC), Mac (LLVM), and Windows (MSVC). If you encou
 To pull the latest updates from Github, simply `git pull` the changes and reinstall using `pip`: `pip install --force-reinstall .`.
 
 
-
-
-
 ## Examples
 
 ### Constructing an Additive Tree Ensemble or `AddTree`
