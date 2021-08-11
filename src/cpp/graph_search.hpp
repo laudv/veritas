@@ -613,7 +613,7 @@ namespace veritas {
             if (constr_prop)
             {
                 constr_prop->check(workspace_.box, push_workspace_box_fun);
-                constr_prop->print();
+                //constr_prop->print();
             }
             else
             {
