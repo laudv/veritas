@@ -63,6 +63,20 @@ class KantchelianBase:
         self.total_time_p = time.process_time() - self.start_time_p
         self.times.append((self.total_time, self.total_time_p))
 
+    def constrain_to_box(self, box):
+        for attribute, dom in enumerate(box):
+            lo, hi = dom.lo, dom.hi
+            if attribute not in self.split_values:
+                continue
+            split_values = self.split_values[attribute]
+            #print(lo, hi)
+            for val in split_values:
+                var = self.pvars[(attribute, val)]
+                if val <= lo:
+                    self.model.addConstr(var == 0)
+                if val >= hi:
+                    self.model.addConstr(var == 1)
+
     def _check_time(self, model):
         if self.start_time_p + self.max_time < time.process_time():
             print(f"Terminating Gurobi after {self.max_time} processor seconds")
@@ -417,20 +431,6 @@ class KantchelianOutputOpt(KantchelianBase):
         # self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MINIMIZE)
 
         self.model.update()
-    
-    def constrain_to_box(self, box):
-        for attribute, dom in enumerate(box):
-            lo, hi = dom.lo, dom.hi
-            if attribute not in self.split_values:
-                continue
-            split_values = self.split_values[attribute]
-            #print(lo, hi)
-            for val in split_values:
-                var = self.pvars[(attribute, val)]
-                if val <= lo:
-                    self.model.addConstr(var == 0)
-                if val >= hi:
-                    self.model.addConstr(var == 1)
 
     def solution(self):
         ensemble_output = self._extract_ensemble_output(self.at,
