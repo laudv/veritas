@@ -8,8 +8,8 @@
 #define VERITAS_GRAPH_SEARCH_HPP
 
 #include "domain.hpp"
-#include "new_tree.hpp"
-#include "new_graph.hpp"
+#include "tree.hpp"
+#include "graph.hpp"
 #include "constraints.hpp"
 #include <iostream>
 #include <chrono>

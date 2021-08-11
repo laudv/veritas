@@ -18,8 +18,7 @@
 
 #include "domain.hpp"
 #include "features.hpp"
-#include "new_tree.hpp"
-//#include "node_search.hpp"
+#include "tree.hpp"
 #include "graph_search.hpp"
 
 #ifdef VERITAS_FEATURE_SMT
@@ -249,7 +248,9 @@ PYBIND11_MODULE(pyveritas, m) {
                 auto node = tree[leaf_id];
                 if (!node.is_leaf())
                     throw std::runtime_error("leaf_id does not point to leaf");
-                node.compute_box(box);
+                bool success = node.compute_box(box);
+                if (!success)
+                    throw std::runtime_error("non-overlapping leafs");
             }
 
             py::dict d;

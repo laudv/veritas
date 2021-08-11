@@ -182,7 +182,7 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
             #kan_at = kan_at.neutralize_negative_leaf_values()
             #kan_at = at
             kan = KantchelianOutputOpt(kan_at, max_time=MAX_TIME)
-            #kan.constraint_to_box(constraints)
+            #kan.constrain_to_box(constraints)
             kan.optimize()
 
             result["kantchelian_output"] = kan.solution()

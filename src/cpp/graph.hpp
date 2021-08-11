@@ -7,7 +7,7 @@
 #ifndef VERITAS_GRAPH_HPP
 #define VERITAS_GRAPH_HPP
 
-#include "new_tree.hpp"
+#include "tree.hpp"
 #include "block_store.hpp"
 
 #include <iomanip>

@@ -7,11 +7,7 @@ set(SOURCE_DIR "src/cpp")
 # Tell cmake that headers are also in source_dir
 include_directories(${SOURCE_DIR})
 set(SOURCES
-    #"${SOURCE_DIR}/domain.cpp"
-    #"${SOURCE_DIR}/tree.cpp"
-    #"${SOURCE_DIR}/graph.cpp"
-    #"${SOURCE_DIR}/boxchecker.cpp"
-    "${SOURCE_DIR}/new_tree.cpp"
+    "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/constraints.cpp"
     )
 

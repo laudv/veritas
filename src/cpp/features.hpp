@@ -8,7 +8,7 @@
 #define VERITAS_FEAT_MAP_HPP
 
 #include "basics.hpp"
-#include "new_tree.hpp"
+#include "tree.hpp"
 
 #include <vector>
 #include <string>

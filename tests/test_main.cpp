@@ -1,6 +1,6 @@
 #include "features.hpp"
 //#include "node_search.hpp"
-#include "new_graph.hpp"
+#include "graph.hpp"
 #include "graph_search.hpp"
 
 #include <iostream>

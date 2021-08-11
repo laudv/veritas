@@ -2,13 +2,15 @@
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
+ *
+ * This is not used.
 */
 
 #ifndef VERITAS_NODE_SEARCH_HPP
 #define VERITAS_NODE_SEARCH_HPP
 
 #include "domain.hpp"
-#include "new_tree.hpp"
+#include "tree.hpp"
 #include "block_store.hpp"
 #include <iostream>
 #include <chrono>

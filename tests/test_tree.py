@@ -108,10 +108,10 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.root()), 0.5)
         t.set_leaf_value(t.right(t.root()), 2.3)
 
-        #print(at)
-
         self.assertRaises(RuntimeError, at.compute_box, [2, 1]) # incompatible leafs
         self.assertEqual(at.compute_box([2, 2]), {1: Domain.from_lo(4.0)})
+        self.assertEqual(at.compute_box([3, 1]), {1: Domain.from_hi_exclusive(2.0),
+                                                  2: Domain.from_hi_exclusive(0.12)})
 
         s = at.get_splits()
 
