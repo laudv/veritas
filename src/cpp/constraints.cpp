@@ -9,9 +9,9 @@
 namespace veritas {
 
     UpdateResult
-    Sum::update(Domain& self, Domain& ldom, Domain& rdom)
+    Add::update(Domain& self, Domain& ldom, Domain& rdom)
     {
-        std::cout << "SUM0 "
+        std::cout << "ADD0 "
             << "self: " << self
             << ", l: " << ldom
             << ", r: " << rdom
@@ -42,7 +42,7 @@ namespace veritas {
         ldom = {new_ldom_lo, new_ldom_hi};
         rdom = {new_rdom_lo, new_rdom_hi};
 
-        std::cout << "SUM1 "
+        std::cout << "ADD1 "
             << "self: " << self
             << ", l: " << ldom
             << ", r: " << rdom
@@ -101,56 +101,69 @@ namespace veritas {
         return res;
     }
 
-    void
-    ConstraintPropagator::copy_from_box(const Box& box)
+    ConstraintPropagator::ConstraintPropagator(int num_features)
+        : num_features_(num_features)
     {
-        /*
-        size_t i = 0, j = 0;
-        for (int i = 0; i < num_features_; ++i) // box is sorted by item.feat_id
+        for (int i = 0; i < num_features_; ++i)
         {
             AnyExpr e;
             e.tag = AnyExpr::VAR;
+            e.parent = -1;
+            exprs_.push_back(e);
+        }
+    }
+
+    void
+    ConstraintPropagator::copy_from_box(const Box& box)
+    {
+        size_t j = 0;
+        for (int i = 0; i < num_features_; ++i) // box is sorted by item.feat_id
+        {
+            AnyExpr& e = exprs_[i];
+            e.tag = AnyExpr::VAR;
+            e.dom = {};
             if (j < box.size() && box[j].feat_id == i)
             {
                 e.dom = box[j].domain;
                 ++j;
             }
-            exprs_.push_back(e);
         }
-
-        // add dependent_exprs
-        exprs_.insert(exprs_.end(), dependent_exprs_.begin(), dependent_exprs_.end());
-        */
+        for (size_t i = num_features_; i < exprs_.size(); ++i)
+        {
+            AnyExpr& expr = exprs_[i];
+            if (expr.tag == AnyExpr::CONST)
+                expr.dom = {expr.constant.value, expr.constant.value};
+            else
+                expr.dom = {}; // reset domain of non-consts
+        }
     }
 
     void
-    ConstraintPropagator::copy_to_box(Box& workspace) const
+    ConstraintPropagator::copy_to_box(Box& box) const
     {
-        /*
         size_t j = 0;
-        size_t sz = workspace.size();
-        for (int i = 0; i <= max_feat_id_; ++i)
+        size_t sz = box.size();
+        for (int i = 0; i < num_features_; ++i)
         {
-            if (j < sz && workspace[j].feat_id == i)
+            if (j < sz && box[j].feat_id == i)
             {
-                workspace[j].domain = exprs_[i].dom;
+                box[j].domain = exprs_[i].dom;
                 ++j;
             }
             else if (!exprs_[i].dom.is_everything())
             {
-                workspace.push_back({i, exprs_[i].dom}); // add new domain to workspace
+                box.push_back({i, exprs_[i].dom}); // add new domain to box
             }
         }
 
         // sort newly added domain ids, if any
-        if (sz < workspace.size())
+        if (sz < box.size())
         {
-            std::sort(workspace.begin(), workspace.end(),
+            std::sort(box.begin(), box.end(),
                     [](const DomainPair& a, const DomainPair& b) {
                         return a.feat_id < b.feat_id;
                     });
         }
-        */
     }
 
     UpdateResult 
@@ -168,7 +181,7 @@ namespace veritas {
     }
 
     void
-    ConstraintPropagator::add_eq(int left, int right)
+    ConstraintPropagator::eq(int left, int right)
     {
         AnyComp c;
         c.left = left;
@@ -179,7 +192,7 @@ namespace veritas {
     }
 
     void
-    ConstraintPropagator::add_lteq(int left, int right)
+    ConstraintPropagator::lteq(int left, int right)
     {
         AnyComp c;
         c.left = left;
@@ -190,36 +203,27 @@ namespace veritas {
     }
 
     int
-    ConstraintPropagator::add_var(FeatId feat_id)
-    {
-        if (exprs_.size() > 0 && exprs_.back().tag != AnyExpr::VAR)
-            throw std::runtime_error("add all vars first!");
-        AnyExpr e;
-        e.tag = AnyExpr::VAR;
-        e.var.feat_id = feat_id;
-        exprs_.push_back(e);
-        return exprs_.size() - 1;
-    }
-
-    int
-    ConstraintPropagator::add_const(FloatT value)
+    ConstraintPropagator::constant(FloatT value)
     {
         AnyExpr e;
         e.tag = AnyExpr::CONST;
         e.constant = {value};
+        e.parent = -1;
         exprs_.push_back(e);
         return exprs_.size() - 1;
     }
 
     int
-    ConstraintPropagator::add_sum(int left, int right)
+    ConstraintPropagator::add(int left, int right)
     {
         AnyExpr e;
-        e.tag = AnyExpr::SUM;
-        e.sum = {left, right};
+        e.tag = AnyExpr::ADD;
+        e.add = {left, right};
+        e.parent = -1;
+        int id = exprs_.size();
         exprs_.push_back(e);
-        return exprs_.size() - 1;
+        exprs_.at(left).parent = id;
+        exprs_.at(right).parent = id;
+        return id;
     }
-
-
 } // namespace veritas

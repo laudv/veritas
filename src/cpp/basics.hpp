@@ -40,28 +40,29 @@ namespace veritas {
     struct data {
         FloatT *ptr;
         size_t num_rows, num_cols;
-    };
+        size_t stride_row, stride_col; // in num of elems, not bytes
 
-    struct row_major_data : public data {
-        inline FloatT get_elem(size_t row, size_t col) const {
-            FloatT v = ptr[row * num_cols + col];
-            return v;
+        inline FloatT get_elem(size_t row, size_t col) const
+        {
+            return ptr[row * stride_row + col * stride_col];
         }
     };
 
-    struct col_major_data : public data {
-        inline FloatT get_elem(size_t row, size_t col) const {
-            FloatT v = ptr[col * num_rows + row];
-            return v;
-        }
-    };
+    inline
+    std::ostream&
+    operator<<(std::ostream& strm, const data& d)
+    {
+        return strm << "data{ptr=" << d.ptr
+            << ", shape=" << d.num_rows << ", " << d.num_cols
+            << ", strides=" << d.stride_row << ", " << d.stride_col
+            << '}';
+    }
 
-    template <typename D>
     struct row {
-        D data;
+        data d;
         size_t row;
         inline FloatT operator[](size_t col) const {
-            return data.get_elem(row, col);
+            return d.get_elem(row, col);
         }
     };
 

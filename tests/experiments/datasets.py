@@ -24,9 +24,6 @@ class Dataset:
         """ populate self.model, self.at """
         raise RuntimeError("not implemented")
 
-    def get_at(self):
-        raise RuntimeError("not implemented")
-
     def get_model_name(self, num_trees, tree_depth):
         return f"{type(self).__name__}{self.special_tag}-{num_trees}-{tree_depth}"
 

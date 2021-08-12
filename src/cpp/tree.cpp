@@ -179,18 +179,15 @@ namespace veritas {
     template void NodeRef<inner::MutRef>::from_json(std::istream&);
 
     template <typename RefT>
-    template <typename D>
     FloatT
-    NodeRef<RefT>::eval(const row<D>& row) const
+    NodeRef<RefT>::eval(const row& row) const
     {
         if (is_leaf()) return leaf_value();
         return get_split().test(row) ? left().eval(row) : right().eval(row);
     }
 
-    template FloatT NodeRef<inner::ConstRef>::eval(const row<row_major_data>&) const;
-    template FloatT NodeRef<inner::ConstRef>::eval(const row<col_major_data>&) const;
-    template FloatT NodeRef<inner::MutRef>::eval(const row<row_major_data>&) const;
-    template FloatT NodeRef<inner::MutRef>::eval(const row<col_major_data>&) const;
+    template FloatT NodeRef<inner::ConstRef>::eval(const row&) const;
+    template FloatT NodeRef<inner::MutRef>::eval(const row&) const;
 
     Tree
     Tree::prune(BoxRef box) const

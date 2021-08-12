@@ -210,8 +210,7 @@ namespace veritas {
         std::enable_if_t<T::is_mut_type::value, void>
         from_json(std::istream& strm);
 
-        template <typename D>
-        FloatT eval(const row<D>& data) const;
+        FloatT eval(const row& data) const;
     }; // NodeRef
 
 
@@ -271,8 +270,7 @@ namespace veritas {
         FloatT leaf_value_variance() const;
         Tree negate_leaf_values() const;
 
-        template <typename D>
-        FloatT eval(const row<D>& data) const { return root().eval(data); }
+        FloatT eval(const row& data) const { return root().eval(data); }
 
         bool operator==(const Tree& other) const { return root() == other.root(); }
     }; // Tree
@@ -337,8 +335,7 @@ namespace veritas {
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);
 
-        template <typename D>
-        FloatT eval(const row<D>& r) const
+        FloatT eval(const row& r) const
         {
             auto op = [&r](FloatT v, const Tree& t) { return v + t.eval(r); };
             return std::accumulate(begin(), end(), 0.0, op) + base_score;

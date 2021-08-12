@@ -827,7 +827,10 @@ void test_constraints1()
 
     GraphSearch s(at);
     s.constr_prop = std::make_unique<ConstraintPropagator>(2);
-    s.constr_prop->add_eq(0, 1);
+    //s.constr_prop->eq(0, 1);
+    int c10 = s.constr_prop->constant(10.0);
+    int s10 = s.constr_prop->add(0, c10);
+    s.constr_prop->eq(s10, 1); // feat0 + 10 == feat1
 
     bool done = s.steps(10);
 

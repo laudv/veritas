@@ -62,7 +62,7 @@ def generate_img():
     at = addtree_from_xgb_model(model)
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
-    mae = sum((model.predict(X) - at.eval(X))**2)
+    mae = mean_absolute_error(model.predict(X), at.eval(X))
     print(f"easy img: rmse train {np.sqrt(sqerr)/len(X)}")
     print(f"easy img: mae model difference {mae}")
 
@@ -88,7 +88,7 @@ def generate_img():
     at = addtree_from_xgb_model(model)
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
-    mae = sum((model.predict(X) - at.eval(X))**2)
+    mae = mean_absolute_error(model.predict(X), at.eval(X))
     print(f"hard img: rmse train {np.sqrt(sqerr)/len(X)}")
     print(f"hard img: mae model difference {mae}")
 
@@ -356,8 +356,8 @@ def generate_allstate():
 
 
 if __name__ == "__main__":
-    #generate_img()
-    generate_allstate()
+    generate_img()
+    #generate_allstate()
     #generate_california_housing()
     #generate_covertype()
     #generate_mnist()

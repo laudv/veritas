@@ -10,6 +10,7 @@
 #include "domain.hpp"
 #include <vector>
 #include <iostream>
+#include <stack>
 
 #define RETURN_IF_INVALID(res) if ((res) == UpdateResult::INVALID) { return UpdateResult::INVALID; }
 
@@ -17,26 +18,25 @@ namespace veritas {
 
     enum UpdateResult : int { UNCHANGED = 0, UPDATED = 1, INVALID = 2 };
 
-    struct Var {
-        FeatId feat_id;
-    };
+    struct Var { };
 
     struct Const {
         FloatT value;
     };
 
-    struct Sum {
+    struct Add {
         int left, right;
         static UpdateResult update(Domain& self, Domain& left_dom, Domain& right_dom);
     };
 
     struct AnyExpr {
+        int parent;
         Domain dom;
-        enum { VAR, CONST, SUM, SUB, PROD, DIV, POW2, SQRT, UNIT_VEC2 } tag;
+        enum { VAR, CONST, ADD, SUB, PROD, DIV, POW2, SQRT, UNIT_VEC2 } tag;
         union {
             Var var;
             Const constant;
-            Sum sum;
+            Add add;
             /*
             Sub sub;
             Prod prod;
@@ -74,8 +74,7 @@ namespace veritas {
         int num_features_;
 
     public:
-        ConstraintPropagator(int num_features)
-            : num_features_(num_features) {}
+        ConstraintPropagator(int num_features);
 
     private:
         void process_feat_id(std::initializer_list<FeatId> ids);
@@ -115,12 +114,12 @@ namespace veritas {
             {
                 case AnyExpr::VAR:
                 case AnyExpr::CONST:
-                    push_box_fun();
+                    //push_box_fun();
                     break;
-                case AnyExpr::SUM: {
-                    AnyExpr& left = exprs_[expr.sum.left];
-                    AnyExpr& right = exprs_[expr.sum.right];
-                    UpdateResult op_res = Sum::update(expr.dom, left.dom, right.dom);
+                case AnyExpr::ADD: {
+                    AnyExpr& left = exprs_[expr.add.left];
+                    AnyExpr& right = exprs_[expr.add.right];
+                    UpdateResult op_res = Add::update(expr.dom, left.dom, right.dom);
                     RETURN_IF_INVALID(op_res);
                     UpdateResult left_res = update_expr(left, push_box_fun);
                     UpdateResult right_res = update_expr(right, push_box_fun);
@@ -144,18 +143,26 @@ namespace veritas {
             return res;
         }
 
+        template <typename F>
+        UpdateResult update_expr2(AnyExpr& expr, const F& push_box_fun)
+        {
+            struct StackFrame {
+                size_t box;
+            };
+            std::stack<StackFrame, std::vector<StackFrame>> stack;
+        }
+
     public:
         int max_num_updates = 10;
 
-        void add_eq(int left, int right);
-        void add_lteq(int left, int right);
+        void eq(int left, int right);
+        void lteq(int left, int right);
 
-        int add_var(FeatId id);
-        int add_const(FloatT value);
-        int add_sum(int left, int right);
+        int constant(FloatT value);
+        int add(int left, int right);
 
         template <typename F>
-        void check(Box& box, const F& push_box_fun)
+        bool check(Box& box, const F& push_box_fun)
         {
             copy_from_box(box);
 
@@ -163,11 +170,52 @@ namespace veritas {
             {
                 for (const auto& c : comps_)
                 {
-                    update_comp(c, [this, &box, &push_box_fun]() {
+                    auto res = update_comp(c, [this, &box, &push_box_fun]() {
                         copy_to_box(box);
+                        std::cout << "pushing " << box << std::endl;
                         push_box_fun(box);
                     });
+                    if (res == INVALID)
+                        return false;
+                    else if(res == UNCHANGED)
+                        return true;
                 }
+            }
+
+            return true;
+        }
+
+        void print()
+        {
+            for (const AnyComp& comp : comps_)
+            {
+                switch (comp.tag)
+                {
+                case AnyComp::EQ:
+                    std::cout << "    - " << comp.left << " == " << comp.right << std::endl;
+                    break;
+                case AnyComp::LTEQ:
+                    std::cout << "    - " << comp.left << " <= " << comp.right << std::endl;
+                    break;
+                }
+            }
+            size_t id = 0;
+            for (const AnyExpr& e : exprs_)
+            {
+                std::cout << "    " << id << " p" << e.parent << ": " << e.dom << " ";
+                switch (e.tag)
+                {
+                case AnyExpr::CONST: std::cout << "CONST " << e.constant.value; break;
+                case AnyExpr::VAR: std::cout << "VAR"; break;
+                case AnyExpr::ADD:
+                    std::cout << "ADD " << e.add.left << " + " <<  e.add.right;
+                    break;
+                default:
+                    std::cout << "TODO ";
+                    break;
+                }
+                std::cout << std::endl;
+                ++id;
             }
         }
 

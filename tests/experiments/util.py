@@ -9,13 +9,15 @@ from sklearn.datasets import fetch_openml
 
 #from veritas import Optimizer, RealDomain
 
+data_dir = "tests/data"
+
 def load_openml(name, data_id, task="classification", force=False):
     """
     calhouse: data_id=537
     mnist: data_id=554
     covtype: data_id=1596
     """
-    if not os.path.exists(f"tests/data/{name}.h5") or force:
+    if not os.path.exists(f"{data_dir}/{name}.h5") or force:
         print(f"loading {name} with fetch_openml")
         X, y = fetch_openml(data_id=data_id, return_X_y=True, as_frame=True)
         #if task == "regression":
@@ -28,12 +30,12 @@ def load_openml(name, data_id, task="classification", force=False):
         #        do_compression=True, format="5")
         X = X.astype(np.float32)
         y = y.astype(np.float32)
-        X.to_hdf(f"tests/data/{name}.h5", key="X", complevel=9)
-        y.to_hdf(f"tests/data/{name}.h5", key="y", complevel=9)
+        X.to_hdf(f"{data_dir}/{name}.h5", key="X", complevel=9)
+        y.to_hdf(f"{data_dir}/{name}.h5", key="y", complevel=9)
 
     print(f"loading {name} h5 file")
-    X = pd.read_hdf(f"tests/data/{name}.h5", key="X")
-    y = pd.read_hdf(f"tests/data/{name}.h5", key="y")
+    X = pd.read_hdf(f"{data_dir}/{name}.h5", key="X")
+    y = pd.read_hdf(f"{data_dir}/{name}.h5", key="y")
 
     return X, y
 
@@ -91,16 +93,16 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
         model = xgb.train(params, dtrain, num_boost_round=num_trees,
                           evals=[(dtrain, "train"), (dtest, "test")])
         m = metric2(model)
-        print(f"(1) metric = {m}")
+        print(f"(2) metric = {m}")
         if m > best_metric:
             print(f"(2) NEW BEST LEARNING_RATE {best_lr} -> {lr}")
             best_metric = m
             best_model = model
             best_lr = lr
 
-    print("(3) BEST LEARNING_RATE =", best_lr, best_metric)
+    print("(-) BEST LEARNING_RATE =", best_lr, ", metric =", best_metric)
 
-    return model, float(best_lr), float(best_metric)
+    return best_model, float(best_lr), float(best_metric)
 
 def double_check_at_output(model, at, X):
     max_diff = 0.0

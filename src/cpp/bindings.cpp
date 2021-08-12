@@ -145,7 +145,6 @@ PYBIND11_MODULE(pyveritas, m) {
     };
 
     py::class_<TreeRef>(m, "Tree")
-        .def(py::init<>())
         .def("root", [](const TreeRef& r) { return r.get().root().id(); })
         .def("num_leafs", [](const TreeRef& r) { return r.get().num_leafs(); })
         .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
@@ -176,8 +175,6 @@ PYBIND11_MODULE(pyveritas, m) {
                 throw py::value_error("out of bounds access into AddTree");
             })
         .def("__len__", &AddTree::size)
-        .def("__iter__", [](const AddTree &at) { return py::make_iterator(at.begin(), at.end()); },
-                    py::keep_alive<0, 1>())
         .def("num_nodes", &AddTree::num_nodes)
         .def("num_leafs", &AddTree::num_leafs)
         .def("get_splits", &AddTree::get_splits)
@@ -204,30 +201,31 @@ PYBIND11_MODULE(pyveritas, m) {
         })
         .def("eval", [](const AddTree& at, py::array_t<FloatT> arr) {
             py::buffer_info buf = arr.request();
-            row_major_data data {{ static_cast<FloatT *>(buf.ptr),
-                                   static_cast<size_t>(buf.shape[0]),
-                                   static_cast<size_t>(buf.shape[1]) }};
+            data d { static_cast<FloatT *>(buf.ptr), 0, 0, 0, 0 };
             if (buf.ndim == 1)
             {
-                data.num_rows = 1;
-                data.num_cols = buf.shape[0];
+                d.num_rows = 1;
+                d.num_cols = buf.shape[0];
+                d.stride_row = 0; // there is only one row
+                d.stride_col = buf.strides[0] / sizeof(FloatT);
             }
             else if (buf.ndim == 2)
             {
-                data.num_rows = buf.shape[0];
-                data.num_cols = buf.shape[1];
+                d.num_rows = buf.shape[0];
+                d.num_cols = buf.shape[1];
+                d.stride_row = buf.strides[0] / sizeof(FloatT);
+                d.stride_col = buf.strides[1] / sizeof(FloatT);
             }
             else throw py::value_error("invalid data");
 
-            //std::cout << "evaluating row_major_data "
-            //    << data.num_rows << "x" << data.num_cols << std::endl;
+            //std::cout << d << std::endl;
 
-            auto result = py::array_t<FloatT>(data.num_rows);
+            auto result = py::array_t<FloatT>(d.num_rows);
             py::buffer_info out = result.request();
             FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
 
-            for (size_t i = 0; i < static_cast<size_t>(data.num_rows); ++i)
-                out_ptr[i] = at.eval(row<row_major_data>{data, i});
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
+                out_ptr[i] = at.eval(row{d, i});
 
             return result;
                 
