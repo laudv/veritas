@@ -1,4 +1,8 @@
-/*
+/**
+ * \file graph.hpp
+ *
+ * A k-partite graph derived from a tree ensemble.
+ *
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
@@ -12,24 +16,29 @@
 
 #include <iomanip>
 #include <chrono>
-#include <map>
-#include <set>
 
 namespace veritas {
 
-    struct MinMax {
-        FloatT min;
-        FloatT max;
+    struct Bounds {
+        FloatT lo;
+        FloatT up;
     };
 
     /**
      * K-partite graph. Edges are implicit between vertices of different
-     * independent sets when their boxes overlap
+     * independent sets when their boxes overlap.
+     *
+     * GraphSearch uses a Graph internally. For normal use of Veritas, you do
+     * not need to use this directly.
      */
     class Graph {
     public:
-        struct Vertex { NodeId leaf_id; BoxRef box; FloatT output; };
-        using IndepSet = std::vector<Vertex>; // independent set
+        struct Vertex {
+            NodeId leaf_id; /**< Leaf ID corresponding to the vertex. */
+            BoxRef box; /**< Box associated with the leaf. See Tree::compute_box(). */
+            FloatT output; /**< The leaf value associated with the leaf. */
+        };
+        using IndepSet = std::vector<Vertex>; /**< independent set */
         using DomainStore = BlockStore<DomainPair>;
 
     private:
@@ -76,7 +85,7 @@ namespace veritas {
 
 
     public:
-        const FloatT base_score;
+        const FloatT base_score; /**< See AddTree::base_score */
 
         Graph() : base_score(0.0) {}
         Graph(const AddTree& at) : base_score(at.base_score)
@@ -88,6 +97,10 @@ namespace veritas {
         std::vector<IndepSet>::const_iterator begin() const { return sets_.begin(); }
         std::vector<IndepSet>::const_iterator end() const { return sets_.end(); }
 
+        /**
+         * Remove vertexes for which the `f` returns true.
+         * Used by GraphSearch::prune().
+         */
         template <typename F> /* F : (Box) -> bool */
         void prune(F f)
         {
@@ -96,6 +109,12 @@ namespace veritas {
                 set.erase(std::remove_if(set.begin(), set.end(), g), set.end());
         }
 
+        /**
+         * Remove vertexes that do not overlap with the given box.
+         *
+         * If `intersect_with_box` is true, the boxes of the vertexes that
+         * remain are updated to intersect with the given box.
+         */
         void prune_by_box(const BoxRef& box, bool intersect_with_box)
         {
             prune([box](const BoxRef& b) { return !b.overlaps(box); });
@@ -126,7 +145,12 @@ namespace veritas {
             std::swap(sets_, new_sets);
         }
 
-        MinMax basic_bound() const
+        /**
+         * Simple output bound:
+         *  - lo = sum{min{v.output : v in indep_set} : indep_set in graph}
+         *  - hi = sum{max{v.output : v in indep_set} : indep_set in graph}
+         */
+        Bounds basic_bound() const
         {
             FloatT min_bound = base_score, max_bound = base_score;
             for (const auto& set : sets_)
@@ -144,16 +168,23 @@ namespace veritas {
             return {min_bound, max_bound};
         }
 
+        /** Get the vertexes in an independent set. */
         const IndepSet& get_vertices(size_t indep_set) const { return sets_.at(indep_set); }
 
         size_t num_independent_sets() const { return sets_.size(); }
-        size_t num_vertices() const
+        size_t num_vertices() const /** Total number of vertices. */
         {
             size_t count = 0;
             for (const IndepSet& set : sets_) count += set.size();
             return count;
         }
 
+        /**
+         * Merge algorithm due to 
+         *
+         *  > Hongge Chen, Huan Zhang, Duane Boning, and Cho-Jui Hsieh "Robust
+         *  > Decision Trees Against Adversarial Examples", ICML 2019
+         */
         bool merge(int K, float max_time)
         {
             using ms = std::chrono::milliseconds;

@@ -1,13 +1,16 @@
-## Inspired by Chen Hongge's implementation:
-##    https://github.com/chenhongge/RobustTrees/blob/ed28228ab68e2c9f0fe630c7a7faa70e8411a359/xgbKantchelianAttack.py
-##
-##    Hongge Chen, Huan Zhang, Duane Boning, and Cho-Jui Hsieh "Robust Decision
-##    Trees Against Adversarial Examples", ICML 2019
-##
-## Algorithm from
-##    Kantchelian, Alex, J. Doug Tygar, and Anthony Joseph. "Evasion and
-##    hardening of tree ensemble classifiers." International Conference on Machine
-##    Learning. 2016.
+## \file kantchelian.py
+#
+# Inspired by Chen Hongge's implementation:
+#    https://github.com/chenhongge/RobustTrees/blob/ed28228ab68e2c9f0fe630c7a7faa70e8411a359/xgbKantchelianAttack.py
+#
+# > Hongge Chen, Huan Zhang, Duane Boning, and Cho-Jui Hsieh "Robust Decision
+# > Trees Against Adversarial Examples", ICML 2019
+#
+# Algorithm from
+#
+# > Kantchelian, Alex, J. Doug Tygar, and Anthony Joseph. "Evasion and
+# > hardening of tree ensemble classifiers." International Conference on Machine
+# > Learning. 2016.
 
 import timeit, time
 import gurobipy as gu
@@ -21,6 +24,8 @@ class NodeInfo:
         self.leafs_in_subtree = leafs_in_subtree
         self.var = var
 
+## \ingroup python
+# \brief Base class for MILP methods
 class KantchelianBase:
 
     def __init__(self, split_values, max_time=1e100):
@@ -311,6 +316,8 @@ class KantchelianBase:
 
 
 
+## \ingroup python
+# \brief Robustness checking with MILP
 class KantchelianAttack(KantchelianBase):
 
     def __init__(self, at, target_output, example, **kwargs):
@@ -353,7 +360,8 @@ class KantchelianAttack(KantchelianBase):
                 self.node_info_per_tree)
         return adv_example, ensemble_output, self.bvar.x
 
-
+## \ingroup python
+# \brief Targeted robustness checking with MILP
 class KantchelianTargetedAttack(KantchelianBase):
 
     def __init__(self, source_at, target_at, example, **kwargs):
@@ -418,6 +426,9 @@ class KantchelianTargetedAttack(KantchelianBase):
                 name="multiclass_mislabel")
 
 
+## \ingroup python
+# \brief Variation of the Kantchelian attack where the output is optimized rather than
+# the distance to the closest adversarial example.
 class KantchelianOutputOpt(KantchelianBase):
     def __init__(self, at, **kwargs):
         self.at = at

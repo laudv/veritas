@@ -180,14 +180,14 @@ namespace veritas {
 
     template <typename RefT>
     FloatT
-    NodeRef<RefT>::eval(const row& row) const
+    NodeRef<RefT>::eval(const data& row) const
     {
         if (is_leaf()) return leaf_value();
         return get_split().test(row) ? left().eval(row) : right().eval(row);
     }
 
-    template FloatT NodeRef<inner::ConstRef>::eval(const row&) const;
-    template FloatT NodeRef<inner::MutRef>::eval(const row&) const;
+    template FloatT NodeRef<inner::ConstRef>::eval(const data&) const;
+    template FloatT NodeRef<inner::MutRef>::eval(const data&) const;
 
     Tree
     Tree::prune(BoxRef box) const
@@ -424,22 +424,6 @@ namespace veritas {
         for (const Tree& t : *this)
             new_at.add_tree(t.prune(box));
         return new_at;
-    }
-
-    std::tuple<FloatT, FloatT>
-    AddTree::find_minmax_leaf_value() const
-    {
-        FloatT min = +FLOATT_INF;
-        FloatT max = -FLOATT_INF;
-
-        for (const Tree& tree : *this)
-        {
-            auto&& [m, M] = tree.find_minmax_leaf_value();
-            min = std::min(min, m);
-            max = std::max(max, M);
-        }
-
-        return {min, max};
     }
 
     AddTree

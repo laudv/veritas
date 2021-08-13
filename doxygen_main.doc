@@ -1,0 +1,27 @@
+/**
+\mainpage Veritas API
+
+Veritas is written in C++ and has Python bindings using [pybind11](https://pybind11.readthedocs.io).
+
+View the [source code](https://github.com/laudv/veritas) on Github.
+
+\section pybind Python bindings
+
+Notable diffferences between Python API and C++ API:
+ - Trees cannot be constructed directly from Python, use veritas::AddTree::add_tree() instead.
+ - Integers are used to refer to nodes of a tree. Instead of
+    + `tree.root().left().right().get_split()`, use
+    + `tree.get_split(tree.right(tree.left(tree.root())))`
+   The former is nicer, but makes memory management difficult from Python.
+ - veritas::Graph is not exposed in Python.
+ - Evaluation (veritas::Tree::eval(), veritas::AddTree::eval(), veritas::Tree::eval_node()) supports numpy arrays.
+
+Otherwise, the C++ and Python APIs are identical.
+
+View the source code for the pybind11 bindings [here](https://github.com/laudv/veritas/blob/main/src/cpp/bindings.cpp).
+
+\section pyutil Python classes and functions
+
+There are some additional Python utility classes and functions. An overview can be found here: \ref python.
+*/
+

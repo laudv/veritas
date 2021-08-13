@@ -30,13 +30,14 @@ namespace py = pybind11;
 using namespace veritas;
 
 template <typename T>
-std::string tostr(T& o)
+std::string tostr(const T& o)
 {
     std::stringstream s;
     s << o;
     return s.str();
 }
 
+/** Convert between Python list and C++ Veritas box. */
 Box
 tobox(py::list pybox)
 {
@@ -76,11 +77,6 @@ tobox(py::list pybox)
     return box;
 }
 
-//static AddTree DUMMY_ADDTREE{};
-
-//using TreeD = Tree<Split, FloatT>;
-//using NodeRefD = TreeD::MRef;
-
 PYBIND11_MODULE(pyveritas, m) {
     m.doc() = "Veritas: verification of tree ensembles";
 
@@ -109,7 +105,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 if (t.size() != 2) throw std::runtime_error("invalid pickle state");
                 return Domain(t[0].cast<FloatT>(), t[1].cast<FloatT>());
             }))
-        ;
+        ; // Domain
 
     m.attr("BOOL_SPLIT_VALUE") = BOOL_SPLIT_VALUE;
     m.attr("TRUE_DOMAIN") = TRUE_DOMAIN;
@@ -118,7 +114,7 @@ PYBIND11_MODULE(pyveritas, m) {
     py::class_<DomainPair>(m, "DomainPair")
         .def_readonly("feat_id", &DomainPair::feat_id)
         .def_readonly("domain", &DomainPair::domain)
-        ;
+        ; // DomainPair
 
     py::class_<LtSplit>(m, "LtSplit")
         .def(py::init<FeatId, FloatT>())
@@ -133,7 +129,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 if (t.size() != 2) throw std::runtime_error("invalid pickle state");
                 return { t[0].cast<FeatId>(), t[1].cast<FloatT>() };
             }))
-        ;
+        ; // LtSplit
 
 
     /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
@@ -225,7 +221,7 @@ PYBIND11_MODULE(pyveritas, m) {
             FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = at.eval(row{d, i});
+                out_ptr[i] = at.eval(d.row(i));
 
             return result;
                 
@@ -270,7 +266,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 at.from_json(s);
                 return at;
             }))
-        ;
+        ; // AddTree
 
     py::class_<FeatMap>(m, "FeatMap")
         .def(py::init<FeatId>())
@@ -312,7 +308,7 @@ PYBIND11_MODULE(pyveritas, m) {
                 return py::make_iterator(h.begin(), h.end()); },
                 py::keep_alive<0, 1>())
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
-        ;
+        ; // FeatMap
 
     py::class_<GraphSearch>(m, "GraphSearch")
         .def(py::init<const AddTree&>())
@@ -341,7 +337,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readwrite("stop_when_solution_eps_equals", &GraphSearch::stop_when_solution_eps_equals)
         .def_readwrite("stop_when_num_solutions_equals", &GraphSearch::stop_when_num_solutions_equals)
         .def_readwrite("stop_when_up_bound_less_than", &GraphSearch::stop_when_up_bound_less_than)
-        ;
+        ; // GraphSearch
 
     //py::class_<Stats>(m, "Stats")
     //    .def_readonly("num_steps", &Stats::num_steps)
@@ -359,7 +355,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readonly("num_states", &Snapshot::num_states)
         .def_readonly("eps", &Snapshot::eps)
         .def_readonly("bounds", &Snapshot::bounds)
-        ;
+        ; // Snapshot
 
     py::class_<Solution>(m, "Solution")
         .def_readonly("state_index", &Solution::state_index)
@@ -375,7 +371,7 @@ PYBIND11_MODULE(pyveritas, m) {
             return d;
         })
         .def("__str__", [](const Solution& s) { return tostr(s); })
-        ;
+        ; // Solution
 
 
 } /* PYBIND11_MODULE */

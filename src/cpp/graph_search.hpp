@@ -1,4 +1,6 @@
-/*
+/**
+ * \file graph_search.hpp
+ *
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
@@ -20,6 +22,9 @@ namespace veritas {
 
     class GraphSearch;
 
+    /** A collection of statistics of the GraphSearch at specific points in
+     * time. After GraphSearch::steps() finishes, a snapshot is added to
+     * GraphSearch::snapshots. */
     struct Snapshot {
         double time = 0.0;
         size_t num_steps = 0;
@@ -29,6 +34,7 @@ namespace veritas {
         std::tuple<FloatT, FloatT, FloatT> bounds = {-FLOATT_INF, FLOATT_INF, FLOATT_INF}; // lo, up_a, up_ara
     };
 
+    /** \private */
     struct State {
         size_t parent; // index into GraphSearch::states_
         FloatT g, h;
@@ -53,6 +59,7 @@ namespace veritas {
             << "}";
     }
 
+    /** \private */
     struct StateCmp {
         const GraphSearch& search;
         FloatT eps;
@@ -63,12 +70,14 @@ namespace veritas {
         { return a.fscore(eps) < b.fscore(eps); }
     };
 
+    /** \private */
     struct SolutionRef {
         size_t state_index;
         FloatT eps;
         double time;
     };
 
+    /** A full (sub)optimal solution. */
     struct Solution {
         size_t state_index;
         size_t solution_index;

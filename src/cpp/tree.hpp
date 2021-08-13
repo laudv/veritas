@@ -1,4 +1,10 @@
-/*
+/**
+ * \file tree.hpp
+ *
+ * The Veritas internal tree representation. Trees are binary and only support
+ * less-than splits. Binary splits can be achieved (given data is in {0, 1})
+ * using `LtSplit(feat_id, BOOL_SPLIT_VALUE=1.0)`.
+ *
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
@@ -9,9 +15,8 @@
 
 #include "domain.hpp"
 #include <vector>
-#include <unordered_map>
 #include <iostream>
-#include <numeric>
+#include <numeric> // std::accumulate
 
 namespace veritas {
 
@@ -62,6 +67,22 @@ namespace veritas {
 
 
 
+    /**
+     * A reference to a node in a `veritas::Tree`.
+     *
+     * A node reference can be constant, disallowing mutations to the tree, or
+     * it can be mutable, allowing mutations to the tree. This is controlled by
+     * the template `RefT`, which is either `veritas.inner.ConstRef` or
+     * `veritas.inner.MutRef`.
+     *
+     * You can get a NodeRef using
+     * - Tree::root()
+     * - Tree::operator[](NodeId)
+     * - Tree::node_const(NodeId)
+     * - Tree::node_mut(NodeId)
+     *
+     * You can convert a mut ref into a const ref using `veritas::NodeRef::to_const()`.
+     */
     template <typename RefT /* inner::ConstRef or inner::MutRef */>
     class NodeRef {
     public:
@@ -85,6 +106,7 @@ namespace veritas {
         inline NodeRef<RefT>& operator=(const NodeRef<RefT>& o)
         { tree_ = o.tree_; node_id_ = o.node_id_; return *this; }
 
+        /** Convert this to a constant reference. */
         inline NodeRef<inner::ConstRef> to_const() const { return { tree_, node_id_ }; }
 
         inline bool is_root() const { return node().parent == node().id; }
@@ -93,25 +115,31 @@ namespace veritas {
         inline bool is_left_child() const { return !is_root() && parent().left().id() == id(); }
         inline bool is_right_child() const { return !is_root() && parent().right().id() == id(); }
 
+        /** Get the node id of this node. */
         inline NodeId id() const { return node_id_; }
+        /** Navigate to the left child. */
         inline NodeRef<RefT> left() const
         {
             if (is_leaf()) throw std::runtime_error("left of leaf");
             return { tree_, node().internal.left };
         }
+        /** Navigate to the right child. */
         inline NodeRef<RefT> right() const
         {
             if (is_leaf()) throw std::runtime_error("right of leaf");
             return { tree_, node().internal.left + 1 };
         }
+        /** Navigate to the parent of this node. */
         inline NodeRef<RefT> parent() const
         {
             if (is_root()) throw std::runtime_error("parent of root");
             return { tree_, node().parent };
         }
 
+        /** Number of nodes in this (sub)tree. */
         inline int tree_size() const { return node().tree_size; }
 
+        /** Compute the depth of this node. */
         inline int depth() const
         {
             int depth = 0;
@@ -124,18 +152,21 @@ namespace veritas {
             return depth;
         }
 
+        /** Access the split of this internal node. */
         inline LtSplit get_split() const
         {
             if (is_leaf()) throw std::runtime_error("get_split of leaf");
             return node().internal.split;
         }
 
+        /** Access the leaf value of this leaf node. */
         inline FloatT leaf_value() const
         {
             if (is_internal()) throw std::runtime_error("get_split of internal");
             return node().leaf.leaf_value;
         }
 
+        /** Set the leaf value of this leaf node. */
         template <typename T=RefT>
         inline std::enable_if_t<T::is_mut_type::value, void>
         set_leaf_value(FloatT value)
@@ -144,6 +175,7 @@ namespace veritas {
             node().leaf.leaf_value = value;
         }
 
+        /** Split this internal node. */
         template <typename T=RefT>
         inline std::enable_if_t<T::is_mut_type::value, void>
         split(LtSplit split)
@@ -170,10 +202,12 @@ namespace veritas {
             }
         }
 
+        /** Boolean split; uses LtSplit with BOOL_SPLIT_VALUE */
         template <typename T=RefT>
         inline std::enable_if_t<T::is_mut_type::value, void>
         split(FeatId feat_id) { split({feat_id, BOOL_SPLIT_VALUE}); } // bool split
 
+        /** Count the number of leafs in this (sub)tree. */
         inline size_t num_leafs() const
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
 
@@ -188,6 +222,7 @@ namespace veritas {
             return false;
         }
 
+        /** Returns the minimum and maximum leaf value in this (sub)tree. */
         std::tuple<FloatT, FloatT> find_minmax_leaf_value() const
         {
             if (is_internal())
@@ -201,6 +236,7 @@ namespace veritas {
 
         /** Get the domain restrictions on the features in this node. */
         Box compute_box() const;
+        /** Like NodeRef::compute_box(), but write to given Box */
         bool compute_box(Box& box) const;
 
         void print_node(std::ostream& strm, int depth) const;
@@ -210,12 +246,16 @@ namespace veritas {
         std::enable_if_t<T::is_mut_type::value, void>
         from_json(std::istream& strm);
 
-        FloatT eval(const row& data) const;
+        /** Evaluate the (sub)tree on the given instance. */
+        FloatT eval(const data& row) const;
     }; // NodeRef
 
 
 
 
+    /**
+     * A binary decision tree with less-than splits.
+     */
     class Tree {
     public:
         using ConstRef = NodeRef<inner::ConstRef>;
@@ -229,19 +269,27 @@ namespace veritas {
 
     public:
         inline Tree() { clear(); }
+        /** Const NodeRef to root node */
         inline ConstRef root() const { return (*this)[0]; }
+        /** Mutable NodeRef to root node */
         inline MutRef root() { return (*this)[0]; }
+        /** Reset this tree. */
         inline void clear() { nodes_.clear(); nodes_.push_back({0, 0}); }
 
+        /** Get a const NodeRef to node with given id. */
         inline ConstRef operator[] (NodeId id) const { return { *this, id }; }
+        /** Get a mutable NodeRef to node with given id. */
         inline MutRef operator[] (NodeId id) { return { *this, id }; }
 
+        /** Bounds check the given node id. */
         inline bool is_valid_node_id(NodeId id) const
         { return id >= 0 && static_cast<size_t>(id) < nodes_.size(); }
 
+        /** Bounds check the given node id, throw error if invalid. */
         inline void check_node_id(NodeId id) const
         { if (!is_valid_node_id(id)) throw std::runtime_error("invalid node id"); }
 
+        /** Like Tree::operator[](NodeId), but with bounds check. */
         inline ConstRef node_const(NodeId id) const { // range checked
             #ifndef VERITAS_SAFETY_CHECKS_DISABLED
             check_node_id(id);
@@ -250,6 +298,7 @@ namespace veritas {
             return { *this, id };
         }
 
+        /** Like Tree::operator[](NodeId), but with bounds check. */
         inline MutRef node_mut(NodeId id) { // range checked
             #ifndef VERITAS_SAFETY_CHECKS_DISABLED
             check_node_id(id);
@@ -264,13 +313,19 @@ namespace veritas {
         inline void to_json(std::ostream& strm) const { root().to_json(strm, 0); }
         inline void from_json(std::istream& strm) { root().from_json(strm); };
 
+        /** Prune all branches that are never taken for examples in the given box. */
         Tree prune(BoxRef box) const;
+        /** See NodeRef::find_minmax_leaf_value */
         std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
+        /** Limit depth and replace leaf values with max leaf value in subtree. */
         Tree limit_depth(int max_depth) const;
+        /** Compute the variance of the leaf values */
         FloatT leaf_value_variance() const;
+        /** Construct a new tree with negated leaf values. */
         Tree negate_leaf_values() const;
 
-        FloatT eval(const row& data) const { return root().eval(data); }
+        /** Evaluate this tree on an instance. */
+        FloatT eval(const data& row) const { return root().eval(row); }
 
         bool operator==(const Tree& other) const { return root() == other.root(); }
     }; // Tree
@@ -280,6 +335,7 @@ namespace veritas {
 
 
 
+    /** Additive ensemble of Trees. A sum of Trees. */
     class AddTree {
     public:
         using const_iterator = std::vector<Tree>::const_iterator;
@@ -289,8 +345,9 @@ namespace veritas {
         std::vector<Tree> trees_;
 
     public:
-        FloatT base_score;
+        FloatT base_score; /**< Constant value added to the output of the ensemble. */
         inline AddTree() : base_score{0.0} {} ;
+        /** Copy trees (begin, begin+num) from given `at`. */
         inline AddTree(const AddTree& at, size_t begin, size_t num)
             : trees_()
             , base_score(begin == 0 ? at.base_score : 0.0)
@@ -301,11 +358,16 @@ namespace veritas {
                 throw std::runtime_error("out of bounds");
         }
 
+        /** Add a new empty tree to the ensemble. */
         inline Tree& add_tree() { return trees_.emplace_back(); }
+        /** Add a tree to the ensemble. */
         inline void add_tree(Tree&& t) { trees_.emplace_back(std::move(t)); }
+        /** Add a tree to the ensemble. */
         inline void add_tree(const Tree& t) { trees_.push_back(t); }
 
+        /** Get mutable reference to tree `i` */
         inline Tree& operator[](size_t i) { return trees_[i]; }
+        /** Get const reference to tree `i` */
         inline const Tree& operator[](size_t i) const { return trees_[i]; }
 
         inline iterator begin() { return trees_.begin(); }
@@ -315,32 +377,45 @@ namespace veritas {
         inline const_iterator end() const { return trees_.end(); }
         inline const_iterator cend() const { return trees_.cend(); }
 
+        /** Number of trees. */
         inline size_t size() const { return trees_.size(); }
 
         size_t num_nodes() const;
         size_t num_leafs() const;
 
+        /** Map feature -> [list of split values, sorted, unique]. */
         SplitMapT get_splits() const;
+        /** Prune each tree in the ensemble. See Tree::prune. */
         AddTree prune(BoxRef box) const;
 
-        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const;
-        /** (base_score-offset) + ({leafs} + offset) */
+        /** Avoid negative leaf values by adding a constant positive value to
+         * the leaf values, and subtracting this value from the #base_score.
+         * (base_score-offset) + ({leafs} + offset) */
         AddTree neutralize_negative_leaf_values() const;
-        /** replace internal nodes at deeper depths by leaf node with maximum leaf value in subtree */
+        /** Replace internal nodes at deeper depths by a leaf node with maximum
+         * leaf value in subtree */
         AddTree limit_depth(int max_depth) const;
+        /** Sort the trees in the ensemble by leaf-value variance. Largest
+         * variance first. */
         AddTree sort_by_leaf_value_variance() const;
+        /** Concatenate the negated trees of `other` to this tree. */
         AddTree concat_negated(const AddTree& other) const;
+        /** Negate the leaf values of all trees. See Tree::negate_leaf_values. */
         AddTree negate_leaf_values() const;
 
         void to_json(std::ostream& strm) const;
         void from_json(std::istream& strm);
 
-        FloatT eval(const row& r) const
+        /** Evaluate the ensemble. This is the sum of the evaluations of the
+         * trees. See Tree::eval. */
+        FloatT eval(const data& row) const
         {
-            auto op = [&r](FloatT v, const Tree& t) { return v + t.eval(r); };
+            auto op = [&row](FloatT v, const Tree& t) { return v + t.eval(row); };
             return std::accumulate(begin(), end(), 0.0, op) + base_score;
         }
 
+        /** Compute the intersection of the boxes of all leaf nodes. See
+         * Tree::compute_box */
         void compute_box(Box& box, const std::vector<NodeId> node_ids) const;
 
         bool operator==(const AddTree& other) const

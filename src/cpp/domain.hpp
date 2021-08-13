@@ -1,4 +1,6 @@
-/*
+/**
+ * \file domain.hpp
+ *
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
@@ -21,14 +23,18 @@ namespace veritas {
     struct Domain;
     std::ostream& operator<<(std::ostream& s, const Domain& d);
 
+    /** A real interval with lower bound `lo` and upper bound `hi`. */
     struct Domain {
-        FloatT lo, hi;
+        FloatT lo; /**< The lower limit (possibly -inf) */
+        FloatT hi; /**< The upper limit (possibly +inf) */
 
+        /** Construct interval (-inf, inf) */
         inline Domain()
             : lo(-FLOATT_INF)
             , hi(FLOATT_INF) {}
 
-        inline Domain(FloatT lo, FloatT hi) : lo(lo), hi(hi) // inclusive!
+        /** Construct interval [lo, hi] (inclusive) */
+        inline Domain(FloatT lo, FloatT hi) : lo(lo), hi(hi)
         {
 #ifndef VERITAS_SAFETY_CHECKS_DISABLED
             if (lo > hi)
@@ -40,15 +46,23 @@ namespace veritas {
 #endif
         }
 
+        /** Construct interval [lo, inf) */
         static inline Domain from_lo(FloatT lo) { return {lo, FLOATT_INF}; }
+        /** Construct interval [-inf, hi] (inclusive) */
         static inline Domain from_hi_inclusive(FloatT hi) { return {-FLOATT_INF, hi}; }
+        /** Construct interval [-inf, hi) (exclusive) */
         static inline Domain from_hi_exclusive(FloatT hi) { return Domain::exclusive(-FLOATT_INF, hi); }
+        /** Construct interval [lo, hi] (inclusive) */
         static inline Domain inclusive(FloatT lo, FloatT hi) { return {lo, hi}; }
+        /** Construct interval [lo, hi) (exclusive) */
         static inline Domain exclusive(FloatT lo, FloatT hi)
         { return {lo, std::isinf(hi) ? FLOATT_INF : std::nextafter(hi, -FLOATT_INF)}; }
 
+        /** Check if equal to (-inf, inf) */
         inline bool is_everything() const { return *this == Domain(); };
+        /** Check if value `v` is in domain. */
         inline bool contains(FloatT v) const { return lo >= v && v <= hi; }
+        /** Check if two domains overlap */
         inline bool overlaps(const Domain& other) const
         {
             // [   ]
@@ -56,6 +70,7 @@ namespace veritas {
             return lo <= other.hi && hi >= other.lo;
         }
 
+        /** Intersect two domains. Given domain must Domain::overlap. */
         inline Domain intersect(const Domain& other) const
         {
             #ifndef VERITAS_SAFETY_CHECKS_DISABLED
@@ -72,7 +87,8 @@ namespace veritas {
         inline bool lo_is_inf() const { return std::isinf(lo); }
         inline bool hi_is_inf() const { return std::isinf(hi); }
 
-        // consistent with LtSplit: strictly less than, left domain exclusive
+        /** Split this domain in two. Domain must constain the value (Domain::contains).
+         * Consistent with LtSplit: strictly less than, left domain exclusive. */
         inline std::tuple<Domain, Domain> split(FloatT value) const
         {
             return {
@@ -98,31 +114,38 @@ namespace veritas {
         return s << "Dom(" << d.lo << ',' << d.hi << ')';
     }
 
+    /** Split value used for boolean splits (assuming feature values in {0, 1}) */
     const FloatT BOOL_SPLIT_VALUE = 1.0;
+    /** [-inf, 1) domain for FALSE */
     const Domain FALSE_DOMAIN = Domain::from_hi_exclusive(BOOL_SPLIT_VALUE);
+    /** [1, inf) domain for TRUE */
     const Domain TRUE_DOMAIN = Domain::from_lo(BOOL_SPLIT_VALUE);
 
+    /** A domain annotated with its feature id. */
     struct DomainPair {
         FeatId feat_id;
         Domain domain;
     };
 
-    /** A sorted list of pairs */
+    /** A __sorted__ list of pairs */
     using Box = std::vector<DomainPair>;
 
 
 
+    /** A less than split on a feature */
     struct LtSplit {
         FeatId feat_id;
         FloatT split_value;
 
         inline LtSplit(FeatId f, FloatT v) : feat_id(f), split_value(v) {}
 
-        /**  true goes left, false goes right */
+        /** True goes left, false goes right */
         inline bool test(FloatT v) const { return v < split_value; }
-        inline bool test(const row& row) { return test(row[feat_id]); }
+        /** Evaluate this split on an instance. */
+        inline bool test(const data& row) { return test(row[feat_id]); }
 
-        /** strict less than, so eq goes right */
+        /** Get the left and right domains of this split.
+         * Strict less than, so eq goes right */
         inline std::tuple<Domain, Domain> get_domains() const
         { return Domain().split(split_value); }
 
@@ -136,13 +159,21 @@ namespace veritas {
 
 
 
-    inline bool refine_box(Box& doms, FeatId feat_id, const Domain& dom)
+    /**
+     * Include the constraint '`feat_id` in `dom`' to the box.
+     *
+     * If no domain is present for `feat_id`, then add it, and maintain the
+     * sorted property of the box. If a domain is already present for
+     * `feat_id`, then intersect it. If it does not overlap, then return false,
+     * else return true.
+     */
+    inline bool refine_box(Box& box, FeatId feat_id, const Domain& dom)
     {
         Domain new_dom;
-        auto it = std::find_if(doms.begin(), doms.end(), [feat_id](const DomainPair& p)
+        auto it = std::find_if(box.begin(), box.end(), [feat_id](const DomainPair& p)
                 { return p.feat_id == feat_id; });
 
-        if (it != doms.end())
+        if (it != box.end())
             new_dom = it->domain;
         if (!new_dom.overlaps(dom))
             return false;
@@ -150,12 +181,12 @@ namespace veritas {
         new_dom = new_dom.intersect(dom);
 
         // ensure sorted
-        if (it == doms.end())
+        if (it == box.end())
         {
-            doms.push_back({ feat_id, new_dom });
-            for (int i = doms.size() - 1; i > 0; --i) // ids sorted
-                if (doms[i-1].feat_id > doms[i].feat_id)
-                    std::swap(doms[i-1], doms[i]);
+            box.push_back({ feat_id, new_dom });
+            for (int i = box.size() - 1; i > 0; --i) // ids sorted
+                if (box[i-1].feat_id > box[i].feat_id)
+                    std::swap(box[i-1], box[i]);
             //std::sort(workspace_.begin(), workspace_.end(),
             //        [](const DomainPair& a, const DomainPair& b) {
             //            return a.first < b.first;
@@ -168,6 +199,9 @@ namespace veritas {
         return true;
     }
 
+    /**
+     * See ::refine_box() and LtSplit::get_domains()
+     */
     inline bool refine_box(Box& doms, const LtSplit& split, bool from_left_child)
     {
         Domain dom = from_left_child
@@ -177,8 +211,13 @@ namespace veritas {
         return refine_box(doms, split.feat_id, dom);
     }
 
-    /** An iterator of `Domain`s sorted asc by their feature ids
-     *  This represents a hypercube in the input space. */
+    /**
+     * An iterator of `Domain`s sorted asc by their feature IDs.
+     * This represents a hypercube in the input space.
+     *
+     * BoxRefs are used in search spaces (GraphSearch) in combination with
+     * stable pointers into a BlockStore.
+     */
     class BoxRef {
     public:
         using const_iterator = const DomainPair *;
@@ -198,10 +237,12 @@ namespace veritas {
         }
         template <typename T>
         explicit inline BoxRef(const T& t) : BoxRef(t.begin, t.end) {}
+        /** A box with no domain restrictions representing the full input space. */
         inline static BoxRef null_box() { return {nullptr, nullptr}; }
         inline const_iterator begin() const { return begin_; }
         inline const_iterator end() const { return end_; }
 
+        /** Do the domains for the corresponding feature ids overlap? */
         inline bool overlaps(const BoxRef& other) const
         {
             auto it0 = begin_;
@@ -222,7 +263,8 @@ namespace veritas {
             return true;
         }
 
-        // slow linear scan
+        /** Does the box overlap the domain for the given feature? This is a
+         * slow linear scan. */
         inline bool overlaps(FeatId feat_id, const Domain& dom) const
         {
             for (auto it = begin_; it < end_; ++it)
@@ -233,10 +275,19 @@ namespace veritas {
             return true;
         }
 
-        const static int OVERLAPS_LEFT = 1;
-        const static int OVERLAPS_RIGHT = 2;
+        const static int OVERLAPS_LEFT = 1; /**< Possible output of BoxRef::overlaps(LtSplit&) */
+        const static int OVERLAPS_RIGHT = 2; /**< Possible output of BoxRef::overlaps(LtSplit&) */
 
-        // slow linear scan
+        /** Does the box overlap the left and right domains for the given split?
+         * See LtSplit::get_domains()
+         *
+         * This is a slow linear scan.
+         *
+         * Output is:
+         * - OVERLAPS_LEFT
+         * - OVERLAPS_RIGHT
+         * - OVERLAPS_LEFT | OVERLAPS_RIGHT
+         */
         inline int overlaps(const LtSplit& split) const
         {
             for (auto it = begin_; it < end_; ++it)
@@ -272,6 +323,14 @@ namespace veritas {
         }
     }; // class BoxRef
 
+    /**
+     * Intersect the boxes with corresponding feature IDs.
+     *
+     * If `copy_b` is false, then the domains in `b` for which no corresponding
+     * domain exists in `a` are excluded.
+     *
+     * It is assumed that both boxes overlap.
+     */
     inline void
     combine_boxes(const BoxRef& a, const BoxRef& b, bool copy_b, Box& out)
     {

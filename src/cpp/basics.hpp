@@ -1,4 +1,6 @@
-/*
+/**
+ * \file basics.hpp
+ *
  * Copyright 2020 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
@@ -8,7 +10,6 @@
 #define VERITAS_BASICS_HPP
 
 #include <iostream>
-#include <cstdint>
 #include <vector>
 #include <limits>
 
@@ -35,16 +36,40 @@ namespace veritas {
         return cnt;
     }
 
-    // https://docs.python.org/3/c-api/buffer.html#buffer-structure
-    // https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
+    /**
+     * A data pointer wrapper. Data is expected to have a
+     * [numpy](https://numpy.org/) layout.
+     *
+     * - https://docs.python.org/3/c-api/buffer.html#buffer-structure
+     * - https://pybind11.readthedocs.io/en/stable/advanced/pycpp/numpy.html
+     */
     struct data {
         FloatT *ptr;
         size_t num_rows, num_cols;
         size_t stride_row, stride_col; // in num of elems, not bytes
 
+        /** Compute the index of an element. */
+        inline size_t index(size_t row, size_t col) const
+        { return row * stride_row + col * stride_col; }
+
+        /** Access element in data matrix without bounds checking. */
         inline FloatT get_elem(size_t row, size_t col) const
+        { return ptr[index(row, col)]; }
+
+        /** Access elements of first row. */
+        inline FloatT operator[](size_t col) const
+        { return get_elem(0, col); }
+
+        /** Select a row from the data. */
+        inline data row(size_t row) const
         {
-            return ptr[row * stride_row + col * stride_col];
+            return {
+                ptr+index(row, 0),
+                1,
+                num_cols,
+                stride_row,
+                stride_col,
+            };
         }
     };
 
@@ -57,16 +82,6 @@ namespace veritas {
             << ", strides=" << d.stride_row << ", " << d.stride_col
             << '}';
     }
-
-    struct row {
-        data d;
-        size_t row;
-        inline FloatT operator[](size_t col) const {
-            return d.get_elem(row, col);
-        }
-    };
-
-
 }
 
 

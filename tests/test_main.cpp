@@ -405,21 +405,25 @@ void test_eval1()
     t.root().left().right().set_leaf_value(3.0);
     t.root().right().set_leaf_value(4.0);
 
-    std::vector<FloatT> data = {1, 1, 1,  // 1
-                                2, 1, 1,  // 4
-                                2, 2, 1,  // 4
-                                2, 2, 2,  // 4
-                                1, 2, 2,  // 3
-                                1, 1, 2,  // 2
-                                1, 2, 1, // 3
-                                2, 1, 2}; // 4
-    row_major_data d1 {{&data[0], 8, 3}};
+    std::vector<FloatT> buf = {1, 1, 1,  // 1
+                               2, 1, 1,  // 4
+                               2, 2, 1,  // 4
+                               2, 2, 2,  // 4
+                               1, 2, 2,  // 3
+                               1, 1, 2,  // 2
+                               1, 2, 1, // 3
+                               2, 1, 2}; // 4
+    data d {&buf[0], 8, 3, 3, 1};
+
+    assert(d.row(6)[0] == 1);
+    assert(d.row(6)[1] == 2);
+    assert(d.row(6)[2] == 1);
 
     std::vector<FloatT> expected {1, 4, 4, 4, 3, 2, 3, 4};
 
     for (size_t i = 0; i < 8; ++i)
     {
-        FloatT v = at.eval<row_major_data>({d1, i});
+        FloatT v = at.eval(d.row(i));
         //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
         assert(v == expected.at(i));
     }
@@ -443,20 +447,24 @@ void test_eval2()
         t.root().set_leaf_value(10.0);
     }
 
-    std::vector<FloatT> data = {1, 2, 2, 2, 1, 1, 1, 2,
-                                1, 1, 2, 2, 2, 1, 2, 1,
-                                1, 1, 1, 2, 2, 2, 1, 2};
-    col_major_data d {{&data[0], 8, 3}};
+    std::vector<FloatT> buf = {1, 2, 2, 2, 1, 1, 1, 2,
+                               1, 1, 2, 2, 2, 1, 2, 1,
+                               1, 1, 1, 2, 2, 2, 1, 2};
+    data d {&buf[0], 8, 3, 1, 8};
+
+    assert(d.row(6)[0] == 1);
+    assert(d.row(6)[1] == 2);
+    assert(d.row(6)[2] == 1);
 
     std::vector<FloatT> expected0 {1, 4, 4, 4, 3, 2, 3, 4};
     std::vector<FloatT> expected {11, 14, 14, 14, 13, 12, 13, 14};
 
     for (size_t i = 0; i < 8; ++i)
     {
-        FloatT v = at.eval<col_major_data>({d, i});
+        FloatT v = at.eval(d.row(i));
         //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
         assert(v == expected.at(i));
-        v = at[0].eval<col_major_data>({d, i});
+        v = at[0].eval(d.row(i));
         assert(v == expected0.at(i));
     }
 }
@@ -850,8 +858,8 @@ int main()
     //test_json1();
     //test_json2();
 
-    //test_eval1();
-    //test_eval2();
+    test_eval1();
+    test_eval2();
 
     //test_prune1();
     //test_block_store1();
@@ -871,6 +879,6 @@ int main()
 
     //test_graph_simplify();
 
-    test_constraints1();
+    //test_constraints1();
 
 }

@@ -1,3 +1,9 @@
+## \file robustness.py
+#
+# Copyright 2020 DTAI Research Group - KU Leuven.
+# License: Apache License 2.0
+# Author: Laurens Devos
+
 import timeit, time
 import numpy as np
 
@@ -10,6 +16,8 @@ except:
 
 DUMMY_AT = AddTree()
 
+## \ingroup python
+# \brief Base class binary robustness search
 class RobustnessSearch:
 
     NO_STOP_COND = lambda lo, up: False
@@ -30,6 +38,12 @@ class RobustnessSearch:
         self.total_time = None
         self.total_time_p = None
 
+    ## Do the search
+    #
+    # For each binary search step, a tuple `(delta, delta_lower_bound,
+    # delta_upper_bound)` is added to self.delta_log.
+    #
+    # \return Tuple `(delta, delta_lower_bound, delta_upper_bound)`
     def search(self):
         self.start_time = timeit.default_timer()
         self.start_time_p = time.process_time()
@@ -110,6 +124,8 @@ class RobustnessSearch:
         return example_delta
 
 
+## \ingroup python
+# \brief Robustness search using Veritas for the output estimate
 class VeritasRobustnessSearch(RobustnessSearch):
     def __init__(self, source_at, target_at, example, **kwargs):
         super().__init__(example, **kwargs)
