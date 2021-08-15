@@ -12,8 +12,7 @@ Notable diffferences between Python API and C++ API:
  - Integers are used to refer to nodes of a tree. Instead of
     + `tree.root().left().right().get_split()`, use
     + `tree.get_split(tree.right(tree.left(tree.root())))`
-   The former is nicer, but makes memory management difficult from Python.
- - veritas::Graph is not exposed in Python.
+ - veritas::Graph is currently not exposed in Python.
  - Evaluation (veritas::Tree::eval(), veritas::AddTree::eval(), veritas::Tree::eval_node()) supports numpy arrays.
 
 Otherwise, the C++ and Python APIs are identical.
