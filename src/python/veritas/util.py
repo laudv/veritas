@@ -2,6 +2,8 @@
 # \defgroup python Python classes and functions
 # \brief An overview of all class and functions defined in Python. Does not include the bindings.
 
+from veritas import Solution
+
 ## \ingroup python
 # \brief Generate a concrete instance.
 #
