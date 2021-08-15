@@ -246,8 +246,8 @@ namespace veritas {
         std::enable_if_t<T::is_mut_type::value, void>
         from_json(std::istream& strm);
 
-        /** Evaluate the (sub)tree on the given instance. */
-        FloatT eval(const data& row) const;
+        FloatT eval(const data& data) const;
+        NodeId eval_node(const data& data) const;
     }; // NodeRef
 
 
@@ -326,6 +326,9 @@ namespace veritas {
 
         /** Evaluate this tree on an instance. */
         FloatT eval(const data& row) const { return root().eval(row); }
+        /** Evaluate this tree on an instance, but return node_id of leaf
+         * instead of leaf value. */
+        NodeId eval_node(const data& data) const { return root().eval_node(data); }
 
         bool operator==(const Tree& other) const { return root() == other.root(); }
     }; // Tree

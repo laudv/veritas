@@ -189,6 +189,17 @@ namespace veritas {
     template FloatT NodeRef<inner::ConstRef>::eval(const data&) const;
     template FloatT NodeRef<inner::MutRef>::eval(const data&) const;
 
+    template <typename RefT>
+    NodeId
+    NodeRef<RefT>::eval_node(const data& row) const
+    {
+        if (is_leaf()) return id();
+        return get_split().test(row) ? left().eval_node(row) : right().eval_node(row);
+    }
+
+    template NodeId NodeRef<inner::ConstRef>::eval_node(const data&) const;
+    template NodeId NodeRef<inner::MutRef>::eval_node(const data&) const;
+
     Tree
     Tree::prune(BoxRef box) const
     {

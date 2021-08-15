@@ -77,6 +77,29 @@ tobox(py::list pybox)
     return box;
 }
 
+data
+get_data(py::array_t<FloatT> arr)
+{
+    py::buffer_info buf = arr.request();
+    data d { static_cast<FloatT *>(buf.ptr), 0, 0, 0, 0 };
+    if (buf.ndim == 1)
+    {
+        d.num_rows = 1;
+        d.num_cols = buf.shape[0];
+        d.stride_row = 0; // there is only one row
+        d.stride_col = buf.strides[0] / sizeof(FloatT);
+    }
+    else if (buf.ndim == 2)
+    {
+        d.num_rows = buf.shape[0];
+        d.num_cols = buf.shape[1];
+        d.stride_row = buf.strides[0] / sizeof(FloatT);
+        d.stride_col = buf.strides[1] / sizeof(FloatT);
+    }
+    else throw py::value_error("invalid data");
+    return d;
+}
+
 PYBIND11_MODULE(pyveritas, m) {
     m.doc() = "Veritas: verification of tree ensembles";
 
@@ -157,6 +180,30 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(fid); })
+        .def("eval", [](const TreeRef& r, py::array_t<FloatT> arr) {
+            data d = get_data(arr);
+
+            auto result = py::array_t<FloatT>(d.num_rows);
+            py::buffer_info out = result.request();
+            FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
+
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
+                out_ptr[i] = r.get().eval(d.row(i));
+
+            return result;
+        })
+        .def("eval_node", [](const TreeRef& r, py::array_t<FloatT> arr) {
+            data d = get_data(arr);
+
+            auto result = py::array_t<NodeId>(d.num_rows);
+            py::buffer_info out = result.request();
+            NodeId *out_ptr = static_cast<NodeId *>(out.ptr);
+
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
+                out_ptr[i] = r.get().eval_node(d.row(i));
+
+            return result;
+        })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
         ;
 
@@ -196,25 +243,7 @@ PYBIND11_MODULE(pyveritas, m) {
             return at;
         })
         .def("eval", [](const AddTree& at, py::array_t<FloatT> arr) {
-            py::buffer_info buf = arr.request();
-            data d { static_cast<FloatT *>(buf.ptr), 0, 0, 0, 0 };
-            if (buf.ndim == 1)
-            {
-                d.num_rows = 1;
-                d.num_cols = buf.shape[0];
-                d.stride_row = 0; // there is only one row
-                d.stride_col = buf.strides[0] / sizeof(FloatT);
-            }
-            else if (buf.ndim == 2)
-            {
-                d.num_rows = buf.shape[0];
-                d.num_cols = buf.shape[1];
-                d.stride_row = buf.strides[0] / sizeof(FloatT);
-                d.stride_col = buf.strides[1] / sizeof(FloatT);
-            }
-            else throw py::value_error("invalid data");
-
-            //std::cout << d << std::endl;
+            data d = get_data(arr);
 
             auto result = py::array_t<FloatT>(d.num_rows);
             py::buffer_info out = result.request();
@@ -224,11 +253,6 @@ PYBIND11_MODULE(pyveritas, m) {
                 out_ptr[i] = at.eval(d.row(i));
 
             return result;
-                
-
-            //for (size_t i = 0; i < buf.shape[0]; ++i)
-            //    for (size_t j = 0; j < buf.shape[1]; ++j)
-            //        py::print(i, j, "=>", data.get_elem(i, j));
         })
         .def("compute_box", [](const AddTree& at, const std::vector<NodeId>& leaf_ids) {
             if (at.size() != leaf_ids.size())
@@ -337,6 +361,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readwrite("stop_when_solution_eps_equals", &GraphSearch::stop_when_solution_eps_equals)
         .def_readwrite("stop_when_num_solutions_equals", &GraphSearch::stop_when_num_solutions_equals)
         .def_readwrite("stop_when_up_bound_less_than", &GraphSearch::stop_when_up_bound_less_than)
+        .def_readwrite("stop_when_solution_output_greater_than", &GraphSearch::stop_when_solution_output_greater_than)
         ; // GraphSearch
 
     //py::class_<Stats>(m, "Stats")

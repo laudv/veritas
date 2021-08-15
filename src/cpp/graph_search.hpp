@@ -142,6 +142,7 @@ namespace veritas {
         FloatT stop_when_solution_eps_equals = 1.0; // default: when optimal
         size_t stop_when_num_solutions_equals = 999'999'999; // default: de facto disabled
         FloatT stop_when_up_bound_less_than = -FLOATT_INF; // default: disabled
+        FloatT stop_when_solution_output_greater_than = FLOATT_INF;
 
 
         GraphSearch(const AddTree& at)
@@ -319,6 +320,16 @@ namespace veritas {
 
         bool stop_conditions_met() const
         {
+            auto [lo, up_a, up_ara] = current_bounds_with_base_score();
+            if (std::min(up_a, up_ara) < stop_when_up_bound_less_than)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << "upper bound " << stop_when_up_bound_less_than
+                    << " reached (" << up_a << ", " << up_ara << ")"
+                    << std::endl;
+                return true;
+            }
+
             if (solutions_.size() > 0 && solutions_[0].eps == stop_when_solution_eps_equals)
             {
                 std::cout << "stop_conditions_met: stopping early: "
@@ -337,16 +348,15 @@ namespace veritas {
                 return true;
             }
 
-            auto [lo, up_a, up_ara] = current_bounds_with_base_score();
-            if (std::min(up_a, up_ara) < stop_when_up_bound_less_than)
+            if (solutions_.size() > 0 && states_[solutions_.front().state_index].fscore()
+                    > stop_when_solution_output_greater_than)
             {
                 std::cout << "stop_conditions_met: stopping early: "
-                    << "upper bound " << stop_when_up_bound_less_than
-                    << " reached (" << up_a << ", " << up_ara << ")"
+                    << "solution found with output greater than "
+                    << stop_when_solution_output_greater_than
                     << std::endl;
                 return true;
             }
-
 
             return false;
         }

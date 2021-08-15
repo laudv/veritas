@@ -143,7 +143,9 @@ class VeritasRobustnessSearch(RobustnessSearch):
 
     def get_search(self, delta):
         s = GraphSearch(self.at)
-        s.stop_when_num_solutions_equals = 1
+        #s.stop_when_num_solutions_equals = 1 # !! could be solution with bad eps not good enough yet
+        #s.stop_when_solution_output_greater_than = 0.0
+        s.stop_when_solution_eps_equals = 1.0
         s.stop_when_up_bound_less_than = 0.0
         box = [Domain(x-delta, x+delta) for x in self.example]
         s.prune(box)
