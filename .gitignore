@@ -11,4 +11,4 @@ sync.sh
 .ipynb_checkpoints
 gmon.out
 venv
-docs
+html
