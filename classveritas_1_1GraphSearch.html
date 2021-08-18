@@ -5,7 +5,7 @@
 <meta http-equiv="X-UA-Compatible" content="IE=9"/>
 <meta name="generator" content="Doxygen 1.9.1"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Veritas: veritas::GraphSearch Class Reference</title>
+<title>Veritas: veritas::GraphSearch&lt; Derived, CmpT &gt; Class Template Reference</title>
 <link href="tabs.css" rel="stylesheet" type="text/css"/>
 <script type="text/javascript" src="jquery.js"></script>
 <script type="text/javascript" src="dynsections.js"></script>
@@ -69,117 +69,415 @@ $(function() {
   <div class="summary">
 <a href="#pub-methods">Public Member Functions</a> &#124;
 <a href="#pub-attribs">Public Attributes</a> &#124;
+<a href="#pro-methods">Protected Member Functions</a> &#124;
+<a href="#pro-attribs">Protected Attributes</a> &#124;
 <a href="classveritas_1_1GraphSearch-members.html">List of all members</a>  </div>
   <div class="headertitle">
-<div class="title">veritas::GraphSearch Class Reference</div>  </div>
+<div class="title">veritas::GraphSearch&lt; Derived, CmpT &gt; Class Template Reference</div>  </div>
 </div><!--header-->
 <div class="contents">
+
+<p>Subclass this with <code>Curiously recurring template pattern</code>, and heap comparison type to sort solutions.  
+ <a href="classveritas_1_1GraphSearch.html#details">More...</a></p>
+
+<p><code>#include &lt;<a class="el" href="graph__robustness__search_8hpp_source.html">graph_robustness_search.hpp</a>&gt;</code></p>
 <div class="dynheader">
-Collaboration diagram for veritas::GraphSearch:</div>
+Collaboration diagram for veritas::GraphSearch&lt; Derived, CmpT &gt;:</div>
 <div class="dyncontent">
-<div class="center"><img src="classveritas_1_1GraphSearch__coll__graph.png" border="0" usemap="#averitas_1_1GraphSearch_coll__map" alt="Collaboration graph"/></div>
-<map name="averitas_1_1GraphSearch_coll__map" id="averitas_1_1GraphSearch_coll__map">
-<area shape="rect" title=" " alt="" coords="301,109,444,135"/>
+<div class="center"><img src="classveritas_1_1GraphSearch__coll__graph.png" border="0" usemap="#averitas_1_1GraphSearch_3_01Derived_00_01CmpT_01_4_coll__map" alt="Collaboration graph"/></div>
+<map name="averitas_1_1GraphSearch_3_01Derived_00_01CmpT_01_4_coll__map" id="averitas_1_1GraphSearch_3_01Derived_00_01CmpT_01_4_coll__map">
+<area shape="rect" title="Subclass this with Curiously recurring template pattern, and heap comparison type to sort solutions." alt="" coords="301,232,444,273"/>
 <area shape="rect" title=" " alt="" coords="27,5,159,47"/>
-<area shape="rect" title=" " alt="" coords="5,71,181,112"/>
-<area shape="rect" title=" " alt="" coords="34,138,153,165"/>
-<area shape="rect" title=" " alt="" coords="8,189,179,215"/>
+<area shape="rect" href="classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="42,71,145,98"/>
+<area shape="rect" title=" " alt="" coords="5,123,181,164"/>
+<area shape="rect" title=" " alt="" coords="34,189,153,215"/>
+<area shape="rect" title=" " alt="" coords="8,239,179,266"/>
+<area shape="rect" title=" " alt="" coords="26,290,161,317"/>
+<area shape="rect" title=" " alt="" coords="8,341,179,367"/>
+<area shape="rect" href="classveritas_1_1BlockStore.html" title=" " alt="" coords="15,392,171,433"/>
+<area shape="rect" href="classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="35,458,151,485"/>
 </map>
 <center><span class="legend">[<a href="graph_legend.html">legend</a>]</span></center></div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-methods"></a>
 Public Member Functions</h2></td></tr>
-<tr class="memitem:aa01201e27a0b65f2e653554d5e97e315"><td class="memItemLeft" align="right" valign="top"><a id="aa01201e27a0b65f2e653554d5e97e315"></a>
-&#160;</td><td class="memItemRight" valign="bottom"><b>GraphSearch</b> (const <a class="el" href="classveritas_1_1AddTree.html">AddTree</a> &amp;at)</td></tr>
-<tr class="separator:aa01201e27a0b65f2e653554d5e97e315"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af7dd5299f8e81cd86e55e09839259476"><td class="memItemLeft" align="right" valign="top"><a id="af7dd5299f8e81cd86e55e09839259476"></a>
+<tr class="memitem:af6768ab53e1afeb53b5024b7be8bef94"><td class="memItemLeft" align="right" valign="top"><a id="af6768ab53e1afeb53b5024b7be8bef94"></a>
 void&#160;</td><td class="memItemRight" valign="bottom"><b>prune_by_box</b> (const <a class="el" href="classveritas_1_1BoxRef.html">BoxRef</a> &amp;box)</td></tr>
-<tr class="separator:af7dd5299f8e81cd86e55e09839259476"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af18a308250967f3b42cd616dc8b865e1"><td class="memItemLeft" align="right" valign="top"><a id="af18a308250967f3b42cd616dc8b865e1"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>step</b> ()</td></tr>
-<tr class="separator:af18a308250967f3b42cd616dc8b865e1"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae4cca29351758a4d9e62591942227196"><td class="memItemLeft" align="right" valign="top"><a id="ae4cca29351758a4d9e62591942227196"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>steps</b> (size_t num_steps)</td></tr>
-<tr class="separator:ae4cca29351758a4d9e62591942227196"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a178a83a891f2446c0702c23a9ebea0b3"><td class="memItemLeft" align="right" valign="top"><a id="a178a83a891f2446c0702c23a9ebea0b3"></a>
+<tr class="separator:af6768ab53e1afeb53b5024b7be8bef94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8dc487dc37f365bf9b3178fa02318116"><td class="memItemLeft" align="right" valign="top"><a id="a8dc487dc37f365bf9b3178fa02318116"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>step_for</b> (double num_seconds, size_t num_steps)</td></tr>
-<tr class="separator:a178a83a891f2446c0702c23a9ebea0b3"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a99e2751fc294f1da1d2a530020494f49"><td class="memItemLeft" align="right" valign="top"><a id="a99e2751fc294f1da1d2a530020494f49"></a>
-bool&#160;</td><td class="memItemRight" valign="bottom"><b>stop_conditions_met</b> () const</td></tr>
-<tr class="separator:a99e2751fc294f1da1d2a530020494f49"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9aa245b98055859994dbb3ddcd5616d5"><td class="memItemLeft" align="right" valign="top"><a id="a9aa245b98055859994dbb3ddcd5616d5"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>push_snapshot</b> ()</td></tr>
-<tr class="separator:a9aa245b98055859994dbb3ddcd5616d5"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aac414910fa0deb5e15795434fc1ad067"><td class="memItemLeft" align="right" valign="top"><a id="aac414910fa0deb5e15795434fc1ad067"></a>
-size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_solutions</b> () const</td></tr>
-<tr class="separator:aac414910fa0deb5e15795434fc1ad067"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4a7600bf1462f289f4fa68b1bff5428d"><td class="memItemLeft" align="right" valign="top"><a id="a4a7600bf1462f289f4fa68b1bff5428d"></a>
-<a class="el" href="structveritas_1_1Solution.html">Solution</a>&#160;</td><td class="memItemRight" valign="bottom"><b>get_solution</b> (size_t solution_index) const</td></tr>
-<tr class="separator:a4a7600bf1462f289f4fa68b1bff5428d"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a9eb7712c5f7205084a9d6ce60c17a735"><td class="memItemLeft" align="right" valign="top"><a id="a9eb7712c5f7205084a9d6ce60c17a735"></a>
+<tr class="separator:a8dc487dc37f365bf9b3178fa02318116"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad74b274919c97c38f545cb0b1e4ef2e3"><td class="memItemLeft" align="right" valign="top"><a id="ad74b274919c97c38f545cb0b1e4ef2e3"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_states</b> () const</td></tr>
-<tr class="separator:a9eb7712c5f7205084a9d6ce60c17a735"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2c4ea98626225a5cc3468a8c0dd918a6"><td class="memItemLeft" align="right" valign="top"><a id="a2c4ea98626225a5cc3468a8c0dd918a6"></a>
-std::tuple&lt; size_t, size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>heap_size</b> () const</td></tr>
-<tr class="separator:a2c4ea98626225a5cc3468a8c0dd918a6"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a14007f6bdbadc70984625d1a57dee234"><td class="memItemLeft" align="right" valign="top"><a id="a14007f6bdbadc70984625d1a57dee234"></a>
-double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#a14007f6bdbadc70984625d1a57dee234">time_since_start</a> () const</td></tr>
-<tr class="memdesc:a14007f6bdbadc70984625d1a57dee234"><td class="mdescLeft">&#160;</td><td class="mdescRight">seconds since the construction of the search <br /></td></tr>
-<tr class="separator:a14007f6bdbadc70984625d1a57dee234"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7dc6c1ec451d3d07fe11b8e145156e6c"><td class="memItemLeft" align="right" valign="top"><a id="a7dc6c1ec451d3d07fe11b8e145156e6c"></a>
-FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>get_eps</b> () const</td></tr>
-<tr class="separator:a7dc6c1ec451d3d07fe11b8e145156e6c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:aab4a416ae04179c6fe3b799b322f6d61"><td class="memItemLeft" align="right" valign="top"><a id="aab4a416ae04179c6fe3b799b322f6d61"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set_eps</b> (FloatT eps)</td></tr>
-<tr class="separator:aab4a416ae04179c6fe3b799b322f6d61"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a4690e43ea6ce735eb87813c83f63ebd9"><td class="memItemLeft" align="right" valign="top"><a id="a4690e43ea6ce735eb87813c83f63ebd9"></a>
-void&#160;</td><td class="memItemRight" valign="bottom"><b>set_eps_increment</b> (FloatT incr)</td></tr>
-<tr class="separator:a4690e43ea6ce735eb87813c83f63ebd9"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ad123d404fbfe5a83f1c5e881998f4b53"><td class="memItemLeft" align="right" valign="top"><a id="ad123d404fbfe5a83f1c5e881998f4b53"></a>
-std::tuple&lt; FloatT, FloatT, FloatT &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#ad123d404fbfe5a83f1c5e881998f4b53">current_bounds_with_base_score</a> () const</td></tr>
-<tr class="memdesc:ad123d404fbfe5a83f1c5e881998f4b53"><td class="mdescLeft">&#160;</td><td class="mdescRight">ARA* lower, A* upper, ARA* upper. <br /></td></tr>
-<tr class="separator:ad123d404fbfe5a83f1c5e881998f4b53"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:af6b9cb11dcde8249a7911591d2cf22f7"><td class="memItemLeft" align="right" valign="top"><a id="af6b9cb11dcde8249a7911591d2cf22f7"></a>
+<tr class="separator:ad74b274919c97c38f545cb0b1e4ef2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5dfaef78eac4d76dcf0e2be0e9e87bcc"><td class="memItemLeft" align="right" valign="top"><a id="a5dfaef78eac4d76dcf0e2be0e9e87bcc"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_solutions</b> () const</td></tr>
+<tr class="separator:a5dfaef78eac4d76dcf0e2be0e9e87bcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5227a3e1750464efd9984da502e763fd"><td class="memItemLeft" align="right" valign="top"><a id="a5227a3e1750464efd9984da502e763fd"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><b>remaining_mem_capacity</b> () const</td></tr>
-<tr class="separator:af6b9cb11dcde8249a7911591d2cf22f7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a5227a3e1750464efd9984da502e763fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9c046f716ec0bdf8ef97ee93c64d094"><td class="memItemLeft" align="right" valign="top"><a id="ae9c046f716ec0bdf8ef97ee93c64d094"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#ae9c046f716ec0bdf8ef97ee93c64d094">time_since_start</a> () const</td></tr>
+<tr class="memdesc:ae9c046f716ec0bdf8ef97ee93c64d094"><td class="mdescLeft">&#160;</td><td class="mdescRight">Seconds since the construction of the search. <br /></td></tr>
+<tr class="separator:ae9c046f716ec0bdf8ef97ee93c64d094"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a216bdaf0796c808ee49786c5f5f01d31"><td class="memItemLeft" align="right" valign="top"><a id="a216bdaf0796c808ee49786c5f5f01d31"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>GraphSearch</b> (const <a class="el" href="classveritas_1_1AddTree.html">AddTree</a> &amp;at)</td></tr>
+<tr class="separator:a216bdaf0796c808ee49786c5f5f01d31"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af6768ab53e1afeb53b5024b7be8bef94"><td class="memItemLeft" align="right" valign="top"><a id="af6768ab53e1afeb53b5024b7be8bef94"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>prune_by_box</b> (const <a class="el" href="classveritas_1_1BoxRef.html">BoxRef</a> &amp;box)</td></tr>
+<tr class="separator:af6768ab53e1afeb53b5024b7be8bef94"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a2c9632b775679e7b41029555432b06ba"><td class="memItemLeft" align="right" valign="top"><a id="a2c9632b775679e7b41029555432b06ba"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>step</b> ()</td></tr>
+<tr class="separator:a2c9632b775679e7b41029555432b06ba"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af8645883a4938a741d8df0adbc3f1762"><td class="memItemLeft" align="right" valign="top"><a id="af8645883a4938a741d8df0adbc3f1762"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>steps</b> (size_t num_steps)</td></tr>
+<tr class="separator:af8645883a4938a741d8df0adbc3f1762"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8dc487dc37f365bf9b3178fa02318116"><td class="memItemLeft" align="right" valign="top"><a id="a8dc487dc37f365bf9b3178fa02318116"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>step_for</b> (double num_seconds, size_t num_steps)</td></tr>
+<tr class="separator:a8dc487dc37f365bf9b3178fa02318116"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7a4382895fd6ba1fbf809dc0be120edb"><td class="memItemLeft" align="right" valign="top"><a id="a7a4382895fd6ba1fbf809dc0be120edb"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>stop_conditions_met</b> () const</td></tr>
+<tr class="separator:a7a4382895fd6ba1fbf809dc0be120edb"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a40655768b4f8146ba7b5b0171c996047"><td class="memItemLeft" align="right" valign="top"><a id="a40655768b4f8146ba7b5b0171c996047"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>push_snapshot</b> ()</td></tr>
+<tr class="separator:a40655768b4f8146ba7b5b0171c996047"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5dfaef78eac4d76dcf0e2be0e9e87bcc"><td class="memItemLeft" align="right" valign="top"><a id="a5dfaef78eac4d76dcf0e2be0e9e87bcc"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_solutions</b> () const</td></tr>
+<tr class="separator:a5dfaef78eac4d76dcf0e2be0e9e87bcc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a874f31946080d4c0c765237d3b6025ea"><td class="memItemLeft" align="right" valign="top"><a id="a874f31946080d4c0c765237d3b6025ea"></a>
+<a class="el" href="structveritas_1_1Solution.html">Solution</a>&#160;</td><td class="memItemRight" valign="bottom"><b>get_solution</b> (size_t solution_index) const</td></tr>
+<tr class="separator:a874f31946080d4c0c765237d3b6025ea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad74b274919c97c38f545cb0b1e4ef2e3"><td class="memItemLeft" align="right" valign="top"><a id="ad74b274919c97c38f545cb0b1e4ef2e3"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_states</b> () const</td></tr>
+<tr class="separator:ad74b274919c97c38f545cb0b1e4ef2e3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab643f5fa7bda7c7cd84624b5c232a8fd"><td class="memItemLeft" align="right" valign="top"><a id="ab643f5fa7bda7c7cd84624b5c232a8fd"></a>
+std::tuple&lt; size_t, size_t &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>heap_size</b> () const</td></tr>
+<tr class="separator:ab643f5fa7bda7c7cd84624b5c232a8fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae9c046f716ec0bdf8ef97ee93c64d094"><td class="memItemLeft" align="right" valign="top"><a id="ae9c046f716ec0bdf8ef97ee93c64d094"></a>
+double&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#ae9c046f716ec0bdf8ef97ee93c64d094">time_since_start</a> () const</td></tr>
+<tr class="memdesc:ae9c046f716ec0bdf8ef97ee93c64d094"><td class="mdescLeft">&#160;</td><td class="mdescRight">seconds since the construction of the search <br /></td></tr>
+<tr class="separator:ae9c046f716ec0bdf8ef97ee93c64d094"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aa46af7109e2bdf75f198c49b17b67ed2"><td class="memItemLeft" align="right" valign="top"><a id="aa46af7109e2bdf75f198c49b17b67ed2"></a>
+FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>get_eps</b> () const</td></tr>
+<tr class="separator:aa46af7109e2bdf75f198c49b17b67ed2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a054f71f9a55e5a6d17a4273b441e8f17"><td class="memItemLeft" align="right" valign="top"><a id="a054f71f9a55e5a6d17a4273b441e8f17"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>set_eps</b> (FloatT eps)</td></tr>
+<tr class="separator:a054f71f9a55e5a6d17a4273b441e8f17"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a6d34004e95fcaa3dc02e9fb770979176"><td class="memItemLeft" align="right" valign="top"><a id="a6d34004e95fcaa3dc02e9fb770979176"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><b>set_eps_increment</b> (FloatT incr)</td></tr>
+<tr class="separator:a6d34004e95fcaa3dc02e9fb770979176"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ae7549cd7f085157e6b67767ed4731857"><td class="memItemLeft" align="right" valign="top"><a id="ae7549cd7f085157e6b67767ed4731857"></a>
+std::tuple&lt; FloatT, FloatT, FloatT &gt;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#ae7549cd7f085157e6b67767ed4731857">current_bounds_with_base_score</a> () const</td></tr>
+<tr class="memdesc:ae7549cd7f085157e6b67767ed4731857"><td class="mdescLeft">&#160;</td><td class="mdescRight">ARA* lower, A* upper, ARA* upper. <br /></td></tr>
+<tr class="separator:ae7549cd7f085157e6b67767ed4731857"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a5227a3e1750464efd9984da502e763fd"><td class="memItemLeft" align="right" valign="top"><a id="a5227a3e1750464efd9984da502e763fd"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>remaining_mem_capacity</b> () const</td></tr>
+<tr class="separator:a5227a3e1750464efd9984da502e763fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
-<tr class="memitem:a676d50806fe744f3e9148a9b706ea9c2"><td class="memItemLeft" align="right" valign="top"><a id="a676d50806fe744f3e9148a9b706ea9c2"></a>
+<tr class="memitem:a17cafd66cbe7ef6054d6048baf9aeebc"><td class="memItemLeft" align="right" valign="top"><a id="a17cafd66cbe7ef6054d6048baf9aeebc"></a>
 friend&#160;</td><td class="memItemRight" valign="bottom"><b>StateCmp</b></td></tr>
-<tr class="separator:a676d50806fe744f3e9148a9b706ea9c2"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a8ecaf5ea24f170cf95b3c19f106c3b1a"><td class="memItemLeft" align="right" valign="top"><a id="a8ecaf5ea24f170cf95b3c19f106c3b1a"></a>
+<tr class="separator:a17cafd66cbe7ef6054d6048baf9aeebc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:af5cec9b65f4368be31399f72bea6652f"><td class="memItemLeft" align="right" valign="top"><a id="af5cec9b65f4368be31399f72bea6652f"></a>
 std::vector&lt; <a class="el" href="structveritas_1_1Snapshot.html">Snapshot</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>snapshots</b></td></tr>
-<tr class="separator:a8ecaf5ea24f170cf95b3c19f106c3b1a"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a40542aeab4293c7c0c7d8eb9a61a4377"><td class="memItemLeft" align="right" valign="top"><a id="a40542aeab4293c7c0c7d8eb9a61a4377"></a>
+<tr class="separator:af5cec9b65f4368be31399f72bea6652f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ab2642268438c621191736044d5b59e62"><td class="memItemLeft" align="right" valign="top"><a id="ab2642268438c621191736044d5b59e62"></a>
 std::unique_ptr&lt; ConstraintPropagator &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>constr_prop</b></td></tr>
-<tr class="separator:a40542aeab4293c7c0c7d8eb9a61a4377"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a17e9c5505d357f3d76febbc6cb185803"><td class="memItemLeft" align="right" valign="top"><a id="a17e9c5505d357f3d76febbc6cb185803"></a>
+<tr class="separator:ab2642268438c621191736044d5b59e62"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a709342de871a5eb6b05935f827590b03"><td class="memItemLeft" align="right" valign="top"><a id="a709342de871a5eb6b05935f827590b03"></a>
 bool&#160;</td><td class="memItemRight" valign="bottom"><b>use_dynprog_heuristic</b> = false</td></tr>
-<tr class="separator:a17e9c5505d357f3d76febbc6cb185803"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1ed31547cbe31cbbe996023ac32f76a4"><td class="memItemLeft" align="right" valign="top"><a id="a1ed31547cbe31cbbe996023ac32f76a4"></a>
+<tr class="separator:a709342de871a5eb6b05935f827590b03"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a41f42131f9102e94085195407bd4147a"><td class="memItemLeft" align="right" valign="top"><a id="a41f42131f9102e94085195407bd4147a"></a>
 FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>stop_when_solution_eps_equals</b> = 1.0</td></tr>
-<tr class="separator:a1ed31547cbe31cbbe996023ac32f76a4"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:acb897788fe552bba0f10e2eccd0fb83e"><td class="memItemLeft" align="right" valign="top"><a id="acb897788fe552bba0f10e2eccd0fb83e"></a>
+<tr class="separator:a41f42131f9102e94085195407bd4147a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a83b9fc1e550ac2faf0b887783e6d4ba6"><td class="memItemLeft" align="right" valign="top"><a id="a83b9fc1e550ac2faf0b887783e6d4ba6"></a>
 size_t&#160;</td><td class="memItemRight" valign="bottom"><b>stop_when_num_solutions_equals</b> = 999'999'999</td></tr>
-<tr class="separator:acb897788fe552bba0f10e2eccd0fb83e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ae457cc1ba41a6d121e1be3a8fcdde96e"><td class="memItemLeft" align="right" valign="top"><a id="ae457cc1ba41a6d121e1be3a8fcdde96e"></a>
+<tr class="separator:a83b9fc1e550ac2faf0b887783e6d4ba6"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ad2d47412f80b1cc923ace31917640e37"><td class="memItemLeft" align="right" valign="top"><a id="ad2d47412f80b1cc923ace31917640e37"></a>
 FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>stop_when_up_bound_less_than</b> = -FLOATT_INF</td></tr>
-<tr class="separator:ae457cc1ba41a6d121e1be3a8fcdde96e"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a1376acabfeb6ca9cf679e6961a628720"><td class="memItemLeft" align="right" valign="top"><a id="a1376acabfeb6ca9cf679e6961a628720"></a>
+<tr class="separator:ad2d47412f80b1cc923ace31917640e37"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:adc95de9c523024044038acd73064bf83"><td class="memItemLeft" align="right" valign="top"><a id="adc95de9c523024044038acd73064bf83"></a>
 FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>stop_when_solution_output_greater_than</b> = FLOATT_INF</td></tr>
-<tr class="separator:a1376acabfeb6ca9cf679e6961a628720"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab97e0bce7fe1e43c74b6dfed9862f54c"><td class="memItemLeft" align="right" valign="top"><a id="ab97e0bce7fe1e43c74b6dfed9862f54c"></a>
+<tr class="separator:adc95de9c523024044038acd73064bf83"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3ffa8bb09aa0eb9c8830afc1119e2dca"><td class="memItemLeft" align="right" valign="top"><a id="a3ffa8bb09aa0eb9c8830afc1119e2dca"></a>
 <a class="el" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a>&#160;</td><td class="memItemRight" valign="bottom"><b>box</b></td></tr>
-<tr class="separator:ab97e0bce7fe1e43c74b6dfed9862f54c"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a7b999bbf68b55be82b2ad7b5e18e110f"><td class="memItemLeft" align="right" valign="top"><a id="a7b999bbf68b55be82b2ad7b5e18e110f"></a>
+<tr class="separator:a3ffa8bb09aa0eb9c8830afc1119e2dca"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a49d3482e9d162a527847fd0194341728"><td class="memItemLeft" align="right" valign="top"><a id="a49d3482e9d162a527847fd0194341728"></a>
 std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>indep_sets</b></td></tr>
-<tr class="separator:a7b999bbf68b55be82b2ad7b5e18e110f"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:a2d7dbc51c0824c1add13ef3411bed2d2"><td class="memItemLeft" align="right" valign="top"><a id="a2d7dbc51c0824c1add13ef3411bed2d2"></a>
+<tr class="separator:a49d3482e9d162a527847fd0194341728"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a13f6476ec6291f9edb02ab3676dd22dc"><td class="memItemLeft" align="right" valign="top"><a id="a13f6476ec6291f9edb02ab3676dd22dc"></a>
 std::vector&lt; int &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>vertices</b></td></tr>
-<tr class="separator:a2d7dbc51c0824c1add13ef3411bed2d2"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="separator:a13f6476ec6291f9edb02ab3676dd22dc"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-methods"></a>
+Protected Member Functions</h2></td></tr>
+<tr class="memitem:a8a86114fd47f05a798a35cb31aa0bf38"><td class="memItemLeft" align="right" valign="top"><a id="a8a86114fd47f05a798a35cb31aa0bf38"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>GraphSearch</b> (const <a class="el" href="classveritas_1_1AddTree.html">AddTree</a> &amp;at, const CmpT &amp;solution_cmp)</td></tr>
+<tr class="separator:a8a86114fd47f05a798a35cb31aa0bf38"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a7699e5cc359acd668c56fa7441481654"><td class="memItemLeft" align="right" valign="top"><a id="a7699e5cc359acd668c56fa7441481654"></a>
+void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#a7699e5cc359acd668c56fa7441481654">init</a> ()</td></tr>
+<tr class="memdesc:a7699e5cc359acd668c56fa7441481654"><td class="mdescLeft">&#160;</td><td class="mdescRight">call in Derived constructor <br /></td></tr>
+<tr class="separator:a7699e5cc359acd668c56fa7441481654"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a56818ea42946f499a57bab2bf6bbb557"><td class="memItemLeft" align="right" valign="top"><a id="a56818ea42946f499a57bab2bf6bbb557"></a>
+bool&#160;</td><td class="memItemRight" valign="bottom"><b>is_solution</b> (const State &amp;state) const</td></tr>
+<tr class="separator:a56818ea42946f499a57bab2bf6bbb557"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acab1318230d70d6229bb6921b24850fa"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#acab1318230d70d6229bb6921b24850fa">push_state_</a> (State &amp;&amp;state)</td></tr>
+<tr class="memdesc:acab1318230d70d6229bb6921b24850fa"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override.  <a href="classveritas_1_1GraphSearch.html#acab1318230d70d6229bb6921b24850fa">More...</a><br /></td></tr>
+<tr class="separator:acab1318230d70d6229bb6921b24850fa"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a457e5c8928a233a98440288624169fea"><td class="memItemLeft" align="right" valign="top">size_t&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#a457e5c8928a233a98440288624169fea">push_solution_</a> (size_t state_index)</td></tr>
+<tr class="memdesc:a457e5c8928a233a98440288624169fea"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override.  <a href="classveritas_1_1GraphSearch.html#a457e5c8928a233a98440288624169fea">More...</a><br /></td></tr>
+<tr class="separator:a457e5c8928a233a98440288624169fea"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4ff001779fa7618e4f80c4c070346714"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#a4ff001779fa7618e4f80c4c070346714">step_</a> (size_t state_index)</td></tr>
+<tr class="memdesc:a4ff001779fa7618e4f80c4c070346714"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override.  <a href="classveritas_1_1GraphSearch.html#a4ff001779fa7618e4f80c4c070346714">More...</a><br /></td></tr>
+<tr class="separator:a4ff001779fa7618e4f80c4c070346714"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a85895136d8436ce24ff23758945e3fdf"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#a85895136d8436ce24ff23758945e3fdf">steps_</a> (size_t num_steps)</td></tr>
+<tr class="memdesc:a85895136d8436ce24ff23758945e3fdf"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override.  <a href="classveritas_1_1GraphSearch.html#a85895136d8436ce24ff23758945e3fdf">More...</a><br /></td></tr>
+<tr class="separator:a85895136d8436ce24ff23758945e3fdf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aae785802168585aa281a3aa725d99f31"><td class="memItemLeft" align="right" valign="top">void&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphSearch.html#aae785802168585aa281a3aa725d99f31">expand_</a> (size_t state_index)</td></tr>
+<tr class="memdesc:aae785802168585aa281a3aa725d99f31"><td class="mdescLeft">&#160;</td><td class="mdescRight">Override.  <a href="classveritas_1_1GraphSearch.html#aae785802168585aa281a3aa725d99f31">More...</a><br /></td></tr>
+<tr class="separator:aae785802168585aa281a3aa725d99f31"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a03d6f9b116b2faa2299076dc77706af7"><td class="memItemLeft" align="right" valign="top"><a id="a03d6f9b116b2faa2299076dc77706af7"></a>
+FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>compute_output_heuristic</b> (const State &amp;state) const</td></tr>
+<tr class="separator:a03d6f9b116b2faa2299076dc77706af7"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a712889dc1f0df44b6fd111a1c8f2072d"><td class="memItemLeft" align="right" valign="top"><a id="a712889dc1f0df44b6fd111a1c8f2072d"></a>
+FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>compute_output_heuristic_dynprog</b> (const State &amp;state) const</td></tr>
+<tr class="separator:a712889dc1f0df44b6fd111a1c8f2072d"><td class="memSeparator" colspan="2">&#160;</td></tr>
+</table><table class="memberdecls">
+<tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="pro-attribs"></a>
+Protected Attributes</h2></td></tr>
+<tr class="memitem:ab05642ca9e2ad2d646535ea0fcc8a1f4"><td class="memItemLeft" align="right" valign="top"><a id="ab05642ca9e2ad2d646535ea0fcc8a1f4"></a>
+<a class="el" href="classveritas_1_1AddTree.html">AddTree</a>&#160;</td><td class="memItemRight" valign="bottom"><b>at_</b></td></tr>
+<tr class="separator:ab05642ca9e2ad2d646535ea0fcc8a1f4"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a65cf8874b6f3ee102203fcdf0d53d4af"><td class="memItemLeft" align="right" valign="top"><a id="a65cf8874b6f3ee102203fcdf0d53d4af"></a>
+<a class="el" href="classveritas_1_1Graph.html">Graph</a>&#160;</td><td class="memItemRight" valign="bottom"><b>g_</b></td></tr>
+<tr class="separator:a65cf8874b6f3ee102203fcdf0d53d4af"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a3178fe4adeb06abd10638b479f50a38a"><td class="memItemLeft" align="right" valign="top"><a id="a3178fe4adeb06abd10638b479f50a38a"></a>
+<a class="el" href="classveritas_1_1BlockStore.html">BlockStore</a>&lt; <a class="el" href="structveritas_1_1DomainPair.html">DomainPair</a> &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>store_</b></td></tr>
+<tr class="separator:a3178fe4adeb06abd10638b479f50a38a"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a79bae05859c107d7d155be2b32c11448"><td class="memItemLeft" ><a id="a79bae05859c107d7d155be2b32c11448"></a>
+struct {</td></tr>
+<tr class="memitem:a2b7267c3c44c75039bf321835ddcf62e"><td class="memItemLeft" >
+&#160;&#160;&#160;<a class="el" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a>&#160;&#160;&#160;<b>box</b></td></tr>
+<tr class="separator:a2b7267c3c44c75039bf321835ddcf62e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a79bae05859c107d7d155be2b32c11448"><td class="memItemLeft" valign="top">}&#160;</td><td class="memItemRight" valign="bottom"><b>workspace_</b></td></tr>
+<tr class="separator:a79bae05859c107d7d155be2b32c11448"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:afa94b04b79ffbe2baddbbd9c623edda9"><td class="memItemLeft" align="right" valign="top"><a id="afa94b04b79ffbe2baddbbd9c623edda9"></a>
+std::vector&lt; State &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>states_</b></td></tr>
+<tr class="separator:afa94b04b79ffbe2baddbbd9c623edda9"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a8d4da9dce6da404205ee2b5d20af11a3"><td class="memItemLeft" align="right" valign="top"><a id="a8d4da9dce6da404205ee2b5d20af11a3"></a>
+std::vector&lt; SolutionRef &gt;&#160;</td><td class="memItemRight" valign="bottom"><b>solutions_</b></td></tr>
+<tr class="separator:a8d4da9dce6da404205ee2b5d20af11a3"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a92719049a1f041176a83550dea425841"><td class="memItemLeft" align="right" valign="top"><a id="a92719049a1f041176a83550dea425841"></a>
+time_point&#160;</td><td class="memItemRight" valign="bottom"><b>start_time_</b></td></tr>
+<tr class="separator:a92719049a1f041176a83550dea425841"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:aeb428ad2c663bf242c475bcac26191bf"><td class="memItemLeft" align="right" valign="top"><a id="aeb428ad2c663bf242c475bcac26191bf"></a>
+size_t&#160;</td><td class="memItemRight" valign="bottom"><b>num_steps_</b></td></tr>
+<tr class="separator:aeb428ad2c663bf242c475bcac26191bf"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a4d6553819a9f0bf43bb05e5e304913ff"><td class="memItemLeft" align="right" valign="top"><a id="a4d6553819a9f0bf43bb05e5e304913ff"></a>
+CmpT&#160;</td><td class="memItemRight" valign="bottom"><b>solution_cmp_</b></td></tr>
+<tr class="separator:a4d6553819a9f0bf43bb05e5e304913ff"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a11ed14f60d1afc52439d76dc3291ed5e"><td class="memItemLeft" align="right" valign="top"><a id="a11ed14f60d1afc52439d76dc3291ed5e"></a>
+friend&#160;</td><td class="memItemRight" valign="bottom"><b>OutputCmp</b></td></tr>
+<tr class="separator:a11ed14f60d1afc52439d76dc3291ed5e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a39eab50565b121ba032f13ff75501ebe"><td class="memItemLeft" align="right" valign="top"><a id="a39eab50565b121ba032f13ff75501ebe"></a>
+friend&#160;</td><td class="memItemRight" valign="bottom"><b>RobustnessCmp</b></td></tr>
+<tr class="separator:a39eab50565b121ba032f13ff75501ebe"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
-<hr/>The documentation for this class was generated from the following file:<ul>
+<a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
+<div class="textblock"><h3>template&lt;typename Derived, typename CmpT&gt;<br />
+class veritas::GraphSearch&lt; Derived, CmpT &gt;</h3>
+
+<p>Subclass this with <code>Curiously recurring template pattern</code>, and heap comparison type to sort solutions. </p>
+<p>Methods to implement:</p><ul>
+<li>Derived::push_state<ul>
+<li>call <a class="el" href="classveritas_1_1GraphSearch.html#acab1318230d70d6229bb6921b24850fa" title="Override.">GraphSearch::push_state_</a>, which returns <code>state_index</code>..</li>
+<li>.. then add this state to heap(s)</li>
+</ul>
+</li>
+<li>Derived::push_solution<ul>
+<li>call <a class="el" href="classveritas_1_1GraphSearch.html#a457e5c8928a233a98440288624169fea" title="Override.">GraphSearch::push_solution_</a>, which returns <code>solution_index</code>..</li>
+<li>.. then (if applicable) check for solution optimality</li>
+</ul>
+</li>
+<li>Derived::step<ul>
+<li>call <a class="el" href="classveritas_1_1GraphSearch.html#a4ff001779fa7618e4f80c4c070346714" title="Override.">GraphSearch::step_</a>, which takes a valid popped-from-heap <code>state_index</code>, and returns whether there are more</li>
+<li>should return true when all relevant states have been explored, false otherwise.</li>
+</ul>
+</li>
+<li>Derived::steps<ul>
+<li>call <a class="el" href="classveritas_1_1GraphSearch.html#a85895136d8436ce24ff23758945e3fdf" title="Override.">GraphSearch::steps_</a> ..</li>
+<li>.. then, if applicable, push a snapshot</li>
+</ul>
+</li>
+<li>Derived::expand<ul>
+<li>call <a class="el" href="classveritas_1_1GraphSearch.html#aae785802168585aa281a3aa725d99f31" title="Override.">GraphSearch::expand_</a> ..</li>
+<li>.. then eg. update eps</li>
+</ul>
+</li>
+<li>Derived::compute_score(State&amp; state)<ul>
+<li>fills in g and h of given state </li>
+</ul>
+</li>
+</ul>
+</div><h2 class="groupheader">Member Function Documentation</h2>
+<a id="aae785802168585aa281a3aa725d99f31"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#aae785802168585aa281a3aa725d99f31">&#9670;&nbsp;</a></span>expand_()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Derived , typename CmpT &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classveritas_1_1GraphSearch.html">veritas::GraphSearch</a>&lt; Derived, CmpT &gt;::expand_ </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>state_index</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Override. </p>
+<p>Call this from Derived::expand(size_t). </p>
+
+</div>
+</div>
+<a id="a457e5c8928a233a98440288624169fea"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a457e5c8928a233a98440288624169fea">&#9670;&nbsp;</a></span>push_solution_()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Derived , typename CmpT &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t <a class="el" href="classveritas_1_1GraphSearch.html">veritas::GraphSearch</a>&lt; Derived, CmpT &gt;::push_solution_ </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>state_index</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Override. </p>
+<p>Call this from Derived::push_solution(size_t). </p><dl class="section return"><dt>Returns</dt><dd><a class="el" href="structveritas_1_1Solution.html" title="A full (sub)optimal solution.">Solution</a> index </dd></dl>
+
+</div>
+</div>
+<a id="acab1318230d70d6229bb6921b24850fa"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acab1318230d70d6229bb6921b24850fa">&#9670;&nbsp;</a></span>push_state_()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Derived , typename CmpT &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">size_t <a class="el" href="classveritas_1_1GraphSearch.html">veritas::GraphSearch</a>&lt; Derived, CmpT &gt;::push_state_ </td>
+          <td>(</td>
+          <td class="paramtype">State &amp;&amp;&#160;</td>
+          <td class="paramname"><em>state</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Override. </p>
+<p>Call this from Derived::push_state(State&amp;&amp;). </p><dl class="section return"><dt>Returns</dt><dd>State index </dd></dl>
+
+</div>
+</div>
+<a id="a4ff001779fa7618e4f80c4c070346714"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a4ff001779fa7618e4f80c4c070346714">&#9670;&nbsp;</a></span>step_()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Derived , typename CmpT &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">void <a class="el" href="classveritas_1_1GraphSearch.html">veritas::GraphSearch</a>&lt; Derived, CmpT &gt;::step_ </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>state_index</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Override. </p>
+<p>Call this from Derived::step(). </p>
+
+</div>
+</div>
+<a id="a85895136d8436ce24ff23758945e3fdf"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a85895136d8436ce24ff23758945e3fdf">&#9670;&nbsp;</a></span>steps_()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<div class="memtemplate">
+template&lt;typename Derived , typename CmpT &gt; </div>
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">bool <a class="el" href="classveritas_1_1GraphSearch.html">veritas::GraphSearch</a>&lt; Derived, CmpT &gt;::steps_ </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>num_steps</em></td><td>)</td>
+          <td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span><span class="mlabel">protected</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Override. </p>
+<p>Call this from Derived::steps(). </p>
+
+</div>
+</div>
+<hr/>The documentation for this class was generated from the following files:<ul>
+<li>src/cpp/<a class="el" href="graph__robustness__search_8hpp_source.html">graph_robustness_search.hpp</a></li>
 <li>src/cpp/<a class="el" href="graph__search_8hpp_source.html">graph_search.hpp</a></li>
 </ul>
 </div><!-- contents -->
