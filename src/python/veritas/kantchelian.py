@@ -264,6 +264,13 @@ class KantchelianBase:
             w[k] -= w[k+1]
         return w
 
+    def has_solution(self):
+        return self.model.status == gu.GRB.OPTIMAL \
+                or self.model.status == gu.GRB.SUBOPTIMAL
+
+    def objective_bound(self):
+        return self.model.objBound;
+
     def _extract_adv_example(self, example): # uses self.split_values, self.pvars, self.guard
         adv_example = example.copy()
         for attribute, split_values in self.split_values.items():
@@ -444,7 +451,5 @@ class KantchelianOutputOpt(KantchelianBase):
         self.model.update()
 
     def solution(self):
-        ensemble_output = self._extract_ensemble_output(self.at,
-                self.node_info_per_tree)
         intervals = self._extract_intervals()
-        return ensemble_output, intervals
+        return self.model.objVal, intervals

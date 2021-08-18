@@ -21,14 +21,14 @@ def get_df(jsons):
     #mnist = datasets.Mnist()
     #mnist.load_dataset()
     colnames = ["example_i", "label", "target_label",
-            "ver_delta", "mer_ext_delta", "kan_delta", "milp_delta",
-            "ver_time", "mer_ext_time", "kan_time", "milp_time"]
+            "ver_delta", "ext_delta", "kan_delta", "milp_delta",
+            "ver_time", "ext_time", "kan_time", "milp_time"]
     example_is = []
     example_labels = []
     target_labels = []
     ver_deltas, kan_deltas, milp_deltas = [], [], []
     ver_times, kan_times, milp_times = [], [], []
-    mer_ext_deltas, mer_ext_times = [], []
+    ext_deltas, ext_times = [], []
     for j in jsons:
         example_is.append(j["example_i"])
         example_labels.append(j["example_label"])
@@ -41,8 +41,8 @@ def get_df(jsons):
             kan_deltas.append(j["kantchelian_delta"])
             kan_times.append(j["kantchelian"]["time_p"])
         if "merge_ext" in j:
-            mer_ext_times.append(j["merge_ext"]["times"][-1])
-            mer_ext_deltas.append(j["merge_ext"]["deltas"][-1])
+            ext_times.append(j["merge_ext"]["times"][-1])
+            ext_deltas.append(j["merge_ext"]["deltas"][-1])
         if "milp_deltas" in j:
             milp_deltas.append(j["milp_deltas"][-1][1])
             milp_times.append(j["milp_time"])
@@ -53,8 +53,8 @@ def get_df(jsons):
         except: pass
 
     columns = { k: v for k, v in zip(colnames, [example_is, example_labels,
-        target_labels, ver_deltas, mer_ext_deltas, milp_deltas, kan_deltas,
-        ver_times, mer_ext_times, kan_times, milp_times]) if len(v) > 0 }
+        target_labels, ver_deltas, ext_deltas, milp_deltas, kan_deltas,
+        ver_times, ext_times, kan_times, milp_times]) if len(v) > 0 }
 
     return pd.DataFrame(data=columns)
             
@@ -137,8 +137,8 @@ if __name__ == "__main__":
     print("mean delta diff ver/kan", (df["kan_delta"]-df["ver_delta"]).abs().mean())
     #print("mean delta diff ver2", (df["kan_delta"]-df["ver2_delta"]).abs().mean())
     #print("mean delta diff mer", (df["kan_delta"]-df["mer_delta"]).abs().mean())
-    if "mer_ext_time" in df:
-        print("mean delta diff mer ext", (df["kan_delta"]-df["mer_ext_delta"]).abs().mean())
+    if "ext_time" in df:
+        print("mean delta diff mer ext", (df["kan_delta"]-df["ext_delta"]).abs().mean())
     #print("ver closer to kan", sum((df["kan_delta"]-df["ver_delta"]).abs() <
     #        (df["kan_delta"]-df["mer_delta"]).abs()))
     #print("ver2 closer to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() <
@@ -150,8 +150,8 @@ if __name__ == "__main__":
     print("mean time ver", df["ver_time"].mean())
     #print("mean time ver2", df["ver2_time"].mean())
     #print("mean time mer", df["mer_time"].mean())
-    if "mer_ext_time" in df:
-        print("mean time ext", df["mer_ext_time"].mean())
+    if "ext_time" in df:
+        print("mean time ext", df["ext_time"].mean())
     print("mean time kan", df["kan_time"].mean())
     if "milp_time" in df:
         print("mean time mip", df["milp_time"].mean())

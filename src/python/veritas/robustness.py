@@ -208,8 +208,10 @@ class MilpRobustnessSearch(RobustnessSearch):
         milp = self.get_milp(delta, rem_time)
         milp.optimize()
 
-        delta, intervals = milp.solution()
         generated_examples = []
-        if delta > 0.0:
-            generated_examples = [get_closest_example(intervals, self.example)]
-        return delta, generated_examples
+        max_output_diff = milp.objective_bound()
+        if milp.has_solution():
+            output_diff, intervals = milp.solution()
+            if max_output_diff > 0.0:
+                generated_examples = [get_closest_example(intervals, self.example)]
+        return max_output_diff, generated_examples

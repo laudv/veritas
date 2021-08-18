@@ -175,7 +175,7 @@ def main():
     max_time = int(sys.argv[4])
     algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
     assert len(algos) == 3
-    outfile = f"{outfile_base}-{dataset}-time{max_time}-{example_is.start}:{example_is.stop}-{algos}.gz"
+    outfile = f"{outfile_base}-{dataset}-{example_is.start}:{example_is.stop}-time{max_time}-{algos}.gz"
 
     dataset, start_delta, num_classes, T, L = parse_dataset(dataset)
 

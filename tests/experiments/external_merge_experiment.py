@@ -1,12 +1,12 @@
 import sys, os, gzip, time
-from robustness_experiment2 import parse_dataset, write_result
+from robustness_experiment import parse_dataset, write_result
 from external_merge import external_merge_binary, external_merge_multiclass
 
 def main():
     dataset = sys.argv[1]
     example_is = range(*(int(i) for i in sys.argv[2].split(":")))
     outfile_base = sys.argv[3]
-    outfile = f"{outfile_base}-{dataset}-{example_is.start}:{example_is.stop}-0e00.gz"
+    outfile = f"{outfile_base}-{dataset}-{example_is.start}:{example_is.stop}-EXT.gz"
 
     dataset, start_delta, num_classes, T, L = parse_dataset(dataset)
 
