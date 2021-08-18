@@ -1,7 +1,8 @@
 #include "features.hpp"
 //#include "node_search.hpp"
 #include "graph.hpp"
-#include "graph_search.hpp"
+//#include "graph_search.hpp"
+#include "graph_robustness_search.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -667,6 +668,7 @@ void test_feat_map3()
     assert(renamed1[0].root().left().right().get_split().feat_id == 5);
 }
 
+/*
 void test_graph_search1()
 {
     AddTree at;
@@ -849,6 +851,7 @@ void test_constraints1()
         std::cout << sol.output << " box " << sol.box << std::endl;
     }
 }
+*/
 
 int main()
 {
@@ -858,8 +861,8 @@ int main()
     //test_json1();
     //test_json2();
 
-    test_eval1();
-    test_eval2();
+    //test_eval1();
+    //test_eval2();
 
     //test_prune1();
     //test_block_store1();
@@ -881,4 +884,11 @@ int main()
 
     //test_constraints1();
 
+    AddTree at;
+    GraphOutputSearch s1(at);
+    std::cout << "is done?" << s1.step();
+    std::cout << "is done?" << s1.step();
+    //std::vector<FloatT> example;
+    //GraphRobustnessSearch s2(at, example, 20);
+    //s2.step();
 }

@@ -592,7 +592,7 @@ namespace veritas {
             // expand by adding vertexes from `next_indep_set`
             Graph::IndepSet set = g_.get_vertices(next_indep_set);
             int num_vertices = static_cast<int>(set.size());
-            for (int vertex = 0; vertex < num_vertices; ++vertex) // filled by `find_indep_sets_not_added`
+            for (int vertex = 0; vertex < num_vertices; ++vertex)
             {
                 const Graph::Vertex& v = set[vertex];
                 if (v.box.overlaps(parent_box))
