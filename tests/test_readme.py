@@ -40,7 +40,7 @@ print("Eval:", at.eval(np.array([[0, 0, 0], [15, -3, 9]])))
 
 
 # What is the maximum of the ensemble?
-s = GraphSearch(at)
+s = GraphOutputSearch(at)
 s.steps(100)
 
 print("---------------\n")
@@ -58,7 +58,7 @@ if s.num_solutions() > 0:
 # If feature0 is between 3 and 5, what is the minimum possible output?
 prune_box = [(0, Domain(3, 5))]  # (feat_id, domain) list, sorted by feat_id
 at_neg = at.negate_leaf_values() # maximize with -leaf_values == minimize
-s = GraphSearch(at_neg)
+s = GraphOutputSearch(at_neg)
 s.prune(prune_box)
 s.steps(100)
 
@@ -96,7 +96,7 @@ print(at_contrast[3])
 print(feat_map)
 print("\n---------------\n")
 
-s = GraphSearch(at_contrast)
+s = GraphOutputSearch(at_contrast)
 s.stop_when_solution_eps_equals = 1.0
 s.step_for(10.0, 10)
 
@@ -122,7 +122,7 @@ print("\n---------------\n")
 at.base_score = -44
 
 # Generate all possible output configurations for this `at`
-s = GraphSearch(at)
+s = GraphOutputSearch(at)
 done = s.steps(100)
 while not done:
     done = s.steps(100)

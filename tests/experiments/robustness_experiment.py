@@ -1,5 +1,6 @@
 import os, sys, json, gzip, time
 import datasets
+from veritas import GraphRobustnessSearch, get_closest_example
 from veritas.robustness import RobustnessSearch, VeritasRobustnessSearch, MilpRobustnessSearch
 from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
@@ -15,7 +16,7 @@ def write_result(result, outfile):
     os.fsync(outfile)
 
 def run(at0, at1, example, start_delta, max_time, algos, result):
-    if algos[0] == "1":
+    if algos[0] == "b" or algos[0] == "a": # binary (or all)
         print("\n== VERITAS ======================================", f"({time.ctime()})")
         ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta,
                 max_time=max_time,
@@ -27,6 +28,21 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         result["veritas_time_p"] = ver.total_time_p
         result["veritas_examples"] = ver.generated_examples
         print("veritas time", ver.total_time, ver.total_time_p)
+
+    if algos[0] == "g" or algos[0] == "a": # graph (or all)
+        print("\n== VERITAS ======================================", f"({time.ctime()})")
+        ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta)
+        ver = GraphRobustnessSearch(ver.at, example, start_delta)
+        ver.stop_when_num_solutions_equals = 1
+        ver.step_for(max_time, 100)
+        result["ver_graph_delta"] = [ver.get_solution(i).delta
+                for i in range(ver.num_solutions())]
+        result["ver_graph_time"] = ver.time_since_start()
+        result["ver_graph_examples"] = [get_closest_example(ver.get_solution(i), example)
+                for i in range(ver.num_solutions())]
+        print("veritas time", ver.time_since_start(),
+                "delta", result["ver_graph_delta"],
+                "steps", ver.num_steps())
 
     if algos[1] == "1":
         print("\n== KANTCHELIAN MILP =============================", f"({time.ctime()})")

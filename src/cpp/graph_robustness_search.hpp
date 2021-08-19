@@ -12,7 +12,7 @@
 #include "domain.hpp"
 #include "tree.hpp"
 #include "graph.hpp"
-#include "constraints.hpp"
+//#include "constraints.hpp"
 #include <iostream>
 #include <chrono>
 #include <map>
@@ -35,6 +35,17 @@ namespace veritas {
     struct SolutionRef {
         size_t state_index;
         FloatT eps;
+        double time;
+    };
+
+    /** A full (sub)optimal solution. */
+    struct Solution {
+        size_t state_index;
+        size_t solution_index;
+        FloatT eps;
+        FloatT output;
+        std::vector<NodeId> nodes; // one leaf node id per tree in addtree
+        Box box;
         double time;
     };
 
@@ -68,7 +79,7 @@ namespace veritas {
 
         bool operator()(size_t i, size_t j) const;
         inline bool operator()(const State& a, const State& b) const
-        { return false; /* TODO */ }
+        { return (a.h == b.h) ? a.g < b.g : a.h > b.h; }
     };
 
 
@@ -97,6 +108,9 @@ namespace veritas {
      *
      *  - Derived::compute_score(State& state)
      *      * fills in g and h of given state
+     *  
+     *  - Derived::stop_conditions_met
+     *      * call GraphSearch::stop_conditions_met_
      */
     template <typename Derived, typename CmpT>
     class GraphSearch {
@@ -140,6 +154,9 @@ namespace veritas {
             static_cast<Derived *>(this)->compute_score(state, fake_parent, fake_v);
             static_cast<Derived *>(this)->push_state(std::move(state));
         }
+
+    public:
+        size_t stop_when_num_solutions_equals = 999'999'999; /**< disabled by default */
 
     public:
         void prune_by_box(const BoxRef& box)
@@ -219,7 +236,8 @@ namespace veritas {
             states_[state_index].is_expanded = true;
             BoxRef parent_box = states_[state_index].box;
 
-            Graph::IndepSet set = g_.get_vertices(states_[state_index].indep_set + 1);
+            int next_indep_set = states_[state_index].indep_set + 1;
+            Graph::IndepSet set = g_.get_vertices(next_indep_set);
             int num_vertices = static_cast<int>(set.size());
             for (int vertex = 0; vertex < num_vertices; ++vertex)
             {
@@ -230,6 +248,21 @@ namespace veritas {
                     construct_and_push_states(state_index, v);
                 }
             }
+        }
+
+        bool stop_conditions_met_() const
+        {
+            if (solutions_.size() >= stop_when_num_solutions_equals)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << num_solutions() << " >= "
+                    << stop_when_num_solutions_equals
+                    << " solutions found"
+                    << std::endl;
+                return true;
+            }
+
+            return false;
         }
 
     public:
@@ -265,17 +298,38 @@ namespace veritas {
                     now-start_time_).count() * 1e-6;
         }
 
+        Solution get_solution(size_t solution_index) const
+        {
+            auto&& [state_index, eps, time] = solutions_.at(solution_index);
+            const State& state = states_[state_index];
+
+            std::vector<NodeId> node_ids;
+            find_node_ids(state, node_ids);
+
+            return {
+                state_index,
+                solution_index,
+                eps,
+                at_.base_score + state.g,
+                node_ids, // copy
+                {state.box.begin(), state.box.end()},
+                time,
+            };
+        }
+
+
     private:
 
         void construct_and_push_states(size_t parent_state_index, const Graph::Vertex& v)
         {
             auto push_workspace_box_fun = [this, parent_state_index, &v](Box& b){
+                int indep_set = states_[parent_state_index].indep_set + 1;
                 BoxRef box = BoxRef(store_.store(b, remaining_mem_capacity()));
                 State new_state = {
                     0.0,
                     0.0, // heuristic, set later, after `in_visited` check, in `compute_heuristic`
                     box,
-                    -1, // indep_sets, set later with h in `compute_heuristic`
+                    indep_set,
                     false, // is_expanded
                 };
 
@@ -300,12 +354,22 @@ namespace veritas {
             workspace_.box.clear();
         }
 
+        void find_node_ids(const State& s, std::vector<NodeId>& buffer) const
+        {
+            buffer.clear();
+
+            for (const Graph::IndepSet& set : g_)
+                for (const Graph::Vertex& v : set)
+                    if (v.box.overlaps(s.box))
+                    { buffer.push_back(v.leaf_id); continue; }
+        }
+
     protected:
         FloatT compute_output_heuristic(const State& state) const
         {
             // compute heuristic
             FloatT h = 0.0;
-            for (size_t indep_set = state.indep_set; indep_set < g_.num_independent_sets(); ++indep_set)
+            for (size_t indep_set = state.indep_set+1; indep_set < g_.num_independent_sets(); ++indep_set)
             {
                 FloatT max = -FLOATT_INF;
                 Graph::IndepSet set = g_.get_vertices(indep_set);
@@ -321,27 +385,19 @@ namespace veritas {
         
         FloatT compute_output_heuristic_dynprog(const State& state) const
         {
-            FloatT h = 0.0;
             std::vector<FloatT> d0, d1;
             int prev_indep_set = -1;
-            for (size_t indep_set = state.indep_set; indep_set < g_.num_independent_sets(); ++indep_set)
+            for (size_t indep_set = state.indep_set+1; indep_set < g_.num_independent_sets(); ++indep_set)
             {
-                FloatT tree_max = -FLOATT_INF;
-                //
                 // fill d0 with the first indep_set
                 if (d0.empty())
                 {
                     for (const auto& v : g_.get_vertices(indep_set))
                     {
                         if (v.box.overlaps(state.box))
-                        {
                             d0.push_back(v.output);
-                            tree_max = std::max(tree_max, v.output);
-                        }
                         else
-                        {
                             d0.push_back(-FLOATT_INF);
-                        }
                     }
                 }
                 else
@@ -354,12 +410,11 @@ namespace veritas {
 
                         if (v1.box.overlaps(state.box))
                         {
-                            tree_max = std::max(tree_max, v1.output);
                             for (size_t j = 0; j < d0.size(); ++j)
                             {
                                 const auto& v0 = set0[j];
-                                if (v0.box.overlaps(v1.box) && max < d0[j])
-                                    max = d0[j];
+                                if (!std::isinf(d0[j]) && v0.box.overlaps(v1.box))
+                                    max = std::max(max, d0[j]);
                             }
                             d1.push_back(max + v1.output);
                         }
@@ -375,7 +430,16 @@ namespace veritas {
 
                 prev_indep_set = indep_set;
             }
-            return h;
+
+            // find max of d0 --> thats the heuristic value
+            if (state.indep_set+1 < static_cast<int>(g_.num_independent_sets()))
+            {
+                FloatT max = -FLOATT_INF;
+                for (auto v : d0)
+                    max = std::max(max, v);
+                return max;
+            }
+            return 0.0; // final state has no heuristic
         }
     }; // class GraphSearch
 
@@ -387,10 +451,17 @@ namespace veritas {
 
         using CmpT = OutputCmp;
 
-        std::vector<Snapshot> snapshots_;
-
     public:
         friend GraphSearch<GraphOutputSearch, OutputCmp>;
+
+        // SETTINGS
+        bool use_dynprog_heuristic = false;
+
+        FloatT stop_when_solution_eps_equals = 1.0; // default: when optimal
+        FloatT stop_when_up_bound_less_than = -FLOATT_INF; // default: disabled
+        FloatT stop_when_solution_output_greater_than = FLOATT_INF;
+
+        std::vector<Snapshot> snapshots;
 
         GraphOutputSearch(const AddTree& at)
             : GraphSearch(at, a_cmp_)
@@ -409,7 +480,10 @@ namespace veritas {
                 const Graph::Vertex& merged_vertex) const
         {
             new_state.g = parent_state.g + merged_vertex.output;
-            new_state.h = compute_output_heuristic(new_state);
+            if (use_dynprog_heuristic)
+                new_state.h = compute_output_heuristic_dynprog(new_state);
+            else
+                new_state.h = compute_output_heuristic(new_state);
         }
 
         void push_state(State&& state)
@@ -441,6 +515,9 @@ namespace veritas {
                 update_eps(eps_increment_);
             }
 
+            std::cout << "solution fscore=" << (g_.base_score+a_cmp_.fscore(states_[state_index]))
+                << ", eps=" << sol.eps << ", nsteps=" << num_steps_ << std::endl;
+
             // better solutions have an eps at least as good as this one
             while (solution_index != 0)
             {
@@ -464,9 +541,11 @@ namespace veritas {
                     const State& s1 = states_[sol.state_index];
                     if (sol.eps != 1.0 && ara_cmp_(s0, s1))
                     {
-                        std::cout << "UPDATE PREVIOUS SOLUTION " << ara_cmp_.fscore(s1)
-                            << " > " << ara_cmp_.fscore(s0)
-                            << " (" << ara_cmp_.eps << " ==? " << ara_cmp_.eps << ")";
+                        std::cout << "UPDATE PREVIOUS SOLUTION "
+                            << (ara_cmp_.fscore(s1)+g_.base_score)
+                            << " > " << (ara_cmp_.fscore(s0)+g_.base_score)
+                            << " (" << sol.eps << " ==? " << ara_cmp_.eps << ")"
+                            << std::endl;
                         sol.eps = ara_cmp_.eps;
                         update_eps(eps_increment_);
                         //std::cout << " new eps=" << ara_cmp_.eps << std::endl;
@@ -514,6 +593,42 @@ namespace veritas {
             return done;
         }
 
+        bool stop_conditions_met() const
+        {
+            if (stop_conditions_met_())
+                return true;
+
+            auto [lo, up_a, up_ara] = current_bounds_with_base_score();
+            if (std::min(up_a, up_ara) < stop_when_up_bound_less_than)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << "upper bound " << stop_when_up_bound_less_than
+                    << " reached (" << up_a << ", " << up_ara << ")"
+                    << std::endl;
+                return true;
+            }
+
+            if (solutions_.size() > 0 && solutions_[0].eps == stop_when_solution_eps_equals)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << "solution with eps " << stop_when_solution_eps_equals
+                    << " found." << std::endl;
+                return true;
+            }
+
+            if (solutions_.size() > 0 && a_cmp_.fscore(states_[solutions_.front().state_index])
+                    > stop_when_solution_output_greater_than)
+            {
+                std::cout << "stop_conditions_met: stopping early: "
+                    << "solution found with output greater than "
+                    << stop_when_solution_output_greater_than
+                    << std::endl;
+                return true;
+            }
+
+            return false;
+        }
+
     private:
         void push_to_heap(std::vector<size_t>& heap, size_t state_index, const OutputCmp& cmp)
         {
@@ -541,7 +656,7 @@ namespace veritas {
 
         void push_snapshot()
         {
-            snapshots_.push_back({
+            snapshots.push_back({
                 time_since_start(),
                 num_steps_,
                 num_solutions(),
@@ -564,6 +679,15 @@ namespace veritas {
             return {lo, up_a, up_ara};
         }
 
+    public:
+
+        /** ARA* lower, A* upper, ARA* upper */
+        std::tuple<FloatT, FloatT, FloatT> current_bounds_with_base_score() const
+        {
+            auto &&[lo, up_a, up_ara] = current_bounds();
+            return {lo+at_.base_score, up_a+at_.base_score, up_ara+at_.base_score};
+        }
+
         void set_eps(FloatT eps)
         {
             ara_cmp_.eps = std::max<FloatT>(0.0, std::min<FloatT>(1.0, eps));
@@ -573,13 +697,8 @@ namespace veritas {
                 ara_heap_.clear();
         }
 
-    public:
-        /** ARA* lower, A* upper, ARA* upper */
-        std::tuple<FloatT, FloatT, FloatT> current_bounds_with_base_score() const
-        {
-            auto &&[lo, up_a, up_ara] = current_bounds();
-            return {lo+at_.base_score, up_a+at_.base_score, up_ara+at_.base_score};
-        }
+        FloatT get_eps() const { return ara_cmp_.eps; }
+        void set_eps_increment(FloatT incr) { eps_increment_ = incr; }
 
         void update_eps(FloatT added_value) // this updates time, set_eps does not
         {
@@ -603,56 +722,136 @@ namespace veritas {
 
     };
 
-    //class GraphRobustnessSearch : public GraphSearch<GraphRobustnessSearch, RobustnessCmp> {
+    /** Minimize the delta between the given example and the generated solution. */
+    class GraphRobustnessSearch : public GraphSearch<GraphRobustnessSearch, RobustnessCmp> {
 
-    //    std::vector<size_t> heap_; // indexes into states_
-    //    RobustnessCmp cmp_;
+        std::vector<size_t> heap_; // indexes into states_
+        RobustnessCmp cmp_;
 
-    //    std::vector<FloatT> example_;
-    //    FloatT max_delta_;
+        std::vector<FloatT> example_;
+        FloatT example_output_;
+        FloatT max_delta_;
 
-    //    using CmpT = RobustnessCmp;
+        using CmpT = RobustnessCmp;
 
-    //public:
-    //    friend GraphSearch<GraphRobustnessSearch, RobustnessCmp>;
+    public:
+        friend GraphSearch<GraphRobustnessSearch, RobustnessCmp>;
 
-    //    GraphRobustnessSearch(const AddTree& at, const std::vector<FloatT>& example, FloatT max_delta)
-    //        : GraphSearch(at, cmp_)
-    //        , cmp_{*this}
-    //        , example_(example)
-    //        , max_delta_(max_delta)
-    //    {
+        GraphRobustnessSearch(const AddTree& at, const std::vector<FloatT>& example, FloatT max_delta)
+            : GraphSearch(at, cmp_)
+            , cmp_{*this}
+            , example_(example)
+            , example_output_(at.eval(example_))
+            , max_delta_(max_delta)
+        {
+            Box box;
+            for (FeatId feat_id = 0; feat_id < static_cast<int>(example.size()); ++feat_id)
+            {
+                FloatT x = example_[feat_id];
+                box.push_back({feat_id, {x - max_delta_, x + max_delta_}});
+            }
+            prune_by_box(box);
+            init();
+        }
 
-    //    }
+    private:
+        void compute_score(State& new_state, const State& parent_state,
+                const Graph::Vertex& merged_vertex) const
+        {
+            // state.g contains output so far
+            // state.h contains delta estimate
+            new_state.g = parent_state.g + merged_vertex.output;
 
-    //private:
-    //    void compute_score(State& new_state, const State& parent_state,
-    //            const Graph::Vertex& merged_vertex) const
-    //    {
-    //        // we don't use h here
+            // compute L0 norm given the new vertex
+            FloatT delta = new_state.h;
+            for (auto &&[feat_id, dom] : new_state.box)
+            {
+                FloatT x = example_[feat_id];
+                if (!dom.contains(x))
+                {
+                    FloatT d = std::min(std::abs(dom.lo - x), std::abs(dom.hi - x));
+                    //std::cout << "feature " << feat_id << ": " << x << ", " << dom << " -> " << d << std::endl;
+                    delta = std::max(delta, d);
+                }
+            }
+            new_state.h = delta;
+        }
 
-    //    }
+        void push_state(State&& state)
+        {
+            // reject states with output certainly < 0 (label not flipped)
+            if (g_.base_score + state.g + compute_output_heuristic(state) - example_output_ <= 0)
+            { 
+                auto f0 = g_.base_score + state.g - example_output_ + compute_output_heuristic(state);
+                auto f1 = g_.base_score + state.g - example_output_ + compute_output_heuristic_dynprog(state);
+                std::cout << "rejecting state f=" << f0 << ", " << f1 << std::endl;
+                return;
+            }
+            
+            size_t state_index = push_state_(std::move(state));
+            heap_.push_back(state_index);
+            std::push_heap(heap_.begin(), heap_.end(), cmp_);
+        }
 
-    //    void notify_pushed_state(size_t state_index)
-    //    {
-    //        heap_.push_back(state_index);
-    //        std::push_heap(heap_.begin(), heap_.end(), cmp_);
-    //    }
+        void push_solution(size_t state_index)
+        {
+            if (states_[state_index].h > 0.0)
+            {
+                /*size_t solution_index = */push_solution_(state_index);
+                std::cout << "accepted solution " << states_[state_index].box
+                    << ", delta " << states_[state_index].h << std::endl;
+            }
+            else
+            {
+                std::cout << "rejected solution " << states_[state_index].box
+                    << ", delta " << states_[state_index].h << std::endl;
+            }
 
-    //    size_t next_state_to_expand()
-    //    {
-    //        std::pop_heap(heap_.begin(), heap_.end(), cmp_);
-    //        size_t state_index = heap_.back();
-    //        heap_.pop_back();
-    //        return state_index;
-    //    }
-    //};
+        }
+
+        void expand(size_t state_index)
+        {
+            expand_(state_index);
+        }
+
+    public:
+        bool step()
+        {
+            if (heap_.empty())
+                return false;
+            std::pop_heap(heap_.begin(), heap_.end(), cmp_);
+            size_t state_index = heap_.back();
+            heap_.pop_back();
+
+            const State& s = states_[state_index];
+            std::cout << "step " << s.box << " g=" << s.g << ", delta=" << s.h << " indep_set=" << s.indep_set << std::endl;
+
+            step_(state_index);
+            return false; // not done
+        }
+
+        bool steps(size_t num_steps)
+        {
+            bool done = steps_(num_steps);
+            //push_snapshot();
+            return done;
+        }
+
+        bool stop_conditions_met() const
+        {
+            if (stop_conditions_met_())
+                return true;
+            return false;
+        }
+
+        size_t num_steps() const { return num_steps_; }
+    };
 
     bool OutputCmp::operator()(size_t i, size_t j) const
     { return this->operator()(search.states_[i], search.states_[j]); }
 
-    //bool RobustnessCmp::operator()(size_t i, size_t j) const
-    //{ return this->operator()(search.states_[i], search.states_[j]); }
+    bool RobustnessCmp::operator()(size_t i, size_t j) const
+    { return this->operator()(search.states_[i], search.states_[j]); }
 
 } /* namespace veritas */
 

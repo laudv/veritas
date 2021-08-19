@@ -71,6 +71,14 @@ namespace veritas {
                 stride_col,
             };
         }
+
+        data(std::vector<FloatT>& v)
+            : ptr(&v[0])
+            , num_rows(1), num_cols(v.size())
+            , stride_row(0), stride_col(1) {}
+
+        data(FloatT *ptr, size_t nr, size_t nc, size_t sr, size_t sc)
+            : ptr(ptr), num_rows(nr), num_cols(nc), stride_row(sr), stride_col(sc) {}
     };
 
     inline

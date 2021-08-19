@@ -7,7 +7,7 @@
 import timeit, time
 import numpy as np
 
-from . import AddTree, GraphSearch, get_closest_example, Domain
+from . import AddTree, GraphOutputSearch, get_closest_example, Domain
 
 try:
     from .kantchelian import KantchelianOutputOpt
@@ -142,7 +142,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         self.log = []
 
     def get_search(self, delta):
-        s = GraphSearch(self.at)
+        s = GraphOutputSearch(self.at)
         #s.stop_when_num_solutions_equals = 1 # !! could be solution with bad eps not good enough yet
         #s.stop_when_solution_output_greater_than = 0.0
         s.stop_when_solution_eps_equals = 1.0

@@ -113,22 +113,22 @@ def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
 # \until ; // FeatMap
 
 ## \ingroup python
-# \class GraphSearch
-# \brief Bindings to C++ veritas::GraphSearch struct.
+# \class GraphOutputSearch
+# \brief Bindings to C++ veritas::GraphOutputSearch class.
 #
 # In `bindings.cpp`:
 # \dontinclude[lineno] bindings.cpp
-# \skipline py::class_<GraphSearch>
-# \until ; // GraphSearch
+# \skipline py::class_<GraphOutputSearch>
+# \until ; // GraphOutputSearch
 
 ## \ingroup python
-# \class GraphSearch
-# \brief Bindings to C++ veritas::GraphSearch struct.
+# \class GraphRobustnessSearch
+# \brief Bindings to C++ veritas::GraphRobustnessSearch struct.
 #
 # In `bindings.cpp`:
 # \dontinclude[lineno] bindings.cpp
-# \skipline py::class_<GraphSearch>
-# \until ; // GraphSearch
+# \skipline py::class_<GraphRobustnessSearch>
+# \until ; // GraphRobustnessSearch
 
 ## \ingroup python
 # \class Snapshot

@@ -334,43 +334,57 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
         ; // FeatMap
 
-    py::class_<GraphSearch>(m, "GraphSearch")
+    py::class_<GraphOutputSearch>(m, "GraphOutputSearch")
         .def(py::init<const AddTree&>())
-        .def("step", &GraphSearch::step)
-        .def("steps", &GraphSearch::steps)
-        .def("step_for", &GraphSearch::step_for)
-        .def("stop_conditions_met", &GraphSearch::stop_conditions_met)
-        .def("num_solutions", &GraphSearch::num_solutions)
-        .def("num_states", &GraphSearch::num_states)
-        .def("heap_size", &GraphSearch::heap_size)
-        .def("get_solution", &GraphSearch::get_solution)
-        .def("time_since_start", &GraphSearch::time_since_start)
-        .def("current_bounds", &GraphSearch::current_bounds_with_base_score)
-        .def("get_eps", &GraphSearch::get_eps)
-        .def("set_eps", &GraphSearch::set_eps)
-        .def("set_eps_increment", &GraphSearch::set_eps_increment)
+        .def("step", &GraphOutputSearch::step)
+        .def("steps", &GraphOutputSearch::steps)
+        .def("step_for", &GraphOutputSearch::step_for)
+        .def("stop_conditions_met", &GraphOutputSearch::stop_conditions_met)
+        .def("num_solutions", &GraphOutputSearch::num_solutions)
+        .def("num_states", &GraphOutputSearch::num_states)
+        .def("num_steps", &GraphOutputSearch::num_steps)
+        //.def("heap_size", &GraphOutputSearch::heap_size)
+        .def("get_solution", &GraphOutputSearch::get_solution)
+        .def("time_since_start", &GraphOutputSearch::time_since_start)
+        .def("current_bounds", &GraphOutputSearch::current_bounds_with_base_score)
+        .def("get_eps", &GraphOutputSearch::get_eps)
+        .def("set_eps", &GraphOutputSearch::set_eps)
+        .def("set_eps_increment", &GraphOutputSearch::set_eps_increment)
         //.def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
-        .def_readonly("snapshots", &GraphSearch::snapshots)
-        .def("prune", [](GraphSearch& s, const py::list& pybox) {
+        .def_readonly("snapshots", &GraphOutputSearch::snapshots)
+        .def("prune", [](GraphOutputSearch& s, const py::list& pybox) {
             Box box = tobox(pybox);
             BoxRef b(box);
-            //py::print("pruning GraphSearch using box", tostr(b));
             return s.prune_by_box(b);
         })
-        .def_readwrite("use_dynprog_heuristic", &GraphSearch::use_dynprog_heuristic)
-        .def_readwrite("stop_when_solution_eps_equals", &GraphSearch::stop_when_solution_eps_equals)
-        .def_readwrite("stop_when_num_solutions_equals", &GraphSearch::stop_when_num_solutions_equals)
-        .def_readwrite("stop_when_up_bound_less_than", &GraphSearch::stop_when_up_bound_less_than)
-        .def_readwrite("stop_when_solution_output_greater_than", &GraphSearch::stop_when_solution_output_greater_than)
-        ; // GraphSearch
+        .def_readwrite("use_dynprog_heuristic", &GraphOutputSearch::use_dynprog_heuristic)
+        .def_readwrite("stop_when_solution_eps_equals", &GraphOutputSearch::stop_when_solution_eps_equals)
+        .def_readwrite("stop_when_num_solutions_equals", &GraphOutputSearch::stop_when_num_solutions_equals)
+        .def_readwrite("stop_when_up_bound_less_than", &GraphOutputSearch::stop_when_up_bound_less_than)
+        .def_readwrite("stop_when_solution_output_greater_than", &GraphOutputSearch::stop_when_solution_output_greater_than)
+        ; // GraphOutputSearch
 
-    //py::class_<Stats>(m, "Stats")
-    //    .def_readonly("num_steps", &Stats::num_steps)
-    //    .def_readonly("num_impossible", &Stats::num_impossible)
-    //    .def_readonly("num_solutions", &Stats::num_solutions)
-    //    .def_readonly("num_states", &Stats::num_states)
-    //    .def_readonly("snapshots", &Stats::snapshots)
-    //    ;
+    py::class_<GraphRobustnessSearch>(m, "GraphRobustnessSearch")
+        .def(py::init<const AddTree&, const std::vector<FloatT>&, FloatT>())
+        .def("step", &GraphRobustnessSearch::step)
+        .def("steps", &GraphRobustnessSearch::steps)
+        .def("step_for", &GraphRobustnessSearch::step_for)
+        .def("stop_conditions_met", &GraphRobustnessSearch::stop_conditions_met)
+        .def("num_solutions", &GraphRobustnessSearch::num_solutions)
+        .def("num_states", &GraphRobustnessSearch::num_states)
+        .def("num_steps", &GraphRobustnessSearch::num_steps)
+        .def("get_solution", &GraphRobustnessSearch::get_solution)
+        .def("time_since_start", &GraphRobustnessSearch::time_since_start)
+        //.def_readonly("snapshots", &GraphRobustnessSearch::snapshots)
+        .def("prune", [](GraphRobustnessSearch& s, const py::list& pybox) {
+            Box box = tobox(pybox);
+            BoxRef b(box);
+            return s.prune_by_box(b);
+        })
+        .def_readwrite("output_threshold", &GraphRobustnessSearch::output_threshold)
+        .def_readwrite("stop_when_num_solutions_equals", &GraphRobustnessSearch::stop_when_num_solutions_equals)
+
+        ; // GraphRobustnessSearch
 
     py::class_<Snapshot>(m, "Snapshot")
         .def_readonly("time", &Snapshot::time)
@@ -386,6 +400,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readonly("state_index", &Solution::state_index)
         .def_readonly("solution_index", &Solution::solution_index)
         .def_readonly("eps", &Solution::eps)
+        .def_readonly("delta", &Solution::eps)
         .def_readonly("output", &Solution::output)
         .def_readonly("nodes", &Solution::nodes)
         .def_readonly("time", &Solution::time)

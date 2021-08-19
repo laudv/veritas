@@ -668,7 +668,6 @@ void test_feat_map3()
     assert(renamed1[0].root().left().right().get_split().feat_id == 5);
 }
 
-/*
 void test_graph_search1()
 {
     AddTree at;
@@ -697,7 +696,8 @@ void test_graph_search1()
     }
     std::cout << at[0] << std::endl;
     std::cout << at[1] << std::endl;
-    GraphSearch s(at);
+    //GraphSearch s(at);
+    GraphOutputSearch s(at);
     s.step();
     s.step();
     s.step();
@@ -715,7 +715,7 @@ void test_graph_search2()
     for (const Tree& t : at)
         std::cout << t << std::endl;
 
-    GraphSearch s(at);
+    GraphOutputSearch s(at);
 
     for (size_t i = 0; i < 100; i++)
     {
@@ -744,8 +744,6 @@ void test_graph_search3()
     //AddTree at10 = AddTree(at, 0, 10);
     //at = at.limit_depth(3);
 
-
-
     //for (auto&&[k, v] : at.get_splits())
     //{
     //    std::cout << k << ":";
@@ -756,12 +754,14 @@ void test_graph_search3()
     
     for (size_t i = 0; i < 2; ++i)
     {
-        GraphSearch s(at);
+        //GraphSearch s(at);
+        GraphOutputSearch s(at);
         s.use_dynprog_heuristic=i;
 
+        bool done = false;
         s.steps(100);
-        while (s.snapshots.back().num_steps < 1000)
-            s.steps(100);
+        while (!done && s.snapshots.back().num_steps < 1000)
+            done = s.steps(100);
 
         //bool done = s.steps(100);
         //while (!done)
@@ -773,6 +773,8 @@ void test_graph_search3()
             << std::endl;
         std::cout << "up bound: " << std::get<1>(s.current_bounds_with_base_score())
             << std::endl;
+        std::cout << "best sol " << s.get_solution(0).output
+            << " at " << s.get_solution(0).time << std::endl;
         std::cout << "time: " << s.time_since_start() << std::endl;
         std::cout << "eps: " << s.get_eps() << std::endl;
         std::cout << "num_steps: " << s.snapshots.back().num_steps << std::endl;
@@ -780,6 +782,39 @@ void test_graph_search3()
     }
 }
 
+void test_robustness_search1()
+{
+    AddTree at;
+    {
+        std::ifstream f;
+        //f.open("tests/models/xgb-allstate.json");
+        f.open("tests/models/xgb-img-hard.json");
+        at.from_json(f);
+    }
+
+    std::vector<FloatT> example {10, 10};
+    std::cout << "eval: " << at.eval(example) << std::endl;
+    GraphRobustnessSearch s(at, example, 20);
+    //bool done = s.step();
+    bool done = s.steps(1000);
+    done = s.steps(1000);
+
+    std::cout << "-------------\n";
+    std::cout << "done: " << done << std::endl;
+    std::cout << "numsols: " << s.num_solutions() << std::endl;
+    for (size_t i = 0; i < s.num_solutions(); ++i)
+    {
+        Solution sol = s.get_solution(i);
+        std::cout << "sol " << sol.output
+            << " at " << sol.time
+            << " box " << sol.box << std::endl;
+    }
+    std::cout << "time: " << s.time_since_start() << std::endl;
+    std::cout << "num_steps: " << s.num_steps() << std::endl;
+    std::cout << "-------------\n";
+}
+
+/*
 void test_graph_simplify()
 {
     AddTree at;
@@ -880,15 +915,9 @@ int main()
     //test_graph_search2();
     //test_graph_search3();
 
+    test_robustness_search1();
+
     //test_graph_simplify();
 
     //test_constraints1();
-
-    AddTree at;
-    GraphOutputSearch s1(at);
-    std::cout << "is done?" << s1.step();
-    std::cout << "is done?" << s1.step();
-    //std::vector<FloatT> example;
-    //GraphRobustnessSearch s2(at, example, 20);
-    //s2.step();
 }

@@ -61,7 +61,7 @@ namespace veritas {
         /** Check if equal to (-inf, inf) */
         inline bool is_everything() const { return *this == Domain(); };
         /** Check if value `v` is in domain. */
-        inline bool contains(FloatT v) const { return lo >= v && v <= hi; }
+        inline bool contains(FloatT v) const { return lo <= v && v <= hi; }
         /** Check if two domains overlap */
         inline bool overlaps(const Domain& other) const
         {

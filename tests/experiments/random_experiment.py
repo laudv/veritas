@@ -2,7 +2,7 @@ import os, sys, json, gzip
 #import util
 import datasets
 import veritas
-from veritas import GraphSearch, Domain, TRUE_DOMAIN, FALSE_DOMAIN
+from veritas import GraphOutputSearch, Domain, TRUE_DOMAIN, FALSE_DOMAIN
 import veritas0
 #from veritas import RobustnessSearch, VeritasRobustnessSearch, MergeRobustnessSearch
 #from treeck_robust import TreeckRobustnessSearch
@@ -104,7 +104,7 @@ def random_experiment(dataset, num_trees, tree_depth, outfile, n, constraints_se
 
         if algos[0] == "1":
             print("\n== VERITAS ======================================")
-            search = GraphSearch(at)
+            search = GraphOutputSearch(at)
             search.prune(constraints)
             search.set_eps(0.1)
             search.set_eps_increment(0.1)

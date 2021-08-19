@@ -6,8 +6,6 @@ import matplotlib.patches as patches
 
 from veritas import *
 
-Search = GraphSearch
-
 def plot_img_solutions(imghat, solutions):
     fig, ax = plt.subplots()
     im = ax.imshow(imghat)
@@ -15,7 +13,6 @@ def plot_img_solutions(imghat, solutions):
     i, j, c = 1, 0, "r"
     for s in solutions:
         box = s.box()
-        hi = True
         x0, y0 = max(0.0, box[i].lo), max(0.0, box[j].lo)
         x1, y1 = min(100.0, box[i].hi), min(100.0, box[j].hi)
         w, h = x1-x0, y1-y0
@@ -38,7 +35,7 @@ class TestSearch(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.root())), 8.0)
         print(at[0])
 
-        search = Search(at)
+        search = GraphOutputSearch(at)
 
         done = False
         while not done:
@@ -70,7 +67,7 @@ class TestSearch(unittest.TestCase):
         m, M = min(yhat), max(yhat)
         #img = np.array(ys).reshape((100, 100))
 
-        search = Search(at)
+        search = GraphOutputSearch(at)
         done = False
         while not done:
             done = search.steps(100)
@@ -100,7 +97,7 @@ class TestSearch(unittest.TestCase):
         m, M = min(yhat), max(yhat)
         #img = np.array(ys).reshape((100, 100))
 
-        search = Search(at)
+        search = GraphOutputSearch(at)
         search.prune([Domain(0, 30), Domain(0, 30)])
         done = False
         while not done:
@@ -139,7 +136,7 @@ class TestSearch(unittest.TestCase):
         m, M = min(yhat), max(yhat)
         #img = np.array(ys).reshape((100, 100))
 
-        search = Search(at)
+        search = GraphOutputSearch(at)
         done = False
         while not done:
             done = search.steps(100)
@@ -154,6 +151,59 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[:3])
         plot_img_solutions(imghat, solutions[-3:])
 
+    def test_img4(self):
+        img = imageio.imread("tests/data/img.png")
+        X = np.array([[x, y] for x in range(100) for y in range(100)])
+        y = np.array([img[x, y] for x, y in X])
+        ymed = np.median(y)
+        X = X.astype(np.float32)
+
+        at = AddTree.read("tests/models/xgb-img-easy.json")
+        at.base_score -= ymed
+        yhat = at.eval(X)
+        imghat = np.array(yhat).reshape((100, 100))
+
+
+        example = [70, 50]
+        print("evaluate", at.eval(example))
+        search = GraphRobustnessSearch(at, example, 15)
+        search.stop_when_num_solutions_equals = 1
+        done = search.step_for(1000, 100)
+        done = search.steps(100)
+        done = search.steps(100)
+        done = search.steps(100)
+        done = search.steps(100)
+
+        print("done?", done, "num_sol?", search.num_solutions(), search.num_steps())
+        plot_img_solutions(imghat, [search.get_solution(i) for i in range(search.num_solutions())])
+
+
+
+
+        #at = at.neutralize_negative_leaf_values()
+        #print(at.base_score)
+        #yhat2 = at.eval(X)
+
+        #print("output difference", sum(abs(yhat-yhat2))/len(yhat))
+        #self.assertLess(sum(abs(yhat-yhat2))/len(yhat), 1e-5)
+
+        #m, M = min(yhat), max(yhat)
+        ##img = np.array(ys).reshape((100, 100))
+
+        #search = GraphOutputSearch(at)
+        #done = False
+        #while not done:
+        #    done = search.steps(100)
+        #self.assertTrue(done)
+        ##self.assertEqual(search.num_solutions(), 32);
+
+        #solutions = [search.get_solution(i) for i in range(search.num_solutions())]
+        #self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:]))) #sorted?
+        #self.assertLess((solutions[0].output-M)/M, 1e-5)
+        #self.assertLess((solutions[-1].output-m)/m, 1e-5)
+
+        #plot_img_solutions(imghat, solutions[:3])
+        #plot_img_solutions(imghat, solutions[-3:])
 
 if __name__ == "__main__":
     unittest.main()
