@@ -78,7 +78,6 @@ $(function() {
 <div class="textblock"><code>#include &quot;<a class="el" href="domain_8hpp_source.html">domain.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="tree_8hpp_source.html">tree.hpp</a>&quot;</code><br />
 <code>#include &quot;<a class="el" href="graph_8hpp_source.html">graph.hpp</a>&quot;</code><br />
-<code>#include &quot;constraints.hpp&quot;</code><br />
 <code>#include &lt;iostream&gt;</code><br />
 <code>#include &lt;chrono&gt;</code><br />
 <code>#include &lt;map&gt;</code><br />
@@ -87,14 +86,13 @@ Include dependency graph for graph_robustness_search.hpp:</div>
 <div class="dyncontent">
 <div class="center"><img src="graph__robustness__search_8hpp__incl.png" border="0" usemap="#asrc_2cpp_2graph__robustness__search_8hpp" alt=""/></div>
 <map name="asrc_2cpp_2graph__robustness__search_8hpp" id="asrc_2cpp_2graph__robustness__search_8hpp">
-<area shape="rect" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="786,5,958,47"/>
+<area shape="rect" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="742,5,914,47"/>
 <area shape="rect" href="domain_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="300,244,388,271"/>
 <area shape="rect" title=" " alt="" coords="687,393,759,420"/>
 <area shape="rect" href="tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="582,169,650,196"/>
 <area shape="rect" href="graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="745,95,823,121"/>
 <area shape="rect" title=" " alt="" coords="841,169,903,196"/>
-<area shape="rect" title=" " alt="" coords="978,95,1089,121"/>
-<area shape="rect" title=" " alt="" coords="1113,95,1159,121"/>
+<area shape="rect" title=" " alt="" coords="978,95,1025,121"/>
 <area shape="rect" href="basics_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="406,319,490,345"/>
 <area shape="rect" title=" " alt="" coords="524,393,583,420"/>
 <area shape="rect" title=" " alt="" coords="295,393,348,420"/>
@@ -112,6 +110,9 @@ Include dependency graph for graph_robustness_search.hpp:</div>
 <table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a name="nested-classes"></a>
 Classes</h2></td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structveritas_1_1Solution.html">veritas::Solution</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A full (sub)optimal solution.  <a href="structveritas_1_1Solution.html#details">More...</a><br /></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">struct &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="structveritas_1_1Snapshot.html">veritas::Snapshot</a></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">A collection of statistics of the <a class="el" href="classveritas_1_1GraphSearch.html" title="Subclass this with Curiously recurring template pattern, and heap comparison type to sort solutions.">GraphSearch</a> at specific points in time.  <a href="structveritas_1_1Snapshot.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -123,6 +124,9 @@ Classes</h2></td></tr>
 <tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Subclass this with <code>Curiously recurring template pattern</code>, and heap comparison type to sort solutions.  <a href="classveritas_1_1GraphSearch.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphOutputSearch.html">veritas::GraphOutputSearch</a></td></tr>
+<tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:"><td class="memItemLeft" align="right" valign="top">class &#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1GraphRobustnessSearch.html">veritas::GraphRobustnessSearch</a></td></tr>
+<tr class="memdesc:"><td class="mdescLeft">&#160;</td><td class="mdescRight">Minimize the delta between the given example and the generated solution.  <a href="classveritas_1_1GraphRobustnessSearch.html#details">More...</a><br /></td></tr>
 <tr class="separator:"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table>
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>

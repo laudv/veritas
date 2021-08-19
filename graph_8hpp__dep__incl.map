@@ -1,5 +1,6 @@
 <map id="src/cpp/graph.hpp" name="src/cpp/graph.hpp">
-<area shape="rect" id="node1" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="126,5,251,32"/>
+<area shape="rect" id="node1" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="225,5,350,32"/>
 <area shape="rect" id="node2" href="$graph__robustness__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="5,80,177,121"/>
 <area shape="rect" id="node3" href="$graph__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="202,87,373,114"/>
+<area shape="rect" id="node4" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="397,80,543,121"/>
 </map>

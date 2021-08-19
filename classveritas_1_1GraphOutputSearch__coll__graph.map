@@ -1,14 +1,14 @@
 <map id="veritas::GraphOutputSearch" name="veritas::GraphOutputSearch">
-<area shape="rect" id="node1" title=" " alt="" coords="5,36,188,63"/>
-<area shape="rect" id="node4" href="$structveritas_1_1OutputCmp.html" title=" " alt="" coords="300,7,433,33"/>
-<area shape="rect" id="node2" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="591,279,743,335"/>
-<area shape="rect" id="node3" title=" " alt="" coords="301,109,433,150"/>
-<area shape="rect" id="node5" href="$classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="315,175,418,201"/>
-<area shape="rect" id="node6" title=" " alt="" coords="279,226,455,267"/>
-<area shape="rect" id="node7" title=" " alt="" coords="307,292,426,319"/>
-<area shape="rect" id="node8" title=" " alt="" coords="281,343,452,369"/>
-<area shape="rect" id="node9" title=" " alt="" coords="299,393,434,420"/>
-<area shape="rect" id="node10" title=" " alt="" coords="281,444,452,471"/>
-<area shape="rect" id="node11" href="$classveritas_1_1BlockStore.html" title=" " alt="" coords="289,495,445,537"/>
-<area shape="rect" id="node12" href="$classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="309,561,425,588"/>
+<area shape="rect" id="node1" title=" " alt="" coords="249,69,432,96"/>
+<area shape="rect" id="node4" href="$structveritas_1_1OutputCmp.html" title=" " alt="" coords="565,7,699,33"/>
+<area shape="rect" id="node2" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="856,257,1008,313"/>
+<area shape="rect" id="node3" title=" " alt="" coords="5,103,137,145"/>
+<area shape="rect" id="node5" href="$classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="581,183,683,209"/>
+<area shape="rect" id="node6" title=" " alt="" coords="544,234,720,275"/>
+<area shape="rect" id="node7" title=" " alt="" coords="573,300,691,327"/>
+<area shape="rect" id="node8" title=" " alt="" coords="547,351,717,377"/>
+<area shape="rect" id="node9" title=" " alt="" coords="565,401,699,428"/>
+<area shape="rect" id="node10" title=" " alt="" coords="547,452,717,479"/>
+<area shape="rect" id="node11" href="$classveritas_1_1BlockStore.html" title=" " alt="" coords="554,503,710,545"/>
+<area shape="rect" id="node12" href="$classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="574,569,690,596"/>
 </map>

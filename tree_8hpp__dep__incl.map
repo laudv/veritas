@@ -1,7 +1,8 @@
 <map id="src/cpp/tree.hpp" name="src/cpp/tree.hpp">
-<area shape="rect" id="node1" title="The Veritas internal tree representation." alt="" coords="175,5,290,32"/>
+<area shape="rect" id="node1" title="The Veritas internal tree representation." alt="" coords="177,5,291,32"/>
 <area shape="rect" id="node2" href="$features_8hpp_source.html" title=" " alt="" coords="5,80,145,107"/>
-<area shape="rect" id="node3" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="221,80,346,107"/>
-<area shape="rect" id="node4" href="$graph__robustness__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="99,155,271,196"/>
-<area shape="rect" id="node5" href="$graph__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="297,162,467,189"/>
+<area shape="rect" id="node3" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="271,80,397,107"/>
+<area shape="rect" id="node4" href="$graph__robustness__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="31,155,203,196"/>
+<area shape="rect" id="node5" href="$graph__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="227,162,398,189"/>
+<area shape="rect" id="node6" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="422,155,569,196"/>
 </map>

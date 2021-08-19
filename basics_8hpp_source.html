@@ -124,21 +124,29 @@ $(function() {
 <div class="line"><a name="l00071"></a><span class="lineno">   71</span>&#160;                stride_col,</div>
 <div class="line"><a name="l00072"></a><span class="lineno">   72</span>&#160;            };</div>
 <div class="line"><a name="l00073"></a><span class="lineno">   73</span>&#160;        }</div>
-<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160;    };</div>
-<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160; </div>
-<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;    <span class="keyword">inline</span></div>
-<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;    std::ostream&amp;</div>
-<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;    operator&lt;&lt;(std::ostream&amp; strm, <span class="keyword">const</span> data&amp; d)</div>
-<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160;    {</div>
-<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;        <span class="keywordflow">return</span> strm &lt;&lt; <span class="stringliteral">&quot;data{ptr=&quot;</span> &lt;&lt; d.ptr</div>
-<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;            &lt;&lt; <span class="stringliteral">&quot;, shape=&quot;</span> &lt;&lt; d.num_rows &lt;&lt; <span class="stringliteral">&quot;, &quot;</span> &lt;&lt; d.num_cols</div>
-<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;            &lt;&lt; <span class="stringliteral">&quot;, strides=&quot;</span> &lt;&lt; d.stride_row &lt;&lt; <span class="stringliteral">&quot;, &quot;</span> &lt;&lt; d.stride_col</div>
-<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160;            &lt;&lt; <span class="charliteral">&#39;}&#39;</span>;</div>
-<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    }</div>
-<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;}</div>
-<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160; </div>
-<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160; </div>
-<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// VERITAS_BASICS_HPP</span></div>
+<div class="line"><a name="l00074"></a><span class="lineno">   74</span>&#160; </div>
+<div class="line"><a name="l00075"></a><span class="lineno">   75</span>&#160;        <a class="code" href="structveritas_1_1data.html">data</a>(std::vector&lt;FloatT&gt;&amp; v)</div>
+<div class="line"><a name="l00076"></a><span class="lineno">   76</span>&#160;            : ptr(&amp;v[0])</div>
+<div class="line"><a name="l00077"></a><span class="lineno">   77</span>&#160;            , num_rows(1), num_cols(v.size())</div>
+<div class="line"><a name="l00078"></a><span class="lineno">   78</span>&#160;            , stride_row(0), stride_col(1) {}</div>
+<div class="line"><a name="l00079"></a><span class="lineno">   79</span>&#160; </div>
+<div class="line"><a name="l00080"></a><span class="lineno">   80</span>&#160;        data(FloatT *ptr, <span class="keywordtype">size_t</span> nr, <span class="keywordtype">size_t</span> nc, <span class="keywordtype">size_t</span> sr, <span class="keywordtype">size_t</span> sc)</div>
+<div class="line"><a name="l00081"></a><span class="lineno">   81</span>&#160;            : ptr(ptr), num_rows(nr), num_cols(nc), stride_row(sr), stride_col(sc) {}</div>
+<div class="line"><a name="l00082"></a><span class="lineno">   82</span>&#160;    };</div>
+<div class="line"><a name="l00083"></a><span class="lineno">   83</span>&#160; </div>
+<div class="line"><a name="l00084"></a><span class="lineno">   84</span>&#160;    <span class="keyword">inline</span></div>
+<div class="line"><a name="l00085"></a><span class="lineno">   85</span>&#160;    std::ostream&amp;</div>
+<div class="line"><a name="l00086"></a><span class="lineno">   86</span>&#160;    operator&lt;&lt;(std::ostream&amp; strm, <span class="keyword">const</span> data&amp; d)</div>
+<div class="line"><a name="l00087"></a><span class="lineno">   87</span>&#160;    {</div>
+<div class="line"><a name="l00088"></a><span class="lineno">   88</span>&#160;        <span class="keywordflow">return</span> strm &lt;&lt; <span class="stringliteral">&quot;data{ptr=&quot;</span> &lt;&lt; d.ptr</div>
+<div class="line"><a name="l00089"></a><span class="lineno">   89</span>&#160;            &lt;&lt; <span class="stringliteral">&quot;, shape=&quot;</span> &lt;&lt; d.num_rows &lt;&lt; <span class="stringliteral">&quot;, &quot;</span> &lt;&lt; d.num_cols</div>
+<div class="line"><a name="l00090"></a><span class="lineno">   90</span>&#160;            &lt;&lt; <span class="stringliteral">&quot;, strides=&quot;</span> &lt;&lt; d.stride_row &lt;&lt; <span class="stringliteral">&quot;, &quot;</span> &lt;&lt; d.stride_col</div>
+<div class="line"><a name="l00091"></a><span class="lineno">   91</span>&#160;            &lt;&lt; <span class="charliteral">&#39;}&#39;</span>;</div>
+<div class="line"><a name="l00092"></a><span class="lineno">   92</span>&#160;    }</div>
+<div class="line"><a name="l00093"></a><span class="lineno">   93</span>&#160;}</div>
+<div class="line"><a name="l00094"></a><span class="lineno">   94</span>&#160; </div>
+<div class="line"><a name="l00095"></a><span class="lineno">   95</span>&#160; </div>
+<div class="line"><a name="l00096"></a><span class="lineno">   96</span>&#160;<span class="preprocessor">#endif </span><span class="comment">// VERITAS_BASICS_HPP</span></div>
 <div class="ttc" id="abasics_8hpp_html_aeeff4ece8fefaf04dfd0287a586c3f81"><div class="ttname"><a href="basics_8hpp.html#aeeff4ece8fefaf04dfd0287a586c3f81">veritas::linear_search</a></div><div class="ttdeci">size_t linear_search(const std::vector&lt; FeatId &gt; l, FeatId x)</div><div class="ttdoc">branchless linear scan search --&gt; we hope the compiler vectorizes this</div><div class="ttdef"><b>Definition:</b> basics.hpp:31</div></div>
 <div class="ttc" id="astructveritas_1_1data_html"><div class="ttname"><a href="structveritas_1_1data.html">veritas::data</a></div><div class="ttdoc">A data pointer wrapper.</div><div class="ttdef"><b>Definition:</b> basics.hpp:46</div></div>
 <div class="ttc" id="astructveritas_1_1data_html_a2aaa60f9776ae02c1e892a139d300c2e"><div class="ttname"><a href="structveritas_1_1data.html#a2aaa60f9776ae02c1e892a139d300c2e">veritas::data::get_elem</a></div><div class="ttdeci">FloatT get_elem(size_t row, size_t col) const</div><div class="ttdoc">Access element in data matrix without bounds checking.</div><div class="ttdef"><b>Definition:</b> basics.hpp:56</div></div>

@@ -1,4 +1,4 @@
 var searchData=
 [
-  ['true_5fdomain_251',['TRUE_DOMAIN',['../domain_8hpp.html#af0c5bbbe7340c8211395b9dcce8563b0',1,'veritas']]]
+  ['stop_5fwhen_5fnum_5fsolutions_5fequals_258',['stop_when_num_solutions_equals',['../classveritas_1_1GraphSearch.html#a83b9fc1e550ac2faf0b887783e6d4ba6',1,'veritas::GraphSearch']]]
 ];
