@@ -12,6 +12,10 @@ from .xgb import \
     addtrees_from_multiclass_xgb_model
 del xgb
 
+from .sklearn import \
+    addtree_from_sklearn_ensemble
+del sklearn
+
 def __domain_hash(self):
     return hash((self.lo, self.hi))
 

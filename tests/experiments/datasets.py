@@ -444,6 +444,59 @@ class FashionMnist(Dataset):
         for at in self.at:
             at.base_score = 0
 
+class FashionMnist2v6(FashionMnist):
+    def __init__(self):
+        super().__init__()
+        self.params = {
+            "objective": "binary:logistic",
+            "eval_metric": "error",
+            "tree_method": "hist",
+            "seed": 235,
+            "nthread": 4,
+            "subsample": 0.5,
+            "colsample_bytree": 0.8,
+        }
+
+    def load_dataset(self):
+        if self.X is None or self.y is None:
+            super().load_dataset()
+            self.X = self.X.loc[(self.y==2) | (self.y==6), :]
+            self.y = self.y[(self.y==2) | (self.y==6)]
+            self.y = (self.y == 2.0).astype(float)
+            self.X.reset_index(inplace=True, drop=True)
+            self.y.reset_index(inplace=True, drop=True)
+
+    def load_model(self, num_trees, tree_depth):
+        model_name = self.get_model_name(num_trees, tree_depth)
+        if not os.path.isfile(os.path.join(self.models_dir, f"{model_name}.xgb")):
+            self.load_dataset()
+            print(f"training model depth={tree_depth}, num_trees={num_trees}")
+
+            def metric(y, raw_yhat):
+                return metrics.accuracy_score(y, raw_yhat > 0)
+
+            self.params["max_depth"] = tree_depth
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
+                    self.y, self.params, num_trees, metric)
+
+            self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
+
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "wb") as f:
+                pickle.dump(self.model, f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "w") as f:
+                json.dump(self.meta, f)
+        else:
+            print(f"loading model from file: {model_name}")
+            with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "rb") as f:
+                self.model = pickle.load(f)
+            with open(os.path.join(self.models_dir, f"{model_name}.meta"), "r") as f:
+                self.meta = json.load(f)
+
+        feat2id_dict = {v: i for i, v in enumerate(self.meta["columns"])}
+        self.feat2id = lambda x: feat2id_dict[x]
+        self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
+        self.at.base_score = 0
+
 class Ijcnn1(Dataset):
     def __init__(self):
         super().__init__()
