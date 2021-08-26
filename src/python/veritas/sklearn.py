@@ -1,4 +1,4 @@
-## \file xgb.py
+## \file sklearn.py
 # Copyright 2020 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
 # Author: Laurens Devos
@@ -26,11 +26,23 @@ def _addtree_from_sklearn_tree(at, tree, extract_value_fun):
             leaf_value = extract_value_fun(tree.value[n])
             t.set_leaf_value(m, leaf_value)
 
-
+## Extract a Veritas AddTree from a scikit learn ensemble model (e.g. random
+# forest)
 def addtree_from_sklearn_ensemble(ensemble, extract_value_fun=lambda v: v[0]):
     at = AddTree()
     for tree in ensemble.estimators_:
         _addtree_from_sklearn_tree(at, tree.tree_, extract_value_fun)
     return at
     
+## Extract `num_classes` Veritas AddTrees from a multi-class scikit learn
+# ensemble model (e.g. random forest)
+def addtrees_from_multiclass_sklearn_ensemble(ensemble, num_classes):
+    addtrees = []
+    for i in range(num_classes):
+        extract_value_fun = lambda v: v[0][i]
+        at = addtree_from_sklearn_ensemble(ensemble, extract_value_fun)
+        addtrees.append(at)
+    return addtrees
+
+
 

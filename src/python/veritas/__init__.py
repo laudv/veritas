@@ -13,7 +13,8 @@ from .xgb import \
 del xgb
 
 from .sklearn import \
-    addtree_from_sklearn_ensemble
+    addtree_from_sklearn_ensemble, \
+    addtrees_from_multiclass_sklearn_ensemble
 del sklearn
 
 def __domain_hash(self):
