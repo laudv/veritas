@@ -12,3 +12,4 @@ sync.sh
 gmon.out
 venv
 html
+*.gz

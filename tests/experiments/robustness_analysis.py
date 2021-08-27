@@ -21,13 +21,13 @@ def get_df(jsons):
     #mnist = datasets.Mnist()
     #mnist.load_dataset()
     colnames = ["example_i", "label", "target_label",
-            "ver_delta", "ext_delta", "kan_delta", "milp_delta",
-            "ver_time", "ext_time", "kan_time", "milp_time"]
+            "ver_delta", "ver_g_delta", "ext_delta", "kan_delta", "milp_delta",
+            "ver_time", "ver_g_time", "ext_time", "kan_time", "milp_time"]
     example_is = []
     example_labels = []
     target_labels = []
-    ver_deltas, kan_deltas, milp_deltas = [], [], []
-    ver_times, kan_times, milp_times = [], [], []
+    ver_deltas, ver_g_deltas, kan_deltas, milp_deltas = [], [], [], []
+    ver_times, ver_g_times, kan_times, milp_times = [], [], [], []
     ext_deltas, ext_times = [], []
     for j in jsons:
         example_is.append(j["example_i"])
@@ -36,6 +36,9 @@ def get_df(jsons):
         if "veritas_deltas" in j:
             ver_deltas.append(j["veritas_deltas"][-1][1])
             ver_times.append(j["veritas_time"])
+        if "ver_graph_delta" in j:
+            ver_g_deltas.append(j["ver_graph_delta"][-1])
+            ver_g_times.append(j["ver_graph_time"])
         if "kantchelian" in j:
             #print(list(j["kantchelian"].keys()))
             kan_deltas.append(j["kantchelian_delta"])
@@ -52,9 +55,10 @@ def get_df(jsons):
                 print("???", j["veritas_deltas"][-1], kan_deltas[-1])
         except: pass
 
-    columns = { k: v for k, v in zip(colnames, [example_is, example_labels,
-        target_labels, ver_deltas, ext_deltas, milp_deltas, kan_deltas,
-        ver_times, ext_times, kan_times, milp_times]) if len(v) > 0 }
+    columns = { k: v for k, v in zip(colnames, 
+        [example_is, example_labels, target_labels,
+        ver_deltas, ver_g_deltas, ext_deltas, milp_deltas, kan_deltas,
+        ver_times, ver_g_times, ext_times, kan_times, milp_times]) if len(v) > 0 }
 
     return pd.DataFrame(data=columns)
             
@@ -132,7 +136,7 @@ if __name__ == "__main__":
     #        avg_time_90percentile(df["mer_time"]),
     #        avg_time_90percentile(df["kan_time"]))
     pd.set_option('display.max_rows', 100)
-    print(df)
+    print(df.round(5))
     #print(df[(df["kan_delta"]-df["ver_delta"]).abs()>1e-4])
     print("mean delta diff ver/kan", (df["kan_delta"]-df["ver_delta"]).abs().mean())
     #print("mean delta diff ver2", (df["kan_delta"]-df["ver2_delta"]).abs().mean())

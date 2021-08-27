@@ -17,6 +17,8 @@
 #include <chrono>
 #include <map>
 
+#include <iomanip>
+
 namespace veritas {
 
     /** \private */
@@ -778,7 +780,7 @@ namespace veritas {
 
         GraphRobustnessSearch(const AddTree& at, const std::vector<FloatT>& example, FloatT max_delta)
             : GraphSearch(at, cmp_)
-            , cmp_{*this, 0.1}
+            , cmp_{*this, 0.5}
             , example_(example)
             , max_delta_(max_delta)
         {
@@ -894,16 +896,29 @@ namespace veritas {
     bool RobustnessCmp::operator()(size_t i, size_t j) const
     { return this->operator()(search.states_[i], search.states_[j]); }
 
+    // return TRUE if first is _less_ than second (ie. you want second higher
+    // up in the max heap)
     bool RobustnessCmp::operator()(const State& a, const State& b) const
     {
         // smaller delta (in h) is better, promote deeper by discounting h
-        size_t num_indep_sets = search.g_.num_independent_sets();
-        FloatT ah = (eps + (1.0-eps)*a.indep_set/num_indep_sets) * a.h;  
-        FloatT bh = (eps + (1.0-eps)*b.indep_set/num_indep_sets) * b.h;  
+        FloatT num_indep_sets = search.g_.num_independent_sets();
+        FloatT ah = (eps + (1.0-eps)*(1.0 - a.indep_set/num_indep_sets)) * a.h;  
+        FloatT bh = (eps + (1.0-eps)*(1.0 - b.indep_set/num_indep_sets)) * b.h;  
         //std::cout << ah << " vs " << bh << " (" << a.h << " vs " << b.h << ")" << std::endl;
-        std::cout << "discount " << (eps + (1.0-eps)*a.indep_set/num_indep_sets)
-            << " at " << a.indep_set
-            << " eps=" << eps << std::endl;
+        //bool x = (ah == bh) ? a.g < b.g : ah > bh;
+        //std::cout << std::setprecision(4)
+        //    << "discount " << (eps + (1.0-eps)*(1.0 - a.indep_set/num_indep_sets))
+        //    << " at " << a.indep_set
+        //    << " h=" << a.h
+        //    << " -> " << ah
+        //    << std::endl;
+        //std::cout << std::setprecision(4)
+        //    << " ------- " << (eps + (1.0-eps)*(1.0 - b.indep_set/num_indep_sets))
+        //    << " at " << b.indep_set
+        //    << " h=" << b.h
+        //    << " -> " << bh
+        //    << "   ==> " << (x ? "b wins" : "a wins")
+        //    << std::endl;
         return (ah == bh) ? a.g < b.g : ah > bh;
     }
 
