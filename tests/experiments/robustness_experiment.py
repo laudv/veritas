@@ -30,7 +30,7 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         print("veritas time", ver.total_time, ver.total_time_p)
 
     if algos[0] == "g" or algos[0] == "a": # graph (or all)
-        print("\n== VERITAS ======================================", f"({time.ctime()})")
+        print("\n== VERITAS robustness search ====================", f"({time.ctime()})")
         ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta)
         ver = GraphRobustnessSearch(ver.at, example, start_delta)
         ver.stop_when_num_solutions_equals = 1
