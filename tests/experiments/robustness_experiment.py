@@ -33,8 +33,9 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         print("\n== VERITAS robustness search ====================", f"({time.ctime()})")
         ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta)
         ver = GraphRobustnessSearch(ver.at, example, start_delta)
+        ver.set_eps(0.5)
         ver.stop_when_num_solutions_equals = 1
-        ver.step_for(max_time, 100)
+        done = ver.step_for(max_time, 100)
         result["ver_graph_delta"] = [ver.get_solution(i).delta
                 for i in range(ver.num_solutions())]
         result["ver_graph_time"] = ver.time_since_start()
@@ -53,6 +54,7 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         result["kantchelian_example"] = kan_example
         result["kantchelian_pred"] = (kan_pred0, kan_pred1)
         result["kantchelian_delta"] = kan_norm
+        print("kantchelian_delta", result["kantchelian_delta"])
         print("kantchelian time", kan.total_time, kan.total_time_p)
 
     if algos[2] == "1":
@@ -64,6 +66,7 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         result["milp_time"] = milp.total_time
         result["milp_time_p"] = milp.total_time_p
         result["milp_examples"] = milp.generated_examples
+        print("MILP BIN SEARCH delta", milp.delta_log[-1])
         print("MILP BIN SEARCH time", milp.total_time, milp.total_time_p)
 
 def robustness_experiment_multiclass(dataset, example_is, max_time,

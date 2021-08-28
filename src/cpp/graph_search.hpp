@@ -26,7 +26,7 @@ namespace veritas {
 
     /** \private */
     struct State {
-        FloatT g, h;
+        FloatT g, h, delta;
         BoxRef box;
 
         int indep_set;
@@ -39,6 +39,7 @@ namespace veritas {
         return strm
             << "State {" << std::endl
             << "   - g, h: " << s.g << ", " << s.h << std::endl
+            << "   - delta: " << s.delta << std::endl
             << "   - box: " << s.box << std::endl
             << "   - indep_set: " << s.indep_set << std::endl
             << "   - expanded?: " << s.is_expanded << std::endl
@@ -57,6 +58,7 @@ namespace veritas {
         size_t state_index;
         size_t solution_index;
         FloatT eps;
+        FloatT delta;
         FloatT output;
         std::vector<NodeId> nodes; // one leaf node id per tree in addtree
         Box box;
@@ -69,7 +71,8 @@ namespace veritas {
         strm
             << "Solution {" << std::endl
             << "   - state, solution index: " << s.state_index << ", " << s.solution_index << std::endl
-            << "   - output, eps/delta: " << s.output << ", " << s.eps << std::endl
+            << "   - output: " << s.output << std::endl
+            << "   - eps, delta: " << s.eps << ", " << s.delta << std::endl
             << "   - nodes: ";
 
         if (s.nodes.size() > 0)
@@ -182,6 +185,7 @@ namespace veritas {
         {
             State state = {
                 0.0, 0.0, // g, h
+                0.0, // delta
                 BoxRef::null_box(), // box
                 -1, // indep_set
                 false, // is_expanded
@@ -348,6 +352,7 @@ namespace veritas {
                 state_index,
                 solution_index,
                 eps,
+                state.delta,
                 at_.base_score + state.g,
                 node_ids, // copy
                 {state.box.begin(), state.box.end()},
@@ -364,8 +369,9 @@ namespace veritas {
                 int indep_set = states_[parent_state_index].indep_set + 1;
                 BoxRef box = BoxRef(store_.store(b, remaining_mem_capacity()));
                 State new_state = {
-                    0.0,
-                    0.0, // heuristic, set later, after `in_visited` check, in `compute_heuristic`
+                    0.0, // g
+                    0.0, // h heuristic, set later
+                    0.0, // delta
                     box,
                     indep_set,
                     false, // is_expanded
@@ -478,6 +484,22 @@ namespace veritas {
                 return max;
             }
             return 0.0; // final state has no heuristic
+        }
+
+        FloatT compute_delta(const State& state, const std::vector<FloatT>& example) const
+        {
+            FloatT delta = state.delta;
+            for (auto &&[feat_id, dom] : state.box)
+            {
+                FloatT x = example[feat_id];
+                if (!dom.contains(x))
+                {
+                    FloatT d = std::min(std::abs(dom.lo - x), std::abs(dom.hi - x));
+                    //std::cout << "feature " << feat_id << ": " << x << ", " << dom << " -> " << d << std::endl;
+                    delta = std::max(delta, d);
+                }
+            }
+            return delta;
         }
     }; // class GraphSearch
 
@@ -780,7 +802,7 @@ namespace veritas {
 
         GraphRobustnessSearch(const AddTree& at, const std::vector<FloatT>& example, FloatT max_delta)
             : GraphSearch(at, cmp_)
-            , cmp_{*this, 0.5}
+            , cmp_{*this, 1.0}
             , example_(example)
             , max_delta_(max_delta)
         {
@@ -801,31 +823,23 @@ namespace veritas {
             // state.g contains output so far
             // state.h contains delta estimate
             new_state.g = parent_state.g + merged_vertex.output;
+            //if (use_dynprog_heuristic)
+            //    new_state.h = compute_output_heuristic_dynprog(new_state);
+            //else
+                new_state.h = compute_output_heuristic(new_state);
 
             // compute L0 norm given the new vertex
-            FloatT delta = new_state.h;
-            for (auto &&[feat_id, dom] : new_state.box)
-            {
-                FloatT x = example_[feat_id];
-                if (!dom.contains(x))
-                {
-                    FloatT d = std::min(std::abs(dom.lo - x), std::abs(dom.hi - x));
-                    //std::cout << "feature " << feat_id << ": " << x << ", " << dom << " -> " << d << std::endl;
-                    delta = std::max(delta, d);
-                }
-            }
-            new_state.h = delta;
+            new_state.delta = compute_delta(new_state, example_);
         }
 
         void push_state(State&& state)
         {
             // reject states with output certainly < 0 (label not flipped)
-            if (g_.base_score + state.g + compute_output_heuristic(state) <= output_threshold)
+            if (g_.base_score + state.g + state.h <= output_threshold)
             { 
-                //auto f0 = g_.base_score + state.g + compute_output_heuristic(state);
-                //auto f1 = g_.base_score + state.g + compute_output_heuristic_dynprog(state);
-                //std::cout << "rejecting state f=" << f0 << ", " << f1
-                //    << " with box " << state.box
+                //std::cout << "rejecting state g+h=" << g_.base_score+state.g+state.h
+                //    << ", g=" << state.g
+                //    << ", h=" << state.h
                 //    << " at depth " << state.indep_set << std::endl;
             }
             else
@@ -838,7 +852,7 @@ namespace veritas {
 
         void push_solution(size_t state_index)
         {
-            if (states_[state_index].h > 0.0)
+            if (states_[state_index].delta > 0.0)
             {
                 size_t solution_index = push_solution_(state_index);
                 solutions_[solution_index].eps = states_[state_index].h;
@@ -888,6 +902,13 @@ namespace veritas {
                 return true;
             return false;
         }
+
+        void set_eps(FloatT eps) 
+        {
+            cmp_.eps = std::max<FloatT>(0.0, std::min<FloatT>(1.0, eps));
+            std::make_heap(heap_.begin(), heap_.end(), cmp_);
+        }
+        FloatT get_eps() const { return cmp_.eps; }
     };
 
     bool OutputCmp::operator()(size_t i, size_t j) const
@@ -902,24 +923,28 @@ namespace veritas {
     {
         // smaller delta (in h) is better, promote deeper by discounting h
         FloatT num_indep_sets = search.g_.num_independent_sets();
-        FloatT ah = (eps + (1.0-eps)*(1.0 - a.indep_set/num_indep_sets)) * a.h;  
-        FloatT bh = (eps + (1.0-eps)*(1.0 - b.indep_set/num_indep_sets)) * b.h;  
-        //std::cout << ah << " vs " << bh << " (" << a.h << " vs " << b.h << ")" << std::endl;
-        //bool x = (ah == bh) ? a.g < b.g : ah > bh;
+        FloatT ad = (eps + (1.0-eps)*(1.0 - a.indep_set/num_indep_sets)) * a.delta;
+        FloatT bd = (eps + (1.0-eps)*(1.0 - b.indep_set/num_indep_sets)) * b.delta;
+
+        //bool x = (ad == bd) ? (a.g+a.h) < (b.g+b.h) : ad > bd;
         //std::cout << std::setprecision(4)
         //    << "discount " << (eps + (1.0-eps)*(1.0 - a.indep_set/num_indep_sets))
         //    << " at " << a.indep_set
-        //    << " h=" << a.h
-        //    << " -> " << ah
+        //    << " delta=" << a.delta
+        //    << " g+h=" << (a.g+a.h)
+        //    << " -> " << ad
         //    << std::endl;
         //std::cout << std::setprecision(4)
         //    << " ------- " << (eps + (1.0-eps)*(1.0 - b.indep_set/num_indep_sets))
         //    << " at " << b.indep_set
-        //    << " h=" << b.h
-        //    << " -> " << bh
+        //    << " delta=" << b.delta
+        //    << " g+h=" << (b.g+b.h)
+        //    << " -> " << bd
         //    << "   ==> " << (x ? "b wins" : "a wins")
         //    << std::endl;
-        return (ah == bh) ? a.g < b.g : ah > bh;
+
+        return (ad == bd) ? (a.g+a.h) < (b.g+b.h) : ad > bd;
+        //return a.delta > b.delta;
     }
 
 } /* namespace veritas */

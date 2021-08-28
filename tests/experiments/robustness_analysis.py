@@ -57,7 +57,7 @@ def get_df(jsons):
 
     columns = { k: v for k, v in zip(colnames, 
         [example_is, example_labels, target_labels,
-        ver_deltas, ver_g_deltas, ext_deltas, milp_deltas, kan_deltas,
+        ver_deltas, ver_g_deltas, ext_deltas, kan_deltas, milp_deltas,
         ver_times, ver_g_times, ext_times, kan_times, milp_times]) if len(v) > 0 }
 
     return pd.DataFrame(data=columns)
@@ -151,14 +151,15 @@ if __name__ == "__main__":
     #        (df["kan_delta"]-df["mer_delta"]).abs()))
     #print("ver2 farther to kan", sum((df["kan_delta"]-df["ver2_delta"]).abs() >
     #        (df["kan_delta"]-df["mer_delta"]).abs()))
-    print("mean time ver", df["ver_time"].mean())
-    #print("mean time ver2", df["ver2_time"].mean())
-    #print("mean time mer", df["mer_time"].mean())
+    print("mean time ver  ", df["ver_time"].mean())
+    if "ver_g_time" in df:
+        print("mean time ver_g", df["ver_g_time"].mean())
     if "ext_time" in df:
-        print("mean time ext", df["ext_time"].mean())
-    print("mean time kan", df["kan_time"].mean())
+        print("mean time ext  ", df["ext_time"].mean())
+    if "kan_time" in df:
+        print("mean time kan  ", df["kan_time"].mean())
     if "milp_time" in df:
-        print("mean time mip", df["milp_time"].mean())
+        print("mean time mip  ", df["milp_time"].mean())
 
     #plot(jsons)
     #plot([jsons[i] for i in ver_worse.index])

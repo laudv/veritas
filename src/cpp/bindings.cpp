@@ -375,6 +375,8 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("num_steps", &GraphRobustnessSearch::num_steps)
         .def("get_solution", &GraphRobustnessSearch::get_solution)
         .def("time_since_start", &GraphRobustnessSearch::time_since_start)
+        .def("set_eps", &GraphRobustnessSearch::set_eps)
+        .def("get_eps", &GraphRobustnessSearch::get_eps)
         //.def_readonly("snapshots", &GraphRobustnessSearch::snapshots)
         .def("prune", [](GraphRobustnessSearch& s, const py::list& pybox) {
             Box box = tobox(pybox);
@@ -400,7 +402,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readonly("state_index", &Solution::state_index)
         .def_readonly("solution_index", &Solution::solution_index)
         .def_readonly("eps", &Solution::eps)
-        .def_readonly("delta", &Solution::eps)
+        .def_readonly("delta", &Solution::delta)
         .def_readonly("output", &Solution::output)
         .def_readonly("nodes", &Solution::nodes)
         .def_readonly("time", &Solution::time)
