@@ -414,7 +414,7 @@ namespace veritas {
         FloatT eval(const data& row) const
         {
             auto op = [&row](FloatT v, const Tree& t) { return v + t.eval(row); };
-            return std::accumulate(begin(), end(), 0.0, op) + base_score;
+            return std::accumulate(begin(), end(), base_score, op);
         }
 
         /** Compute the intersection of the boxes of all leaf nodes. See

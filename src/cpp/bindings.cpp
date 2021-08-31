@@ -78,8 +78,13 @@ tobox(py::list pybox)
 }
 
 data
-get_data(py::array_t<FloatT> arr)
+get_data(py::handle h)
 {
+    auto arr = py::array::ensure(h);
+    if (!arr) throw std::runtime_error("invalid eval array");
+    if (!arr.dtype().is(pybind11::dtype::of<FloatT>()))
+        throw std::runtime_error("invalid dtype");
+
     py::buffer_info buf = arr.request();
     data d { static_cast<FloatT *>(buf.ptr), 0, 0, 0, 0 };
     if (buf.ndim == 1)
@@ -180,7 +185,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(fid); })
-        .def("eval", [](const TreeRef& r, py::array_t<FloatT> arr) {
+        .def("eval", [](const TreeRef& r, py::handle arr) {
             data d = get_data(arr);
 
             auto result = py::array_t<FloatT>(d.num_rows);
@@ -192,7 +197,7 @@ PYBIND11_MODULE(pyveritas, m) {
 
             return result;
         })
-        .def("eval_node", [](const TreeRef& r, py::array_t<FloatT> arr) {
+        .def("eval_node", [](const TreeRef& r, py::handle arr) {
             data d = get_data(arr);
 
             auto result = py::array_t<NodeId>(d.num_rows);
@@ -205,7 +210,7 @@ PYBIND11_MODULE(pyveritas, m) {
             return result;
         })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
-        ;
+        ; // TreeRef
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
@@ -242,7 +247,7 @@ PYBIND11_MODULE(pyveritas, m) {
             at.from_json(s);
             return at;
         })
-        .def("eval", [](const AddTree& at, py::array_t<FloatT> arr) {
+        .def("eval", [](const AddTree& at, py::handle arr) {
             data d = get_data(arr);
 
             auto result = py::array_t<FloatT>(d.num_rows);

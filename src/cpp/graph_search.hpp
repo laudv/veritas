@@ -167,7 +167,7 @@ namespace veritas {
         std::vector<SolutionRef> solutions_; // indices into states_
         time_point start_time_;
         size_t num_steps_;
-        CmpT solution_cmp_;
+        const CmpT& solution_cmp_;
 
         friend OutputCmp;
         friend RobustnessCmp;
@@ -855,7 +855,7 @@ namespace veritas {
             if (states_[state_index].delta > 0.0)
             {
                 size_t solution_index = push_solution_(state_index);
-                solutions_[solution_index].eps = states_[state_index].h;
+                solutions_[solution_index].eps = cmp_.eps;
                 //std::cout << "accepted solution " << states_[state_index].box
                 //    << ", delta " << states_[state_index].h << std::endl;
             }

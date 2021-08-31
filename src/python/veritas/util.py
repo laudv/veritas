@@ -91,8 +91,8 @@ def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
 #
 # In `bindings.cpp`:
 # \dontinclude[lineno] bindings.cpp
-# \skipline py::class_<Tree>
-# \until ; // Tree
+# \skipline py::class_<TreeRef>
+# \until ; // TreeRef
 
 ## \ingroup python
 # \class AddTree
@@ -100,7 +100,7 @@ def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
 #
 # In `bindings.cpp`:
 # \dontinclude[lineno] bindings.cpp
-# \skipline py::class_<AddTree>
+# \skipline py::class_<AddTree
 # \until ; // AddTree
 
 ## \ingroup python
