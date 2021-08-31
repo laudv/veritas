@@ -1,14 +1,8 @@
 <map id="veritas::GraphRobustnessSearch" name="veritas::GraphRobustnessSearch">
-<area shape="rect" id="node1" title="Minimize the delta between the given example and the generated solution." alt="" coords="5,61,176,102"/>
-<area shape="rect" id="node12" href="$structveritas_1_1RobustnessCmp.html" title=" " alt="" coords="273,5,436,32"/>
-<area shape="rect" id="node2" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="579,272,761,328"/>
-<area shape="rect" id="node3" title=" " alt="" coords="289,131,421,173"/>
-<area shape="rect" id="node4" href="$classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="303,197,406,224"/>
-<area shape="rect" id="node5" title=" " alt="" coords="267,249,443,290"/>
-<area shape="rect" id="node6" title=" " alt="" coords="295,315,414,341"/>
-<area shape="rect" id="node7" title=" " alt="" coords="269,365,440,392"/>
-<area shape="rect" id="node8" title=" " alt="" coords="287,416,422,443"/>
-<area shape="rect" id="node9" title=" " alt="" coords="269,467,440,493"/>
-<area shape="rect" id="node10" href="$classveritas_1_1BlockStore.html" title=" " alt="" coords="277,518,433,559"/>
-<area shape="rect" id="node11" href="$classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="297,584,413,611"/>
+<area shape="rect" id="node1" title="Minimize the delta between the given example and the generated solution." alt="" coords="60,5,231,47"/>
+<area shape="rect" id="node6" href="$structveritas_1_1RobustnessCmp.html" title=" " alt="" coords="5,109,168,136"/>
+<area shape="rect" id="node2" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="210,199,393,255"/>
+<area shape="rect" id="node3" href="$classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="243,109,359,136"/>
+<area shape="rect" id="node4" href="$classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="383,109,486,136"/>
+<area shape="rect" id="node5" title=" " alt="" coords="511,109,681,136"/>
 </map>

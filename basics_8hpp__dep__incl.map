@@ -1,10 +1,9 @@
 <map id="src/cpp/basics.hpp" name="src/cpp/basics.hpp">
-<area shape="rect" id="node1" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="377,5,508,32"/>
-<area shape="rect" id="node2" href="$domain_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="275,80,410,107"/>
-<area shape="rect" id="node7" href="$features_8hpp_source.html" title=" " alt="" coords="531,229,671,256"/>
-<area shape="rect" id="node3" href="$graph__robustness__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="201,304,373,345"/>
-<area shape="rect" id="node4" href="$graph__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="5,311,176,338"/>
-<area shape="rect" id="node5" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="397,304,544,345"/>
-<area shape="rect" id="node6" href="$tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="285,155,400,181"/>
-<area shape="rect" id="node8" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="280,229,405,256"/>
+<area shape="rect" id="node1" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="281,5,412,32"/>
+<area shape="rect" id="node2" href="$domain_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="227,80,362,107"/>
+<area shape="rect" id="node6" href="$features_8hpp_source.html" title=" " alt="" coords="379,229,519,256"/>
+<area shape="rect" id="node3" href="$graph__search_8hpp.html" title="Copyright 2020 DTAI Research Group &#45; KU Leuven." alt="" coords="5,311,176,338"/>
+<area shape="rect" id="node4" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="217,304,364,345"/>
+<area shape="rect" id="node5" href="$tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="189,155,304,181"/>
+<area shape="rect" id="node7" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="128,229,253,256"/>
 </map>
