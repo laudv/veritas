@@ -38,7 +38,7 @@ def addtree_from_sklearn_ensemble(ensemble, extract_value_fun=None):
 
         if "Regressor" in type(ensemble).__name__:
             print("SKLEARN: regressor")
-            extract_value_fun = lambda v: v[0]
+            extract_value_fun = lambda v: v[0]/num_classifiers
         elif "Classifier" in type(ensemble).__name__:
             print("SKLEARN: binary classifier")
             extract_value_fun = lambda v: (v[0][1]/sum(v[0]))/num_classifiers # class ratio averaged over trees
