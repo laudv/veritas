@@ -24,7 +24,7 @@ t = at.add_tree();
 t.split(t.root(), 0, 3)
 t.split( t.left(t.root()), 1, 5)
 t.split(t.right(t.root()), 1, 0)
-t.split(t.right(t.right(t.root())), 2) # boolean split (ie < 1.0)
+t.split(t.right(t.right(t.root())), 2) # Boolean split (ie < 1.0)
 t.set_leaf_value( t.left( t.left(t.root())), 30)
 t.set_leaf_value(t.right( t.left(t.root())), 40)
 t.set_leaf_value( t.left(t.right(t.root())), 50)

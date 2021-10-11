@@ -1,5 +1,6 @@
 build
 __pycache__
+.cache
 *egg-info
 *.so
 compile_commands.json

@@ -3,6 +3,7 @@
 # Author: Laurens Devos
 
 import gzip, types
+import numpy as np
 from io import StringIO
 
 from .pyveritas import *
@@ -44,9 +45,28 @@ def __addtree_iter(self):
     for i in range(len(self)):
         yield self[i]
 
+__addtree_eval_cpp = AddTree.eval
+def __addtree_eval(self, data):
+    data = np.array(data, dtype=np.float32)
+    return __addtree_eval_cpp(self, data)
+
 setattr(AddTree, "write", __addtree_write)
 setattr(AddTree, "read", __addtree_read)
 setattr(AddTree, "__iter__", __addtree_iter)
+setattr(AddTree, "eval", __addtree_eval)
+
+__tree_eval_cpp = Tree.eval
+def __tree_eval(self, data):
+    data = np.array(data, dtype=np.float32)
+    return __tree_eval_cpp(self, data)
+
+__tree_eval_node_cpp = Tree.eval_node
+def __tree_eval_node(self, data):
+    data = np.array(data, dtype=np.float32)
+    return __tree_eval_node_cpp(self, data)
+
+setattr(Tree, "eval", __tree_eval)
+setattr(Tree, "eval_node", __tree_eval_node)
 
 from .util import *
 del util
