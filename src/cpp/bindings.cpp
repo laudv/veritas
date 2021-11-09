@@ -363,6 +363,7 @@ PYBIND11_MODULE(pyveritas, m) {
             return s.prune_by_box(b);
         })
         .def_readwrite("use_dynprog_heuristic", &GraphOutputSearch::use_dynprog_heuristic)
+        .def_readwrite("break_steps_when_n_new_solutions", &GraphOutputSearch::break_steps_when_n_new_solutions)
         .def_readwrite("stop_when_solution_eps_equals", &GraphOutputSearch::stop_when_solution_eps_equals)
         .def_readwrite("stop_when_num_solutions_equals", &GraphOutputSearch::stop_when_num_solutions_equals)
         .def_readwrite("stop_when_up_bound_less_than", &GraphOutputSearch::stop_when_up_bound_less_than)

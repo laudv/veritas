@@ -198,6 +198,7 @@ namespace veritas {
 
     public:
         size_t stop_when_num_solutions_equals = 999'999'999; /**< disabled by default */
+        int break_steps_when_n_new_solutions = 1;
 
     public:
         void prune_by_box(const BoxRef& box)
@@ -260,7 +261,8 @@ namespace veritas {
         {
             bool done = false;
             size_t num_sol = num_solutions();
-            for (size_t i = 0; i < num_steps && num_sol == num_solutions(); ++i)
+            for (size_t i = 0; i < num_steps
+                    && num_sol + break_steps_when_n_new_solutions > num_solutions(); ++i)
             {
                 if (static_cast<Derived *>(this)->step())
                 {
@@ -575,8 +577,8 @@ namespace veritas {
                 update_eps(eps_increment_);
             }
 
-            std::cout << "solution fscore=" << (g_.base_score+a_cmp_.fscore(states_[state_index]))
-                << ", eps=" << sol.eps << ", nsteps=" << num_steps_ << std::endl;
+            //std::cout << "solution fscore=" << (g_.base_score+a_cmp_.fscore(states_[state_index]))
+            //    << ", eps=" << sol.eps << ", nsteps=" << num_steps_ << std::endl;
 
             // better solutions have an eps at least as good as this one
             while (solution_index != 0)
@@ -636,7 +638,7 @@ namespace veritas {
             size_t state_index;
             while (true)
             {
-                if (a_heap_.empty() or ara_heap_.empty())
+                if (a_heap_.empty() and ara_heap_.empty())
                     return true; // we're done
                 state_index = pop_state();
                 if (!states_[state_index].is_expanded)
