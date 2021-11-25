@@ -17,6 +17,7 @@
 #include <vector>
 #include <iostream>
 #include <numeric> // std::accumulate
+#include <unordered_map>
 
 namespace veritas {
 
