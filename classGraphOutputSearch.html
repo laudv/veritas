@@ -88,6 +88,7 @@ $(function() {
 <div class="line">        .def(<span class="stringliteral">&quot;set_eps&quot;</span>, &amp;GraphOutputSearch::set_eps)</div>
 <div class="line">        .def(<span class="stringliteral">&quot;set_eps_increment&quot;</span>, &amp;GraphOutputSearch::set_eps_increment)</div>
 <div class="line">        <span class="comment">//.def_readwrite(&quot;max_mem_size&quot;, &amp;NodeSearch::max_mem_size)</span></div>
+<div class="line">        .def(<span class="stringliteral">&quot;set_mem_capacity&quot;</span>, &amp;GraphOutputSearch::set_mem_capacity)</div>
 <div class="line">        .def_readonly(<span class="stringliteral">&quot;snapshots&quot;</span>, &amp;GraphOutputSearch::snapshots)</div>
 <div class="line">        .def(<span class="stringliteral">&quot;prune&quot;</span>, [](<a class="code hl_class" href="classGraphOutputSearch.html">GraphOutputSearch</a>&amp; s, <span class="keyword">const</span> py::list&amp; pybox) {</div>
 <div class="line">            <a class="code hl_typedef" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a> box = tobox(pybox);</div>

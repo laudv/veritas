@@ -86,6 +86,10 @@ $(function() {
 <div class="line">        .def(<span class="stringliteral">&quot;get_leaf_value&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r, NodeId n) { <span class="keywordflow">return</span> r.get()[n].leaf_value(); })</div>
 <div class="line">        .def(<span class="stringliteral">&quot;get_split&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r, NodeId n) { <span class="keywordflow">return</span> r.get()[n].get_split(); })</div>
 <div class="line">        .def(<span class="stringliteral">&quot;set_leaf_value&quot;</span>, [](TreeRef&amp; r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })</div>
+<div class="line">        .def(<span class="stringliteral">&quot;find_minmax_leaf_value&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r, NodeId n)</div>
+<div class="line">                { <span class="keywordflow">return</span> r.get()[n].find_minmax_leaf_value(); })</div>
+<div class="line">        .def(<span class="stringliteral">&quot;get_leaf_ids&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r) { <span class="keywordflow">return</span> r.get().get_leaf_ids(); })</div>
+<div class="line">        .def(<span class="stringliteral">&quot;leaf_value_variance&quot;</span>, [](TreeRef&amp; r) { <span class="keywordflow">return</span> r.get().leaf_value_variance(); })</div>
 <div class="line">        .def(<span class="stringliteral">&quot;split&quot;</span>, [](TreeRef&amp; r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })</div>
 <div class="line">        .def(<span class="stringliteral">&quot;split&quot;</span>, [](TreeRef&amp; r, NodeId n, FeatId fid) { r.get()[n].split(fid); })</div>
 <div class="line">        .def(<span class="stringliteral">&quot;eval&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r, py::handle arr) {</div>
@@ -113,7 +117,15 @@ $(function() {
 <div class="line">            <span class="keywordflow">return</span> result;</div>
 <div class="line">        })</div>
 <div class="line">        .def(<span class="stringliteral">&quot;__str__&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r) { <span class="keywordflow">return</span> tostr(r.get()); })</div>
+<div class="line">        .def(<span class="stringliteral">&quot;compute_box&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r, NodeId n) {</div>
+<div class="line">            <a class="code hl_typedef" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a> box = r.get()[n].compute_box();</div>
+<div class="line">            py::dict d;</div>
+<div class="line">            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp;&amp; [feat_id, dom] : box)</div>
+<div class="line">                d[py::int_(feat_id)] = dom;</div>
+<div class="line">            <span class="keywordflow">return</span> d;</div>
+<div class="line">        })</div>
 <div class="line">        ; <span class="comment">// TreeRef</span></div>
+<div class="ttc" id="adomain_8hpp_html_a9c5d35af6974f9a5a5d0d0df8c7b5528"><div class="ttname"><a href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">veritas::Box</a></div><div class="ttdeci">std::vector&lt; DomainPair &gt; Box</div><div class="ttdoc">A sorted list of pairs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:131</div></div>
 </div><!-- fragment --></div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/python/veritas/<a class="el" href="util_8py.html">util.py</a></li>
 </ul>
