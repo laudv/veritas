@@ -21,11 +21,6 @@
 #include "tree.hpp"
 #include "graph_search.hpp"
 
-#ifdef VERITAS_FEATURE_SMT
-    #include <z3++.h>
-    #include "smt.h"
-#endif
-
 namespace py = pybind11;
 using namespace veritas;
 
@@ -183,6 +178,10 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get()[n].leaf_value(); })
         .def("get_split", [](const TreeRef& r, NodeId n) { return r.get()[n].get_split(); })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
+        .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n)
+                { return r.get()[n].find_minmax_leaf_value(); })
+        .def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
+        .def("leaf_value_variance", [](TreeRef& r) { return r.get().leaf_value_variance(); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(fid); })
         .def("eval", [](const TreeRef& r, py::handle arr) {
@@ -210,6 +209,13 @@ PYBIND11_MODULE(pyveritas, m) {
             return result;
         })
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
+        .def("compute_box", [](const TreeRef& r, NodeId n) {
+            Box box = r.get()[n].compute_box();
+            py::dict d;
+            for (auto&& [feat_id, dom] : box)
+                d[py::int_(feat_id)] = dom;
+            return d;
+        })
         ; // TreeRef
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
@@ -356,6 +362,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("set_eps", &GraphOutputSearch::set_eps)
         .def("set_eps_increment", &GraphOutputSearch::set_eps_increment)
         //.def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
+        .def("set_mem_capacity", &GraphOutputSearch::set_mem_capacity)
         .def_readonly("snapshots", &GraphOutputSearch::snapshots)
         .def("prune", [](GraphOutputSearch& s, const py::list& pybox) {
             Box box = tobox(pybox);

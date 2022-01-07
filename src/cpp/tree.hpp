@@ -235,6 +235,25 @@ namespace veritas {
             else return {leaf_value(), leaf_value()};
         }
 
+        /** Returns a vector of the leaf node ids in this subtree. */
+        std::vector<NodeId> get_leaf_ids() const
+        {
+            std::vector<NodeId> ids;
+            get_leaf_ids(ids);
+            return ids;
+        }
+
+        /** Appends the leaf node ids in this subtree to the given vector. */
+        void get_leaf_ids(std::vector<NodeId>& ids) const
+        {
+            if (is_internal())
+            {
+                left().get_leaf_ids(ids);
+                right().get_leaf_ids(ids);
+            }
+            else ids.push_back(id());
+        }
+
         /** Get the domain restrictions on the features in this node. */
         Box compute_box() const;
         /** Like NodeRef::compute_box(), but write to given Box */
@@ -318,6 +337,8 @@ namespace veritas {
         Tree prune(BoxRef box) const;
         /** See NodeRef::find_minmax_leaf_value */
         std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
+        /** See NodeRef::get_leaf_ids */
+        std::vector<NodeId> get_leaf_ids() const { return root().get_leaf_ids(); }
         /** Limit depth and replace leaf values with max leaf value in subtree. */
         Tree limit_depth(int max_depth) const;
         /** Compute the variance of the leaf values */

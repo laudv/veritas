@@ -33,6 +33,7 @@ namespace veritas {
         bool is_expanded;
     };
 
+    static
     std::ostream&
     operator<<(std::ostream& strm, const State& s)
     {
@@ -65,6 +66,7 @@ namespace veritas {
         double time;
     };
 
+    static
     std::ostream&
     operator<<(std::ostream& strm, const Solution& s)
     {
@@ -165,6 +167,7 @@ namespace veritas {
 
         std::vector<State> states_;
         std::vector<SolutionRef> solutions_; // indices into states_
+        size_t mem_capacity_;
         time_point start_time_;
         size_t num_steps_;
         const CmpT& solution_cmp_;
@@ -175,6 +178,7 @@ namespace veritas {
         GraphSearch(const AddTree& at, const CmpT& solution_cmp)
             : at_(at.neutralize_negative_leaf_values())
             , g_(at_)
+            , mem_capacity_(size_t(1024)*1024*1024)
             , start_time_{std::chrono::system_clock::now()}
             , num_steps_{0}
             , solution_cmp_(solution_cmp)
@@ -331,8 +335,9 @@ namespace veritas {
         size_t num_states() const { return states_.size(); }
         size_t num_steps() const { return num_steps_; }
         size_t num_solutions() const { return solutions_.size(); }
+        void set_mem_capacity(size_t bytes) { mem_capacity_ = bytes; }
         size_t remaining_mem_capacity() const
-        { return (size_t(1024)*1024*1024) - store_.get_mem_size(); }
+        { return mem_capacity_ - store_.get_mem_size(); }
 
         /** Seconds since the construction of the search */
         double time_since_start() const

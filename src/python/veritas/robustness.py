@@ -127,8 +127,10 @@ class RobustnessSearch:
 ## \ingroup python
 # \brief Robustness search using Veritas for the output estimate
 class VeritasRobustnessSearch(RobustnessSearch):
-    def __init__(self, source_at, target_at, example, **kwargs):
+    def __init__(self, source_at, target_at, example, mem_capacity=1024*1024*1024,
+            **kwargs):
         super().__init__(example, **kwargs)
+        self.mem_capacity = mem_capacity
 
         if source_at is not None and target_at is not None:
             self.at = target_at.concat_negated(source_at) # minimize source_at
@@ -147,6 +149,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         #s.stop_when_solution_output_greater_than = 0.0
         s.stop_when_solution_eps_equals = 1.0
         s.stop_when_up_bound_less_than = 0.0
+        s.set_mem_capacity(self.mem_capacity)
         box = [Domain(x-delta, x+delta) for x in self.example]
         s.prune(box)
         return s
