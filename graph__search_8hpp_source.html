@@ -646,14 +646,14 @@ $(function() {
 <div class="line"><a id="l00626" name="l00626"></a><span class="lineno">  626</span>            <span class="keywordtype">double</span> t = <a class="code hl_function" href="classveritas_1_1GraphSearch.html#ae9c046f716ec0bdf8ef97ee93c64d094">time_since_start</a>();</div>
 <div class="line"><a id="l00627" name="l00627"></a><span class="lineno">  627</span>            <span class="keywordflow">if</span> (last_eps_increment_ &gt; 0.0 &amp;&amp; (t-last_eps_increment_) &gt; 20*avg_eps_update_time_)</div>
 <div class="line"><a id="l00628" name="l00628"></a><span class="lineno">  628</span>            {</div>
-<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;HALVING eps_increment_ to &quot;</span> &lt;&lt; eps_increment_/2.0</div>
-<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>                    &lt;&lt; <span class="stringliteral">&quot; avg t: &quot;</span> &lt;&lt; avg_eps_update_time_</div>
-<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>                    &lt;&lt; <span class="stringliteral">&quot; t: &quot;</span> &lt;&lt; (t-last_eps_increment_);</div>
+<div class="line"><a id="l00629" name="l00629"></a><span class="lineno">  629</span>                <span class="comment">//std::cout &lt;&lt; &quot;HALVING eps_increment_ to &quot; &lt;&lt; eps_increment_/2.0</span></div>
+<div class="line"><a id="l00630" name="l00630"></a><span class="lineno">  630</span>                <span class="comment">//    &lt;&lt; &quot; avg t: &quot; &lt;&lt; avg_eps_update_time_</span></div>
+<div class="line"><a id="l00631" name="l00631"></a><span class="lineno">  631</span>                <span class="comment">//    &lt;&lt; &quot; t: &quot; &lt;&lt; (t-last_eps_increment_);</span></div>
 <div class="line"><a id="l00632" name="l00632"></a><span class="lineno">  632</span>                eps_increment_ = std::max(0.001, eps_increment_/2.0);</div>
 <div class="line"><a id="l00633" name="l00633"></a><span class="lineno">  633</span>                update_eps(-eps_increment_);</div>
-<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>                std::cout</div>
-<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>                    &lt;&lt; <span class="stringliteral">&quot; (eps=&quot;</span> &lt;&lt; ara_cmp_.eps &lt;&lt; <span class="stringliteral">&quot;)&quot;</span></div>
-<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>                    &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00634" name="l00634"></a><span class="lineno">  634</span>                <span class="comment">//std::cout</span></div>
+<div class="line"><a id="l00635" name="l00635"></a><span class="lineno">  635</span>                <span class="comment">//    &lt;&lt; &quot; (eps=&quot; &lt;&lt; ara_cmp_.eps &lt;&lt; &quot;)&quot;</span></div>
+<div class="line"><a id="l00636" name="l00636"></a><span class="lineno">  636</span>                <span class="comment">//    &lt;&lt; std::endl;</span></div>
 <div class="line"><a id="l00637" name="l00637"></a><span class="lineno">  637</span>            }</div>
 <div class="line"><a id="l00638" name="l00638"></a><span class="lineno">  638</span>        }</div>
 <div class="line"><a id="l00639" name="l00639"></a><span class="lineno">  639</span>        </div>

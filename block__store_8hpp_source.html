@@ -108,9 +108,9 @@ $(function() {
 <div class="line"><a id="l00041" name="l00041"></a><span class="lineno">   41</span>                new_block.reserve(rem_capacity);</div>
 <div class="line"><a id="l00042" name="l00042"></a><span class="lineno">   42</span>                blocks_.push_back(std::move(new_block));</div>
 <div class="line"><a id="l00043" name="l00043"></a><span class="lineno">   43</span> </div>
-<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;BlockStore memory: &quot;</span> &lt;&lt; get_mem_size() &lt;&lt; <span class="stringliteral">&quot; bytes, &quot;</span></div>
-<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>                    &lt;&lt; (<span class="keyword">static_cast&lt;</span><span class="keywordtype">double</span><span class="keyword">&gt;</span>(get_mem_size()) / (1024.0 * 1024.0)) &lt;&lt; <span class="stringliteral">&quot; mb (&quot;</span></div>
-<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>                    &lt;&lt; blocks_.size() &lt;&lt; <span class="stringliteral">&quot; blocks)&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00044" name="l00044"></a><span class="lineno">   44</span>                <span class="comment">//std::cout &lt;&lt; &quot;BlockStore memory: &quot; &lt;&lt; get_mem_size() &lt;&lt; &quot; bytes, &quot;</span></div>
+<div class="line"><a id="l00045" name="l00045"></a><span class="lineno">   45</span>                <span class="comment">//    &lt;&lt; (static_cast&lt;double&gt;(get_mem_size()) / (1024.0 * 1024.0)) &lt;&lt; &quot; mb (&quot;</span></div>
+<div class="line"><a id="l00046" name="l00046"></a><span class="lineno">   46</span>                <span class="comment">//    &lt;&lt; blocks_.size() &lt;&lt; &quot; blocks)&quot; &lt;&lt; std::endl;</span></div>
 <div class="line"><a id="l00047" name="l00047"></a><span class="lineno">   47</span>            }</div>
 <div class="line"><a id="l00048" name="l00048"></a><span class="lineno">   48</span> </div>
 <div class="line"><a id="l00049" name="l00049"></a><span class="lineno">   49</span>            <span class="keywordflow">return</span> blocks_.back();</div>
