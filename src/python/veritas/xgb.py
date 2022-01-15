@@ -22,7 +22,8 @@ def addtree_from_xgb_model(model, feat2id_map=int,
     mulclass=(offset, num_classes): only loads tree offset, offset+num_classes,
     offset+2*num_classes...
     """
-    base_score = 0.5
+    #base_score = 0.5
+    base_score = 0.0 # xgboost 1.4.2
     if isinstance(model, XGBModel):
         base_score = model.base_score if model.base_score is not None else base_score
         model = model.get_booster()

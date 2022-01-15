@@ -626,14 +626,14 @@ namespace veritas {
             double t = time_since_start();
             if (last_eps_increment_ > 0.0 && (t-last_eps_increment_) > 20*avg_eps_update_time_)
             {
-                std::cout << "HALVING eps_increment_ to " << eps_increment_/2.0
-                    << " avg t: " << avg_eps_update_time_
-                    << " t: " << (t-last_eps_increment_);
+                //std::cout << "HALVING eps_increment_ to " << eps_increment_/2.0
+                //    << " avg t: " << avg_eps_update_time_
+                //    << " t: " << (t-last_eps_increment_);
                 eps_increment_ = std::max(0.001, eps_increment_/2.0);
                 update_eps(-eps_increment_);
-                std::cout
-                    << " (eps=" << ara_cmp_.eps << ")"
-                    << std::endl;
+                //std::cout
+                //    << " (eps=" << ara_cmp_.eps << ")"
+                //    << std::endl;
             }
         }
         

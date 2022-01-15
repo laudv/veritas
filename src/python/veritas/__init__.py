@@ -18,6 +18,12 @@ from .sklearn import \
     addtrees_from_multiclass_sklearn_ensemble
 del sklearn
 
+try:
+    from .groot import \
+        addtree_from_groot_ensemble
+    del groot
+except: pass
+
 def __domain_hash(self):
     return hash((self.lo, self.hi))
 

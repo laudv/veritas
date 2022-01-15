@@ -41,9 +41,9 @@ namespace veritas {
                 new_block.reserve(rem_capacity);
                 blocks_.push_back(std::move(new_block));
 
-                std::cout << "BlockStore memory: " << get_mem_size() << " bytes, "
-                    << (static_cast<double>(get_mem_size()) / (1024.0 * 1024.0)) << " mb ("
-                    << blocks_.size() << " blocks)" << std::endl;
+                //std::cout << "BlockStore memory: " << get_mem_size() << " bytes, "
+                //    << (static_cast<double>(get_mem_size()) / (1024.0 * 1024.0)) << " mb ("
+                //    << blocks_.size() << " blocks)" << std::endl;
             }
 
             return blocks_.back();
