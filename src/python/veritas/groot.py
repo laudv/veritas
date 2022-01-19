@@ -43,5 +43,6 @@ def addtree_from_groot_ensemble(model, extract_value_fun=None):
     at = RfAddTree()
     for tree in model.estimators_:
         _addtree_from_groot_tree(at, tree, extract_value_fun)
+    at.base_score = -num_trees / 2
     return at
 
