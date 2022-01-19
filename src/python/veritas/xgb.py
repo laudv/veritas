@@ -4,11 +4,16 @@
 # Author: Laurens Devos
 
 import json
+import numpy as np
 
 from xgboost.sklearn import XGBModel
 from xgboost.core import Booster
 
 from . import AddTree
+
+class GbAddTree(AddTree):
+    def predict_proba(self, X):
+        return 1/(1+np.exp(-self.eval(X)))
 
 def addtrees_from_multiclass_xgb_model(model, nclasses, feat2id_map=int):
     return [
@@ -30,10 +35,9 @@ def addtree_from_xgb_model(model, feat2id_map=int,
     assert isinstance(model, Booster), f"not xgb.Booster but {type(model)}"
 
     dump = model.get_dump("", dump_format="json")
-    at = AddTree()
+    at = GbAddTree()
 
     at.base_score = base_score
-
     offset, num_classes = multiclass
 
     for i in range(offset, len(dump), num_classes):

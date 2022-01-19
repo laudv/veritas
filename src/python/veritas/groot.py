@@ -1,4 +1,4 @@
-## \file xgb.py
+## \file groot.py
 # Convert GROOT trees to Veritas AddTree instances.
 # GROOT: https://github.com/tudelft-cda-lab/GROOT
 #
@@ -8,6 +8,7 @@
 
 import numpy as np
 from . import AddTree
+from .sklearn import RfAddTree
 
 import groot.model
 
@@ -39,11 +40,8 @@ def addtree_from_groot_ensemble(model, extract_value_fun=None):
         else:
             raise RuntimeError(f"{type(model).__name__} not supported")
 
-    at = AddTree()
-    at.base_score = -num_trees/2 # need at least half the trees to vote + to get +
+    at = RfAddTree()
     for tree in model.estimators_:
         _addtree_from_groot_tree(at, tree, extract_value_fun)
-    predict_proba = lambda self, X: (self.eval(X) - self.base_score) / num_trees
-    setattr(AddTree, "predict_proba", predict_proba)
     return at
 

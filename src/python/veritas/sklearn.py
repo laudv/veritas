@@ -7,6 +7,14 @@ import numpy as np
 
 from . import AddTree
 
+class RfAddTree(AddTree):
+    def __init__(self):
+        super().__init__()
+        self.base_score = -len(self)/2 # need at least half the trees to vote + to get +
+
+    def predict_proba(self, X):
+        return (self.eval(X) - self.base_score) / len(self)
+
 # https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html
 
 def _addtree_from_sklearn_tree(at, tree, extract_value_fun):
@@ -46,12 +54,9 @@ def addtree_from_sklearn_ensemble(ensemble, extract_value_fun=None):
             raise RuntimeError("cannot determine extract_value_fun for:",
                     type(ensemble).__name__)
 
-    at = AddTree()
-    at.base_score = -num_trees/2 # need at least half the trees to vote + to get +
+    at = RfAddTree()
     for tree in ensemble.estimators_:
         _addtree_from_sklearn_tree(at, tree.tree_, extract_value_fun)
-    predict_proba = lambda self, X: (self.eval(X) - self.base_score) / num_trees
-    setattr(AddTree, "predict_proba", predict_proba)
     return at
     
 ## Extract `num_classes` Veritas AddTrees from a multi-class scikit learn
