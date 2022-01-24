@@ -408,11 +408,10 @@ namespace veritas {
         void find_node_ids(const State& s, std::vector<NodeId>& buffer) const
         {
             buffer.clear();
-
             for (const Graph::IndepSet& set : g_)
                 for (const Graph::Vertex& v : set)
                     if (v.box.overlaps(s.box))
-                    { buffer.push_back(v.leaf_id); continue; }
+                    { buffer.push_back(v.leaf_id); break; }
         }
 
     protected:

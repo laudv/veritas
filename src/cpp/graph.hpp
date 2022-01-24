@@ -16,6 +16,7 @@
 
 #include <iomanip>
 #include <chrono>
+#include <sstream>
 
 namespace veritas {
 
@@ -48,12 +49,12 @@ namespace veritas {
         std::vector<IndepSet> sets_; // all indep sets in graph
         Box workspace_;
 
-        void fill_indep_set(IndepSet& set, Tree::ConstRef node)
+        void fill_indep_set(int tree_index, IndepSet& set, Tree::ConstRef node)
         {
             if (node.is_internal())
             {
-                fill_indep_set(set, node.left());
-                fill_indep_set(set, node.right());
+                fill_indep_set(tree_index, set, node.left());
+                fill_indep_set(tree_index, set, node.right());
             }
             else // 
             {
@@ -63,7 +64,15 @@ namespace veritas {
                 {
                     auto child_node = node;
                     node = node.parent();
-                    refine_box(workspace_, node.get_split(), child_node.is_left_child());
+                    bool status = refine_box(workspace_, node.get_split(), child_node.is_left_child());
+                    if (!status)
+                    {
+                        std::stringstream ss;
+                        ss << "could not refine box of node " << id << " of tree " << tree_index
+                           << ", refining " << workspace_ << " with split " <<
+                               node.get_split() << " not possible";
+                        throw std::runtime_error(ss.str());
+                    }
                 }
                 BoxRef box = BoxRef(store_.store(workspace_, remaining_mem_capacity()));
                 workspace_.clear();
@@ -71,10 +80,10 @@ namespace veritas {
             }
         }
 
-        IndepSet fill_indep_set(const Tree& tree)
+        IndepSet fill_indep_set(int tree_index, const Tree& tree)
         {
             IndepSet set;
-            fill_indep_set(set, tree.root());
+            fill_indep_set(tree_index, set, tree.root());
             return set;
         }
 
@@ -90,8 +99,9 @@ namespace veritas {
         Graph() : base_score(0.0) {}
         Graph(const AddTree& at) : base_score(at.base_score)
         {
+            int tree_index = 0;
             for (const Tree& tree : at)
-                sets_.push_back(fill_indep_set(tree));
+                sets_.push_back(fill_indep_set(tree_index++, tree));
         }
 
         std::vector<IndepSet>::const_iterator begin() const { return sets_.begin(); }
