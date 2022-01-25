@@ -36,15 +36,14 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
                 if not validl:
                     print(" -> considering only right branch, not adding split")
                     stack.append((vnode, gnode.right_child))
+                    continue
                 elif not validr:
                     print(" -> considering only left branch, not adding split")
                     stack.append((vnode, gnode.left_child))
-            else:
-                vtree.split(vnode, feat_id, split_value)
-                stack.append((vtree.right(vnode), gnode.right_child))
-                vtree.compute_box(vtree.right(vnode))
-                stack.append((vtree.left(vnode), gnode.left_child))
-                vtree.compute_box(vtree.left(vnode))
+                    continue
+            vtree.split(vnode, feat_id, split_value)
+            stack.append((vtree.right(vnode), gnode.right_child))
+            stack.append((vtree.left(vnode), gnode.left_child))
 
 def addtree_from_groot_ensemble(model, extract_value_fun=None):
     assert isinstance(model, groot.model.GrootRandomForestClassifier),\
