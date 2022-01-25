@@ -7,7 +7,7 @@
 # Author: Laurens Devos
 
 import numpy as np
-from . import AddTree
+from . import AddTree, Domain
 from .sklearn import RfAddTree
 
 import groot.model
@@ -25,12 +25,30 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
             feat_id = gnode.feature
             thrs = gnode.threshold
             split_value = np.nextafter(np.float32(thrs), np.float32(np.inf)) # <= splits
-            vtree.split(vnode, feat_id, split_value)
-            stack.append((vtree.right(vnode), gnode.right_child))
-            stack.append((vtree.left(vnode), gnode.left_child))
+            box = vtree.compute_box(vnode)
+            doml, domr = Domain().split(split_value)
+            if feat_id in box:
+                validl, validr = doml.overlaps(box[feat_id]), domr.overlaps(box[feat_id])
+                if not validl or not validr:
+                    print(f"WARNING: invalid split, node domain of feat {feat_id} is {box[feat_id]}",
+                          f"but split value is {split_value} (node {vnode})")
+                    print(vtree, end="")
+                if not validl:
+                    print(" -> considering only right branch, not adding split")
+                    stack.append((vnode, gnode.right_child))
+                elif not validr:
+                    print(" -> considering only left branch, not adding split")
+                    stack.append((vnode, gnode.left_child))
+            else:
+                vtree.split(vnode, feat_id, split_value)
+                stack.append((vtree.right(vnode), gnode.right_child))
+                vtree.compute_box(vtree.right(vnode))
+                stack.append((vtree.left(vnode), gnode.left_child))
+                vtree.compute_box(vtree.left(vnode))
 
 def addtree_from_groot_ensemble(model, extract_value_fun=None):
-    assert isinstance(model, groot.model.GrootRandomForestClassifier), f"not GrootRandomForestClassifier but {type(model)}"
+    assert isinstance(model, groot.model.GrootRandomForestClassifier),\
+        f"not GrootRandomForestClassifier but {type(model)}"
 
     num_trees = len(model.estimators_)
     if extract_value_fun is None:
@@ -41,8 +59,10 @@ def addtree_from_groot_ensemble(model, extract_value_fun=None):
             raise RuntimeError(f"{type(model).__name__} not supported")
 
     at = RfAddTree()
-    for tree in model.estimators_:
-        _addtree_from_groot_tree(at, tree, extract_value_fun)
+    for i, gtree in enumerate(model.estimators_):
+        _addtree_from_groot_tree(at, gtree, extract_value_fun)
+        #print(at[len(at)-1])
+        #print(gtree.root_.pretty_print())
     at.base_score = -num_trees / 2
     return at
 
