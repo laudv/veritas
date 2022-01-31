@@ -11,6 +11,12 @@
 # > Kantchelian, Alex, J. Doug Tygar, and Anthony Joseph. "Evasion and
 # > hardening of tree ensemble classifiers." International Conference on Machine
 # > Learning. 2016.
+#
+# This requires `gurobipy` to be installed: https://www.gurobi.com
+#
+# Copyright 2022 DTAI Research Group - KU Leuven.
+# License: Apache License 2.0
+# Author: Laurens Devos
 
 import timeit, time
 import gurobipy as gu

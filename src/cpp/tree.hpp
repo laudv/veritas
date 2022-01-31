@@ -5,7 +5,7 @@
  * less-than splits. Binary splits can be achieved (given data is in {0, 1})
  * using `LtSplit(feat_id, BOOL_SPLIT_VALUE=1.0)`.
  *
- * Copyright 2020 DTAI Research Group - KU Leuven.
+ * Copyright 2022 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
 */

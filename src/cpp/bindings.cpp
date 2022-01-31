@@ -1,5 +1,5 @@
 /*
- * Copyright 2020 DTAI Research Group - KU Leuven.
+ * Copyright 2022 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
 */
@@ -127,6 +127,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("hi_is_inf", &Domain::hi_is_inf)
         .def("contains", &Domain::contains)
         .def("overlaps", &Domain::overlaps)
+        .def("intersect", &Domain::intersect)
         .def("is_everything", &Domain::is_everything)
         .def("split", &Domain::split)
         .def("__eq__", [](const Domain& s, const Domain& t) { return s == t; })

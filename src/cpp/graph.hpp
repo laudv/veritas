@@ -3,7 +3,7 @@
  *
  * A k-partite graph derived from a tree ensemble.
  *
- * Copyright 2020 DTAI Research Group - KU Leuven.
+ * Copyright 2022 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
 */

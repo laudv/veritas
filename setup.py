@@ -80,17 +80,35 @@ def test_suite():
     return test_suite
 
 
-setup(
-    name='veritas',
-    version='0.1',
-    author='Laurens Devos',
-    author_email='',
-    long_description='',
-    packages=find_packages('src/python'),
-    install_requires=[],
-    package_dir={'':'src/python'},
-    ext_modules=[CMakeExtension('veritas/veritas')],
-    cmdclass=dict(build_ext=CMakeBuild),
-    test_suite='setup.test_suite',
-    zip_safe=False,
-)
+# https://hynek.me/articles/sharing-your-labor-of-love-pypi-quick-and-dirty/
+META = {}
+with open(os.path.join("src", "python", "veritas", "__init__.py")) as f:
+    locs = {}
+    for l in f.readlines():
+        m = re.fullmatch('^__(?P<key>\\w+)__\\s*=\\s*(?P<value>.+)\\n$', l)
+        if m:
+            k, v = m.group("key"), m.group("value")
+            exec(f"__{k}__={v}", globals(), locs)
+            META[k] = locs[f"__{k}__"]
+    del locs
+
+if __name__ == "__main__":
+    setup(
+        name="veritas",
+        license=META["license"],
+        python_requires='>=3.6',
+        url=META["url"],
+        version=META["version"],
+        author=META["author"],
+        author_email=META["email"],
+        maintainer=META["author"],
+        maintainer_email=META["email"],
+        long_description=META["doc"],
+        packages=find_packages('src/python'),
+        install_requires=["numpy"],
+        package_dir={ "": "src/python" },
+        ext_modules=[CMakeExtension("veritas/veritas")],
+        cmdclass=dict(build_ext=CMakeBuild),
+        test_suite="setup.test_suite",
+        zip_safe=False,
+    )

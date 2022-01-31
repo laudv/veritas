@@ -1,5 +1,8 @@
 ## \file xgb.py
-# Copyright 2020 DTAI Research Group - KU Leuven.
+#
+# This requires `xgboost` to be installed.
+#
+# Copyright 2022 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
 # Author: Laurens Devos
 

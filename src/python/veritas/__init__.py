@@ -1,28 +1,52 @@
-# Copyright 2020 DTAI Research Group - KU Leuven.
+# Copyright 2022 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import gzip, types
+import gzip
 import numpy as np
-from io import StringIO
 
 from .pyveritas import *
+del pyveritas
 
-from .xgb import \
-    addtree_from_xgb_model, \
-    addtrees_from_multiclass_xgb_model
-del xgb
+try: # fails when xgboost not installed
+    from .xgb import \
+        addtree_from_xgb_model, \
+        addtrees_from_multiclass_xgb_model
+    del xgb
+except ModuleNotFoundError as e: pass
 
-from .sklearn import \
-    addtree_from_sklearn_ensemble, \
-    addtrees_from_multiclass_sklearn_ensemble
-del sklearn
+try: # fails when sklearn not installed
+    from .sklearn import \
+        addtree_from_sklearn_ensemble, \
+        addtrees_from_multiclass_sklearn_ensemble
+    del sklearn
+except ModuleNotFoundError as e: pass
 
-try:
+try: # fails when groot not installed
     from .groot import \
         addtree_from_groot_ensemble
     del groot
-except: pass
+except ModuleNotFoundError as e: pass
+
+
+
+# PACKAGE META
+
+__version__ = "0.1"
+__title__ = "veritas"
+__description__ = "Versatile Verification of Tree Ensembles"
+__url__ = "https://github.com/laudv/veritas"
+__doc__ = __description__ + " <" + __url__ + ">"
+
+__author__ = "Laurens Devos"
+__email__ = ""
+
+__license__ = "Apache 2.0"
+__copyright__ = "Copyright (c) 2022 DTAI Research Group, KU Leuven"
+
+
+
+
 
 def __domain_hash(self):
     return hash((self.lo, self.hi))
@@ -77,9 +101,8 @@ setattr(Tree, "eval_node", __tree_eval_node)
 from .util import *
 del util
 
-try:
+try: # fails when gurobipy not installed
     from . import kantchelian
-except:
-    print("Veritas: install `gurobipy` for MILP support")
+except ModuleNotFoundError as e: pass
 
 from . import robustness
