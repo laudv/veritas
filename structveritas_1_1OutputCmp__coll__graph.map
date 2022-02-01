@@ -1,8 +1,14 @@
 <map id="veritas::OutputCmp" name="veritas::OutputCmp">
-<area shape="rect" id="node1" title=" " alt="" coords="21,5,154,32"/>
-<area shape="rect" id="node3" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="167,95,319,151"/>
-<area shape="rect" id="node2" href="$classveritas_1_1GraphOutputSearch.html" title=" " alt="" coords="5,200,188,227"/>
-<area shape="rect" id="node4" href="$classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="181,5,297,32"/>
-<area shape="rect" id="node5" href="$classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="321,5,424,32"/>
-<area shape="rect" id="node6" title=" " alt="" coords="449,5,619,32"/>
+<area shape="rect" id="node1" title=" " alt="" coords="27,5,160,32"/>
+<area shape="rect" id="node3" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="317,248,469,304"/>
+<area shape="rect" id="node2" href="$classveritas_1_1GraphOutputSearch.html" title=" " alt="" coords="519,263,701,289"/>
+<area shape="rect" id="node4" href="$classveritas_1_1AddTree.html" title="Additive ensemble of Trees." alt="" coords="35,237,151,264"/>
+<area shape="rect" id="node5" href="$classveritas_1_1Graph.html" title="K&#45;partite graph." alt="" coords="42,288,145,315"/>
+<area shape="rect" id="node6" href="$classveritas_1_1BlockStore.html" title=" " alt="" coords="15,339,171,381"/>
+<area shape="rect" id="node7" title=" " alt="" coords="8,405,179,432"/>
+<area shape="rect" id="node8" title=" " alt="" coords="26,456,161,483"/>
+<area shape="rect" id="node9" title=" " alt="" coords="8,69,179,96"/>
+<area shape="rect" id="node10" title=" " alt="" coords="34,120,153,147"/>
+<area shape="rect" id="node11" title=" " alt="" coords="27,517,159,558"/>
+<area shape="rect" id="node12" title=" " alt="" coords="5,171,181,213"/>
 </map>

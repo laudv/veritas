@@ -5,9 +5,10 @@ var searchData=
   ['basics_2ehpp_2',['basics.hpp',['../basics_8hpp.html',1,'']]],
   ['blockstore_3',['BlockStore',['../classveritas_1_1BlockStore.html',1,'veritas']]],
   ['blockstore_3c_20domainpair_20_3e_4',['BlockStore&lt; DomainPair &gt;',['../classveritas_1_1BlockStore.html',1,'veritas']]],
-  ['bool_5fsplit_5fvalue_5',['BOOL_SPLIT_VALUE',['../domain_8hpp.html#abd838fc74310dbdb2ba6ea3c3beb121e',1,'veritas']]],
-  ['bounds_6',['Bounds',['../structveritas_1_1Bounds.html',1,'veritas']]],
-  ['box_7',['box',['../structveritas_1_1Graph_1_1Vertex.html#a9a6cb5db867553f5f4aa70c590fd6468',1,'veritas::Graph::Vertex']]],
-  ['box_8',['Box',['../domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528',1,'veritas']]],
-  ['boxref_9',['BoxRef',['../classveritas_1_1BoxRef.html',1,'veritas']]]
+  ['blockstore_3c_20veritas_3a_3adomainpair_20_3e_5',['BlockStore&lt; veritas::DomainPair &gt;',['../classveritas_1_1BlockStore.html',1,'veritas']]],
+  ['bool_5fsplit_5fvalue_6',['BOOL_SPLIT_VALUE',['../domain_8hpp.html#abd838fc74310dbdb2ba6ea3c3beb121e',1,'veritas']]],
+  ['bounds_7',['Bounds',['../structveritas_1_1Bounds.html',1,'veritas']]],
+  ['box_8',['box',['../structveritas_1_1Graph_1_1Vertex.html#a9a6cb5db867553f5f4aa70c590fd6468',1,'veritas::Graph::Vertex']]],
+  ['box_9',['Box',['../domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528',1,'veritas']]],
+  ['boxref_10',['BoxRef',['../classveritas_1_1BoxRef.html',1,'veritas']]]
 ];

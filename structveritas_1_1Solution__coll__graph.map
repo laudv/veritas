@@ -1,4 +1,5 @@
 <map id="veritas::Solution" name="veritas::Solution">
-<area shape="rect" id="node1" title="A full (sub)optimal solution." alt="" coords="33,95,148,121"/>
-<area shape="rect" id="node2" title=" " alt="" coords="5,5,176,32"/>
+<area shape="rect" id="node1" title="A full (sub)optimal solution." alt="" coords="112,95,227,121"/>
+<area shape="rect" id="node2" title=" " alt="" coords="5,5,152,32"/>
+<area shape="rect" id="node3" title=" " alt="" coords="176,5,347,32"/>
 </map>
