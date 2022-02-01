@@ -6,3 +6,7 @@ build-backend = "setuptools.build_meta"
 # package should a) use black and b) fix the WRONG default.
 [tool.black]
 line-length = 79
+
+[tool.cibuildwheel]
+test-requires = "imageio"
+test-command = "python -m unittest discover {project}/tests test_*.py"

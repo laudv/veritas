@@ -18,9 +18,9 @@ jobs:
 
       - name: Build wheels
         uses: pypa/cibuildwheel@v2.3.1
-        env:
-          CIBW_TEST_REQUIRES: imageio
-          CIBW_TEST_COMMAND: "python -m unittest discover tests test_*.py"
+          #env: # in pyproject.toml
+          #  CIBW_TEST_REQUIRES: imageio
+          #  CIBW_TEST_COMMAND: "python -m unittest discover tests test_*.py"
 
       - uses: actions/upload-artifact@v2
         with:

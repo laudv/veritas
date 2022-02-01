@@ -1,4 +1,4 @@
-import unittest, sys
+import unittest, sys, os
 import imageio
 import numpy as np
 
@@ -10,6 +10,8 @@ except ModuleNotFoundError as e:
     MATPLOTLIB=False
 
 from veritas import *
+
+BPATH = os.path.dirname(__file__)
 
 def plot_img_solutions(imghat, solutions):
     if not MATPLOTLIB:
@@ -62,12 +64,12 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(solutions[3].box()[0], Domain.from_hi_exclusive(1))
 
     def test_img1(self):
-        img = imageio.imread("tests/data/img.png")
+        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
 
-        at = AddTree.read("tests/models/xgb-img-very-easy.json")
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-very-easy.json"))
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
 
@@ -90,12 +92,12 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[-3:])
 
     def test_img2(self):
-        img = imageio.imread("tests/data/img.png")
+        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
 
-        at = AddTree.read("tests/models/xgb-img-easy.json")
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy.json"))
         at.base_score = 0.0
         #at = at.prune([Domain(0, 30), Domain(0, 30)])
         yhat = at.eval(X)
@@ -123,12 +125,12 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[-3:])
 
     def test_img3(self):
-        img = imageio.imread("tests/data/img.png")
+        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
 
-        at = AddTree.read("tests/models/xgb-img-easy.json")
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy.json"))
         print(at.base_score)
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
@@ -159,13 +161,13 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[-3:])
 
     def test_img4(self):
-        img = imageio.imread("tests/data/img.png")
+        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         ymed = np.median(y)
         X = X.astype(np.float32)
 
-        at = AddTree.read("tests/models/xgb-img-easy.json")
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy.json"))
         at.base_score -= ymed
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
