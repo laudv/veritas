@@ -1,6 +1,6 @@
 include *.txt
 include tests/models/*.json
-include tests/data/*.png
+include tests/data/*.npy
 include tests/*.py
 
 recursive-include src/cpp *.h *.cpp *.hpp
@@ -8,3 +8,4 @@ recursive-include src/cpp *.h *.cpp *.hpp
 include lib/pybind11/CMakeLists.txt
 recursive-include lib/pybind11 *.cmake
 recursive-include lib/pybind11/include *.h
+prune tests/experiments

@@ -2,12 +2,8 @@
 requires = ["setuptools>=42", "wheel", "ninja"]
 build-backend = "setuptools.build_meta"
 
-# Not necessary for packaging but every self-respecting Python
-# package should a) use black and b) fix the WRONG default.
-[tool.black]
-line-length = 79
-
 [tool.cibuildwheel]
+skip = "*-win32 *-manylinux_i686 *-musllinux*"
 test-requires = ""
 test-command = "python -m unittest discover {project}/tests test_*.py"
 

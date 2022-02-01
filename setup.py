@@ -138,7 +138,7 @@ with open(os.path.join("src", "python", "veritas", "__init__.py")) as f:
 
 if __name__ == "__main__":
     setup(
-        name="veritas",
+        name="dtai-veritas",
         license=META["license"],
         python_requires='>=3.6',
         url=META["url"],
