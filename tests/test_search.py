@@ -1,5 +1,4 @@
 import unittest, sys, os
-import imageio
 import numpy as np
 
 try:
@@ -64,7 +63,7 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(solutions[3].box()[0], Domain.from_hi_exclusive(1))
 
     def test_img1(self):
-        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
+        img = np.load(os.path.join(BPATH, "data/img.npy"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
@@ -92,7 +91,7 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[-3:])
 
     def test_img2(self):
-        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
+        img = np.load(os.path.join(BPATH, "data/img.npy"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
@@ -125,7 +124,7 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[-3:])
 
     def test_img3(self):
-        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
+        img = np.load(os.path.join(BPATH, "data/img.npy"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
@@ -161,7 +160,7 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[-3:])
 
     def test_img4(self):
-        img = imageio.imread(os.path.join(BPATH, "data/img.png"))
+        img = np.load(os.path.join(BPATH, "data/img.npy"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         ymed = np.median(y)

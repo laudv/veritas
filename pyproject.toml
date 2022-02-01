@@ -8,5 +8,10 @@ build-backend = "setuptools.build_meta"
 line-length = 79
 
 [tool.cibuildwheel]
-test-requires = "imageio"
+build = ["cp38-manylinux_x86_64", "pp38-manylinux_x86_64"]
+test-requires = ""
 test-command = "python -m unittest discover {project}/tests test_*.py"
+
+ # Setuptools bug causes collision between pypy and cpython artifacts
+ # (from pybind/cmake_example, is necessary)
+before-build = "rm -rf {project}/build"
