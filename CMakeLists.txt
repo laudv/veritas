@@ -36,14 +36,10 @@ endif()
 find_package(Threads REQUIRED)
 target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
 
-# systems usually have old version of cereal, so we use a git submodule
-include_directories(lib/cereal/include)
-
 option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
 if (BUILD_PYTHON_BINDINGS)
     #find_package(pybind11 REQUIRED)
     add_subdirectory(lib/pybind11)
-    #pybind11_add_module("py${PROJECT_NAME}" ${SOURCES} "${SOURCE_DIR}/bindings.cpp")
     pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
     target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
 

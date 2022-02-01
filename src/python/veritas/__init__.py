@@ -106,3 +106,4 @@ try: # fails when gurobipy not installed
 except ModuleNotFoundError as e: pass
 
 from . import robustness
+del robustness

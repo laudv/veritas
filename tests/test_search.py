@@ -1,12 +1,19 @@
 import unittest, sys
 import imageio
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
+
+try:
+    MATPLOTLIB=True
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as patches
+except ModuleNotFoundError as e:
+    MATPLOTLIB=False
 
 from veritas import *
 
 def plot_img_solutions(imghat, solutions):
+    if not MATPLOTLIB:
+        return
     fig, ax = plt.subplots()
     im = ax.imshow(imghat)
     fig.colorbar(im, ax=ax)

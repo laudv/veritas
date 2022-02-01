@@ -1,36 +1,46 @@
+import unittest
 import numpy as np
-
-from groot.adversary import DecisionTreeAdversary
-from groot.model import GrootTreeClassifier
-from groot.model import GrootRandomForestClassifier
-
-from sklearn.datasets import make_moons
 
 import veritas
 
-X, y = make_moons(noise=0.3, random_state=0)
-X_test, y_test = make_moons(noise=0.3, random_state=1)
+class TestGroot(unittest.TestCase):
 
-attack_model = [0.5, 0.5]
-is_numerical = [True, True]
-num_trees = 10
-forest = GrootRandomForestClassifier(attack_model=[0.1, 0.1],
-        n_estimators=num_trees, max_depth=5, random_state=1)
-forest.fit(X, y)
+    def get_groot_model(self):
+        from sklearn.datasets import make_moons
 
-at = veritas.addtree_from_groot_ensemble(forest)
+        from groot.adversary import DecisionTreeAdversary
+        #from groot.model import GrootTreeClassifier
+        from groot.model import GrootRandomForestClassifier
 
-yat = at.eval(X_test) > 0.0
-ygr = forest.predict(X_test) == 1.0
+        X, y = make_moons(noise=0.3, random_state=0)
+        X_test, y_test = make_moons(noise=0.3, random_state=1)
 
-print("y prediction match?", np.all(yat == ygr))
+        attack_model = [0.5, 0.5]
+        is_numerical = [True, True]
+        num_trees = 10
+        forest = GrootRandomForestClassifier(attack_model=[0.1, 0.1],
+                n_estimators=num_trees, max_depth=5, random_state=1)
+        forest.fit(X, y)
 
-pat = at.predict_proba(X_test)
-pgr = forest.predict_proba(X_test)[:,1]
+        at = veritas.addtree_from_groot_ensemble(forest)
 
-print("proba prediction match?", np.max(np.abs(pat-pgr)) < 1e-5) # float32 errors
+        return at, forest
 
-accuracy = forest.score(X_test, y_test)
-#adversarial_accuracy = DecisionTreeAdversary(tree, "groot").adversarial_accuracy(X_test, y_test)
+    def test_groot_model(self):
+        try:
+            at, forest = self.get_groot_model()
+        except ModuleNotFoundError as e:
+            print("Skipping GROOT tests because GROOT not installed")
+            return
 
-print("Accuracy:", accuracy)
+        yat = at.eval(X_test) > 0.0
+        ygr = forest.predict(X_test) == 1.0
+
+        self.assertTrue(np.all(yat == ygr))
+
+        pat = at.predict_proba(X_test)
+        pgr = forest.predict_proba(X_test)[:,1]
+
+        np.assertTrue(np.max(np.abs(pat-pgr)) < 1e-5) # float32 errors
+
+        #accuracy = forest.score(X_test, y_test)
