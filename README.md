@@ -363,7 +363,7 @@ We now try to find the distance to the closest adversarial example for which the
 - the initial delta value used by the binary search
 
 ```python
-from veritas.robustness import VeritasRobustnessSearch
+from veritas import VeritasRobustnessSearch
 rob = VeritasRobustnessSearch(None, at, example, start_delta=5.0)
 delta, delta_lo, delta_up = rob.search()
 

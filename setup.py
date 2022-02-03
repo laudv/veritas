@@ -28,6 +28,8 @@ class CMakeExtension(Extension):
 class CMakeBuild(build_ext):
     def build_extension(self, ext):
         extdir = os.path.abspath(os.path.dirname(self.get_ext_fullpath(ext.name)))
+        print("extdir", extdir, ext.name)
+        print("ext_fullpath", self.get_ext_fullpath(ext.name))
 
         # required for auto-detection & inclusion of auxiliary "native" libs
         if not extdir.endswith(os.path.sep):
@@ -150,9 +152,8 @@ if __name__ == "__main__":
         long_description=META["doc"],
         packages=find_packages('src/python'),
         install_requires=["numpy"],
-        extras_require={"test": ["imageio"]},
         package_dir={ "": "src/python" },
-        ext_modules=[CMakeExtension("veritas/veritas")],
+        ext_modules=[CMakeExtension("veritas.pyveritas")],
         cmdclass=dict(build_ext=CMakeBuild),
         test_suite="setup.test_suite",
         zip_safe=False,

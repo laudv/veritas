@@ -105,5 +105,5 @@ try: # fails when gurobipy not installed
     from . import kantchelian
 except ModuleNotFoundError as e: pass
 
-from . import robustness
+from .robustness import *
 del robustness

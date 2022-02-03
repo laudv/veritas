@@ -135,7 +135,7 @@ for i in range(s.num_solutions()):
 example = [2, 4, 2]
 print("output for example", example, "is", at.eval(example)[0])
 
-from veritas.robustness import VeritasRobustnessSearch
+from veritas import VeritasRobustnessSearch
 rob = VeritasRobustnessSearch(None, at, example, start_delta=5.0)
 delta, delta_lo, delta_up = rob.search()
 
