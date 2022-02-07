@@ -4,7 +4,7 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit, time
+import timeit, time, os, contextlib
 import numpy as np
 
 from . import AddTree, GraphOutputSearch, get_closest_example, Domain
@@ -23,7 +23,7 @@ class RobustnessSearch:
     NO_STOP_COND = lambda lo, up: False
     INT_STOP_COND = lambda lo, up: np.floor(up) == np.ceil(lo)
 
-    def __init__(self, example, start_delta, num_steps=10, guard=1e-4,
+    def __init__(self, example, start_delta, num_steps=10, guard=0.0,
             max_time = 10,
             stop_condition=NO_STOP_COND):
         self.example = example
@@ -141,8 +141,6 @@ class VeritasRobustnessSearch(RobustnessSearch):
         else:
             raise RuntimeError("source_at and target_at None")
 
-        self.log = []
-
     def get_search(self, delta):
         s = GraphOutputSearch(self.at)
         #s.stop_when_num_solutions_equals = 1 # !! could be solution with bad eps not good enough yet
@@ -181,7 +179,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         return max_output_diff, generated_examples
 
 class MilpRobustnessSearch(RobustnessSearch):
-    def __init__(self, source_at, target_at, example, **kwargs):
+    def __init__(self, source_at, target_at, example, silent=True, **kwargs):
         super().__init__(example, **kwargs)
 
         if source_at is not None and target_at is not None:
@@ -193,8 +191,10 @@ class MilpRobustnessSearch(RobustnessSearch):
         else:
             raise RuntimeError("source_at and target_at None")
 
+        self.silent = silent
+
     def get_milp(self, delta, rem_time):
-        milp = KantchelianOutputOpt(self.at, max_time=rem_time)
+        milp = KantchelianOutputOpt(self.at, silent=self.silent, max_time=rem_time)
         box = [Domain(x-delta, x+delta) for x in self.example]
         milp.constrain_to_box(box)
         return milp
@@ -203,13 +203,18 @@ class MilpRobustnessSearch(RobustnessSearch):
         rem_time = self.max_time - timeit.default_timer() + self.start_time
         #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
         rem_time /= (self.num_steps - self.i)
-        print("step time", rem_time, self.max_time, self.num_steps)
+        #print("step time", rem_time, self.max_time, self.num_steps)
 
         if rem_time < 0.0:
             return None
 
-        milp = self.get_milp(delta, rem_time)
-        milp.optimize()
+        if self.silent:
+            with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
+                milp = self.get_milp(delta, rem_time)
+                milp.optimize()
+        else:
+            milp = self.get_milp(delta, rem_time)
+            milp.optimize()
 
         generated_examples = []
         max_output_diff = milp.objective_bound()

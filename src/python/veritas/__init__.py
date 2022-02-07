@@ -32,7 +32,7 @@ except ModuleNotFoundError as e: pass
 
 # PACKAGE META
 
-__version__ = "0.1"
+__version__ = "0.1.1"
 __title__ = "veritas"
 __description__ = "Versatile Verification of Tree Ensembles"
 __url__ = "https://github.com/laudv/veritas"
@@ -41,7 +41,7 @@ __doc__ = __description__ + " <" + __url__ + ">"
 __author__ = "Laurens Devos"
 __email__ = ""
 
-__license__ = "Apache 2.0"
+__license__ = "Apache-2.0"
 __copyright__ = "Copyright (c) 2022 DTAI Research Group, KU Leuven"
 
 
@@ -102,7 +102,8 @@ from .util import *
 del util
 
 try: # fails when gurobipy not installed
-    from . import kantchelian
+    from .kantchelian import *
+    del kantchelian
 except ModuleNotFoundError as e: pass
 
 from .robustness import *

@@ -34,11 +34,13 @@ class NodeInfo:
 # \brief Base class for MILP methods
 class KantchelianBase:
 
-    def __init__(self, split_values, max_time=1e100):
+    def __init__(self, split_values, max_time=1e100, silent=True):
         self.guard = 1e-4
         self.split_values = split_values
         self.env = gu.Env(empty=True)
         self.env.setParam("Threads", 1)
+        if silent:
+            self.env.setParam("OutputFlag", 0)
         try:
             self.model = gu.Model("KantchelianAttack", env=self.env) # requires license
         except:

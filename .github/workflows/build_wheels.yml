@@ -1,6 +1,11 @@
 name: Build Python Wheels
 
-on: [push, pull_request]
+on:
+  pull_request:
+
+  push:
+    branches:
+      - deploy
 
 jobs:
   build_wheels:
@@ -8,7 +13,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-latest, macos-latest] #, windows-latest
+        os: [ubuntu-latest, macos-latest, windows-latest]
 
     steps:
       - name: Checkout repository and submodules

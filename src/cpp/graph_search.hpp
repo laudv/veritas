@@ -917,10 +917,10 @@ namespace veritas {
         FloatT get_eps() const { return cmp_.eps; }
     };
 
-    bool OutputCmp::operator()(size_t i, size_t j) const
+    inline bool OutputCmp::operator()(size_t i, size_t j) const
     { return this->operator()(search.states_[i], search.states_[j]); }
 
-    bool RobustnessCmp::operator()(size_t i, size_t j) const
+    inline bool RobustnessCmp::operator()(size_t i, size_t j) const
     { return this->operator()(search.states_[i], search.states_[j]); }
 
     // return TRUE if first is _less_ than second (ie. you want second higher
