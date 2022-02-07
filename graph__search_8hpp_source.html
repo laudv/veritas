@@ -933,10 +933,10 @@ $(function() {
 <div class="line"><a id="l00917" name="l00917"></a><span class="lineno">  917</span>        FloatT get_eps()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> cmp_.eps; }</div>
 <div class="line"><a id="l00918" name="l00918"></a><span class="lineno">  918</span>    };</div>
 <div class="line"><a id="l00919" name="l00919"></a><span class="lineno">  919</span> </div>
-<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="keywordtype">bool</span> OutputCmp::operator()(<span class="keywordtype">size_t</span> i, <span class="keywordtype">size_t</span> j)<span class="keyword"> const</span></div>
+<div class="line"><a id="l00920" name="l00920"></a><span class="lineno">  920</span>    <span class="keyword">inline</span> <span class="keywordtype">bool</span> OutputCmp::operator()(<span class="keywordtype">size_t</span> i, <span class="keywordtype">size_t</span> j)<span class="keyword"> const</span></div>
 <div class="line"><a id="l00921" name="l00921"></a><span class="lineno">  921</span><span class="keyword">    </span>{ <span class="keywordflow">return</span> this-&gt;operator()(search.states_[i], search.states_[j]); }</div>
 <div class="line"><a id="l00922" name="l00922"></a><span class="lineno">  922</span> </div>
-<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="keywordtype">bool</span> RobustnessCmp::operator()(<span class="keywordtype">size_t</span> i, <span class="keywordtype">size_t</span> j)<span class="keyword"> const</span></div>
+<div class="line"><a id="l00923" name="l00923"></a><span class="lineno">  923</span>    <span class="keyword">inline</span> <span class="keywordtype">bool</span> RobustnessCmp::operator()(<span class="keywordtype">size_t</span> i, <span class="keywordtype">size_t</span> j)<span class="keyword"> const</span></div>
 <div class="line"><a id="l00924" name="l00924"></a><span class="lineno">  924</span><span class="keyword">    </span>{ <span class="keywordflow">return</span> this-&gt;operator()(search.states_[i], search.states_[j]); }</div>
 <div class="line"><a id="l00925" name="l00925"></a><span class="lineno">  925</span> </div>
 <div class="line"><a id="l00926" name="l00926"></a><span class="lineno">  926</span>    <span class="comment">// return TRUE if first is _less_ than second (ie. you want second higher</span></div>
