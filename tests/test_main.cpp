@@ -2,11 +2,12 @@
 //#include "node_search.hpp"
 #include "graph.hpp"
 //#include "graph_search.hpp"
-#include "graph_robustness_search.hpp"
+//#include "graph_robustness_search.hpp"
 
 #include <iostream>
 #include <fstream>
 #include <assert.h>
+#include <algorithm>
 
 using namespace veritas;
 
@@ -668,6 +669,7 @@ void test_feat_map3()
     assert(renamed1[0].root().left().right().get_split().feat_id == 5);
 }
 
+/*
 void test_graph_search1()
 {
     AddTree at;
@@ -781,38 +783,39 @@ void test_graph_search3()
         std::cout << "-------------\n";
     }
 }
+*/
 
-void test_robustness_search1()
-{
-    AddTree at;
-    {
-        std::ifstream f;
-        //f.open("tests/models/xgb-allstate.json");
-        f.open("tests/models/xgb-img-hard.json");
-        at.from_json(f);
-    }
-
-    std::vector<FloatT> example {10, 10};
-    std::cout << "eval: " << at.eval(example) << std::endl;
-    GraphRobustnessSearch s(at, example, 20);
-    //bool done = s.step();
-    bool done = s.steps(1000);
-    done = s.steps(1000);
-
-    std::cout << "-------------\n";
-    std::cout << "done: " << done << std::endl;
-    std::cout << "numsols: " << s.num_solutions() << std::endl;
-    for (size_t i = 0; i < s.num_solutions(); ++i)
-    {
-        Solution sol = s.get_solution(i);
-        std::cout << "sol " << sol.output
-            << " at " << sol.time
-            << " box " << sol.box << std::endl;
-    }
-    std::cout << "time: " << s.time_since_start() << std::endl;
-    std::cout << "num_steps: " << s.num_steps() << std::endl;
-    std::cout << "-------------\n";
-}
+//void test_robustness_search1()
+//{
+//    AddTree at;
+//    {
+//        std::ifstream f;
+//        //f.open("tests/models/xgb-allstate.json");
+//        f.open("tests/models/xgb-img-hard.json");
+//        at.from_json(f);
+//    }
+//
+//    std::vector<FloatT> example {10, 10};
+//    std::cout << "eval: " << at.eval(example) << std::endl;
+//    GraphRobustnessSearch s(at, example, 20);
+//    //bool done = s.step();
+//    bool done = s.steps(1000);
+//    done = s.steps(1000);
+//
+//    std::cout << "-------------\n";
+//    std::cout << "done: " << done << std::endl;
+//    std::cout << "numsols: " << s.num_solutions() << std::endl;
+//    for (size_t i = 0; i < s.num_solutions(); ++i)
+//    {
+//        Solution sol = s.get_solution(i);
+//        std::cout << "sol " << sol.output
+//            << " at " << sol.time
+//            << " box " << sol.box << std::endl;
+//    }
+//    std::cout << "time: " << s.time_since_start() << std::endl;
+//    std::cout << "num_steps: " << s.num_steps() << std::endl;
+//    std::cout << "-------------\n";
+//}
 
 /*
 void test_graph_simplify()
@@ -888,6 +891,59 @@ void test_constraints1()
 }
 */
 
+#include "search.hpp"
+
+void test_search1()
+{
+    AddTree at;
+    {
+        std::ifstream f;
+        f.open("tests/models/xgb-img-easy.json");
+        at.from_json(f);
+    }
+
+    Search<MaxOutputHeuristic> s(at);
+    s.eps = 0.9;
+    for (size_t i = 0; i < 120; i++)
+    {
+        auto &&[lo, hi, top] = s.current_bounds();
+        std::cout << lo << ", " << hi << ", " << top << ", " << s.is_optimal() << std::endl;
+        if (s.step())
+        {
+            std::cout << "done " << s.num_steps << std::endl;
+            break;
+        }
+    }
+
+    //std::vector<int> v = { 5, 6, 2, 10, 12, 59, 102 };
+    //std::make_heap(v.begin(), v.end());
+
+    //Tree t;
+    //std::vector<Tree::MutRef> stack {t.root()};
+    //while (!stack.empty())
+    //{
+    //    Tree::MutRef n = stack.back();
+    //    stack.pop_back();
+
+    //    if (n.id() >= v.size())
+    //    {
+    //        continue;
+    //    }
+    //    else if (n.id() * 2 >= v.size())
+    //    {
+    //        n.set_leaf_value((float)v[n.id()]);
+    //    }
+    //    else
+    //    {
+    //        n.split(LtSplit(0, (float)v[n.id()]));
+    //        stack.push_back(n.right());
+    //        stack.push_back(n.left());
+    //    }
+    //}
+
+    //std::cout << t << std::endl;
+}
+
 int main()
 {
     //test_tree1();
@@ -915,9 +971,11 @@ int main()
     //test_graph_search2();
     //test_graph_search3();
 
-    test_robustness_search1();
+    //test_robustness_search1();
 
     //test_graph_simplify();
 
     //test_constraints1();
+    
+    test_search1();
 }

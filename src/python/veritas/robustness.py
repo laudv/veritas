@@ -60,6 +60,9 @@ class RobustnessSearch:
             if len(generated_examples) > 0:
                 for example in generated_examples:
                     example_delta = self._calc_example_delta(example) + self.guard
+                    print("example_delta", example_delta, self.guard, best_example_delta)
+                    print("max_output_diff", max_output_diff,
+                            self.at.eval(example)[0], self.at.eval(self.example)[0])
                     best_example_delta = min(best_example_delta, example_delta)
                     self.generated_examples.append(example)
 
@@ -171,7 +174,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         if s.num_solutions() > 0:
             best_sol = s.get_solution(0)
             if best_sol.output > 0.0:
-                #print(f"Veritas generated example", best_sol)
+                print(f"Veritas generated example", best_sol)
                 max_output_diff = upper_bound if best_sol.eps != 1.0 else best_sol.output
                 closest = get_closest_example(best_sol, self.example)
                 generated_examples = [closest]

@@ -178,6 +178,26 @@ namespace veritas {
             return {min_bound, max_bound};
         }
 
+        /**
+         * Looking at sets `start_indep_set` .. end, what is the maximum
+         * possible sum of vertex output values given the box?
+         *
+         * return = sum{max{v.output : v in indep_set} : indep set in graph[start_indep_set..]}
+         */
+        FloatT basic_remaining_upbound(size_t start_indep_set, const BoxRef& box) const
+        {
+            FloatT res = 0.0;
+            for (size_t indep_set = start_indep_set; indep_set < sets_.size(); ++indep_set)
+            {
+                FloatT max = -FLOATT_INF;
+                for (const Vertex& v : sets_[indep_set])
+                    if (v.box.overlaps(box))
+                        max = std::max(max, v.output);
+                res += max;
+            }
+            return res;
+        }
+
         /** Get the vertexes in an independent set. */
         const IndepSet& get_vertices(size_t indep_set) const { return sets_.at(indep_set); }
 

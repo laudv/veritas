@@ -599,12 +599,19 @@ namespace veritas {
 
             // if the previous best suboptimal solution was still in the ara
             // stack, would it be at the top? if so, increase eps
+            bool sol_updated = false;
             if (num_solutions() > 0 && ara_heap_.size() > 0)
             {
                 const State& s0 = states_[state_index];
                 for (SolutionRef& sol : solutions_)
                 {
                     const State& s1 = states_[sol.state_index];
+                    std::cout << "UPDATE SOL? "
+                        << (ara_cmp_.fscore(s1)+g_.base_score)
+                        << " > " << (ara_cmp_.fscore(s0)+g_.base_score)
+                        << " (" << sol.eps << " ==? " << ara_cmp_.eps << ") " << sol.state_index
+                        << ", " << state_index
+                        << std::endl;
                     if (sol.eps != 1.0 && ara_cmp_(s0, s1))
                     {
                         //std::cout << "UPDATE PREVIOUS SOLUTION "
@@ -613,12 +620,14 @@ namespace veritas {
                         //    << " (" << sol.eps << " ==? " << ara_cmp_.eps << ")"
                         //    << std::endl;
                         sol.eps = ara_cmp_.eps;
-                        update_eps(eps_increment_);
+                        sol_updated = true;
                         //std::cout << " new eps=" << ara_cmp_.eps << std::endl;
                     }
                     else break;
                 }
             }
+            if (sol_updated)
+                update_eps(eps_increment_);
 
             // if finding another suboptimal solution takes too long,
             // decrease eps, halve eps_increment_
@@ -642,7 +651,7 @@ namespace veritas {
             size_t state_index;
             while (true)
             {
-                if (a_heap_.empty() and ara_heap_.empty())
+                if (a_heap_.empty() && ara_heap_.empty())
                     return true; // we're done
                 state_index = pop_state();
                 if (!states_[state_index].is_expanded)
@@ -758,7 +767,9 @@ namespace veritas {
 
         void set_eps(FloatT eps)
         {
+            std::cout << "UPDATING EPS " << ara_cmp_.eps << " -> ";
             ara_cmp_.eps = std::max<FloatT>(0.0, std::min<FloatT>(1.0, eps));
+            std::cout << ara_cmp_.eps << std::endl;
             if (ara_cmp_.eps < 1.0)
                 std::make_heap(ara_heap_.begin(), ara_heap_.end(), ara_cmp_);
             else
@@ -773,14 +784,14 @@ namespace veritas {
 
             double t = time_since_start();
             double time_since_previous_incr = t - last_eps_increment_;
-            //if (time_since_previous_incr*10 < avg_eps_update_time_)
-            //{
-            //    eps_increment_ *= 2;
-            //    std::cout << "DOUBLING eps_increment_ to " << eps_increment_
-            //        << " avg t: " << avg_eps_update_time_
-            //        << " t: " << (t - last_eps_increment_)
-            //        << std::endl;
-            //}
+            if (time_since_previous_incr*10 < avg_eps_update_time_)
+            {
+                eps_increment_ *= 2;
+                //std::cout << "DOUBLING eps_increment_ to " << eps_increment_
+                //    << " avg t: " << avg_eps_update_time_
+                //    << " t: " << (t - last_eps_increment_)
+                //    << std::endl;
+            }
             last_eps_increment_ = t;
             avg_eps_update_time_ = 0.2*avg_eps_update_time_ + 0.8*time_since_previous_incr;
         }

@@ -75,7 +75,8 @@ namespace veritas {
     void
     NodeRef<RefT>::print_node(std::ostream& strm, int depth) const
     {
-        for (int i = 0; i < depth; ++i)
+        int i = 1;
+        for (; i < depth; ++i)
             strm << "│  ";
         if (is_leaf())
         {
@@ -87,7 +88,8 @@ namespace veritas {
         }
         else
         {
-            strm << "├─ Node("
+            strm << (depth==0 ? "" : "├─ ")
+                << "Node("
                 << "id=" << id()
                 << ", split=[" << get_split() << ']'
                 << ", left=" << left().id()
