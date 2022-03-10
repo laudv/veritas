@@ -7,7 +7,7 @@
 import timeit, time, os, contextlib
 import numpy as np
 
-from . import AddTree, GraphOutputSearch, get_closest_example, Domain
+from . import AddTree, Search, get_closest_example, Domain
 
 try:
     from .kantchelian import KantchelianOutputOpt
@@ -79,10 +79,14 @@ class RobustnessSearch:
                     print(f"   -> generated adv.example w/ delta",
                             best_example_delta-self.guard)
             else: # no adv. can exist
-                if delta == upper:
+                if delta == upper and lower == 0.0:
                     lower = delta
                     delta = 2.0 * delta
                     upper = delta
+                elif upper != 0.0 and (upper - lower) / upper < 1e-5:
+                    self.early_stop = True
+                    print("STOPPING EARLY")
+                    break
                 else:
                     lower = delta
                     delta = lower + 0.5 * (upper - lower)
@@ -145,11 +149,16 @@ class VeritasRobustnessSearch(RobustnessSearch):
             raise RuntimeError("source_at and target_at None")
 
     def get_search(self, delta):
-        s = GraphOutputSearch(self.at)
-        #s.stop_when_num_solutions_equals = 1 # !! could be solution with bad eps not good enough yet
-        #s.stop_when_solution_output_greater_than = 0.0
-        s.stop_when_solution_eps_equals = 1.0
-        s.stop_when_up_bound_less_than = 0.0
+        s = Search.max_output(self.at)
+        #s.set_example(self.example)
+        s.stop_when_optimal = True
+        s.stop_when_upper_less_than = 0.0
+        s.stop_when_num_solutions_exceeds = 1
+        s.reject_solution_when_output_less_than = 0.0
+        s.max_focal_size = 10000
+        s.debug = False;
+        s.auto_eps = True;
+
         s.set_mem_capacity(self.mem_capacity)
         box = [Domain(x-delta, x+delta) for x in self.example]
         s.prune(box)
@@ -166,18 +175,24 @@ class VeritasRobustnessSearch(RobustnessSearch):
         if rem_time < 0.0:
             return None
 
-        s.step_for(rem_time, 50)
+        stop_reason = s.step_for(rem_time, 50)
 
-        upper_bound = min(s.current_bounds()[1:])
+        upper_bound = s.current_bounds()[1]
+        print("stop reason", stop_reason, upper_bound)
         max_output_diff = upper_bound
         generated_examples = []
         if s.num_solutions() > 0:
             best_sol = s.get_solution(0)
             if best_sol.output > 0.0:
-                print(f"Veritas generated example", best_sol)
-                max_output_diff = upper_bound if best_sol.eps != 1.0 else best_sol.output
+                #max_output_diff = upper_bound if best_sol.eps != 1.0 else best_sol.output
+                max_output_diff = best_sol.output
                 closest = get_closest_example(best_sol, self.example)
                 generated_examples = [closest]
+
+        print("VERITAS numsol", s.num_solutions())
+        print("VERITAS num rej sol", s.num_rejected_solutions)
+        print("VERITAS num steps", s.num_steps, "{:.2f}k/sec".format(s.num_steps / 1000 / s.time_since_start()))
+        print("VERITAS focal_size", np.mean([sn.avg_focal_size for sn in s.snapshots]))
 
         return max_output_diff, generated_examples
 

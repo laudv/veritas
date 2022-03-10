@@ -291,8 +291,12 @@ namespace veritas {
         inline Tree() { clear(); }
         /** Const NodeRef to root node */
         inline ConstRef root() const { return (*this)[0]; }
+        /** Const NodeRef to root node */
+        inline ConstRef root_const() const { return (*this)[0]; }
         /** Mutable NodeRef to root node */
         inline MutRef root() { return (*this)[0]; }
+        /** Mutable NodeRef to root node */
+        inline MutRef root_mut() { return (*this)[0]; }
         /** Reset this tree. */
         inline void clear() { nodes_.clear(); nodes_.push_back({0, 0}); }
 

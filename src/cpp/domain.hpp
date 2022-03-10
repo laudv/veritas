@@ -160,6 +160,38 @@ namespace veritas {
 
 
     /**
+     * Get a reference to the Domain entry in the given box for `feat_id`. If
+     * no entry exists, then it is inserted in the right place so that the box
+     * remains sorted on feat_id.
+     */
+    inline Domain& get_domain(Box& box, FeatId feat_id)
+    {
+        auto it = std::find_if(box.begin(), box.end(), [feat_id](const DomainPair& p)
+                { return p.feat_id == feat_id; });
+
+        // domain not in box, insert and ensure sorted
+        if (it == box.end())
+        {
+            box.push_back({ feat_id, {} });
+            for (it = box.end()-1; it > box.begin(); --it)
+            {
+                //std::cout << (it-1)->feat_id << " vs " << it->feat_id << std::endl;
+                if ((it-1)->feat_id > it->feat_id)
+                    std::swap(*(it-1), *it);
+                else break;
+            }
+            //for (int i = box.size() - 1; i > 0; --i) // ids sorted
+            //    if (box[i-1].feat_id > box[i].feat_id)
+            //        std::swap(box[i-1], box[i]);
+            //std::sort(workspace_.begin(), workspace_.end(),
+            //        [](const DomainPair& a, const DomainPair& b) {
+            //            return a.first < b.first;
+            //        })
+        }
+        return it->domain;
+    }
+
+    /**
      * Include the constraint '`feat_id` in `dom`' to the box.
      *
      * If no domain is present for `feat_id`, then add it, and maintain the
@@ -169,33 +201,10 @@ namespace veritas {
      */
     inline bool refine_box(Box& box, FeatId feat_id, const Domain& dom)
     {
-        Domain new_dom;
-        auto it = std::find_if(box.begin(), box.end(), [feat_id](const DomainPair& p)
-                { return p.feat_id == feat_id; });
-
-        if (it != box.end())
-            new_dom = it->domain;
+        Domain& new_dom = get_domain(box, feat_id);
         if (!new_dom.overlaps(dom))
             return false;
-
         new_dom = new_dom.intersect(dom);
-
-        // ensure sorted
-        if (it == box.end())
-        {
-            box.push_back({ feat_id, new_dom });
-            for (int i = box.size() - 1; i > 0; --i) // ids sorted
-                if (box[i-1].feat_id > box[i].feat_id)
-                    std::swap(box[i-1], box[i]);
-            //std::sort(workspace_.begin(), workspace_.end(),
-            //        [](const DomainPair& a, const DomainPair& b) {
-            //            return a.first < b.first;
-            //        })
-        }
-        else
-        {
-            it->domain = new_dom;
-        }
         return true;
     }
 
@@ -239,6 +248,7 @@ namespace veritas {
         explicit inline BoxRef(const T& t) : BoxRef(t.begin, t.end) {}
         /** A box with no domain restrictions representing the full input space. */
         inline static BoxRef null_box() { return {nullptr, nullptr}; }
+        inline bool is_null_box() const { return begin_ == nullptr; }
         inline const_iterator begin() const { return begin_; }
         inline const_iterator end() const { return end_; }
 

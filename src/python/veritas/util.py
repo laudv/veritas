@@ -1,6 +1,6 @@
 ## \file util.py
 # \defgroup python Python classes and functions
-# \brief An overview of all class and functions defined in Python. Does not include the bindings.
+# \brief An overview of all class and functions defined in Python.
 
 from veritas import Solution
 
@@ -147,3 +147,12 @@ def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
 # \dontinclude[lineno] bindings.cpp
 # \skipline py::class_<Solution>
 # \until ; // Solution
+
+## \ingroup python
+# \class Search
+# \brief Bindings to C++ veritas::Search class.
+#
+# In `bindings.cpp`:
+# \dontinclude[lineno] bindings.cpp
+# \skipline py::class_<VSearch>
+# \until ; // VSearch

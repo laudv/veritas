@@ -20,7 +20,8 @@
 #include "domain.hpp"
 #include "features.hpp"
 #include "tree.hpp"
-#include "graph_search.hpp"
+//#include "graph_search.hpp"
+#include "search.hpp"
 
 namespace py = pybind11;
 using namespace veritas;
@@ -356,6 +357,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
         ; // FeatMap
 
+    /*
     py::class_<GraphOutputSearch>(m, "GraphOutputSearch")
         .def(py::init<const AddTree&>())
         .def("step", &GraphOutputSearch::step)
@@ -438,6 +440,171 @@ PYBIND11_MODULE(pyveritas, m) {
         })
         .def("__str__", [](const Solution& s) { return tostr(s); })
         ; // Solution
+    */
+
+    py::enum_<StopReason>(m, "StopReason")
+        .value("NONE", StopReason::NONE)
+        .value("NO_MORE_OPEN", StopReason::NO_MORE_OPEN)
+        .value("NUM_SOLUTIONS_EXCEEDED", StopReason::NUM_SOLUTIONS_EXCEEDED)
+        .value("NUM_NEW_SOLUTIONS_EXCEEDED", StopReason::NUM_NEW_SOLUTIONS_EXCEEDED)
+        .value("OPTIMAL", StopReason::OPTIMAL)
+        .value("UPPER_LT", StopReason::UPPER_LT)
+        .value("LOWER_GT", StopReason::LOWER_GT)
+        ; // StopReason
+
+
+    py::class_<VSearch, std::shared_ptr<VSearch>>(m, "Search")
+        .def_static("max_output", &VSearch::max_output)
+        .def_static("min_dist_to_example", &VSearch::min_dist_to_example)
+        .def("step", &VSearch::step)
+        .def("steps", &VSearch::steps)
+        .def("step_for", &VSearch::step_for)
+        .def("steps", &VSearch::steps)
+        .def("step_for", &VSearch::step_for)
+        .def("num_solutions", &VSearch::num_solutions)
+        .def("num_open", &VSearch::num_open)
+        .def("set_mem_capacity", &VSearch::set_mem_capacity)
+        .def("time_since_start", &VSearch::time_since_start)
+        .def("current_bounds", &VSearch::current_bounds)
+        .def("get_solution", &VSearch::get_solution)
+        .def("is_optimal", &VSearch::is_optimal)
+        .def("base_score", &VSearch::base_score)
+        .def("get_at_output_for_box", [](const VSearch& s, const py::list& pybox) {
+            Box box = tobox(pybox);
+            BoxRef b(box);
+            return s.get_at_output_for_box(b);
+        })
+        .def("prune", [](VSearch& s, const py::list& pybox) {
+            Box box = tobox(pybox);
+            BoxRef b(box);
+            return s.prune_by_box(b);
+        })
+        .def("get_solstate_field", [](const VSearch& s, size_t index, const std::string& field) -> py::object {
+            if (const auto* v = dynamic_cast<const Search<MaxOutputHeuristic>*>(&s))
+            {
+                const auto& s = v->get_solution_state(index);
+                if (field == "g")
+                    return py::float_(s.g);
+                if (field == "h")
+                    return py::float_(s.h);
+            }
+            else if(const auto* v = dynamic_cast<const Search<MinDistToExampleHeuristic>*>(&s))
+            {
+                const auto& s = v->get_solution_state(index);
+                if (field == "g")
+                    return py::float_(s.g);
+                if (field == "h")
+                    return py::float_(s.h);
+                if (field == "dist")
+                    return py::float_(s.dist);
+            }
+            else {
+                throw std::runtime_error("unsupported VSearch subtype");
+            }
+            return py::none();
+        })
+
+        // stats
+        .def_readonly("num_steps", &VSearch::num_steps)
+        .def_readonly("num_rejected_solutions", &VSearch::num_rejected_solutions)
+        .def_readonly("snapshots", &VSearch::snapshots)
+
+        // options
+        .def_readwrite("eps", &VSearch::eps)
+        .def_readwrite("debug", &VSearch::debug)
+        .def_readwrite("max_focal_size", &VSearch::max_focal_size)
+        .def_readwrite("auto_eps", &VSearch::auto_eps)
+        .def_readwrite("reject_solution_when_output_less_than", &VSearch::reject_solution_when_output_less_than)
+
+        // stop condition
+        .def_readwrite("stop_when_num_solutions_exceeds",     &VSearch::stop_when_num_solutions_exceeds)
+        .def_readwrite("stop_when_num_new_solutions_exceeds", &VSearch::stop_when_num_new_solutions_exceeds)
+        .def_readwrite("stop_when_optimal",                   &VSearch::stop_when_optimal)
+        .def_readwrite("stop_when_upper_less_than",           &VSearch::stop_when_upper_less_than)
+        .def_readwrite("stop_when_lower_greater_than",        &VSearch::stop_when_lower_greater_than)
+        ; // VSearch
+
+    /*
+    using MaxOutputSearch = Search<MaxOutputHeuristic>;
+    using MaxOutputSolution = Solution<MaxOutputHeuristic::State>;
+
+    py::class_<MaxOutputSearch>(m, "MaxOutputSearch")
+        .def(py::init<const AddTree&>())
+        .def("step", &MaxOutputSearch::step)
+        .def("steps", &MaxOutputSearch::steps)
+        .def("step_for", &MaxOutputSearch::step_for)
+        .def("num_solutions", &MaxOutputSearch::num_solutions)
+        .def("num_open", &MaxOutputSearch::num_open)
+        .def("set_mem_capacity", &MaxOutputSearch::set_mem_capacity)
+        .def("time_since_start", &MaxOutputSearch::time_since_start)
+        .def("current_bounds", &MaxOutputSearch::current_bounds)
+        .def("get_solution", &MaxOutputSearch::get_solution)
+        .def("is_optimal", &MaxOutputSearch::is_optimal)
+        .def("prune", [](MaxOutputSearch& s, const py::list& pybox) {
+            Box box = tobox(pybox);
+            BoxRef b(box);
+            return s.prune_by_box(b);
+        })
+
+        // stats
+        .def_readonly("num_steps", &MaxOutputSearch::num_steps)
+        .def_readonly("num_rejected_solutions", &MaxOutputSearch::num_rejected_solutions)
+        .def_readonly("snapshots", &MaxOutputSearch::snapshots)
+
+        // options
+        .def_readwrite("eps", &MaxOutputSearch::eps)
+        .def_readwrite("debug", &MaxOutputSearch::debug)
+        .def_readwrite("max_focal_size", &MaxOutputSearch::max_focal_size)
+        .def_readwrite("auto_eps", &MaxOutputSearch::auto_eps)
+        .def_readwrite("reject_solution_when_output_less_than", &MaxOutputSearch::reject_solution_when_output_less_than)
+
+        // stop condition
+        .def_readwrite("stop_when_num_solutions_exceeds",     &MaxOutputSearch::stop_when_num_solutions_exceeds)
+        .def_readwrite("stop_when_num_new_solutions_exceeds", &MaxOutputSearch::stop_when_num_new_solutions_exceeds)
+        .def_readwrite("stop_when_optimal",                   &MaxOutputSearch::stop_when_optimal)
+        .def_readwrite("stop_when_upper_less_than",           &MaxOutputSearch::stop_when_upper_less_than)
+        .def_readwrite("stop_when_lower_greater_than",        &MaxOutputSearch::stop_when_lower_greater_than)
+
+
+        ; // MaxOutputSearch
+
+    py::class_<MaxOutputSolution>(m, "MaxOutputSolution")
+        .def_readonly("eps", &MaxOutputSolution::eps)
+        .def_readonly("time", &MaxOutputSolution::time)
+        .def_readonly("output", &MaxOutputSolution::output)
+        .def("box", [](const MaxOutputSolution& s) {
+            py::dict d;
+            for (auto&& [feat_id, dom] : s.state.box)
+                d[py::int_(feat_id)] = dom;
+            return d;
+        })
+        .def("__str__", [](const MaxOutputSolution& s) { return tostr(s); })
+        ; // Solution
+        */
+
+    py::class_<Solution>(m, "Solution")
+        .def_readonly("eps", &Solution::eps)
+        .def_readonly("time", &Solution::time)
+        .def_readonly("output", &Solution::output)
+        .def("box", [](const Solution& s) {
+            py::dict d;
+            for (auto&& [feat_id, dom] : s.box)
+                d[py::int_(feat_id)] = dom;
+            return d;
+        })
+        .def("__str__", [](const Solution& s) { return tostr(s); })
+        ; // Solution
+
+    py::class_<Snapshot>(m, "Snapshot")
+        .def_readonly("time", &Snapshot::time)
+        .def_readonly("num_steps", &Snapshot::num_steps)
+        .def_readonly("num_solutions", &Snapshot::num_solutions)
+        .def_readonly("num_open", &Snapshot::num_open)
+        .def_readonly("eps", &Snapshot::eps)
+        .def_readonly("bounds", &Snapshot::bounds)
+        .def_readonly("avg_focal_size", &Snapshot::avg_focal_size)
+        ; // Snapshot
+
 
 
 } /* PYBIND11_MODULE */

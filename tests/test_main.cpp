@@ -891,6 +891,45 @@ void test_constraints1()
 }
 */
 
+void test_get_domain_from_box()
+{
+    std::vector<DomainPair> box;
+    Domain& d1 = get_domain(box, 125);
+    d1 = {100, 200};
+    Domain& d2 = get_domain(box, 13);
+    d2.lo = 10;
+    Domain& d3 = get_domain(box, 138340);
+    d3.hi = 139;
+    Domain& d4 = get_domain(box, 13);
+    d4.hi = 283;
+    Domain& d5 = get_domain(box, 1);
+    d5 = {0, 1};
+
+    for (auto&&[feat_id, dom] : box)
+        std::cout << " - " << feat_id << ": " << dom << std::endl;
+
+    bool result = refine_box(box, 1, {0.2, 0.5});
+    std::cout << "result 1: " << result << std::endl;
+    result = refine_box(box, 125, {50, 150});
+    std::cout << "result 2: " << result << std::endl;
+    result = refine_box(box, 1, {0.1, 0.19});
+    std::cout << "result 3: " << result << std::endl; // should fail
+    result = refine_box(box, 2, {1, 19});
+    std::cout << "result 4: " << result << std::endl;
+    result = refine_box(box, LtSplit(2, 10), true);
+    std::cout << "result 5: " << result << std::endl;
+
+    for (auto&&[feat_id, dom] : box)
+        std::cout << " - " << feat_id << ": " << dom << std::endl;
+
+    // - 1: Dom(0.2,0.5)
+    // - 2: Dom(1,10)
+    // - 13: Dom(10,283)
+    // - 125: Dom(100,150)
+    // - 138340: Dom(< 139)
+
+}
+
 #include "search.hpp"
 
 void test_search1()
@@ -898,22 +937,37 @@ void test_search1()
     AddTree at;
     {
         std::ifstream f;
-        f.open("tests/models/xgb-img-easy.json");
+        f.open("tests/models/xgb-img-hard.json");
         at.from_json(f);
     }
 
     Search<MaxOutputHeuristic> s(at);
+    VSearch& vs = s;
     s.eps = 0.9;
-    for (size_t i = 0; i < 120; i++)
-    {
-        auto &&[lo, hi, top] = s.current_bounds();
-        std::cout << lo << ", " << hi << ", " << top << ", " << s.is_optimal() << std::endl;
-        if (s.step())
-        {
-            std::cout << "done " << s.num_steps << std::endl;
-            break;
-        }
-    }
+    //for (size_t i = 0; i < 120; i++)
+    //{
+    //    auto &&[lo, hi, top] = s.current_bounds();
+    //    std::cout << lo << ", " << hi << ", " << top << ", " << s.is_optimal() << std::endl;
+    //    if (s.step())
+    //    {
+    //        std::cout << "done " << s.num_steps << std::endl;
+    //        break;
+    //    }
+    //}
+    
+    s.stop_when_num_new_solutions_exceeds = 99999;
+    Box box { { 1, {50, 100} } };
+    s.prune_by_box(BoxRef(box));
+    auto stop_reason = vs.step_for(10.0, 100);
+    //StopReason stop_reason = StopReason::NONE;
+    //while ((stop_reason = s.step()) == StopReason::NONE);
+   
+    std::cout << "stop_reason " << stop_reason << std::endl;
+    std::cout << "num_sols " << s.num_solutions() << std::endl;
+    std::cout << "num_steps " << s.num_steps << std::endl;
+    std::cout << "time_since_start " << s.time_since_start() << std::endl;
+    auto &&[lo, up, top] = s.current_bounds();
+    std::cout << "bounds " << lo << ", " << up << ", " << top << std::endl;
 
     //std::vector<int> v = { 5, 6, 2, 10, 12, 59, 102 };
     //std::make_heap(v.begin(), v.end());
@@ -977,5 +1031,6 @@ int main()
 
     //test_constraints1();
     
+    //test_get_domain_from_box();
     test_search1();
 }
