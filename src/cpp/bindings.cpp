@@ -36,10 +36,11 @@ std::string tostr(const T& o)
 
 /** Convert between Python list and C++ Veritas box. */
 Box
-tobox(py::list pybox)
+tobox(py::object pybox)
 {
     Box box;
     FeatId count = 0;
+
     for (const auto& x : pybox)
     {
         Domain d;
@@ -48,13 +49,17 @@ tobox(py::list pybox)
             py::tuple t = py::cast<py::tuple>(x);
             FeatId id = py::cast<FeatId>(t[0]);
             d = py::cast<Domain>(t[1]);
-            //box.push_back({id, dom});
+            count = id;
+        }
+        else if (py::isinstance<py::int_>(x)) // iterating dict
+        {
+            FeatId id = py::cast<FeatId>(x);
+            d = py::cast<Domain>(pybox[x]);
             count = id;
         }
         else if (py::isinstance<Domain>(x))
         {
             d = py::cast<Domain>(x);
-            //box.push_back({count, dom});
         }
         if (!std::isinf(d.lo))
             refine_box(box, LtSplit(count, d.lo), false);
@@ -228,6 +233,14 @@ PYBIND11_MODULE(pyveritas, m) {
                 d[py::int_(feat_id)] = dom;
             return d;
         })
+        .def("prune", [](const TreeRef& r, const py::object& pybox) {
+            Box box = tobox(pybox);
+            BoxRef b(box);
+            AddTree at;
+            Tree t = r.get().prune(b);
+            at.add_tree(std::move(t));
+            return at;
+        })
         ; // TreeRef
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
@@ -246,7 +259,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("get_splits", &AddTree::get_splits)
         .def("add_tree", [](const std::shared_ptr<AddTree>& at) {
                 at->add_tree(); return TreeRef{at, at->size()-1}; })
-        .def("prune", [](AddTree& at, const py::list& pybox) {
+        .def("prune", [](AddTree& at, const py::object& pybox) {
             Box box = tobox(pybox);
             BoxRef b(box);
             //py::print("pruning AddTree using box", tostr(b));
@@ -474,7 +487,7 @@ PYBIND11_MODULE(pyveritas, m) {
             BoxRef b(box);
             return s.get_at_output_for_box(b);
         })
-        .def("prune", [](VSearch& s, const py::list& pybox) {
+        .def("prune", [](VSearch& s, const py::object& pybox) {
             Box box = tobox(pybox);
             BoxRef b(box);
             return s.prune_by_box(b);

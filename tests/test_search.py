@@ -44,10 +44,13 @@ class TestSearch(unittest.TestCase):
         print(at[0])
 
         search = Search.max_output(at)
+        search.debug = True
 
         done = False
         while not done:
             done = search.steps(100)
+
+        print("num_rej", search.num_rejected_solutions)
 
         print(done, search.num_solutions(), search.get_solution(0))
         self.assertTrue(done)
@@ -214,7 +217,8 @@ class TestSearch(unittest.TestCase):
             print(at.eval([d.lo for d in sol.box().values()])[0],
                     sol.output,
                     search.get_solstate_field(i, "g"),
-                    search.get_solstate_field(i, "dist"))
+                    search.get_solstate_field(i, "dist"),
+                    sol.box(), example, ypred, at.eval(get_closest_example(sol.box(), example)))
 
         print(search.current_bounds())
 

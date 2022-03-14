@@ -60,9 +60,9 @@ class RobustnessSearch:
             if len(generated_examples) > 0:
                 for example in generated_examples:
                     example_delta = self._calc_example_delta(example) + self.guard
-                    print("example_delta", example_delta, self.guard, best_example_delta)
-                    print("max_output_diff", max_output_diff,
-                            self.at.eval(example)[0], self.at.eval(self.example)[0])
+                    #print("example_delta", example_delta, self.guard, best_example_delta)
+                    #print("max_output_diff", max_output_diff,
+                    #        self.at.eval(example)[0], self.at.eval(self.example)[0])
                     best_example_delta = min(best_example_delta, example_delta)
                     self.generated_examples.append(example)
 
@@ -72,12 +72,14 @@ class RobustnessSearch:
             if max_output_diff >= 0.0:
                 upper = min(delta, best_example_delta)
                 delta = upper - 0.5 * (upper - lower)
-                maybe_sat_str = "maybe SAT" if len(generated_examples) == 0 else "SAT"
-                print(f"[{self.i}]: {maybe_sat_str} delta update: {old_delta:.5f}/{best_example_delta:.5f}"
-                      f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
+                maybe_sat_str = "? SAT" if len(generated_examples) == 0 else "  SAT"
+                t = timeit.default_timer() - self.start_time
+                print(f"[{self.i} {t:3.1f}s]:"
+                      f" {maybe_sat_str} for delta {old_delta:.5f}" #/{best_example_delta:.5f}"
+                      f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]", end="")
                 if len(generated_examples):
-                    print(f"   -> generated adv.example w/ delta",
-                            best_example_delta-self.guard)
+                    print(" (!) ex.w/ delta", best_example_delta-self.guard)
+                else: print()
             else: # no adv. can exist
                 if delta == upper and lower == 0.0:
                     lower = delta
@@ -90,7 +92,8 @@ class RobustnessSearch:
                 else:
                     lower = delta
                     delta = lower + 0.5 * (upper - lower)
-                print(f"[{self.i}]: UNSAT delta update: {old_delta:.3f}"
+                print(f"[{self.i} {t:3.1f}s]:"
+                      f" UNSAT for delta {old_delta:.5f}"
                       f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
 
             if self.stop_condition(lower, upper):
@@ -167,6 +170,25 @@ class VeritasRobustnessSearch(RobustnessSearch):
     def get_max_output_difference(self, delta):
         s = self.get_search(delta)
 
+        #milp = KantchelianOutputOpt(self.at, silent=True)
+        #milp.constrain_to_box([Domain(x-delta, x+delta) for x in self.example])
+        #milp.model.update()
+        #m = milp.model.relax()
+        #print()
+        #print("====================================")
+        ##m.setParam("OutputFlag", 0)
+        #m.setParam("Threads", 1)
+        #t=timeit.default_timer()
+        #m.optimize()
+        #t = timeit.default_timer() - t
+        #print("SECONDS", t)
+        #import gurobipy as gu
+        #kanup = m.getAttr(gu.GRB.Attr.ObjBound)
+        #kanlo = m.getAttr(gu.GRB.Attr.ObjVal)
+        #print("mip relax", kanup, kanlo)
+        #print("====================================")
+        #print()
+
         rem_time = self.max_time - timeit.default_timer() + self.start_time
         #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
         rem_time /= (self.num_steps - self.i)
@@ -178,7 +200,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         stop_reason = s.step_for(rem_time, 50)
 
         upper_bound = s.current_bounds()[1]
-        print("stop reason", stop_reason, upper_bound)
+        #print("stop reason", stop_reason, upper_bound)
         max_output_diff = upper_bound
         generated_examples = []
         if s.num_solutions() > 0:
@@ -189,10 +211,10 @@ class VeritasRobustnessSearch(RobustnessSearch):
                 closest = get_closest_example(best_sol, self.example)
                 generated_examples = [closest]
 
-        print("VERITAS numsol", s.num_solutions())
-        print("VERITAS num rej sol", s.num_rejected_solutions)
-        print("VERITAS num steps", s.num_steps, "{:.2f}k/sec".format(s.num_steps / 1000 / s.time_since_start()))
-        print("VERITAS focal_size", np.mean([sn.avg_focal_size for sn in s.snapshots]))
+        #print("VERITAS numsol", s.num_solutions())
+        #print("VERITAS num rej sol", s.num_rejected_solutions)
+        #print("VERITAS num steps", s.num_steps, "{:.2f}k/sec".format(s.num_steps / 1000 / s.time_since_start()))
+        #print("VERITAS focal_size", np.mean([sn.avg_focal_size for sn in s.snapshots]))
 
         return max_output_diff, generated_examples
 

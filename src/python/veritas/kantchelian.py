@@ -131,7 +131,7 @@ class KantchelianBase:
         pvars = {}
         for attribute, split_values in self.split_values.items():
             for k, split_value in enumerate(split_values): # split values are sorted
-                var = self.model.addVar(vtype=gu.GRB.BINARY, name=f"p{attribute}-{k}")
+                var = self.model.addVar(vtype=gu.GRB.BINARY, name=f"p{attribute}_{k}")
                 pvars[(attribute, split_value)] = var
         return pvars
 
@@ -147,7 +147,7 @@ class KantchelianBase:
                     return leafs_of_node[node]
                 if tree.is_leaf(node):
                     var = self.model.addVar(lb=0.0, ub=1.0,
-                            name=f"l{tree_index}-{node}")
+                            name=f"l{tree_index}_{node}")
                     leafs = [(node)]
                 else:
                     split = tree.get_split(node)
@@ -196,14 +196,14 @@ class KantchelianBase:
 
                 if tree.is_root(node):
                     # if pvar is true, then the right branch cannot contain a true leaf
-                    self.model.addConstr(right_sum+pvar == 1.0, name=f"pl_consist_r{node}")
+                    self.model.addConstr(right_sum+pvar == 1.0, name=f"plc_r{node}")
                     # if pvar is false, then left sum cannot contain a true leaf
-                    self.model.addConstr(left_sum-pvar == 0.0, name=f"pl_consist_l{node}")
+                    self.model.addConstr(left_sum-pvar == 0.0, name=f"plc_l{node}")
                 else:
                     # if pvar is true, right cannot have a true leaf
-                    self.model.addConstr(right_sum+pvar <= 1.0, name=f"pl_consist_r{node}")
+                    self.model.addConstr(right_sum+pvar <= 1.0, name=f"plc_r{node}")
                     # if pvar is false, left cannot have a true leaf
-                    self.model.addConstr(left_sum-pvar <= 0.0, name=f"pl_consist_l{node}")
+                    self.model.addConstr(left_sum-pvar <= 0.0, name=f"plc_l{node}")
 
                 stack += [right, left]
 
@@ -214,7 +214,7 @@ class KantchelianBase:
             var0 = self.pvars[(attribute, split_values[0])]
             for k, split_value1 in enumerate(split_values[1:]):
                 var1 = self.pvars[(attribute, split_value1)]
-                self.model.addConstr(var0 <= var1, f"p_consist{k}")
+                self.model.addConstr(var0 <= var1, f"pc{k}")
                 var0 = var1
 
     def _add_mislabel_constraint(self, at, node_info_per_tree, target_output): # uses self.model

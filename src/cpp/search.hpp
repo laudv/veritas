@@ -24,6 +24,7 @@ namespace veritas {
 
     /** \private */
     using time_point = std::chrono::time_point<std::chrono::system_clock>;
+    struct BaseHeuristic; /* heuristics.hpp */
 
     struct Solution {
         double time; 
@@ -74,38 +75,51 @@ namespace veritas {
 #undef VER_STOP_REASON_CASE
     }
 
+    /** Iterator over leafs overlapping with a box. */
     class LeafIter {
+    public:
+        std::vector<Domain> flatbox;
+
+    private:
         std::vector<NodeId> stack_;
-        std::vector<Domain> flatbox_;
         const Tree* tree_ = nullptr;
 
         void copy_to_flatbox_(BoxRef box)
         {
-            std::fill(flatbox_.begin(), flatbox_.end(), Domain{});
+            std::fill(flatbox.begin(), flatbox.end(), Domain{});
             for (auto &&[feat_id, dom] : box)
-                flatbox_.at(feat_id) = dom;
+                flatbox.at(feat_id) = dom;
         }
 
     public:
 
-        /* setup the iterator */
-        void setup(const Tree& t, BoxRef box)
+        void setup_tree(const Tree& t)
         {
             tree_ = &t;
             if (!stack_.empty())
                 throw std::runtime_error("iter stack not empty");
             stack_.push_back(t.root().id());
+        }
 
+        void setup_flatbox(BoxRef box)
+        {
             if (!box.is_null_box())
             {
                 FeatId max_feat_id = (box.end()-1)->feat_id;
-                if (flatbox_.size() <= static_cast<size_t>(max_feat_id))
+                if (flatbox.size() <= static_cast<size_t>(max_feat_id))
                 {
-                    //std::cout << "resizing flatbox_ to " << (max_feat_id+1) << std::endl;
-                    flatbox_.resize(max_feat_id+1);
+                    //std::cout << "resizing flatbox to " << (max_feat_id+1) << std::endl;
+                    flatbox.resize(max_feat_id+1);
                 }
             }
             copy_to_flatbox_(box);
+        }
+
+        /* setup the iterator */
+        void setup(const Tree& t, BoxRef box)
+        {
+            setup_tree(t);
+            setup_flatbox(box);
         }
 
         /* find next overlapping leaf */
@@ -121,8 +135,8 @@ namespace veritas {
 
                 const LtSplit& s = n.get_split();
                 Domain d;
-                if (static_cast<size_t>(s.feat_id) < flatbox_.size())
-                    d = flatbox_[s.feat_id];
+                if (static_cast<size_t>(s.feat_id) < flatbox.size())
+                    d = flatbox[s.feat_id];
 
                 // null box is quick indicator that node is unreachable due to
                 // additional constraints
@@ -198,6 +212,7 @@ namespace veritas {
         size_t mem_capacity_;
         time_point start_time_;
 
+        friend BaseHeuristic;
         friend Heuristic;
         using State = typename Heuristic::State;
 
@@ -224,9 +239,9 @@ namespace veritas {
         /** how many open states did we look at in `pop_from_focal_`? */
         size_t sum_focal_size_ = 0;
 
-        FloatT last_eps_update_time_ = 0;
-        FloatT avg_eps_update_time_ = 0.1;
-        FloatT eps_increment_ = 0.1;
+        FloatT last_eps_update_time_ = 0.0;
+        FloatT avg_eps_update_time_ = 0.02;
+        FloatT eps_increment_ = 0.05;
 
     public:
         Heuristic heuristic;
@@ -255,12 +270,11 @@ namespace veritas {
             //    : pop_top_();
             
             State state = pop_from_focal_();
-            //heuristic.print_state(std::cout, state);
 
             if (is_solution_(state))
             {
                 if (heuristic.output_overestimate(state) <
-                        reject_solution_when_output_less_than) // TODO
+                        reject_solution_when_output_less_than)
                 {
                     std::cout << "rejected " << heuristic.output_overestimate(state)
                         << " < " << reject_solution_when_output_less_than
@@ -509,16 +523,15 @@ namespace veritas {
                 }
             });
 
-            auto cmp = [this](const State& a, const State& b) {
-                return heuristic.cmp_open_score(a, b); };
-
             // sort solutions
             size_t i = solutions_.size()-1;
             for (; i > 0; --i)
             {
                 auto& sol1 = solutions_[i-1];
                 auto& sol2 = solutions_[i];
-                if (cmp(sol1.state, sol2.state))
+                // if a solution lower in the list (sol2) is better than a
+                // solution higher in the list (sol1), then swap them
+                if (heuristic.cmp_open_score(sol2.state, sol1.state))
                     std::swap(sol1, sol2);
                 else return i;
             }
@@ -589,59 +602,12 @@ namespace veritas {
             workspace_.box.clear();
         }
 
-        // todo move
-        FloatT compute_basic_output_heuristic_(const State& state) const
-        {
-            FloatT h = 0.0;
-            for (size_t tree_index = state.indep_set + 1;
-                    tree_index < at_.size(); ++tree_index)
-            {
-                FloatT max = -FLOATT_INF;
-                const Tree& t = at_[tree_index];
-                workspace_.leafiter2.setup(t, state.box);
-                NodeId leaf_id = -1;
-                while ((leaf_id = workspace_.leafiter2.next()) != -1)
-                {
-                    if (node_box_[tree_index][leaf_id].is_null_box())
-                    {
-                        //std::cout << "skipping2 " << leaf_id << " because constraints" << std::endl;
-                        continue;
-                    }
-                    max = std::max(t[leaf_id].leaf_value(), max);
-                }
-                h += max;
-            }
-            return h;
-        }
-
-        // todo move
-        FloatT compute_lp_heuristic_(const State& state) const
-        {
-            FloatT h = 0.0;
-            for (size_t tree_index = state.indep_set + 1;
-                    tree_index < at_.size(); ++tree_index)
-            {
-                FloatT min = +FLOATT_INF;
-                const Tree& t = at_[tree_index];
-                workspace_.leafiter2.setup(t, state.box);
-                NodeId leaf_id = -1;
-                while ((leaf_id = workspace_.leafiter2.next()) != -1)
-                {
-                    BoxRef box = node_box_[tree_index][leaf_id];
-                    if (box.is_null_box())
-                        continue;
-                    min = std::min(cmpbox(state.box, box), min);
-                }
-                h += min;
-            }
-            return h;
-        }
-
         void push_(State&& state)
         {
             //size_t state_index = push_state_(std::move(state));
             auto cmp = [this](const State& a, const State& b) {
-                return heuristic.cmp_open_score(a, b); };
+                return heuristic.cmp_open_score(b, a); // (!) reverse: max-heap with less-than cmp
+            };
             push_to_heap_(open_, std::move(state), cmp);
             //return state_index;
         }
@@ -649,7 +615,8 @@ namespace veritas {
         State pop_top_()
         {
             auto cmp = [this](const State& a, const State& b) {
-                return heuristic.cmp_open_score(a, b); };
+                return heuristic.cmp_open_score(b, a); // (!) reverse: max-heap with less-than cmp
+            };
             return pop_from_heap_(open_, cmp);
         }
 
@@ -664,13 +631,14 @@ namespace veritas {
             if (max_focal_size <= 1)
                 return pop_top_();
 
+            // reverse order of a and b, heap functions require less-than comparision
             auto cmp_i = [this](size_t a, size_t b) {
-                return heuristic.cmp_open_score(open_[a], open_[b]); };
+                return heuristic.cmp_open_score(open_[b], open_[a]); };
             auto cmp_s = [this](const State& a, const State& b) {
-                return heuristic.cmp_open_score(a, b); };
+                return heuristic.cmp_open_score(b, a); };
 
             FloatT oscore = heuristic.open_score(open_.front());
-            FloatT omin = oscore - (1.0-eps)*std::abs(oscore);
+            FloatT orelax = heuristic.relax_open_score(oscore, eps);
             FloatT i_best = 0;
             size_t focal_size = 0;
 
@@ -692,13 +660,16 @@ namespace veritas {
                 if (++focal_size >= max_focal_size)
                     break;
 
-                //std::cout << "  i=" << i << ", omin=" << omin
+                //std::cout << num_steps << ": " << "ref_oscore=" << oscore << ", orelax=" << orelax
                 //    <<", best=" << heuristic.open_score(open_[i_best]) << "/" << open_[i_best].indep_set << ": ";
                 //heuristic.print_state(std::cout, s);
-
-                if (2*i+1 < open_.size() && heuristic.open_score(open_[2*i+1]) >= omin)
+                
+                FloatT oscore1 = heuristic.open_score(open_[2*i+1]);
+                if (2*i+1 < open_.size() && heuristic.cmp_open_score(oscore1, orelax))
                     push_to_heap_(workspace_.focal, 2*i+1, cmp_i);
-                if (2*i+2 < open_.size() && heuristic.open_score(open_[2*i+2]) >= omin)
+
+                FloatT oscore2 = heuristic.open_score(open_[2*i+2]);
+                if (2*i+2 < open_.size() && heuristic.cmp_open_score(oscore2, orelax))
                     push_to_heap_(workspace_.focal, 2*i+2, cmp_i);
             }
 
@@ -723,12 +694,16 @@ namespace veritas {
             std::pop_heap(heap.begin(), heap.end(), cmp);
             T s = heap.back();
             heap.pop_back();
-            if constexpr (std::is_same<T, State>::value)
-                std::cout << "first " << heuristic.open_score(s)
-                    << ", second " << heuristic.open_score(heap.front()) << std::endl;
+            //if constexpr (std::is_same<T, State>::value)
+            //    std::cout << "first " << heuristic.open_score(s)
+            //        << ", second " << heuristic.open_score(heap.front()) << std::endl;
             return s;
         }
 
+        /**
+         * max-heap with less-than comparison, i.e.,
+         * cmp(a, b) == True <=> a must be lower in the heap than b
+         */
         template <typename T, typename CmpT>
         T pop_index_heap_(std::vector<T>& heap, size_t index, const CmpT& cmp)
         {
