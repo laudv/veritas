@@ -259,6 +259,9 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("get_splits", &AddTree::get_splits)
         .def("add_tree", [](const std::shared_ptr<AddTree>& at) {
                 at->add_tree(); return TreeRef{at, at->size()-1}; })
+        .def("add_tree", [](const std::shared_ptr<AddTree>& at, const TreeRef& tref) {
+                at->add_tree(tref.get()); // copy
+                return TreeRef{at, at->size()-1}; })
         .def("prune", [](AddTree& at, const py::object& pybox) {
             Box box = tobox(pybox);
             BoxRef b(box);

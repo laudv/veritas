@@ -37,15 +37,11 @@ class KantchelianBase:
     def __init__(self, split_values, max_time=1e100, silent=True):
         self.guard = 1e-4
         self.split_values = split_values
-        self.env = gu.Env(empty=True)
-        self.env.setParam("Threads", 1)
+        self.model = gu.Model("KantchelianAttack")
         if silent:
-            self.env.setParam("OutputFlag", 0)
-        try:
-            self.model = gu.Model("KantchelianAttack", env=self.env) # requires license
-        except:
-            print("Gurobi: could not set env, using defaults")
-            self.model = gu.Model("KantchelianAttack")#, env=self.env) # requires license
+            self.model.setParam("OutputFlag", 0)
+        self.model.setParam("Threads", 1)
+
         self.pvars = self._construct_pvars()
 
         self.max_time = max_time
@@ -54,6 +50,7 @@ class KantchelianBase:
         self.bounds = []
         self.times = []
         self.force_stop = False
+        self.finished = False
 
     def stats(self):
         return {
@@ -62,16 +59,21 @@ class KantchelianBase:
             "max_time": self.max_time,
             "time": self.total_time,
             "time_p": self.total_time_p,
-            "force_stop": self.force_stop
+            "force_stop": self.force_stop,
+            "finished": self.finished,
         }
 
     def optimize(self):
         self.start_time = timeit.default_timer()
         self.start_time_p = time.process_time()
         self.model.optimize(self._optimize_callback())
-        up = self.model.getAttr(gu.GRB.Attr.ObjBound)
-        lo = self.model.getAttr(gu.GRB.Attr.ObjVal)
-        self.bounds.append((lo, up))
+        try:
+            up = self.model.getAttr(gu.GRB.Attr.ObjBound)
+            lo = self.model.getAttr(gu.GRB.Attr.ObjVal)
+            self.bounds.append((lo, up))
+            self.finished = True
+        except:
+            pass
         self.total_time = timeit.default_timer() - self.start_time
         self.total_time_p = time.process_time() - self.start_time_p
         self.times.append((self.total_time, self.total_time_p))

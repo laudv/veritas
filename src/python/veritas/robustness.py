@@ -53,7 +53,9 @@ class RobustnessSearch:
 
         for self.i in range(self.num_steps):
             self.delta_log.append((delta, lower, upper, timeit.default_timer()-self.start_time))
-            res = self.get_max_output_difference(delta)
+            step_time = self.get_step_time()
+            if step_time < 0.0: break
+            res = self.get_max_output_difference(delta, step_time)
             if res is None: break
             max_output_diff, generated_examples = res
             best_example_delta = delta
@@ -106,7 +108,15 @@ class RobustnessSearch:
 
         return delta, lower, upper
 
-    def get_max_output_difference(self, delta): # returns (max_output_diff, [list of generated_example])
+    def get_step_time(self):
+        rem_time = self.max_time - timeit.default_timer() + self.start_time
+        #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
+        rem_time /= (self.num_steps - self.i)
+        #print("step time", rem_time, self.max_time, self.num_steps)
+        return rem_time
+
+    # returns (max_output_diff, [list of generated_example])
+    def get_max_output_difference(self, delta, max_time):
         """
         Return tuple
          - [0] max_output_diff: (max. possible output of target_at)
@@ -167,7 +177,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         s.prune(box)
         return s
 
-    def get_max_output_difference(self, delta):
+    def get_max_output_difference(self, delta, max_time):
         s = self.get_search(delta)
 
         #milp = KantchelianOutputOpt(self.at, silent=True)
@@ -189,16 +199,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         #print("====================================")
         #print()
 
-        rem_time = self.max_time - timeit.default_timer() + self.start_time
-        #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
-        rem_time /= (self.num_steps - self.i)
-        #print("step time", rem_time, self.max_time, self.num_steps)
-
-        if rem_time < 0.0:
-            return None
-
-        stop_reason = s.step_for(rem_time, 50)
-
+        stop_reason = s.step_for(max_time, 100)
         upper_bound = s.current_bounds()[1]
         #print("stop reason", stop_reason, upper_bound)
         max_output_diff = upper_bound
@@ -239,21 +240,13 @@ class MilpRobustnessSearch(RobustnessSearch):
         milp.constrain_to_box(box)
         return milp
 
-    def get_max_output_difference(self, delta):
-        rem_time = self.max_time - timeit.default_timer() + self.start_time
-        #rem_time = min(rem_time, 2.0 * self.max_time / self.num_steps)
-        rem_time /= (self.num_steps - self.i)
-        #print("step time", rem_time, self.max_time, self.num_steps)
-
-        if rem_time < 0.0:
-            return None
-
+    def get_max_output_difference(self, delta, max_time):
         if self.silent:
             with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
-                milp = self.get_milp(delta, rem_time)
+                milp = self.get_milp(delta, max_time)
                 milp.optimize()
         else:
-            milp = self.get_milp(delta, rem_time)
+            milp = self.get_milp(delta, max_time)
             milp.optimize()
 
         generated_examples = []
