@@ -169,12 +169,16 @@ namespace veritas {
         FloatT base_score() const { return at_.base_score; }
 
     public:
+        virtual ~VSearch() { /* required, otherwise pybind11 memory leak */ }
+
         virtual StopReason step() = 0;
         virtual StopReason steps(size_t num_steps) = 0;
         virtual StopReason step_for(double num_seconds, size_t num_steps) = 0;
         virtual size_t num_solutions() const = 0;
         virtual size_t num_open() const = 0;
         virtual void set_mem_capacity(size_t bytes) = 0;
+        virtual size_t remaining_mem_capacity() const = 0;
+        virtual size_t used_mem_size() const = 0;
         virtual double time_since_start() const = 0;
         virtual std::tuple<FloatT, FloatT, FloatT> current_bounds() const = 0;
         virtual const Solution& get_solution(size_t solution_index) const = 0;
@@ -349,6 +353,7 @@ namespace veritas {
         void set_mem_capacity(size_t bytes) { mem_capacity_ = bytes; }
         size_t remaining_mem_capacity() const
         { return mem_capacity_ - store_.get_mem_size(); }
+        size_t used_mem_size() const { return store_.get_used_mem_size(); }
 
         /** Seconds since the construction of the search */
         double time_since_start() const

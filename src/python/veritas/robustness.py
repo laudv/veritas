@@ -94,6 +94,7 @@ class RobustnessSearch:
                 else:
                     lower = delta
                     delta = lower + 0.5 * (upper - lower)
+                t = timeit.default_timer() - self.start_time
                 print(f"[{self.i} {t:3.1f}s]:"
                       f" UNSAT for delta {old_delta:.5f}"
                       f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
@@ -216,6 +217,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         #print("VERITAS num rej sol", s.num_rejected_solutions)
         #print("VERITAS num steps", s.num_steps, "{:.2f}k/sec".format(s.num_steps / 1000 / s.time_since_start()))
         #print("VERITAS focal_size", np.mean([sn.avg_focal_size for sn in s.snapshots]))
+        del s
 
         return max_output_diff, generated_examples
 

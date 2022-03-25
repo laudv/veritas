@@ -248,7 +248,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def(py::init<const AddTree&, size_t, size_t>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("copy", [](const AddTree& at) { return AddTree(at); })
-        .def("__getitem__", [](std::shared_ptr<AddTree> at, size_t i) {
+        .def("__getitem__", [](const std::shared_ptr<AddTree>& at, size_t i) {
                 if (i < at->size())
                     return TreeRef{at, i};
                 throw py::value_error("out of bounds access into AddTree");
@@ -480,6 +480,8 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("num_solutions", &VSearch::num_solutions)
         .def("num_open", &VSearch::num_open)
         .def("set_mem_capacity", &VSearch::set_mem_capacity)
+        .def("remaining_mem_capacity", &VSearch::remaining_mem_capacity)
+        .def("used_mem_size", &VSearch::used_mem_size)
         .def("time_since_start", &VSearch::time_since_start)
         .def("current_bounds", &VSearch::current_bounds)
         .def("get_solution", &VSearch::get_solution)
