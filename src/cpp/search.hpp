@@ -11,7 +11,8 @@
 
 #include "domain.hpp"
 #include "tree.hpp"
-#include "graph.hpp"
+#include "block_store.hpp"
+//#include "graph.hpp"
 //#include "constraints.hpp"
 #include <iostream>
 #include <chrono>
@@ -150,7 +151,6 @@ namespace veritas {
         }
     };
 
-
     /** See Search */
     class VSearch {
     protected:
@@ -204,21 +204,55 @@ namespace veritas {
         // statistics
         size_t num_steps = 0;
         size_t num_rejected_solutions = 0;
+        size_t num_rejected_states = 0;
+        size_t num_callback_calls = 0;
         std::vector<Snapshot> snapshots;
     };
 
+    template <typename H>
+    class Search;
 
+    template <typename Heuristic>
+    class CallbackContext {
+        Search<Heuristic>& search_;
+        size_t caret_;
+        int callback_group_;
 
+    public:
+        CallbackContext(Search<Heuristic>& search, size_t caret, int callback_group)
+            : search_(search)
+            , caret_(caret)
+            , callback_group_(callback_group) {}
+
+        void duplicate() { search_.duplicate_expand_frame_(caret_+1); }
+
+        void intersect(FeatId feat_id, Domain dom)
+        {
+            search_.intersect_flatbox_feat_dom_(caret_, feat_id, dom,
+                    callback_group_);
+        }
+
+        void intersect(FeatId feat_id, FloatT lo, FloatT hi)
+        { intersect(feat_id, Domain(lo, hi)); }
+
+        Domain get(FeatId feat_id) const
+        { return search_.get_flatbox_feat_dom_(feat_id); }
+    };
+
+    template <typename H>
+    using Callback = std::function<void(CallbackContext<H>&, Domain)>;
 
     template <typename Heuristic>
     class Search : public VSearch {
-        Graph graph_;
+        /*Graph graph_;*/
         size_t mem_capacity_;
         time_point start_time_;
 
         friend BaseHeuristic;
         friend Heuristic;
+        friend CallbackContext<Heuristic>;
         using State = typename Heuristic::State;
+        using Context = CallbackContext<Heuristic>;
 
         std::vector<State> open_;
 
@@ -230,8 +264,21 @@ namespace veritas {
 
         BlockStore<DomainPair> store_;
 
+        struct CallbackAndGroup {
+            Callback<Heuristic> cb;
+            int grp;
+        };
+
+        int callback_group_count_ = 0;
+        std::vector<std::vector<CallbackAndGroup>> callbacks_;
+
         mutable struct {
+            /** \private */ bool reject_flag;
             /** \private */ Box box;
+            /** \private */ std::vector<Domain> flatbox;
+            /** \private */ std::vector<Domain> flatbox_frames;
+            /** \private */ std::vector<size_t> flatbox_offset;
+            /** \private */ std::vector<size_t> flatbox_caret;
             /** \private */ std::vector<size_t> focal;
             /** \private */ LeafIter leafiter1; // expand_
             /** \private */ LeafIter leafiter2; // heurstic computation
@@ -254,7 +301,7 @@ namespace veritas {
         template <typename... HeurArgs>
         Search(const AddTree& at, HeurArgs... heur_args)
             : VSearch(at)
-            , graph_(at_)
+            /*, graph_(at_)*/
             , mem_capacity_(size_t(1024)*1024*1024)
             , start_time_{std::chrono::system_clock::now()}
             , heuristic(heur_args...)
@@ -262,7 +309,9 @@ namespace veritas {
             init_();
         }
 
-        StopReason step()
+        StopReason step() { return stepv(); } // !! virtual, vtable lookup required
+
+        StopReason stepv() // non virtual
         {
             ++num_steps;
 
@@ -308,7 +357,7 @@ namespace veritas {
             for (; stop_reason == StopReason::NONE
                     && step_count < num_steps; ++step_count)
             {
-                stop_reason = step();
+                stop_reason = stepv();
                 if (num_sol + stop_when_num_new_solutions_exceeds
                         <= num_solutions())
                     return StopReason::NUM_NEW_SOLUTIONS_EXCEEDED;
@@ -377,7 +426,8 @@ namespace veritas {
             }
             if (num_solutions() > 0)
             {
-                lo = heuristic.open_score(solutions_[0].state); // best solution so far, sols are sorted
+                // best solution so far, sols are sorted
+                lo = heuristic.open_score(solutions_[0].state);
                 if (open_.size() == 0 || (up < lo))
                     up = lo;
             }
@@ -432,7 +482,7 @@ namespace veritas {
         {
             if (open_.size() > 1)
                 throw std::runtime_error("invalid state: pruning after search has started");
-            graph_.prune_by_box(box, false);
+            /*graph_.prune_by_box(box, false);*/
 
             for (size_t tree_index = 0; tree_index < at_.size(); ++tree_index)
             {
@@ -441,7 +491,8 @@ namespace veritas {
                     if (node_box.overlaps(box))
                     {
                         combine_boxes(node_box, box, false, workspace_.box);
-                        node_box = BoxRef(store_.store(workspace_.box, remaining_mem_capacity()));
+                        node_box = BoxRef(store_.store(workspace_.box,
+                                    remaining_mem_capacity()));
                         workspace_.box.clear();
                     }
                     else
@@ -451,6 +502,22 @@ namespace veritas {
                 }
             }
         }
+
+        /** Callback is called when the feature with id `feat_id` is updated. */
+        void add_callback(FeatId feat_id, Callback<Heuristic>&& c, int callback_group = -1)
+        {
+            if (feat_id < 0) return;
+            if (callbacks_.size() <= static_cast<size_t>(feat_id))
+                callbacks_.resize(feat_id+1);
+            if (callback_group == -1)
+                callback_group = this->callback_group();
+            callbacks_.at(feat_id).push_back({std::move(c), callback_group});
+        }
+
+        /** Get a callback group. Use in `add_callback` to give each callback
+         * of the same constraint the same group number. This prevents
+         * callbacks of the same constraint calling each other repeatedly. */
+        int callback_group() { return callback_group_count_++; }
 
 
 
@@ -566,44 +633,210 @@ namespace veritas {
             NodeId leaf_id = -1;
             while ((leaf_id = workspace_.leafiter1.next()) != -1)
             {
-                if (node_box_[next_tree][leaf_id].is_null_box())
+                BoxRef leaf_box = node_box_[next_tree][leaf_id];
+                if (leaf_box.is_null_box())
                 {
-                    //std::cout << "skipping1 " << leaf_id << " because constraints " << next_tree << std::endl;
+                    //std::cout << "skip1" << leaf_id << " because constraints " << next_tree << std::endl;
                     continue;
                 }
-                BoxRef leaf_box = node_box_[next_tree][leaf_id];
-                if (leaf_box.overlaps(state.box))
+                //if (leaf_box.overlaps(state.box))
+                //{
+                //    // we want to add refine this state by combining state.box with the leaf's box.
+                //    // the state box' flatbox is in leafiter1.flatbox
+                //    //      --> CANNOT CHANGE this flatbox, would invalidate iteration!!
+                //    // TODO 
+                //    //  - detect which feature's domain has changed,
+                //    //  - call listeners for those attributes
+                //    
+                //    for (auto&&[feat_id, dom] : leaf_box)
+                //    {
+                //        Domain dom2;
+                //        if (workspace_.leafiter1.flatbox.size() > static_cast<size_t>(feat_id))
+                //            dom2 = workspace_.leafiter1.flatbox[feat_id];
+                //        std::cout << feat_id << ": " << dom2
+                //            << " + "
+                //            << dom << " of leaf " << leaf_id << " => "
+                //            << dom.intersect(dom2)
+                //            << " changed? " << static_cast<int>(dom2 != dom.intersect(dom2))
+                //            << std::endl;
+                //    }
+
+                //    combine_boxes(leaf_box, state.box, true, workspace_.box);
+                //    construct_and_push_states_(state, t[leaf_id].leaf_value());
+                //}
+                //else
+                //{
+                //    std::cout << "overlaps but doesn't actually overlap??\n";
+                //}
+
+                workspace_.flatbox_offset.clear();
+                workspace_.flatbox_caret.clear();
+                workspace_.flatbox.resize(workspace_.leafiter1.flatbox.size());
+                std::copy(workspace_.leafiter1.flatbox.begin(),
+                        workspace_.leafiter1.flatbox.end(),
+                        workspace_.flatbox.begin());
+
+                FeatId max_feat_id = 0;
+                if (!leaf_box.is_null_box())
+                    max_feat_id = (leaf_box.end()-1)->feat_id;
+                if (workspace_.flatbox.size() <= static_cast<size_t>(max_feat_id))
+                    workspace_.flatbox.resize(max_feat_id+1);
+                for (auto &&[feat_id, leaf_dom] : leaf_box)
                 {
-                    combine_boxes(leaf_box, state.box, true, workspace_.box);
-                    construct_and_push_states_(state, t[leaf_id].leaf_value());
+                    Domain new_dom = workspace_.flatbox[feat_id].intersect(leaf_dom);
+                    workspace_.flatbox[feat_id] = new_dom;
                 }
-                else
-                {
-                    std::cout << "overlaps but doesn't actually overlap??\n";
-                }
+
+                while (pop_expand_frame_())
+                    construct_and_push_state_(state, t[leaf_id].leaf_value());
             }
         }
 
-        void construct_and_push_states_(const State& parent, FloatT leaf_value)
+        /*
+         * if there is a frame in workspace_.flatbox, it processes that frame
+         * if not, it copies the last frame in workspace_.flatbox_frames[b..],
+         * with b = workspace_.flatbox_offset[-1]
+         */
+        bool pop_expand_frame_()
         {
-            auto push_workspace_box_fun = [this, parent, leaf_value](Box& b){
+            size_t caret = 0;
+            workspace_.reject_flag = false;
+
+            // pop frame from flatbox_frames into flatbox in workspace_
+            if (workspace_.flatbox.empty())
+            {
+                // no more frames
+                if (workspace_.flatbox_frames.empty())
+                    return false;
+
+                // continue with a frame on the framestack
+                std::cout << "popping frame from frames... "
+                    << workspace_.flatbox_frames.size();
+
+                // copy last frame to workspace_.flatbox
+                size_t begin = workspace_.flatbox_offset.back();
+                size_t end = workspace_.flatbox_frames.size();
+                workspace_.flatbox.resize(end-begin);
+                std::copy(workspace_.flatbox_frames.begin()+begin,
+                          workspace_.flatbox_frames.begin()+end,
+                          workspace_.flatbox.begin());
+                caret = workspace_.flatbox_caret.back();
+
+                // drop frame from flatbox_frames
+                workspace_.flatbox_frames.resize(begin);
+                workspace_.flatbox_offset.pop_back();
+                workspace_.flatbox_caret.pop_back();
+
+                std::cout << " -> " << workspace_.flatbox_frames.size() << std::endl;
+            }
+
+            // compare for changes with respect to state box, which
+            // conveniently happens to be in leafiter1's flatbox!
+            for (size_t i = caret; i < workspace_.flatbox.size(); ++i)
+            {
+                Domain old_dom;
+                if (i < workspace_.leafiter1.flatbox.size())
+                    old_dom = workspace_.leafiter1.flatbox[i];
+                if (old_dom != workspace_.flatbox[i])
+                {
+                    //std::cout << "notify " << i << ": "
+                    //    << old_dom
+                    //    << " -> "
+                    //    << workspace_.flatbox[i] << std::endl;
+                    notify_flatbox_change_(i, static_cast<FeatId>(i),
+                            workspace_.flatbox[i], /* callback group */ -1);
+                    if (workspace_.reject_flag)
+                        break;
+                }
+            }
+
+            return true;
+        }
+
+        /* assumes workspace_.flatbox and workspace_.flatbox_stack set */
+        void duplicate_expand_frame_(size_t caret)
+        {
+            if (!workspace_.reject_flag)
+            {
+                // branch, put current flatbox on frame and continue with a 'new' one
+                // continue with the current one later (next call of pop_expand_frame_)
+                workspace_.flatbox_offset.push_back(workspace_.flatbox_offset.size());
+                workspace_.flatbox_caret.push_back(caret);
+                for (const Domain& d : workspace_.flatbox)
+                    workspace_.flatbox_frames.push_back(d);
+            }
+            workspace_.reject_flag = false;
+        }
+
+        void intersect_flatbox_feat_dom_(size_t caret, FeatId feat_id, Domain dom,
+                int callback_group)
+        {
+            if (feat_id < 0) return;
+            if (workspace_.flatbox.size() <= static_cast<size_t>(feat_id))
+                workspace_.flatbox.resize(feat_id+1);
+            Domain old_dom = workspace_.flatbox[feat_id];
+            if (old_dom.overlaps(dom))
+            {
+                workspace_.flatbox[feat_id] = old_dom.intersect(dom);
+                if (old_dom != workspace_.flatbox[feat_id])
+                    notify_flatbox_change_(caret, feat_id, dom, callback_group);
+            }
+            else workspace_.reject_flag = true;
+        }
+
+        Domain get_flatbox_feat_dom_(FeatId feat_id) const
+        {
+            Domain dom;
+            if (feat_id >= 0 && workspace_.flatbox.size() > static_cast<size_t>(feat_id))
+                dom = workspace_.flatbox[feat_id];
+            return dom;
+        }
+
+        void notify_flatbox_change_(size_t caret, FeatId feat_id, Domain dom,
+                int callback_group)
+        {
+            if (static_cast<size_t>(feat_id) >= callbacks_.size())
+                return;
+
+            for (const auto& c : callbacks_[feat_id])
+            {
+                if (callback_group != c.grp)
+                {
+                    Context ctx { *this, caret, c.grp };
+                    c.cb(ctx, dom);
+                    ++num_callback_calls;
+                }
+                if (workspace_.reject_flag)
+                    break;
+            }
+        }
+
+        void construct_and_push_state_(const State& parent, FloatT leaf_value)
+        {
+            if (!workspace_.reject_flag)
+            {
+                // copy flatbox back to {(feat_id, dom)} box
+                FeatId feat_id = 0;
+                for (const Domain& d : workspace_.flatbox)
+                {
+                    if (!d.is_everything())
+                        workspace_.box.push_back({feat_id, d});
+                    ++feat_id;
+                }
+
                 State new_state;
                 new_state.indep_set = parent.indep_set + 1;
-                new_state.box = BoxRef(store_.store(b, remaining_mem_capacity()));
+                new_state.box = BoxRef(store_.store(workspace_.box, remaining_mem_capacity()));
                 if (heuristic.update_heuristic(new_state, *this, parent, leaf_value))
                     push_(std::move(new_state));
-            };
+            }
+            else
+            {
+                ++num_rejected_states;
+                //std::cout << "state rejected" << std::endl;
+            }
 
-            //if (constr_prop)
-            //{
-            //    constr_prop->check(workspace_.box, push_workspace_box_fun);
-            //    //constr_prop->print();
-            //}
-            //else
-            //{
-                push_workspace_box_fun(workspace_.box);
-            //}
-
+            workspace_.flatbox.clear();
             workspace_.box.clear();
         }
 

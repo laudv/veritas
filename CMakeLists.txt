@@ -8,7 +8,6 @@ set(SOURCE_DIR "src/cpp")
 include_directories(${SOURCE_DIR})
 set(SOURCES
     "${SOURCE_DIR}/tree.cpp"
-    "${SOURCE_DIR}/constraints.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)

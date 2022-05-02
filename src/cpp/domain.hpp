@@ -59,7 +59,7 @@ namespace veritas {
         { return {lo, std::isinf(hi) ? FLOATT_INF : std::nextafter(hi, -FLOATT_INF)}; }
 
         /** Check if equal to (-inf, inf) */
-        inline bool is_everything() const { return *this == Domain(); };
+        inline bool is_everything() const { return lo == -FLOATT_INF && hi == FLOATT_INF; };
         /** Check if value `v` is in domain. */
         inline bool contains(FloatT v) const { return lo <= v && v <= hi; }
         /** Check if two domains overlap */
@@ -84,8 +84,8 @@ namespace veritas {
             return { std::max(lo, other.lo), std::min(hi, other.hi) };
         }
 
-        inline bool lo_is_inf() const { return std::isinf(lo); }
-        inline bool hi_is_inf() const { return std::isinf(hi); }
+        inline bool lo_is_inf() const { return lo == -FLOATT_INF; }
+        inline bool hi_is_inf() const { return hi ==  FLOATT_INF; }
 
         /** Split this domain in two. Domain must constain the value (Domain::contains).
          * Consistent with LtSplit: strictly less than, left domain exclusive. */
@@ -110,12 +110,12 @@ namespace veritas {
         if (d.hi_is_inf())
             return s << "Dom(>=" << d.lo << ')';
         if (d.lo_is_inf())
-            return s << "Dom(< " << d.hi << ')';
+            return s << "Dom(<=" << d.hi << ')';
         return s << "Dom(" << d.lo << ',' << d.hi << ')';
     }
 
     /** Split value used for boolean splits (assuming feature values in {0, 1}) */
-    const FloatT BOOL_SPLIT_VALUE = 1.0;
+    const FloatT BOOL_SPLIT_VALUE = 0.5;
     /** [-inf, 1) domain for FALSE */
     const Domain FALSE_DOMAIN = Domain::from_hi_exclusive(BOOL_SPLIT_VALUE);
     /** [1, inf) domain for TRUE */

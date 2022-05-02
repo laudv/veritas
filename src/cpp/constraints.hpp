@@ -7,223 +7,167 @@
 #ifndef VERITAS_CONSTRAINTS_HPP
 #define VERITAS_CONSTRAINTS_HPP
 
-#include "domain.hpp"
-#include <vector>
-#include <iostream>
-#include <stack>
+#include "search.hpp"
 
-#define RETURN_IF_INVALID(res) if ((res) == UpdateResult::INVALID) { return UpdateResult::INVALID; }
+/**
+ * Veritas constraints.
+ *
+ * You can make up feature IDs.
+ * If your problems has 5 features with feature IDs 0, 1, 2, 3, 4, then you can
+ * use feature ID 5, 6, ... for 'psuedo' features.
+ */
+namespace veritas::constraints {
 
-namespace veritas {
+    using veritas::Search;
 
-    enum UpdateResult : int { UNCHANGED = 0, UPDATED = 1, INVALID = 2 };
+    /**
+     * `feat_x <= feat_y`
+     *
+     *       |---- dom x ---!!!!|
+     * |!!!!!----- dom y --|
+     */
+    template <typename H>
+    void lteq(Search<H>& s, FeatId x, FeatId y)
+    {
+        int grp = s.callback_group();
 
-    struct Var { };
+        // if x in [a, b], then y cannot be less than a
+        s.add_callback(x, [x, y](CallbackContext<H>& ctx, Domain domx) {
+            ctx.intersect(y, Domain::from_lo(domx.lo));
+        }, grp);
 
-    struct Const {
-        FloatT value;
-    };
+        // if y in [a, b], then x cannot be greater than b
+        s.add_callback(y, [x, y](CallbackContext<H>& ctx, Domain domy) {
+            ctx.intersect(x, Domain::from_hi_inclusive(domy.hi));
+        }, grp);
+    }
+    
+    /**
+     * `feat_c = feat_a + feat_b` == `feat_a = feat_c - feat_b`
+     *                            == `feat_b = feat_c - feat_a`
+     */
+    template <typename H>
+    void sum(Search<H>& s, FeatId a, FeatId b, FeatId c)
+    {
+        int grp = s.callback_group();
+        s.add_callback(c, [a, b, c](CallbackContext<H>& ctx, Domain domc) {
+            Domain doma = ctx.get(a);
+            Domain domb = ctx.get(b);
+            ctx.intersect(a, domc.lo - domb.hi, domc.hi - domb.lo);
+            ctx.intersect(b, domc.lo - doma.hi, domc.hi - doma.lo);
+        }, grp);
 
-    struct Add {
-        int left, right;
-        static UpdateResult update(Domain& self, Domain& left_dom, Domain& right_dom);
-    };
+        s.add_callback(a, [a, b, c](CallbackContext<H>& ctx, Domain doma) {
+            Domain domb = ctx.get(b);
+            ctx.intersect(c, doma.lo + domb.lo, doma.hi + domb.hi);
+        }, grp);
 
-    struct AnyExpr {
-        int parent;
-        Domain dom;
-        enum { VAR, CONST, ADD, SUB, PROD, DIV, POW2, SQRT, UNIT_VEC2 } tag;
-        union {
-            Var var;
-            Const constant;
-            Add add;
-            /*
-            Sub sub;
-            Prod prod;
-            Div div;
-            Pow2 pow2;
-            Sqrt sqrt;
-            UnitVec2 unit_vec2;
-            */
+        s.add_callback(b, [a, b, c](CallbackContext<H>& ctx, Domain domb) {
+            Domain doma = ctx.get(a);
+            ctx.intersect(c, doma.lo + domb.lo, doma.hi + domb.hi);
+        }, grp);
+    }
+
+    template <typename H>
+    void onehot(Search<H>& s, std::initializer_list<FeatId> il_xs)
+    {
+        std::vector<FeatId> xs = il_xs;
+
+        int grp = s.callback_group();
+        for (FeatId x : xs)
+        {
+            s.add_callback(x, [x, xs](CallbackContext<H>& ctx, Domain domx) {
+                if (!domx.overlaps(FALSE_DOMAIN)) // not false, must be true
+                {
+                    for (FeatId y : xs)
+                        ctx.intersect(y, x==y ? TRUE_DOMAIN : FALSE_DOMAIN);
+                }
+                else // if all others are false, then this must be true
+                {
+                    bool all_false = true;
+                    for (FeatId y : xs)
+                        all_false &= (y == x) || !ctx.get(y).overlaps(TRUE_DOMAIN);
+                    if (all_false)
+                        for (FeatId y : xs)
+                            ctx.intersect(y, x==y ? TRUE_DOMAIN : FALSE_DOMAIN);
+                }
+            }, grp);
+        }
+    }
+
+    /**
+     * Squared distance between two 2-d points, one of which is fixed.
+     * 
+     * `feat_d = sqrt((x0 - feat_x1)**2 + (y0 - feat_y1)**2)`
+     */
+    template <typename H>
+    void sqdist1(Search<H>& s, FeatId x, FeatId y, FeatId d, FloatT x0, FloatT y0)
+    {
+        int grp = s.callback_group();
+
+        auto pow2 = [](double x) { return x*x; };
+        auto cb = [x, y, d, x0, y0, pow2](CallbackContext<H>& ctx, Domain) {
+            Domain domx = ctx.get(x);
+            Domain domy = ctx.get(y);
+
+            // single term (x-x0)**2
+            //      lo       hi
+            //      |--------|
+            // x0                   -> min at (lo-x0)**2 -> lo-x0 > 0, x0-hi < 0
+            //          x0          -> min at (0.0)**2
+            //                   x0 -> min at (x0-hi)**2 -> lo-x0 < 0, x0-hi > 0
+            FloatT x1m = std::max({(FloatT)0.0, domx.lo - x0, x0 - domx.hi});
+            FloatT y1m = std::max({(FloatT)0.0, domy.lo - y0, y0 - domy.hi});
+            FloatT x1M = std::max(std::abs(domx.lo-x0), std::abs(x0-domx.hi));
+            FloatT y1M = std::max(std::abs(domy.lo-y0), std::abs(y0-domy.hi));
+            FloatT dlo = std::sqrt(pow2(x1m) + pow2(y1m));
+            FloatT dhi = std::sqrt(pow2(x1M) + pow2(y1M));
+            std::cout
+                << domx << " " << domy << " "
+                << x1m << " " << y1m << " " << x1M << " " << y1M
+                << " -> " << dlo << " " << dhi
+                << std::endl;
+            ctx.intersect(d, dlo, dhi);
         };
-    };
 
+        s.add_callback(x, cb, grp);
+        s.add_callback(y, cb, grp);
 
-    struct Eq {
-        static UpdateResult update(Domain& left_dom, Domain& right_dom);
-    };
+        s.add_callback(d, [x, y, d, x0, y0, pow2](CallbackContext<H>& ctx, Domain domd) {
+            Domain domx = ctx.get(x);
+            Domain domy = ctx.get(y);
 
-    struct LtEq {
-        static UpdateResult update(Domain& left_dom, Domain& right_dom);
-    };
+            ctx.intersect(d, Domain::from_lo(0.0)); // distance is positive
 
-    struct AnyComp {
-        FeatId left, right;
-        enum { EQ, LTEQ } tag;
-        union {
-            Eq eq;
-            LtEq lteq;
-        } comp;
-    };
+            FloatT x1m = std::max({(FloatT)0.0, domx.lo - x0, x0 - domx.hi});
+            FloatT y1m = std::max({(FloatT)0.0, domy.lo - y0, y0 - domy.hi});
+            FloatT x1M = std::max(std::abs(domx.lo-x0), std::abs(x0-domx.hi));
+            FloatT y1M = std::max(std::abs(domy.lo-y0), std::abs(y0-domy.hi));
 
-    class ConstraintPropagator  {
-        std::vector<AnyExpr> exprs_;
-        std::vector<AnyComp> comps_;
-        //std::vector<BinaryConstraint> bin_constraints_;
-        
-        int num_features_;
+            FloatT dym = std::sqrt(std::max(0.0, pow2(domd.lo) - pow2(y1M)));
+            FloatT dyM = std::sqrt(std::max(0.0, pow2(domd.hi) - pow2(y1m)));
+            FloatT dxm = std::sqrt(std::max(0.0, pow2(domd.lo) - pow2(x1M)));
+            FloatT dxM = std::sqrt(std::max(0.0, pow2(domd.hi) - pow2(x1m)));
 
-    public:
-        ConstraintPropagator(int num_features);
+            std::cout << "(1) " << domx << ", " << domy << ", " << domd << " "
+                << (dym+x0) << ", " << (dyM+x0) << "; "
+                << (dxm+x0) << ", " << (dxM+x0) << std::endl;
 
-    private:
-        void process_feat_id(std::initializer_list<FeatId> ids);
-        void copy_from_box(const Box&);
-        void copy_to_box(Box& box) const;
+            std::cout  << "(2) " << domx << ", " << domy << ", " << domd << " "
+                << (x0-dyM) << ", " << (x0-dym) << "; "
+                << (y0-dxM) << ", " << (y0-dxm) << std::endl;
 
-        UpdateResult aggregate_update_result(std::initializer_list<UpdateResult> l);
+            ctx.intersect(x, x0-dyM, x0-dym);
+            ctx.intersect(y, y0-dxM, y0-dxm);
 
-        template <typename F>
-        UpdateResult update_comp(const AnyComp& comp, const F& push_box_fun)
-        {
-            AnyExpr& left = exprs_[comp.left];
-            AnyExpr& right = exprs_[comp.right];
+            ctx.duplicate();
 
-            UpdateResult comp_res = UNCHANGED;
+            ctx.intersect(x, dym+x0, dyM+x0);
+            ctx.intersect(y, dxm+x0, dxM+x0);
+        }, grp);
+    }
 
-            if (comp.tag == AnyComp::EQ)
-                comp_res = Eq::update(left.dom, right.dom);
-            else if (comp.tag == AnyComp::LTEQ)
-                comp_res = LtEq::update(left.dom, right.dom);
-            else throw std::runtime_error("invalid");
-
-            RETURN_IF_INVALID(comp_res);
-            auto left_res = update_expr(left, push_box_fun);
-            RETURN_IF_INVALID(left_res);
-            auto right_res = update_expr(right, push_box_fun);
-
-            return aggregate_update_result({comp_res, left_res, right_res});
-        }
-
-        template <typename F>
-        UpdateResult update_expr(AnyExpr& expr, const F& push_box_fun)
-        {
-            UpdateResult res = UNCHANGED;
-
-            switch (expr.tag)
-            {
-                case AnyExpr::VAR:
-                case AnyExpr::CONST:
-                    //push_box_fun();
-                    break;
-                case AnyExpr::ADD: {
-                    AnyExpr& left = exprs_[expr.add.left];
-                    AnyExpr& right = exprs_[expr.add.right];
-                    UpdateResult op_res = Add::update(expr.dom, left.dom, right.dom);
-                    RETURN_IF_INVALID(op_res);
-                    UpdateResult left_res = update_expr(left, push_box_fun);
-                    UpdateResult right_res = update_expr(right, push_box_fun);
-                    res = aggregate_update_result({op_res, left_res, right_res});
-                    break;
-                }
-                case AnyExpr::SUB:
-                    break;
-                case AnyExpr::PROD:
-                    break;
-                case AnyExpr::DIV:
-                    break;
-                case AnyExpr::POW2:
-                    break;
-                case AnyExpr::SQRT:
-                    break;
-                case AnyExpr::UNIT_VEC2:
-                    break;
-            }
-
-            return res;
-        }
-
-        template <typename F>
-        UpdateResult update_expr2(AnyExpr& expr, const F& push_box_fun)
-        {
-            struct StackFrame {
-                size_t box;
-            };
-            std::stack<StackFrame, std::vector<StackFrame>> stack;
-        }
-
-    public:
-        int max_num_updates = 10;
-
-        void eq(int left, int right);
-        void lteq(int left, int right);
-
-        int constant(FloatT value);
-        int add(int left, int right);
-
-        template <typename F>
-        bool check(Box& box, const F& push_box_fun)
-        {
-            copy_from_box(box);
-
-            for (int i = 0; i < max_num_updates; i++)
-            {
-                for (const auto& c : comps_)
-                {
-                    auto res = update_comp(c, [this, &box, &push_box_fun]() {
-                        copy_to_box(box);
-                        std::cout << "pushing " << box << std::endl;
-                        push_box_fun(box);
-                    });
-                    if (res == INVALID)
-                        return false;
-                    else if(res == UNCHANGED)
-                        return true;
-                }
-            }
-
-            return true;
-        }
-
-        void print()
-        {
-            for (const AnyComp& comp : comps_)
-            {
-                switch (comp.tag)
-                {
-                case AnyComp::EQ:
-                    std::cout << "    - " << comp.left << " == " << comp.right << std::endl;
-                    break;
-                case AnyComp::LTEQ:
-                    std::cout << "    - " << comp.left << " <= " << comp.right << std::endl;
-                    break;
-                }
-            }
-            size_t id = 0;
-            for (const AnyExpr& e : exprs_)
-            {
-                std::cout << "    " << id << " p" << e.parent << ": " << e.dom << " ";
-                switch (e.tag)
-                {
-                case AnyExpr::CONST: std::cout << "CONST " << e.constant.value; break;
-                case AnyExpr::VAR: std::cout << "VAR"; break;
-                case AnyExpr::ADD:
-                    std::cout << "ADD " << e.add.left << " + " <<  e.add.right;
-                    break;
-                default:
-                    std::cout << "TODO ";
-                    break;
-                }
-                std::cout << std::endl;
-                ++id;
-            }
-        }
-
-    }; // class ConstraintPropagator
-
-} // namespace veritas
-
-#undef RETURN_IF_INVALID
+} // namespace veritas::constraints
 
 #endif // VERITAS_CONSTRAINTS_HPP
 

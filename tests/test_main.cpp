@@ -1,8 +1,6 @@
 #include "features.hpp"
-//#include "node_search.hpp"
-#include "graph.hpp"
-//#include "graph_search.hpp"
-//#include "graph_robustness_search.hpp"
+#include "search.hpp"
+#include "constraints.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -508,51 +506,51 @@ void test_block_store1()
     assert(store.get_used_mem_size() == 5*4);
 }
 
-void test_graph1()
-{
-    AddTree at;
-    {
-        Tree& t = at.add_tree();
-        t.root().split({1, 8.0});
-        t.root().left().split({2, 2.0});
-        t.root().left().left().set_leaf_value(1.0);
-        t.root().left().right().set_leaf_value(2.0);
-        t.root().right().set_leaf_value(3.0);
-    }
-    {
-        Tree& t = at.add_tree();
-        t.root().split({1, 16.0});
-        t.root().left().split({2, 4.0});
-        t.root().left().right().split({1, 6.0});
-
-        t.root().left().left().set_leaf_value(1.0);
-        t.root().left().right().left().set_leaf_value(2.0);
-        t.root().left().right().right().set_leaf_value(3.0);
-        t.root().right().set_leaf_value(4.0);
-    }
-
-    Domain c, d;
-    std::swap(c, d);
-
-    std::cout << at[0] << std::endl;
-    std::cout << at[1] << std::endl;
-
-    Graph g(at);
-
-    //g.store.refine_workspace({1, 9.0}, true);
-    //const Box b = g.store.get_workspace_box();
-    Box b {{1, Domain::from_hi_exclusive(9.0)}};
-
-    std::cout << g << std::endl;
-    std::cout << b << std::endl;
-    //g.prune([b](const Box& box) {
-    //            bool res = b.overlaps(box); 
-    //            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
-    //            return !res;
-    //        });
-    g.prune_by_box(b, true);
-    std::cout << g << std::endl;
-}
+//void test_graph1()
+//{
+//    AddTree at;
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({1, 8.0});
+//        t.root().left().split({2, 2.0});
+//        t.root().left().left().set_leaf_value(1.0);
+//        t.root().left().right().set_leaf_value(2.0);
+//        t.root().right().set_leaf_value(3.0);
+//    }
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({1, 16.0});
+//        t.root().left().split({2, 4.0});
+//        t.root().left().right().split({1, 6.0});
+//
+//        t.root().left().left().set_leaf_value(1.0);
+//        t.root().left().right().left().set_leaf_value(2.0);
+//        t.root().left().right().right().set_leaf_value(3.0);
+//        t.root().right().set_leaf_value(4.0);
+//    }
+//
+//    Domain c, d;
+//    std::swap(c, d);
+//
+//    std::cout << at[0] << std::endl;
+//    std::cout << at[1] << std::endl;
+//
+//    Graph g(at);
+//
+//    //g.store.refine_workspace({1, 9.0}, true);
+//    //const Box b = g.store.get_workspace_box();
+//    Box b {{1, Domain::from_hi_exclusive(9.0)}};
+//
+//    std::cout << g << std::endl;
+//    std::cout << b << std::endl;
+//    //g.prune([b](const Box& box) {
+//    //            bool res = b.overlaps(box); 
+//    //            std::cout << b << " overlaps " << box << " -> " << res << std::endl;
+//    //            return !res;
+//    //        });
+//    g.prune_by_box(b, true);
+//    std::cout << g << std::endl;
+//}
 
 //void test_node_search1()
 //{
@@ -930,44 +928,61 @@ void test_get_domain_from_box()
 
 }
 
-#include "search.hpp"
-
 void test_search1()
 {
     AddTree at;
     {
         std::ifstream f;
-        f.open("tests/models/xgb-img-hard.json");
+        f.open("tests/models/xgb-img-easy.json");
         at.from_json(f);
     }
 
     Search<MaxOutputHeuristic> s(at);
     VSearch& vs = s;
+
+    //constraints::lteq(s, 1, 0);
+    //constraints::sum(s, 0, 1, 2);
+    //constraints::onehot(s, {0, 1, 2});
+    //
+    //Box box { { 0, {0, 1.1} } };
+    //s.prune_by_box(box);
+
+    constraints::sqdist1(s, 0, 1, 2, 0.0, 0.0);
+
+
     s.eps = 0.9;
-    //for (size_t i = 0; i < 120; i++)
-    //{
-    //    auto &&[lo, hi, top] = s.current_bounds();
-    //    std::cout << lo << ", " << hi << ", " << top << ", " << s.is_optimal() << std::endl;
-    //    if (s.step())
-    //    {
-    //        std::cout << "done " << s.num_steps << std::endl;
-    //        break;
-    //    }
-    //}
-    
     s.stop_when_num_new_solutions_exceeds = 99999;
-    Box box { { 1, {50, 100} } };
-    s.prune_by_box(BoxRef(box));
-    auto stop_reason = vs.step_for(10.0, 100);
-    //StopReason stop_reason = StopReason::NONE;
-    //while ((stop_reason = s.step()) == StopReason::NONE);
+    s.stop_when_optimal = false;
+    std::cout << vs.step_for(10.0, 100) << std::endl;
+
+    for (size_t i = 0; i < std::min((size_t)10, s.num_solutions()); ++i)
+    {
+        const Solution& sol = s.get_solution(i);
+        std::cout << " - " << sol << ", " << sol.box << std::endl;
+    }
+
+    std::cout << "num_open            " << s.num_open() << std::endl;
+    std::cout << "num_steps           " << s.num_steps << std::endl;
+    std::cout << "num_rejected_states " << s.num_rejected_states << std::endl;
+    std::cout << "num_solutions       " << s.num_solutions() << std::endl;
+    std::cout << "num_callbacks       " << s.num_callback_calls << std::endl;
+    std::cout << "time                " << s.time_since_start() << std::endl;
    
-    std::cout << "stop_reason " << stop_reason << std::endl;
-    std::cout << "num_sols " << s.num_solutions() << std::endl;
-    std::cout << "num_steps " << s.num_steps << std::endl;
-    std::cout << "time_since_start " << s.time_since_start() << std::endl;
-    auto &&[lo, up, top] = s.current_bounds();
-    std::cout << "bounds " << lo << ", " << up << ", " << top << std::endl;
+    
+    
+    //s.stop_when_num_new_solutions_exceeds = 99999;
+    //Box box { { 1, {50, 100} } };
+    //s.prune_by_box(BoxRef(box));
+    //auto stop_reason = vs.step_for(10.0, 100);
+    ////StopReason stop_reason = StopReason::NONE;
+    ////while ((stop_reason = s.step()) == StopReason::NONE);
+   
+    //std::cout << "stop_reason " << stop_reason << std::endl;
+    //std::cout << "num_sols " << s.num_solutions() << std::endl;
+    //std::cout << "num_steps " << s.num_steps << std::endl;
+    //std::cout << "time_since_start " << s.time_since_start() << std::endl;
+    //auto &&[lo, up, top] = s.current_bounds();
+    //std::cout << "bounds " << lo << ", " << up << ", " << top << std::endl;
 
     //std::vector<int> v = { 5, 6, 2, 10, 12, 59, 102 };
     //std::make_heap(v.begin(), v.end());

@@ -237,7 +237,7 @@ namespace veritas {
         }
     };
 
-    std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
+    inline std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
     {
         s << "FeatMap {" << std::endl;
         for (auto index : fm)
