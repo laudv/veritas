@@ -186,7 +186,7 @@ namespace veritas {
         the_end: return;
     }
 
-    template void NodeRef<inner::MutRef>::from_json(std::istream&);
+    //template int NodeRef<inner::MutRef>::from_json(std::istream&);
 
     template <typename RefT>
     FloatT
@@ -344,7 +344,7 @@ namespace veritas {
             }
         }
 
-        return (sum2 - (sum*sum) / count) / count;
+        return static_cast<FloatT>((sum2 - (sum*sum) / count) / count);
     }
 
     Tree
@@ -498,8 +498,8 @@ namespace veritas {
     AddTree
     AddTree::sort_by_leaf_value_variance() const
     {
-        std::vector<std::tuple<TreeId, FloatT>> v;
-        for (TreeId i = 0; i < static_cast<TreeId>(size()); ++i)
+        std::vector<std::tuple<size_t, FloatT>> v;
+        for (size_t i = 0; i < size(); ++i)
             v.push_back({i, trees_[i].leaf_value_variance()});
         std::sort(v.begin(), v.end(), [](const auto& v, const auto& w) {
             return std::get<1>(v) > std::get<1>(w); // sort desc

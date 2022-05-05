@@ -332,7 +332,7 @@ namespace veritas {
         }
 
         inline size_t num_leafs() const { return root().num_leafs(); }
-        inline size_t num_nodes() const { return root().tree_size(); }
+        inline size_t num_nodes() const { return static_cast<size_t>(root().tree_size()); }
 
         inline void to_json(std::ostream& strm) const { root().to_json(strm, 0); }
         inline void from_json(std::istream& strm) { root().from_json(strm); };
@@ -379,7 +379,7 @@ namespace veritas {
         /** Copy trees (begin, begin+num) from given `at`. */
         inline AddTree(const AddTree& at, size_t begin, size_t num)
             : trees_()
-            , base_score(begin == 0 ? at.base_score : 0.0)
+            , base_score(begin == 0 ? at.base_score : FloatT(0.0))
         {
             if (begin < at.size() && (begin+num) <= at.size())
                 trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);

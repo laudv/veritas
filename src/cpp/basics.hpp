@@ -18,7 +18,6 @@ namespace veritas {
 
     static const FloatT FLOATT_INF = std::numeric_limits<FloatT>::infinity();
 
-    using TreeId = int;
     using NodeId = int;
     using FeatId = int;
 
