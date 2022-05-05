@@ -118,6 +118,9 @@ std::vector&lt; <a class="el" href="classveritas_1_1Graph.html#ab5957665fe4df6aa
 <tr class="memitem:aaf91880e631423e9e641023daa841f24"><td class="memItemLeft" align="right" valign="top"><a class="el" href="structveritas_1_1Bounds.html">Bounds</a>&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1Graph.html#aaf91880e631423e9e641023daa841f24">basic_bound</a> () const</td></tr>
 <tr class="memdesc:aaf91880e631423e9e641023daa841f24"><td class="mdescLeft">&#160;</td><td class="mdescRight">Simple output bound:  <a href="classveritas_1_1Graph.html#aaf91880e631423e9e641023daa841f24">More...</a><br /></td></tr>
 <tr class="separator:aaf91880e631423e9e641023daa841f24"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a0be32e8e4ba8daa0fec39d36ceda50f9"><td class="memItemLeft" align="right" valign="top">FloatT&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1Graph.html#a0be32e8e4ba8daa0fec39d36ceda50f9">basic_remaining_upbound</a> (size_t start_indep_set, const <a class="el" href="classveritas_1_1BoxRef.html">BoxRef</a> &amp;box) const</td></tr>
+<tr class="memdesc:a0be32e8e4ba8daa0fec39d36ceda50f9"><td class="mdescLeft">&#160;</td><td class="mdescRight">Looking at sets <code>start_indep_set</code> .  <a href="classveritas_1_1Graph.html#a0be32e8e4ba8daa0fec39d36ceda50f9">More...</a><br /></td></tr>
+<tr class="separator:a0be32e8e4ba8daa0fec39d36ceda50f9"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:abda11d6a35e6fb92a4cc6251835487b5"><td class="memItemLeft" align="right" valign="top"><a id="abda11d6a35e6fb92a4cc6251835487b5" name="abda11d6a35e6fb92a4cc6251835487b5"></a>
 const <a class="el" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>get_vertices</b> (size_t indep_set) const</td></tr>
 <tr class="memdesc:abda11d6a35e6fb92a4cc6251835487b5"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get the vertexes in an independent set. <br /></td></tr>
@@ -173,6 +176,46 @@ const FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>base_score</b
 <li>lo = sum{min{v.output : v in indep_set} : indep_set in graph}</li>
 <li>hi = sum{max{v.output : v in indep_set} : indep_set in graph} </li>
 </ul>
+
+</div>
+</div>
+<a id="a0be32e8e4ba8daa0fec39d36ceda50f9" name="a0be32e8e4ba8daa0fec39d36ceda50f9"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#a0be32e8e4ba8daa0fec39d36ceda50f9">&#9670;&nbsp;</a></span>basic_remaining_upbound()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname">FloatT veritas::Graph::basic_remaining_upbound </td>
+          <td>(</td>
+          <td class="paramtype">size_t&#160;</td>
+          <td class="paramname"><em>start_indep_set</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">const <a class="el" href="classveritas_1_1BoxRef.html">BoxRef</a> &amp;&#160;</td>
+          <td class="paramname"><em>box</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td> const</td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Looking at sets <code>start_indep_set</code> . </p>
+<p >. end, what is the maximum possible sum of vertex output values given the box?</p>
+<p >return = sum{max{v.output : v in indep_set} : indep set in graph[start_indep_set..]} </p>
 
 </div>
 </div>

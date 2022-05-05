@@ -1,3 +1,7 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classveritas_1_1BlockStore.html" title="Store immutable dynamically&#45;sized arrays of type T in stable memory." alt="" coords="5,5,167,32"/>
+<area shape="rect" id="node1" href="$structveritas_1_1BaseHeuristic.html" title=" " alt="" coords="5,35,155,61"/>
+<area shape="rect" id="node2" href="$structveritas_1_1MaxHeuristic.html" title=" " alt="" coords="203,8,345,35"/>
+<area shape="rect" id="node4" href="$structveritas_1_1MinHeuristic.html" title=" " alt="" coords="204,60,344,87"/>
+<area shape="rect" id="node3" href="$structveritas_1_1MaxOutputHeuristic.html" title=" " alt="" coords="393,5,576,32"/>
+<area shape="rect" id="node5" href="$structveritas_1_1MinDistToExampleHeuristic.html" title=" " alt="" coords="397,57,572,98"/>
 </map>

@@ -1,10 +1,12 @@
 <map id="src/cpp/basics.hpp" name="src/cpp/basics.hpp">
-<area shape="rect" id="node1" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="339,5,470,32"/>
-<area shape="rect" id="node2" href="$domain_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="285,80,420,107"/>
-<area shape="rect" id="node6" href="$features_8hpp_source.html" title=" " alt="" coords="465,229,605,256"/>
-<area shape="rect" id="node3" href="$graph__search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="91,311,262,338"/>
-<area shape="rect" id="node4" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="303,304,450,345"/>
-<area shape="rect" id="node5" href="$tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="247,155,362,181"/>
-<area shape="rect" id="node7" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="214,229,339,256"/>
-<area shape="rect" id="node8" href="$tree_8cpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="25,229,139,256"/>
+<area shape="rect" id="node1" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="461,5,592,32"/>
+<area shape="rect" id="node2" href="$domain_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="262,80,396,107"/>
+<area shape="rect" id="node8" href="$features_8hpp_source.html" title=" " alt="" coords="738,229,878,256"/>
+<area shape="rect" id="node3" href="$graph__search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="564,311,734,338"/>
+<area shape="rect" id="node4" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="376,304,522,345"/>
+<area shape="rect" id="node5" href="$heuristics_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="22,229,172,256"/>
+<area shape="rect" id="node6" href="$search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="31,311,163,338"/>
+<area shape="rect" id="node7" href="$tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="344,155,458,181"/>
+<area shape="rect" id="node9" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="486,229,612,256"/>
+<area shape="rect" id="node10" href="$tree_8cpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="297,229,412,256"/>
 </map>

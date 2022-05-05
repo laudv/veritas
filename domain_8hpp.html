@@ -106,13 +106,15 @@ This graph shows which files directly or indirectly include this file:</div>
 <div class="dyncontent">
 <div class="center"><img src="domain_8hpp__dep__incl.png" border="0" usemap="#asrc_2cpp_2domain_8hppdep" alt=""/></div>
 <map name="asrc_2cpp_2domain_8hppdep" id="asrc_2cpp_2domain_8hppdep">
-<area shape="rect" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="289,5,423,32"/>
+<area shape="rect" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="429,5,563,32"/>
 <area shape="rect" href="graph__search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="5,237,176,263"/>
-<area shape="rect" href="graph__search__old_8hpp_source.html" title=" " alt="" coords="521,229,668,271"/>
-<area shape="rect" href="tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="299,80,413,107"/>
-<area shape="rect" href="features_8hpp_source.html" title=" " alt="" coords="129,155,269,181"/>
-<area shape="rect" href="graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="293,155,419,181"/>
-<area shape="rect" href="tree_8cpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="443,155,557,181"/>
+<area shape="rect" href="graph__search__old_8hpp_source.html" title=" " alt="" coords="200,229,347,271"/>
+<area shape="rect" href="heuristics_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="749,155,899,181"/>
+<area shape="rect" href="search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="758,237,890,263"/>
+<area shape="rect" href="tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="439,80,553,107"/>
+<area shape="rect" href="features_8hpp_source.html" title=" " alt="" coords="534,155,674,181"/>
+<area shape="rect" href="graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="195,155,320,181"/>
+<area shape="rect" href="tree_8cpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="344,155,459,181"/>
 </map>
 </div>
 </div>
@@ -148,6 +150,9 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>veritas
 <tr class="memitem:ae18f45ba666c138f5c964b55ff59b084"><td class="memItemLeft" align="right" valign="top"><a id="ae18f45ba666c138f5c964b55ff59b084" name="ae18f45ba666c138f5c964b55ff59b084"></a>
 std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>veritas::operator&lt;&lt;</b> (std::ostream &amp;strm, const <a class="el" href="classLtSplit.html">LtSplit</a> &amp;s)</td></tr>
 <tr class="separator:ae18f45ba666c138f5c964b55ff59b084"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:acef1d3825a35b30b7fbfb543ab32c0b8"><td class="memItemLeft" align="right" valign="top"><a class="el" href="classDomain.html">Domain</a> &amp;&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="domain_8hpp.html#acef1d3825a35b30b7fbfb543ab32c0b8">veritas::get_domain</a> (Box &amp;box, FeatId feat_id)</td></tr>
+<tr class="memdesc:acef1d3825a35b30b7fbfb543ab32c0b8"><td class="mdescLeft">&#160;</td><td class="mdescRight">Get a reference to the <a class="el" href="structveritas_1_1Domain.html" title="A real interval with lower bound lo and upper bound hi.">Domain</a> entry in the given box for <code>feat_id</code>.  <a href="domain_8hpp.html#acef1d3825a35b30b7fbfb543ab32c0b8">More...</a><br /></td></tr>
+<tr class="separator:acef1d3825a35b30b7fbfb543ab32c0b8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:adc2e1cdb5c36c9a4595c928aef252ca7"><td class="memItemLeft" align="right" valign="top">bool&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="domain_8hpp.html#adc2e1cdb5c36c9a4595c928aef252ca7">veritas::refine_box</a> (Box &amp;box, FeatId feat_id, const <a class="el" href="classDomain.html">Domain</a> &amp;dom)</td></tr>
 <tr class="memdesc:adc2e1cdb5c36c9a4595c928aef252ca7"><td class="mdescLeft">&#160;</td><td class="mdescRight">Include the constraint '<code>feat_id</code> in <code>dom</code>' to the box.  <a href="domain_8hpp.html#adc2e1cdb5c36c9a4595c928aef252ca7">More...</a><br /></td></tr>
 <tr class="separator:adc2e1cdb5c36c9a4595c928aef252ca7"><td class="memSeparator" colspan="2">&#160;</td></tr>
@@ -165,7 +170,7 @@ std::ostream &amp;&#160;</td><td class="memItemRight" valign="bottom"><b>veritas
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="var-members" name="var-members"></a>
 Variables</h2></td></tr>
 <tr class="memitem:abd838fc74310dbdb2ba6ea3c3beb121e"><td class="memItemLeft" align="right" valign="top"><a id="abd838fc74310dbdb2ba6ea3c3beb121e" name="abd838fc74310dbdb2ba6ea3c3beb121e"></a>
-const FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>veritas::BOOL_SPLIT_VALUE</b> = 1.0</td></tr>
+const FloatT&#160;</td><td class="memItemRight" valign="bottom"><b>veritas::BOOL_SPLIT_VALUE</b> = 0.5</td></tr>
 <tr class="memdesc:abd838fc74310dbdb2ba6ea3c3beb121e"><td class="mdescLeft">&#160;</td><td class="mdescRight">Split value used for boolean splits (assuming feature values in {0, 1}) <br /></td></tr>
 <tr class="separator:abd838fc74310dbdb2ba6ea3c3beb121e"><td class="memSeparator" colspan="2">&#160;</td></tr>
 <tr class="memitem:ac878c4a9efaf9b1a2749cccccaf7ca32"><td class="memItemLeft" align="right" valign="top"><a id="ac878c4a9efaf9b1a2749cccccaf7ca32" name="ac878c4a9efaf9b1a2749cccccaf7ca32"></a>
@@ -230,6 +235,45 @@ const <a class="el" href="classDomain.html">Domain</a>&#160;</td><td class="memI
 <p>Intersect the boxes with corresponding feature IDs. </p>
 <p >If <code>copy_b</code> is false, then the domains in <code>b</code> for which no corresponding domain exists in <code>a</code> are excluded.</p>
 <p >It is assumed that both boxes overlap. </p>
+
+</div>
+</div>
+<a id="acef1d3825a35b30b7fbfb543ab32c0b8" name="acef1d3825a35b30b7fbfb543ab32c0b8"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#acef1d3825a35b30b7fbfb543ab32c0b8">&#9670;&nbsp;</a></span>get_domain()</h2>
+
+<div class="memitem">
+<div class="memproto">
+<table class="mlabels">
+  <tr>
+  <td class="mlabels-left">
+      <table class="memname">
+        <tr>
+          <td class="memname"><a class="el" href="classDomain.html">Domain</a> &amp; veritas::get_domain </td>
+          <td>(</td>
+          <td class="paramtype"><a class="el" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a> &amp;&#160;</td>
+          <td class="paramname"><em>box</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">FeatId&#160;</td>
+          <td class="paramname"><em>feat_id</em>&#160;</td>
+        </tr>
+        <tr>
+          <td></td>
+          <td>)</td>
+          <td></td><td></td>
+        </tr>
+      </table>
+  </td>
+  <td class="mlabels-right">
+<span class="mlabels"><span class="mlabel">inline</span></span>  </td>
+  </tr>
+</table>
+</div><div class="memdoc">
+
+<p>Get a reference to the <a class="el" href="classDomain.html" title="Bindings to C++ veritas::Domain class.">Domain</a> entry in the given box for <code>feat_id</code>. </p>
+<p >If no entry exists, then it is inserted in the right place so that the box remains sorted on feat_id. </p>
 
 </div>
 </div>

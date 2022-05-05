@@ -1,3 +1,4 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$structveritas_1_1OutputCmp.html" title=" " alt="" coords="5,5,139,32"/>
+<area shape="rect" id="node1" href="$classveritas_1_1GraphSearch.html" title=" " alt="" coords="5,5,188,61"/>
+<area shape="rect" id="node2" href="$classveritas_1_1GraphRobustnessSearch.html" title="Minimize the delta between the given example and the generated solution." alt="" coords="236,13,407,54"/>
 </map>

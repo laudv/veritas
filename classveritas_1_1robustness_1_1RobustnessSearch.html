@@ -97,9 +97,12 @@ def&#160;</td><td class="memItemRight" valign="bottom"><b>__init__</b> (self, ex
 <tr class="memitem:addca1fd3e52c2b9cc5b016bdc103e514"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1robustness_1_1RobustnessSearch.html#addca1fd3e52c2b9cc5b016bdc103e514">search</a> (self)</td></tr>
 <tr class="memdesc:addca1fd3e52c2b9cc5b016bdc103e514"><td class="mdescLeft">&#160;</td><td class="mdescRight">Do the search.  <a href="classveritas_1_1robustness_1_1RobustnessSearch.html#addca1fd3e52c2b9cc5b016bdc103e514">More...</a><br /></td></tr>
 <tr class="separator:addca1fd3e52c2b9cc5b016bdc103e514"><td class="memSeparator" colspan="2">&#160;</td></tr>
-<tr class="memitem:ab11fbb0a43aa92a120288f7484999b5f"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1robustness_1_1RobustnessSearch.html#ab11fbb0a43aa92a120288f7484999b5f">get_max_output_difference</a> (self, delta)</td></tr>
-<tr class="memdesc:ab11fbb0a43aa92a120288f7484999b5f"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return tuple.  <a href="classveritas_1_1robustness_1_1RobustnessSearch.html#ab11fbb0a43aa92a120288f7484999b5f">More...</a><br /></td></tr>
-<tr class="separator:ab11fbb0a43aa92a120288f7484999b5f"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:a298f51f149365045a5bd402e4f77521e"><td class="memItemLeft" align="right" valign="top"><a id="a298f51f149365045a5bd402e4f77521e" name="a298f51f149365045a5bd402e4f77521e"></a>
+def&#160;</td><td class="memItemRight" valign="bottom"><b>get_step_time</b> (self)</td></tr>
+<tr class="separator:a298f51f149365045a5bd402e4f77521e"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac12feffc64a0897babf7f140d49bb197"><td class="memItemLeft" align="right" valign="top">def&#160;</td><td class="memItemRight" valign="bottom"><a class="el" href="classveritas_1_1robustness_1_1RobustnessSearch.html#ac12feffc64a0897babf7f140d49bb197">get_max_output_difference</a> (self, delta, max_time)</td></tr>
+<tr class="memdesc:ac12feffc64a0897babf7f140d49bb197"><td class="mdescLeft">&#160;</td><td class="mdescRight">Return tuple.  <a href="classveritas_1_1robustness_1_1RobustnessSearch.html#ac12feffc64a0897babf7f140d49bb197">More...</a><br /></td></tr>
+<tr class="separator:ac12feffc64a0897babf7f140d49bb197"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-attribs" name="pub-attribs"></a>
 Public Attributes</h2></td></tr>
@@ -139,6 +142,9 @@ Public Attributes</h2></td></tr>
 <tr class="memitem:a28983e7bebf3a76fd257a343826663fd"><td class="memItemLeft" align="right" valign="top"><a id="a28983e7bebf3a76fd257a343826663fd" name="a28983e7bebf3a76fd257a343826663fd"></a>
 &#160;</td><td class="memItemRight" valign="bottom"><b>start_time_p</b></td></tr>
 <tr class="separator:a28983e7bebf3a76fd257a343826663fd"><td class="memSeparator" colspan="2">&#160;</td></tr>
+<tr class="memitem:ac7775c68c3b702c6017bffde850a16d8"><td class="memItemLeft" align="right" valign="top"><a id="ac7775c68c3b702c6017bffde850a16d8" name="ac7775c68c3b702c6017bffde850a16d8"></a>
+&#160;</td><td class="memItemRight" valign="bottom"><b>early_stop</b></td></tr>
+<tr class="separator:ac7775c68c3b702c6017bffde850a16d8"><td class="memSeparator" colspan="2">&#160;</td></tr>
 </table><table class="memberdecls">
 <tr class="heading"><td colspan="2"><h2 class="groupheader"><a id="pub-static-attribs" name="pub-static-attribs"></a>
 Static Public Attributes</h2></td></tr>
@@ -152,8 +158,8 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>NO_STOP_COND</b> = la
 <a name="details" id="details"></a><h2 class="groupheader">Detailed Description</h2>
 <div class="textblock"><p >Base class binary robustness search. </p>
 </div><h2 class="groupheader">Member Function Documentation</h2>
-<a id="ab11fbb0a43aa92a120288f7484999b5f" name="ab11fbb0a43aa92a120288f7484999b5f"></a>
-<h2 class="memtitle"><span class="permalink"><a href="#ab11fbb0a43aa92a120288f7484999b5f">&#9670;&nbsp;</a></span>get_max_output_difference()</h2>
+<a id="ac12feffc64a0897babf7f140d49bb197" name="ac12feffc64a0897babf7f140d49bb197"></a>
+<h2 class="memtitle"><span class="permalink"><a href="#ac12feffc64a0897babf7f140d49bb197">&#9670;&nbsp;</a></span>get_max_output_difference()</h2>
 
 <div class="memitem">
 <div class="memproto">
@@ -168,7 +174,13 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>NO_STOP_COND</b> = la
           <td class="paramkey"></td>
           <td></td>
           <td class="paramtype">&#160;</td>
-          <td class="paramname"><em>delta</em>&#160;</td>
+          <td class="paramname"><em>delta</em>, </td>
+        </tr>
+        <tr>
+          <td class="paramkey"></td>
+          <td></td>
+          <td class="paramtype">&#160;</td>
+          <td class="paramname"><em>max_time</em>&#160;</td>
         </tr>
         <tr>
           <td></td>
@@ -188,7 +200,7 @@ bool&#160;</td><td class="memItemRight" valign="bottom"><b>NO_STOP_COND</b> = la
 <li>[1] list of generated (counter) examples for this delta, empty list if none found. If available, this is used to update the current value of <code>upper</code>, the upper bound on the minimal distance to the closest adversarial example </li>
 </ul>
 
-<p>Reimplemented in <a class="el" href="classveritas_1_1robustness_1_1VeritasRobustnessSearch.html#aa386998eac5856c1acd07592bb1f31e5">veritas.robustness.VeritasRobustnessSearch</a>, and <a class="el" href="classveritas_1_1robustness_1_1MilpRobustnessSearch.html#a1dda66962171e64b67107730d61b48d3">veritas.robustness.MilpRobustnessSearch</a>.</p>
+<p>Reimplemented in <a class="el" href="classveritas_1_1robustness_1_1VeritasRobustnessSearch.html#a8eeae333aed7707705037afb66c6bd1f">veritas.robustness.VeritasRobustnessSearch</a>, and <a class="el" href="classveritas_1_1robustness_1_1MilpRobustnessSearch.html#a33fab8aae3e16485b726db22da293242">veritas.robustness.MilpRobustnessSearch</a>.</p>
 
 </div>
 </div>

@@ -1,9 +1,11 @@
 <map id="src/cpp/domain.hpp" name="src/cpp/domain.hpp">
-<area shape="rect" id="node1" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="289,5,423,32"/>
+<area shape="rect" id="node1" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="429,5,563,32"/>
 <area shape="rect" id="node2" href="$graph__search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="5,237,176,263"/>
-<area shape="rect" id="node3" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="521,229,668,271"/>
-<area shape="rect" id="node4" href="$tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="299,80,413,107"/>
-<area shape="rect" id="node5" href="$features_8hpp_source.html" title=" " alt="" coords="129,155,269,181"/>
-<area shape="rect" id="node6" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="293,155,419,181"/>
-<area shape="rect" id="node7" href="$tree_8cpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="443,155,557,181"/>
+<area shape="rect" id="node3" href="$graph__search__old_8hpp_source.html" title=" " alt="" coords="200,229,347,271"/>
+<area shape="rect" id="node4" href="$heuristics_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="749,155,899,181"/>
+<area shape="rect" id="node5" href="$search_8hpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="758,237,890,263"/>
+<area shape="rect" id="node6" href="$tree_8hpp.html" title="The Veritas internal tree representation." alt="" coords="439,80,553,107"/>
+<area shape="rect" id="node7" href="$features_8hpp_source.html" title=" " alt="" coords="534,155,674,181"/>
+<area shape="rect" id="node8" href="$graph_8hpp.html" title="A k&#45;partite graph derived from a tree ensemble." alt="" coords="195,155,320,181"/>
+<area shape="rect" id="node9" href="$tree_8cpp.html" title="Copyright 2022 DTAI Research Group &#45; KU Leuven." alt="" coords="344,155,459,181"/>
 </map>

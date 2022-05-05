@@ -1,6 +1,3 @@
 <map id="Graphical Class Hierarchy" name="Graphical Class Hierarchy">
-<area shape="rect" id="node1" href="$classveritas_1_1kantchelian_1_1KantchelianBase.html" title="Base class for MILP methods." alt="" coords="5,78,236,105"/>
-<area shape="rect" id="node2" href="$classveritas_1_1kantchelian_1_1KantchelianAttack.html" title="Robustness checking with MILP." alt="" coords="284,5,485,47"/>
-<area shape="rect" id="node3" href="$classveritas_1_1kantchelian_1_1KantchelianOutputOpt.html" title="Variation of the Kantchelian attack where the output is optimized rather than the distance to the clo..." alt="" coords="284,71,485,112"/>
-<area shape="rect" id="node4" href="$classveritas_1_1kantchelian_1_1KantchelianTargetedAttack.html" title="Targeted robustness checking with MILP." alt="" coords="284,136,485,177"/>
+<area shape="rect" id="node1" href="$classTree.html" title="Bindings to C++ veritas::Tree struct." alt="" coords="5,5,53,32"/>
 </map>

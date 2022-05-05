@@ -8,6 +8,7 @@ var searchData=
   ['instance_5fiter_5fhelper_5',['instance_iter_helper',['../structveritas_1_1FeatMap_1_1instance__iter__helper.html',1,'veritas::FeatMap']]],
   ['intersect_6',['intersect',['../structveritas_1_1Domain.html#aff3e088d91f7a4b726832ac1b0e32283',1,'veritas::Domain']]],
   ['is_5feverything_7',['is_everything',['../structveritas_1_1Domain.html#a74cd5466998be39fdbe1758e905ea920',1,'veritas::Domain']]],
-  ['is_5fvalid_5fnode_5fid_8',['is_valid_node_id',['../classveritas_1_1Tree.html#acc29b2b76db139d40732b4dee5872528',1,'veritas::Tree']]],
-  ['iterator_9',['iterator',['../classveritas_1_1FeatMap_1_1iterator.html',1,'veritas::FeatMap']]]
+  ['is_5foptimal_8',['is_optimal',['../classveritas_1_1Search.html#ad635ba7b008bcb348506cc231d1c3f12',1,'veritas::Search']]],
+  ['is_5fvalid_5fnode_5fid_9',['is_valid_node_id',['../classveritas_1_1Tree.html#acc29b2b76db139d40732b4dee5872528',1,'veritas::Tree']]],
+  ['iterator_10',['iterator',['../classveritas_1_1FeatMap_1_1iterator.html',1,'veritas::FeatMap']]]
 ];

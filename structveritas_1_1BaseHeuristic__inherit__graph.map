@@ -1,0 +1,7 @@
+<map id="veritas::BaseHeuristic" name="veritas::BaseHeuristic">
+<area shape="rect" id="node1" title=" " alt="" coords="123,5,273,32"/>
+<area shape="rect" id="node2" href="$structveritas_1_1MaxHeuristic.html" title=" " alt="" coords="35,80,177,107"/>
+<area shape="rect" id="node4" href="$structveritas_1_1MinHeuristic.html" title=" " alt="" coords="220,80,360,107"/>
+<area shape="rect" id="node3" href="$structveritas_1_1MaxOutputHeuristic.html" title=" " alt="" coords="5,162,188,189"/>
+<area shape="rect" id="node5" href="$structveritas_1_1MinDistToExampleHeuristic.html" title=" " alt="" coords="212,155,387,196"/>
+</map>

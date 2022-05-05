@@ -1,4 +1,5 @@
 var searchData=
 [
-  ['milprobustnesssearch_0',['MilpRobustnessSearch',['../classveritas_1_1robustness_1_1MilpRobustnessSearch.html',1,'veritas::robustness']]]
+  ['leafiter_0',['LeafIter',['../classveritas_1_1LeafIter.html',1,'veritas']]],
+  ['ltsplit_1',['LtSplit',['../classLtSplit.html',1,'LtSplit'],['../structveritas_1_1LtSplit.html',1,'veritas::LtSplit']]]
 ];

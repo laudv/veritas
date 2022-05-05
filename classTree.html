@@ -124,7 +124,17 @@ $(function() {
 <div class="line">                d[py::int_(feat_id)] = dom;</div>
 <div class="line">            <span class="keywordflow">return</span> d;</div>
 <div class="line">        })</div>
+<div class="line">        .def(<span class="stringliteral">&quot;prune&quot;</span>, [](<span class="keyword">const</span> TreeRef&amp; r, <span class="keyword">const</span> py::object&amp; pybox) {</div>
+<div class="line">            <a class="code hl_typedef" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a> box = tobox(pybox);</div>
+<div class="line">            BoxRef b(box);</div>
+<div class="line">            <a class="code hl_class" href="classAddTree.html">AddTree</a> at;</div>
+<div class="line">            <a class="code hl_class" href="classTree.html">Tree</a> t = r.get().prune(b);</div>
+<div class="line">            at.add_tree(std::move(t));</div>
+<div class="line">            <span class="keywordflow">return</span> at;</div>
+<div class="line">        })</div>
 <div class="line">        ; <span class="comment">// TreeRef</span></div>
+<div class="ttc" id="aclassAddTree_html"><div class="ttname"><a href="classAddTree.html">AddTree</a></div><div class="ttdoc">Bindings to C++ veritas::AddTree struct.</div></div>
+<div class="ttc" id="aclassTree_html"><div class="ttname"><a href="classTree.html">Tree</a></div><div class="ttdoc">Bindings to C++ veritas::Tree struct.</div></div>
 <div class="ttc" id="adomain_8hpp_html_a9c5d35af6974f9a5a5d0d0df8c7b5528"><div class="ttname"><a href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">veritas::Box</a></div><div class="ttdeci">std::vector&lt; DomainPair &gt; Box</div><div class="ttdoc">A sorted list of pairs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:131</div></div>
 </div><!-- fragment --></div><hr/>The documentation for this class was generated from the following file:<ul>
 <li>src/python/veritas/<a class="el" href="util_8py.html">util.py</a></li>

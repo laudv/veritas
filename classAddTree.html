@@ -85,7 +85,7 @@ Inheritance diagram for AddTree:</div>
 <div class="line">        .def(py::init&lt;const AddTree&amp;, size_t, size_t&gt;())</div>
 <div class="line">        .def_readwrite(<span class="stringliteral">&quot;base_score&quot;</span>, &amp;AddTree::base_score)</div>
 <div class="line">        .def(<span class="stringliteral">&quot;copy&quot;</span>, [](<span class="keyword">const</span> <a class="code hl_class" href="classAddTree.html">AddTree</a>&amp; at) { <span class="keywordflow">return</span> <a class="code hl_class" href="classAddTree.html">AddTree</a>(at); })</div>
-<div class="line">        .def(<span class="stringliteral">&quot;__getitem__&quot;</span>, [](std::shared_ptr&lt;AddTree&gt; at, <span class="keywordtype">size_t</span> i) {</div>
+<div class="line">        .def(<span class="stringliteral">&quot;__getitem__&quot;</span>, [](<span class="keyword">const</span> std::shared_ptr&lt;AddTree&gt;&amp; at, <span class="keywordtype">size_t</span> i) {</div>
 <div class="line">                <span class="keywordflow">if</span> (i &lt; at-&gt;size())</div>
 <div class="line">                    <span class="keywordflow">return</span> TreeRef{at, i};</div>
 <div class="line">                <span class="keywordflow">throw</span> py::value_error(<span class="stringliteral">&quot;out of bounds access into AddTree&quot;</span>);</div>
@@ -96,7 +96,10 @@ Inheritance diagram for AddTree:</div>
 <div class="line">        .def(<span class="stringliteral">&quot;get_splits&quot;</span>, &amp;AddTree::get_splits)</div>
 <div class="line">        .def(<span class="stringliteral">&quot;add_tree&quot;</span>, [](<span class="keyword">const</span> std::shared_ptr&lt;AddTree&gt;&amp; at) {</div>
 <div class="line">                at-&gt;add_tree(); <span class="keywordflow">return</span> TreeRef{at, at-&gt;size()-1}; })</div>
-<div class="line">        .def(<span class="stringliteral">&quot;prune&quot;</span>, [](<a class="code hl_class" href="classAddTree.html">AddTree</a>&amp; at, <span class="keyword">const</span> py::list&amp; pybox) {</div>
+<div class="line">        .def(<span class="stringliteral">&quot;add_tree&quot;</span>, [](<span class="keyword">const</span> std::shared_ptr&lt;AddTree&gt;&amp; at, <span class="keyword">const</span> TreeRef&amp; tref) {</div>
+<div class="line">                at-&gt;add_tree(tref.get()); <span class="comment">// copy</span></div>
+<div class="line">                <span class="keywordflow">return</span> TreeRef{at, at-&gt;size()-1}; })</div>
+<div class="line">        .def(<span class="stringliteral">&quot;prune&quot;</span>, [](<a class="code hl_class" href="classAddTree.html">AddTree</a>&amp; at, <span class="keyword">const</span> py::object&amp; pybox) {</div>
 <div class="line">            <a class="code hl_typedef" href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">Box</a> box = tobox(pybox);</div>
 <div class="line">            BoxRef b(box);</div>
 <div class="line">            <span class="comment">//py::print(&quot;pruning AddTree using box&quot;, tostr(b));</span></div>

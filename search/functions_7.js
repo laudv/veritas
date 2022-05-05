@@ -6,5 +6,6 @@ var searchData=
   ['init_3',['init',['../classveritas_1_1GraphSearch.html#a7699e5cc359acd668c56fa7441481654',1,'veritas::GraphSearch']]],
   ['intersect_4',['intersect',['../structveritas_1_1Domain.html#aff3e088d91f7a4b726832ac1b0e32283',1,'veritas::Domain']]],
   ['is_5feverything_5',['is_everything',['../structveritas_1_1Domain.html#a74cd5466998be39fdbe1758e905ea920',1,'veritas::Domain']]],
-  ['is_5fvalid_5fnode_5fid_6',['is_valid_node_id',['../classveritas_1_1Tree.html#acc29b2b76db139d40732b4dee5872528',1,'veritas::Tree']]]
+  ['is_5foptimal_6',['is_optimal',['../classveritas_1_1Search.html#ad635ba7b008bcb348506cc231d1c3f12',1,'veritas::Search']]],
+  ['is_5fvalid_5fnode_5fid_7',['is_valid_node_id',['../classveritas_1_1Tree.html#acc29b2b76db139d40732b4dee5872528',1,'veritas::Tree']]]
 ];

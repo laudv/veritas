@@ -218,112 +218,127 @@ $(function() {
 <div class="line"><a id="l00178" name="l00178"></a><span class="lineno">  178</span>            <span class="keywordflow">return</span> {min_bound, max_bound};</div>
 <div class="line"><a id="l00179" name="l00179"></a><span class="lineno">  179</span>        }</div>
 <div class="line"><a id="l00180" name="l00180"></a><span class="lineno">  180</span> </div>
-<div class="line"><a id="l00182" name="l00182"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#abda11d6a35e6fb92a4cc6251835487b5">  182</a></span>        <span class="keyword">const</span> <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a>&amp; <a class="code hl_function" href="classveritas_1_1Graph.html#abda11d6a35e6fb92a4cc6251835487b5">get_vertices</a>(<span class="keywordtype">size_t</span> indep_set)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> sets_.at(indep_set); }</div>
-<div class="line"><a id="l00183" name="l00183"></a><span class="lineno">  183</span> </div>
-<div class="line"><a id="l00184" name="l00184"></a><span class="lineno">  184</span>        <span class="keywordtype">size_t</span> num_independent_sets()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> sets_.size(); }</div>
-<div class="line"><a id="l00185" name="l00185"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#a2a3e3f9e341a1ef2f8ae972ec5fd2bb8">  185</a></span>        <span class="keywordtype">size_t</span> <a class="code hl_function" href="classveritas_1_1Graph.html#a2a3e3f9e341a1ef2f8ae972ec5fd2bb8">num_vertices</a>() const </div>
-<div class="line"><a id="l00186" name="l00186"></a><span class="lineno">  186</span>        {</div>
-<div class="line"><a id="l00187" name="l00187"></a><span class="lineno">  187</span>            <span class="keywordtype">size_t</span> count = 0;</div>
-<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a>&amp; set : sets_) count += set.size();</div>
-<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>            <span class="keywordflow">return</span> count;</div>
-<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>        }</div>
-<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span> </div>
-<div class="line"><a id="l00198" name="l00198"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#a729491e3cff9191a068d456aa85093aa">  198</a></span>        <span class="keywordtype">bool</span> <a class="code hl_function" href="classveritas_1_1Graph.html#a729491e3cff9191a068d456aa85093aa">merge</a>(<span class="keywordtype">int</span> K, <span class="keywordtype">float</span> max_time)</div>
-<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        {</div>
-<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span>            <span class="keyword">using</span> ms = std::chrono::milliseconds;</div>
-<div class="line"><a id="l00201" name="l00201"></a><span class="lineno">  201</span>            <span class="keyword">using</span> clock = std::chrono::steady_clock;</div>
-<div class="line"><a id="l00202" name="l00202"></a><span class="lineno">  202</span> </div>
-<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span>            max_time *= 1000; <span class="comment">/* milliseconds */</span></div>
-<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>            clock::time_point begin = clock::now();</div>
-<div class="line"><a id="l00205" name="l00205"></a><span class="lineno">  205</span>            std::vector&lt;IndepSet&gt; new_sets;</div>
-<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span> </div>
-<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> it = sets_.cbegin(); it != sets_.cend(); )</div>
-<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>            {</div>
-<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>                <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a> set0(*it++);</div>
-<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>                <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a> set1;</div>
+<div class="line"><a id="l00187" name="l00187"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#a0be32e8e4ba8daa0fec39d36ceda50f9">  187</a></span>        FloatT <a class="code hl_function" href="classveritas_1_1Graph.html#a0be32e8e4ba8daa0fec39d36ceda50f9">basic_remaining_upbound</a>(<span class="keywordtype">size_t</span> start_indep_set, <span class="keyword">const</span> <a class="code hl_class" href="classveritas_1_1BoxRef.html">BoxRef</a>&amp; box)<span class="keyword"> const</span></div>
+<div class="line"><a id="l00188" name="l00188"></a><span class="lineno">  188</span><span class="keyword">        </span>{</div>
+<div class="line"><a id="l00189" name="l00189"></a><span class="lineno">  189</span>            FloatT res = 0.0;</div>
+<div class="line"><a id="l00190" name="l00190"></a><span class="lineno">  190</span>            <span class="keywordflow">for</span> (<span class="keywordtype">size_t</span> indep_set = start_indep_set; indep_set &lt; sets_.size(); ++indep_set)</div>
+<div class="line"><a id="l00191" name="l00191"></a><span class="lineno">  191</span>            {</div>
+<div class="line"><a id="l00192" name="l00192"></a><span class="lineno">  192</span>                FloatT max = -FLOATT_INF;</div>
+<div class="line"><a id="l00193" name="l00193"></a><span class="lineno">  193</span>                <span class="keywordflow">for</span> (<span class="keyword">const</span> <a class="code hl_struct" href="structveritas_1_1Graph_1_1Vertex.html">Vertex</a>&amp; v : sets_[indep_set])</div>
+<div class="line"><a id="l00194" name="l00194"></a><span class="lineno">  194</span>                    <span class="keywordflow">if</span> (v.box.overlaps(box))</div>
+<div class="line"><a id="l00195" name="l00195"></a><span class="lineno">  195</span>                        max = std::max(max, v.output);</div>
+<div class="line"><a id="l00196" name="l00196"></a><span class="lineno">  196</span>                res += max;</div>
+<div class="line"><a id="l00197" name="l00197"></a><span class="lineno">  197</span>            }</div>
+<div class="line"><a id="l00198" name="l00198"></a><span class="lineno">  198</span>            <span class="keywordflow">return</span> res;</div>
+<div class="line"><a id="l00199" name="l00199"></a><span class="lineno">  199</span>        }</div>
+<div class="line"><a id="l00200" name="l00200"></a><span class="lineno">  200</span> </div>
+<div class="line"><a id="l00202" name="l00202"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#abda11d6a35e6fb92a4cc6251835487b5">  202</a></span>        <span class="keyword">const</span> <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a>&amp; <a class="code hl_function" href="classveritas_1_1Graph.html#abda11d6a35e6fb92a4cc6251835487b5">get_vertices</a>(<span class="keywordtype">size_t</span> indep_set)<span class="keyword"> const </span>{ <span class="keywordflow">return</span> sets_.at(indep_set); }</div>
+<div class="line"><a id="l00203" name="l00203"></a><span class="lineno">  203</span> </div>
+<div class="line"><a id="l00204" name="l00204"></a><span class="lineno">  204</span>        <span class="keywordtype">size_t</span> num_independent_sets()<span class="keyword"> const </span>{ <span class="keywordflow">return</span> sets_.size(); }</div>
+<div class="line"><a id="l00205" name="l00205"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#a2a3e3f9e341a1ef2f8ae972ec5fd2bb8">  205</a></span>        <span class="keywordtype">size_t</span> <a class="code hl_function" href="classveritas_1_1Graph.html#a2a3e3f9e341a1ef2f8ae972ec5fd2bb8">num_vertices</a>() const </div>
+<div class="line"><a id="l00206" name="l00206"></a><span class="lineno">  206</span>        {</div>
+<div class="line"><a id="l00207" name="l00207"></a><span class="lineno">  207</span>            <span class="keywordtype">size_t</span> count = 0;</div>
+<div class="line"><a id="l00208" name="l00208"></a><span class="lineno">  208</span>            <span class="keywordflow">for</span> (<span class="keyword">const</span> <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a>&amp; set : sets_) count += set.size();</div>
+<div class="line"><a id="l00209" name="l00209"></a><span class="lineno">  209</span>            <span class="keywordflow">return</span> count;</div>
+<div class="line"><a id="l00210" name="l00210"></a><span class="lineno">  210</span>        }</div>
 <div class="line"><a id="l00211" name="l00211"></a><span class="lineno">  211</span> </div>
-<div class="line"><a id="l00212" name="l00212"></a><span class="lineno">  212</span>                <span class="keywordflow">for</span> (<span class="keywordtype">int</span> k = 1; k &lt; K &amp;&amp; it != sets_.cend(); ++k, ++it)</div>
-<div class="line"><a id="l00213" name="l00213"></a><span class="lineno">  213</span>                {</div>
-<div class="line"><a id="l00214" name="l00214"></a><span class="lineno">  214</span>                    <span class="comment">//std::cout &lt;&lt; &quot;merge &quot; &lt;&lt; set0.size() &lt;&lt; &quot; x &quot; &lt;&lt; it-&gt;size() &lt;&lt; std::endl;</span></div>
-<div class="line"><a id="l00215" name="l00215"></a><span class="lineno">  215</span>                    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; v0 : set0)</div>
-<div class="line"><a id="l00216" name="l00216"></a><span class="lineno">  216</span>                    {</div>
-<div class="line"><a id="l00217" name="l00217"></a><span class="lineno">  217</span>                        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; v1 : *it)</div>
-<div class="line"><a id="l00218" name="l00218"></a><span class="lineno">  218</span>                        {</div>
-<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>                            clock::time_point end = clock::now();</div>
-<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>                            <span class="keywordtype">float</span> dur = std::chrono::duration_cast&lt;ms&gt;(end - begin).count();</div>
-<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>                            <span class="keywordflow">if</span> (dur &gt; max_time) { <span class="keywordflow">return</span> <span class="keyword">false</span>; }</div>
+<div class="line"><a id="l00218" name="l00218"></a><span class="lineno"><a class="line" href="classveritas_1_1Graph.html#a729491e3cff9191a068d456aa85093aa">  218</a></span>        <span class="keywordtype">bool</span> <a class="code hl_function" href="classveritas_1_1Graph.html#a729491e3cff9191a068d456aa85093aa">merge</a>(<span class="keywordtype">int</span> K, <span class="keywordtype">float</span> max_time)</div>
+<div class="line"><a id="l00219" name="l00219"></a><span class="lineno">  219</span>        {</div>
+<div class="line"><a id="l00220" name="l00220"></a><span class="lineno">  220</span>            <span class="keyword">using</span> ms = std::chrono::milliseconds;</div>
+<div class="line"><a id="l00221" name="l00221"></a><span class="lineno">  221</span>            <span class="keyword">using</span> clock = std::chrono::steady_clock;</div>
 <div class="line"><a id="l00222" name="l00222"></a><span class="lineno">  222</span> </div>
-<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>                            <span class="keywordflow">if</span> (v0.box.overlaps(v1.box))</div>
-<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>                            {</div>
-<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>                                <span class="comment">//BoxRef box = store.combine_and_push(v0.box, v1.box, true);</span></div>
-<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span>                                <a class="code hl_function" href="domain_8hpp.html#adeadbf28be46b85fdd5f95eaffd9513f">combine_boxes</a>(v0.box, v1.box, <span class="keyword">true</span>, workspace_);</div>
-<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>                                <a class="code hl_class" href="classveritas_1_1BoxRef.html">BoxRef</a> box = <a class="code hl_class" href="classveritas_1_1BoxRef.html">BoxRef</a>(store_.store(workspace_, remaining_mem_capacity()));</div>
-<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>                                workspace_.clear();</div>
-<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>                                FloatT output = v0.output + v1.output;</div>
-<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>                                set1.push_back({-1, box, output}); <span class="comment">// we loose leaf node ids</span></div>
-<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span>                            }</div>
-<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>                        }</div>
-<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>                    }</div>
-<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span> </div>
-<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>                    set0.clear();</div>
-<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>                    std::swap(set0, set1);</div>
-<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>                }</div>
-<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span> </div>
-<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;merge new_set of size &quot;</span> &lt;&lt; set0.size() &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>                new_sets.push_back(std::move(set0));</div>
-<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>            }</div>
+<div class="line"><a id="l00223" name="l00223"></a><span class="lineno">  223</span>            max_time *= 1000; <span class="comment">/* milliseconds */</span></div>
+<div class="line"><a id="l00224" name="l00224"></a><span class="lineno">  224</span>            clock::time_point begin = clock::now();</div>
+<div class="line"><a id="l00225" name="l00225"></a><span class="lineno">  225</span>            std::vector&lt;IndepSet&gt; new_sets;</div>
+<div class="line"><a id="l00226" name="l00226"></a><span class="lineno">  226</span> </div>
+<div class="line"><a id="l00227" name="l00227"></a><span class="lineno">  227</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span> it = sets_.cbegin(); it != sets_.cend(); )</div>
+<div class="line"><a id="l00228" name="l00228"></a><span class="lineno">  228</span>            {</div>
+<div class="line"><a id="l00229" name="l00229"></a><span class="lineno">  229</span>                <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a> set0(*it++);</div>
+<div class="line"><a id="l00230" name="l00230"></a><span class="lineno">  230</span>                <a class="code hl_typedef" href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">IndepSet</a> set1;</div>
+<div class="line"><a id="l00231" name="l00231"></a><span class="lineno">  231</span> </div>
+<div class="line"><a id="l00232" name="l00232"></a><span class="lineno">  232</span>                <span class="keywordflow">for</span> (<span class="keywordtype">int</span> k = 1; k &lt; K &amp;&amp; it != sets_.cend(); ++k, ++it)</div>
+<div class="line"><a id="l00233" name="l00233"></a><span class="lineno">  233</span>                {</div>
+<div class="line"><a id="l00234" name="l00234"></a><span class="lineno">  234</span>                    <span class="comment">//std::cout &lt;&lt; &quot;merge &quot; &lt;&lt; set0.size() &lt;&lt; &quot; x &quot; &lt;&lt; it-&gt;size() &lt;&lt; std::endl;</span></div>
+<div class="line"><a id="l00235" name="l00235"></a><span class="lineno">  235</span>                    <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; v0 : set0)</div>
+<div class="line"><a id="l00236" name="l00236"></a><span class="lineno">  236</span>                    {</div>
+<div class="line"><a id="l00237" name="l00237"></a><span class="lineno">  237</span>                        <span class="keywordflow">for</span> (<span class="keyword">const</span> <span class="keyword">auto</span>&amp; v1 : *it)</div>
+<div class="line"><a id="l00238" name="l00238"></a><span class="lineno">  238</span>                        {</div>
+<div class="line"><a id="l00239" name="l00239"></a><span class="lineno">  239</span>                            clock::time_point end = clock::now();</div>
+<div class="line"><a id="l00240" name="l00240"></a><span class="lineno">  240</span>                            <span class="keywordtype">float</span> dur = std::chrono::duration_cast&lt;ms&gt;(end - begin).count();</div>
+<div class="line"><a id="l00241" name="l00241"></a><span class="lineno">  241</span>                            <span class="keywordflow">if</span> (dur &gt; max_time) { <span class="keywordflow">return</span> <span class="keyword">false</span>; }</div>
 <div class="line"><a id="l00242" name="l00242"></a><span class="lineno">  242</span> </div>
-<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>            std::swap(new_sets, sets_);</div>
-<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
-<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>        }</div>
-<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span> </div>
-<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>    }; <span class="comment">// class Graph</span></div>
-<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span> </div>
-<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>    std::ostream&amp;</div>
-<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>    operator&lt;&lt;(std::ostream&amp; s, <span class="keyword">const</span> Graph&amp; graph)</div>
-<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>    {</div>
-<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>        std::ios_base::fmtflags flgs(std::cout.flags());</div>
-<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span> </div>
-<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span>        <span class="keywordflow">if</span> (graph.num_independent_sets() == 0)</div>
-<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>            <span class="keywordflow">return</span> s &lt;&lt; <span class="stringliteral">&quot;Graph { }&quot;</span>;</div>
-<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span> </div>
-<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>        s &lt;&lt; <span class="stringliteral">&quot;Graph {&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; set : graph)</div>
-<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>        {</div>
-<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>            s &lt;&lt; <span class="stringliteral">&quot;  IndependentSet {&quot;</span> &lt;&lt; std::endl;;</div>
-<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; vertex : set)</div>
-<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span>            {</div>
-<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>                s</div>
-<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>                    &lt;&lt; <span class="stringliteral">&quot;    v(&quot;</span></div>
-<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>                    &lt;&lt; std::fixed</div>
-<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span>                    &lt;&lt; std::setprecision(3)</div>
-<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>                    &lt;&lt; vertex.output</div>
-<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span>                    &lt;&lt; <span class="stringliteral">&quot;) &quot;</span>;</div>
-<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>                s &lt;&lt; vertex.box &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>            }</div>
-<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>            s &lt;&lt; <span class="stringliteral">&quot;  }&quot;</span> &lt;&lt; std::endl;</div>
-<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        }</div>
-<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span>        s &lt;&lt; <span class="stringliteral">&quot;}&quot;</span>;</div>
-<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        std::cout.flags(flgs);</div>
-<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>        <span class="keywordflow">return</span> s;</div>
-<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span>    }</div>
-<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span> </div>
-<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>} <span class="comment">// namespace veritas</span></div>
-<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span> </div>
-<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span> </div>
-<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span><span class="preprocessor">#endif </span><span class="comment">// VERITAS_GRAPH_HPP</span></div>
-<div class="ttc" id="aclassveritas_1_1AddTree_html"><div class="ttname"><a href="classveritas_1_1AddTree.html">veritas::AddTree</a></div><div class="ttdoc">Additive ensemble of Trees.</div><div class="ttdef"><b>Definition:</b> tree.hpp:364</div></div>
+<div class="line"><a id="l00243" name="l00243"></a><span class="lineno">  243</span>                            <span class="keywordflow">if</span> (v0.box.overlaps(v1.box))</div>
+<div class="line"><a id="l00244" name="l00244"></a><span class="lineno">  244</span>                            {</div>
+<div class="line"><a id="l00245" name="l00245"></a><span class="lineno">  245</span>                                <span class="comment">//BoxRef box = store.combine_and_push(v0.box, v1.box, true);</span></div>
+<div class="line"><a id="l00246" name="l00246"></a><span class="lineno">  246</span>                                <a class="code hl_function" href="domain_8hpp.html#adeadbf28be46b85fdd5f95eaffd9513f">combine_boxes</a>(v0.box, v1.box, <span class="keyword">true</span>, workspace_);</div>
+<div class="line"><a id="l00247" name="l00247"></a><span class="lineno">  247</span>                                <a class="code hl_class" href="classveritas_1_1BoxRef.html">BoxRef</a> box = <a class="code hl_class" href="classveritas_1_1BoxRef.html">BoxRef</a>(store_.store(workspace_, remaining_mem_capacity()));</div>
+<div class="line"><a id="l00248" name="l00248"></a><span class="lineno">  248</span>                                workspace_.clear();</div>
+<div class="line"><a id="l00249" name="l00249"></a><span class="lineno">  249</span>                                FloatT output = v0.output + v1.output;</div>
+<div class="line"><a id="l00250" name="l00250"></a><span class="lineno">  250</span>                                set1.push_back({-1, box, output}); <span class="comment">// we loose leaf node ids</span></div>
+<div class="line"><a id="l00251" name="l00251"></a><span class="lineno">  251</span>                            }</div>
+<div class="line"><a id="l00252" name="l00252"></a><span class="lineno">  252</span>                        }</div>
+<div class="line"><a id="l00253" name="l00253"></a><span class="lineno">  253</span>                    }</div>
+<div class="line"><a id="l00254" name="l00254"></a><span class="lineno">  254</span> </div>
+<div class="line"><a id="l00255" name="l00255"></a><span class="lineno">  255</span>                    set0.clear();</div>
+<div class="line"><a id="l00256" name="l00256"></a><span class="lineno">  256</span>                    std::swap(set0, set1);</div>
+<div class="line"><a id="l00257" name="l00257"></a><span class="lineno">  257</span>                }</div>
+<div class="line"><a id="l00258" name="l00258"></a><span class="lineno">  258</span> </div>
+<div class="line"><a id="l00259" name="l00259"></a><span class="lineno">  259</span>                std::cout &lt;&lt; <span class="stringliteral">&quot;merge new_set of size &quot;</span> &lt;&lt; set0.size() &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00260" name="l00260"></a><span class="lineno">  260</span>                new_sets.push_back(std::move(set0));</div>
+<div class="line"><a id="l00261" name="l00261"></a><span class="lineno">  261</span>            }</div>
+<div class="line"><a id="l00262" name="l00262"></a><span class="lineno">  262</span> </div>
+<div class="line"><a id="l00263" name="l00263"></a><span class="lineno">  263</span>            std::swap(new_sets, sets_);</div>
+<div class="line"><a id="l00264" name="l00264"></a><span class="lineno">  264</span>            <span class="keywordflow">return</span> <span class="keyword">true</span>;</div>
+<div class="line"><a id="l00265" name="l00265"></a><span class="lineno">  265</span>        }</div>
+<div class="line"><a id="l00266" name="l00266"></a><span class="lineno">  266</span> </div>
+<div class="line"><a id="l00267" name="l00267"></a><span class="lineno">  267</span>    }; <span class="comment">// class Graph</span></div>
+<div class="line"><a id="l00268" name="l00268"></a><span class="lineno">  268</span> </div>
+<div class="line"><a id="l00269" name="l00269"></a><span class="lineno">  269</span>    std::ostream&amp;</div>
+<div class="line"><a id="l00270" name="l00270"></a><span class="lineno">  270</span>    operator&lt;&lt;(std::ostream&amp; s, <span class="keyword">const</span> Graph&amp; graph)</div>
+<div class="line"><a id="l00271" name="l00271"></a><span class="lineno">  271</span>    {</div>
+<div class="line"><a id="l00272" name="l00272"></a><span class="lineno">  272</span>        std::ios_base::fmtflags flgs(std::cout.flags());</div>
+<div class="line"><a id="l00273" name="l00273"></a><span class="lineno">  273</span> </div>
+<div class="line"><a id="l00274" name="l00274"></a><span class="lineno">  274</span>        <span class="keywordflow">if</span> (graph.num_independent_sets() == 0)</div>
+<div class="line"><a id="l00275" name="l00275"></a><span class="lineno">  275</span>            <span class="keywordflow">return</span> s &lt;&lt; <span class="stringliteral">&quot;Graph { }&quot;</span>;</div>
+<div class="line"><a id="l00276" name="l00276"></a><span class="lineno">  276</span> </div>
+<div class="line"><a id="l00277" name="l00277"></a><span class="lineno">  277</span>        s &lt;&lt; <span class="stringliteral">&quot;Graph {&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00278" name="l00278"></a><span class="lineno">  278</span>        <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; set : graph)</div>
+<div class="line"><a id="l00279" name="l00279"></a><span class="lineno">  279</span>        {</div>
+<div class="line"><a id="l00280" name="l00280"></a><span class="lineno">  280</span>            s &lt;&lt; <span class="stringliteral">&quot;  IndependentSet {&quot;</span> &lt;&lt; std::endl;;</div>
+<div class="line"><a id="l00281" name="l00281"></a><span class="lineno">  281</span>            <span class="keywordflow">for</span> (<span class="keyword">auto</span>&amp; vertex : set)</div>
+<div class="line"><a id="l00282" name="l00282"></a><span class="lineno">  282</span>            {</div>
+<div class="line"><a id="l00283" name="l00283"></a><span class="lineno">  283</span>                s</div>
+<div class="line"><a id="l00284" name="l00284"></a><span class="lineno">  284</span>                    &lt;&lt; <span class="stringliteral">&quot;    v(&quot;</span></div>
+<div class="line"><a id="l00285" name="l00285"></a><span class="lineno">  285</span>                    &lt;&lt; std::fixed</div>
+<div class="line"><a id="l00286" name="l00286"></a><span class="lineno">  286</span>                    &lt;&lt; std::setprecision(3)</div>
+<div class="line"><a id="l00287" name="l00287"></a><span class="lineno">  287</span>                    &lt;&lt; vertex.output</div>
+<div class="line"><a id="l00288" name="l00288"></a><span class="lineno">  288</span>                    &lt;&lt; <span class="stringliteral">&quot;) &quot;</span>;</div>
+<div class="line"><a id="l00289" name="l00289"></a><span class="lineno">  289</span>                s &lt;&lt; vertex.box &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00290" name="l00290"></a><span class="lineno">  290</span>            }</div>
+<div class="line"><a id="l00291" name="l00291"></a><span class="lineno">  291</span>            s &lt;&lt; <span class="stringliteral">&quot;  }&quot;</span> &lt;&lt; std::endl;</div>
+<div class="line"><a id="l00292" name="l00292"></a><span class="lineno">  292</span>        }</div>
+<div class="line"><a id="l00293" name="l00293"></a><span class="lineno">  293</span>        s &lt;&lt; <span class="stringliteral">&quot;}&quot;</span>;</div>
+<div class="line"><a id="l00294" name="l00294"></a><span class="lineno">  294</span>        std::cout.flags(flgs);</div>
+<div class="line"><a id="l00295" name="l00295"></a><span class="lineno">  295</span>        <span class="keywordflow">return</span> s;</div>
+<div class="line"><a id="l00296" name="l00296"></a><span class="lineno">  296</span>    }</div>
+<div class="line"><a id="l00297" name="l00297"></a><span class="lineno">  297</span> </div>
+<div class="line"><a id="l00298" name="l00298"></a><span class="lineno">  298</span>} <span class="comment">// namespace veritas</span></div>
+<div class="line"><a id="l00299" name="l00299"></a><span class="lineno">  299</span> </div>
+<div class="line"><a id="l00300" name="l00300"></a><span class="lineno">  300</span> </div>
+<div class="line"><a id="l00301" name="l00301"></a><span class="lineno">  301</span><span class="preprocessor">#endif </span><span class="comment">// VERITAS_GRAPH_HPP</span></div>
+<div class="ttc" id="aclassveritas_1_1AddTree_html"><div class="ttname"><a href="classveritas_1_1AddTree.html">veritas::AddTree</a></div><div class="ttdoc">Additive ensemble of Trees.</div><div class="ttdef"><b>Definition:</b> tree.hpp:368</div></div>
 <div class="ttc" id="aclassveritas_1_1BlockStore_html"><div class="ttname"><a href="classveritas_1_1BlockStore.html">veritas::BlockStore&lt; DomainPair &gt;</a></div></div>
-<div class="ttc" id="aclassveritas_1_1BoxRef_html"><div class="ttname"><a href="classveritas_1_1BoxRef.html">veritas::BoxRef</a></div><div class="ttdoc">An iterator of Domains sorted asc by their feature IDs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:221</div></div>
-<div class="ttc" id="aclassveritas_1_1BoxRef_html_a16b7af0aba068241e50bc89326765fbf"><div class="ttname"><a href="classveritas_1_1BoxRef.html#a16b7af0aba068241e50bc89326765fbf">veritas::BoxRef::overlaps</a></div><div class="ttdeci">bool overlaps(const BoxRef &amp;other) const</div><div class="ttdoc">Do the domains for the corresponding feature ids overlap?</div><div class="ttdef"><b>Definition:</b> domain.hpp:246</div></div>
+<div class="ttc" id="aclassveritas_1_1BoxRef_html"><div class="ttname"><a href="classveritas_1_1BoxRef.html">veritas::BoxRef</a></div><div class="ttdoc">An iterator of Domains sorted asc by their feature IDs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:230</div></div>
+<div class="ttc" id="aclassveritas_1_1BoxRef_html_a16b7af0aba068241e50bc89326765fbf"><div class="ttname"><a href="classveritas_1_1BoxRef.html#a16b7af0aba068241e50bc89326765fbf">veritas::BoxRef::overlaps</a></div><div class="ttdeci">bool overlaps(const BoxRef &amp;other) const</div><div class="ttdoc">Do the domains for the corresponding feature ids overlap?</div><div class="ttdef"><b>Definition:</b> domain.hpp:256</div></div>
 <div class="ttc" id="aclassveritas_1_1Graph_html"><div class="ttname"><a href="classveritas_1_1Graph.html">veritas::Graph</a></div><div class="ttdoc">K-partite graph.</div><div class="ttdef"><b>Definition:</b> graph.hpp:35</div></div>
+<div class="ttc" id="aclassveritas_1_1Graph_html_a0be32e8e4ba8daa0fec39d36ceda50f9"><div class="ttname"><a href="classveritas_1_1Graph.html#a0be32e8e4ba8daa0fec39d36ceda50f9">veritas::Graph::basic_remaining_upbound</a></div><div class="ttdeci">FloatT basic_remaining_upbound(size_t start_indep_set, const BoxRef &amp;box) const</div><div class="ttdoc">Looking at sets start_indep_set .</div><div class="ttdef"><b>Definition:</b> graph.hpp:187</div></div>
 <div class="ttc" id="aclassveritas_1_1Graph_html_a1b7075ddb8ced7a8e5fdec7b45d265cd"><div class="ttname"><a href="classveritas_1_1Graph.html#a1b7075ddb8ced7a8e5fdec7b45d265cd">veritas::Graph::prune_by_box</a></div><div class="ttdeci">void prune_by_box(const BoxRef &amp;box, bool intersect_with_box)</div><div class="ttdoc">Remove vertexes that do not overlap with the given box.</div><div class="ttdef"><b>Definition:</b> graph.hpp:128</div></div>
-<div class="ttc" id="aclassveritas_1_1Graph_html_a2a3e3f9e341a1ef2f8ae972ec5fd2bb8"><div class="ttname"><a href="classveritas_1_1Graph.html#a2a3e3f9e341a1ef2f8ae972ec5fd2bb8">veritas::Graph::num_vertices</a></div><div class="ttdeci">size_t num_vertices() const</div><div class="ttdoc">Total number of vertices.</div><div class="ttdef"><b>Definition:</b> graph.hpp:185</div></div>
-<div class="ttc" id="aclassveritas_1_1Graph_html_a729491e3cff9191a068d456aa85093aa"><div class="ttname"><a href="classveritas_1_1Graph.html#a729491e3cff9191a068d456aa85093aa">veritas::Graph::merge</a></div><div class="ttdeci">bool merge(int K, float max_time)</div><div class="ttdoc">Merge algorithm due to.</div><div class="ttdef"><b>Definition:</b> graph.hpp:198</div></div>
+<div class="ttc" id="aclassveritas_1_1Graph_html_a2a3e3f9e341a1ef2f8ae972ec5fd2bb8"><div class="ttname"><a href="classveritas_1_1Graph.html#a2a3e3f9e341a1ef2f8ae972ec5fd2bb8">veritas::Graph::num_vertices</a></div><div class="ttdeci">size_t num_vertices() const</div><div class="ttdoc">Total number of vertices.</div><div class="ttdef"><b>Definition:</b> graph.hpp:205</div></div>
+<div class="ttc" id="aclassveritas_1_1Graph_html_a729491e3cff9191a068d456aa85093aa"><div class="ttname"><a href="classveritas_1_1Graph.html#a729491e3cff9191a068d456aa85093aa">veritas::Graph::merge</a></div><div class="ttdeci">bool merge(int K, float max_time)</div><div class="ttdoc">Merge algorithm due to.</div><div class="ttdef"><b>Definition:</b> graph.hpp:218</div></div>
 <div class="ttc" id="aclassveritas_1_1Graph_html_a9dd115cb6d6ce12c5f974edb2e91c125"><div class="ttname"><a href="classveritas_1_1Graph.html#a9dd115cb6d6ce12c5f974edb2e91c125">veritas::Graph::base_score</a></div><div class="ttdeci">const FloatT base_score</div><div class="ttdoc">See AddTree::base_score.</div><div class="ttdef"><b>Definition:</b> graph.hpp:97</div></div>
 <div class="ttc" id="aclassveritas_1_1Graph_html_aaf91880e631423e9e641023daa841f24"><div class="ttname"><a href="classveritas_1_1Graph.html#aaf91880e631423e9e641023daa841f24">veritas::Graph::basic_bound</a></div><div class="ttdeci">Bounds basic_bound() const</div><div class="ttdoc">Simple output bound:</div><div class="ttdef"><b>Definition:</b> graph.hpp:163</div></div>
 <div class="ttc" id="aclassveritas_1_1Graph_html_ab5957665fe4df6aa194ce546cd92d58a"><div class="ttname"><a href="classveritas_1_1Graph.html#ab5957665fe4df6aa194ce546cd92d58a">veritas::Graph::IndepSet</a></div><div class="ttdeci">std::vector&lt; Vertex &gt; IndepSet</div><div class="ttdoc">independent set</div><div class="ttdef"><b>Definition:</b> graph.hpp:42</div></div>
-<div class="ttc" id="aclassveritas_1_1Graph_html_abda11d6a35e6fb92a4cc6251835487b5"><div class="ttname"><a href="classveritas_1_1Graph.html#abda11d6a35e6fb92a4cc6251835487b5">veritas::Graph::get_vertices</a></div><div class="ttdeci">const IndepSet &amp; get_vertices(size_t indep_set) const</div><div class="ttdoc">Get the vertexes in an independent set.</div><div class="ttdef"><b>Definition:</b> graph.hpp:182</div></div>
+<div class="ttc" id="aclassveritas_1_1Graph_html_abda11d6a35e6fb92a4cc6251835487b5"><div class="ttname"><a href="classveritas_1_1Graph.html#abda11d6a35e6fb92a4cc6251835487b5">veritas::Graph::get_vertices</a></div><div class="ttdeci">const IndepSet &amp; get_vertices(size_t indep_set) const</div><div class="ttdoc">Get the vertexes in an independent set.</div><div class="ttdef"><b>Definition:</b> graph.hpp:202</div></div>
 <div class="ttc" id="aclassveritas_1_1Graph_html_ae4b09283abd69d3cd8001e1801cf7c0b"><div class="ttname"><a href="classveritas_1_1Graph.html#ae4b09283abd69d3cd8001e1801cf7c0b">veritas::Graph::prune</a></div><div class="ttdeci">void prune(F f)</div><div class="ttdoc">Remove vertexes for which the f returns true.</div><div class="ttdef"><b>Definition:</b> graph.hpp:115</div></div>
 <div class="ttc" id="aclassveritas_1_1NodeRef_html"><div class="ttname"><a href="classveritas_1_1NodeRef.html">veritas::NodeRef</a></div><div class="ttdoc">A reference to a node in a veritas::Tree.</div><div class="ttdef"><b>Definition:</b> tree.hpp:88</div></div>
 <div class="ttc" id="aclassveritas_1_1NodeRef_html_a5eabb7ca5636772d68dace66a4e04b2c"><div class="ttname"><a href="classveritas_1_1NodeRef.html#a5eabb7ca5636772d68dace66a4e04b2c">veritas::NodeRef::leaf_value</a></div><div class="ttdeci">FloatT leaf_value() const</div><div class="ttdoc">Access the leaf value of this leaf node.</div><div class="ttdef"><b>Definition:</b> tree.hpp:164</div></div>
@@ -335,8 +350,8 @@ $(function() {
 <div class="ttc" id="aclassveritas_1_1Tree_html"><div class="ttname"><a href="classveritas_1_1Tree.html">veritas::Tree</a></div><div class="ttdoc">A binary decision tree with less-than splits.</div><div class="ttdef"><b>Definition:</b> tree.hpp:279</div></div>
 <div class="ttc" id="aclassveritas_1_1Tree_html_afb7bbc3889cd3908902895a0f6394c54"><div class="ttname"><a href="classveritas_1_1Tree.html#afb7bbc3889cd3908902895a0f6394c54">veritas::Tree::root</a></div><div class="ttdeci">ConstRef root() const</div><div class="ttdoc">Const NodeRef to root node.</div><div class="ttdef"><b>Definition:</b> tree.hpp:293</div></div>
 <div class="ttc" id="adomain_8hpp_html_a9c5d35af6974f9a5a5d0d0df8c7b5528"><div class="ttname"><a href="domain_8hpp.html#a9c5d35af6974f9a5a5d0d0df8c7b5528">veritas::Box</a></div><div class="ttdeci">std::vector&lt; DomainPair &gt; Box</div><div class="ttdoc">A sorted list of pairs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:131</div></div>
-<div class="ttc" id="adomain_8hpp_html_adc2e1cdb5c36c9a4595c928aef252ca7"><div class="ttname"><a href="domain_8hpp.html#adc2e1cdb5c36c9a4595c928aef252ca7">veritas::refine_box</a></div><div class="ttdeci">bool refine_box(Box &amp;box, FeatId feat_id, const Domain &amp;dom)</div><div class="ttdoc">Include the constraint 'feat_id in dom' to the box.</div><div class="ttdef"><b>Definition:</b> domain.hpp:170</div></div>
-<div class="ttc" id="adomain_8hpp_html_adeadbf28be46b85fdd5f95eaffd9513f"><div class="ttname"><a href="domain_8hpp.html#adeadbf28be46b85fdd5f95eaffd9513f">veritas::combine_boxes</a></div><div class="ttdeci">void combine_boxes(const BoxRef &amp;a, const BoxRef &amp;b, bool copy_b, Box &amp;out)</div><div class="ttdoc">Intersect the boxes with corresponding feature IDs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:335</div></div>
+<div class="ttc" id="adomain_8hpp_html_adc2e1cdb5c36c9a4595c928aef252ca7"><div class="ttname"><a href="domain_8hpp.html#adc2e1cdb5c36c9a4595c928aef252ca7">veritas::refine_box</a></div><div class="ttdeci">bool refine_box(Box &amp;box, FeatId feat_id, const Domain &amp;dom)</div><div class="ttdoc">Include the constraint 'feat_id in dom' to the box.</div><div class="ttdef"><b>Definition:</b> domain.hpp:202</div></div>
+<div class="ttc" id="adomain_8hpp_html_adeadbf28be46b85fdd5f95eaffd9513f"><div class="ttname"><a href="domain_8hpp.html#adeadbf28be46b85fdd5f95eaffd9513f">veritas::combine_boxes</a></div><div class="ttdeci">void combine_boxes(const BoxRef &amp;a, const BoxRef &amp;b, bool copy_b, Box &amp;out)</div><div class="ttdoc">Intersect the boxes with corresponding feature IDs.</div><div class="ttdef"><b>Definition:</b> domain.hpp:345</div></div>
 <div class="ttc" id="astructveritas_1_1Bounds_html"><div class="ttname"><a href="structveritas_1_1Bounds.html">veritas::Bounds</a></div><div class="ttdef"><b>Definition:</b> graph.hpp:23</div></div>
 <div class="ttc" id="astructveritas_1_1Graph_1_1Vertex_html"><div class="ttname"><a href="structveritas_1_1Graph_1_1Vertex.html">veritas::Graph::Vertex</a></div><div class="ttdef"><b>Definition:</b> graph.hpp:37</div></div>
 <div class="ttc" id="astructveritas_1_1Graph_1_1Vertex_html_a43c3fb8860c1541e44177a21925b6aeb"><div class="ttname"><a href="structveritas_1_1Graph_1_1Vertex.html#a43c3fb8860c1541e44177a21925b6aeb">veritas::Graph::Vertex::output</a></div><div class="ttdeci">FloatT output</div><div class="ttdoc">The leaf value associated with the leaf.</div><div class="ttdef"><b>Definition:</b> graph.hpp:40</div></div>

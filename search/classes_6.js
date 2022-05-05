@@ -1,7 +1,5 @@
 var searchData=
 [
-  ['kantchelianattack_0',['KantchelianAttack',['../classveritas_1_1kantchelian_1_1KantchelianAttack.html',1,'veritas::kantchelian']]],
-  ['kantchelianbase_1',['KantchelianBase',['../classveritas_1_1kantchelian_1_1KantchelianBase.html',1,'veritas::kantchelian']]],
-  ['kantchelianoutputopt_2',['KantchelianOutputOpt',['../classveritas_1_1kantchelian_1_1KantchelianOutputOpt.html',1,'veritas::kantchelian']]],
-  ['kantcheliantargetedattack_3',['KantchelianTargetedAttack',['../classveritas_1_1kantchelian_1_1KantchelianTargetedAttack.html',1,'veritas::kantchelian']]]
+  ['instance_5fiter_5fhelper_0',['instance_iter_helper',['../structveritas_1_1FeatMap_1_1instance__iter__helper.html',1,'veritas::FeatMap']]],
+  ['iterator_1',['iterator',['../classveritas_1_1FeatMap_1_1iterator.html',1,'veritas::FeatMap']]]
 ];
