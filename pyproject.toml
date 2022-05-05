@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 skip = "*-win32 *-manylinux_i686 *-musllinux*"
-test-requires = "gurobipy"
+test-requires = ""
 test-command = "python -m unittest discover {project}/tests test_*.py"
 
  # Setuptools bug causes collision between pypy and cpython artifacts
