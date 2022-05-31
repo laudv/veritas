@@ -28,7 +28,7 @@ namespace veritas {
     struct BaseHeuristic; /* heuristics.hpp */
 
     struct Solution {
-        double time; 
+        double time;
         FloatT eps;
         FloatT output;
         BoxRef box;
@@ -182,6 +182,7 @@ namespace veritas {
         virtual double time_since_start() const = 0;
         virtual std::tuple<FloatT, FloatT, FloatT> current_bounds() const = 0;
         virtual const Solution& get_solution(size_t solution_index) const = 0;
+        virtual std::vector<NodeId> get_solution_nodes(size_t solution_index) const = 0;
         virtual FloatT get_at_output_for_box(BoxRef box) const = 0;
         virtual bool is_optimal() const = 0;
         virtual void prune_by_box(BoxRef box) = 0;
@@ -321,7 +322,7 @@ namespace veritas {
             //State state = (num_steps%2 == 1)
             //    ? pop_from_focal_()
             //    : pop_top_();
-            
+
             State state = pop_from_focal_();
 
             if (is_solution_(state))
@@ -437,15 +438,29 @@ namespace veritas {
         const Solution& get_solution(size_t solution_index) const
         { return solutions_.at(solution_index).sol; }
 
+        std::vector<NodeId> get_solution_nodes(size_t solution_index) const
+        {
+            std::vector<NodeId> nodes;
+            for (const Tree& t : at_)
+            {
+                workspace_.leafiter2.setup(t,
+                        solutions_.at(solution_index).state.box);
+                NodeId leaf_id = workspace_.leafiter2.next();
+                if (workspace_.leafiter2.next() != -1)
+                    throw std::runtime_error("no unique output for box");
+                nodes.push_back(leaf_id);
+            }
+            return nodes;
+        }
+
         const State& get_solution_state(size_t solution_index) const
         { return solutions_.at(solution_index).state; }
 
         FloatT get_at_output_for_box(BoxRef box) const
         {
             FloatT output = at_.base_score;
-            for (size_t tree_index = 0; tree_index < at_.size(); ++tree_index)
+            for (const Tree& t : at_)
             {
-                const Tree& t = at_[tree_index];
                 workspace_.leafiter2.setup(t, box);
                 NodeId leaf_id = workspace_.leafiter2.next();
                 if (workspace_.leafiter2.next() != -1)
@@ -541,7 +556,7 @@ namespace veritas {
             heuristic.update_heuristic(initial_state, *this, dummy_parent, at_.base_score);
             push_(std::move(initial_state));
         }
-        
+
         void compute_node_box_(size_t tree_index, Tree::ConstRef n)
         {
             if (n.is_leaf())
@@ -644,10 +659,10 @@ namespace veritas {
                 //    // we want to add refine this state by combining state.box with the leaf's box.
                 //    // the state box' flatbox is in leafiter1.flatbox
                 //    //      --> CANNOT CHANGE this flatbox, would invalidate iteration!!
-                //    // TODO 
+                //    // TODO
                 //    //  - detect which feature's domain has changed,
                 //    //  - call listeners for those attributes
-                //    
+                //
                 //    for (auto&&[feat_id, dom] : leaf_box)
                 //    {
                 //        Domain dom2;
@@ -901,7 +916,7 @@ namespace veritas {
                 //std::cout << num_steps << ": " << "ref_oscore=" << oscore << ", orelax=" << orelax
                 //    <<", best=" << heuristic.open_score(open_[i_best]) << "/" << open_[i_best].indep_set << ": ";
                 //heuristic.print_state(std::cout, s);
-                
+
                 FloatT oscore1 = heuristic.open_score(open_[2*i+1]);
                 if (2*i+1 < open_.size() && heuristic.cmp_open_score(oscore1, orelax))
                     push_to_heap_(workspace_.focal, 2*i+1, cmp_i);
@@ -1032,7 +1047,7 @@ namespace veritas {
             // if update time is similar to last time, double eps increase
             if (time_since_previous_update*2 < avg_eps_update_time_)
                 eps_increment_ *= 2.0;
-            
+
             last_eps_update_time_ = t;
             avg_eps_update_time_ = 0.2 * avg_eps_update_time_ +
                 0.8*time_since_previous_update;

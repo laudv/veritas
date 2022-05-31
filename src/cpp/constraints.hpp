@@ -69,10 +69,8 @@ namespace veritas::constraints {
     }
 
     template <typename H>
-    void onehot(Search<H>& s, std::initializer_list<FeatId> il_xs)
+    void onehot(Search<H>& s, std::vector<FeatId> xs)
     {
-        std::vector<FeatId> xs = il_xs;
-
         int grp = s.callback_group();
         for (FeatId x : xs)
         {
@@ -94,6 +92,10 @@ namespace veritas::constraints {
             }, grp);
         }
     }
+
+    template <typename H>
+    void onehot(Search<H>& s, std::initializer_list<FeatId> il_xs)
+    { onehot(s, std::vector<FeatId>(il_xs)); }
 
     /**
      * Squared distance between two 2-d points, one of which is fixed.

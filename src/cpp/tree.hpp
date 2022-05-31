@@ -163,7 +163,7 @@ namespace veritas {
         /** Access the leaf value of this leaf node. */
         inline FloatT leaf_value() const
         {
-            if (is_internal()) throw std::runtime_error("get_split of internal");
+            if (is_internal()) throw std::runtime_error("leaf_value of internal");
             return node().leaf.leaf_value;
         }
 
@@ -176,14 +176,14 @@ namespace veritas {
             node().leaf.leaf_value = value;
         }
 
-        /** Split this internal node. */
+        /** Split this leaf node. */
         template <typename T=RefT>
         inline std::enable_if_t<T::is_mut_type::value, void>
         split(LtSplit split)
         {
             if (is_internal()) throw std::runtime_error("split internal");
 
-            NodeId left_id = tree_->nodes_.size();
+            NodeId left_id = static_cast<NodeId>(tree_->nodes_.size());
 
             inner::Node left(left_id,      id());
             inner::Node right(left_id + 1, id());

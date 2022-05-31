@@ -83,6 +83,7 @@ namespace veritas {
             strm << (is_right_child() ? "└─ " : "├─ ")
                 << "Leaf("
                 << "id=" << id()
+                << ", sz=" << tree_size()
                 << ", value=" << leaf_value()
                 << ')' << std::endl;
         }
@@ -92,6 +93,7 @@ namespace veritas {
                 << "Node("
                 << "id=" << id()
                 << ", split=[" << get_split() << ']'
+                << ", sz=" << tree_size()
                 << ", left=" << left().id()
                 << ", right=" << right().id()
                 << ')' << std::endl;

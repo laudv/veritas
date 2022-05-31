@@ -22,6 +22,7 @@
 #include "tree.hpp"
 //#include "graph_search.hpp"
 #include "search.hpp"
+#include "constraints.hpp"
 
 namespace py = pybind11;
 using namespace veritas;
@@ -62,9 +63,11 @@ tobox(py::object pybox)
             d = py::cast<Domain>(x);
         }
         if (!std::isinf(d.lo))
-            refine_box(box, LtSplit(count, d.lo), false);
+            if (!refine_box(box, LtSplit(count, d.lo), false))
+                throw std::runtime_error("invalid box");
         if (!std::isinf(d.hi))
-            refine_box(box, LtSplit(count, d.hi), true);
+            if (!refine_box(box, LtSplit(count, d.hi), true))
+                throw std::runtime_error("invalid box");
         //for (auto bb : box)//debug print
         //{
         //    if (bb.feat_id == count)
@@ -373,91 +376,6 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
         ; // FeatMap
 
-    /*
-    py::class_<GraphOutputSearch>(m, "GraphOutputSearch")
-        .def(py::init<const AddTree&>())
-        .def("step", &GraphOutputSearch::step)
-        .def("steps", &GraphOutputSearch::steps)
-        .def("step_for", &GraphOutputSearch::step_for)
-        .def("stop_conditions_met", &GraphOutputSearch::stop_conditions_met)
-        .def("num_solutions", &GraphOutputSearch::num_solutions)
-        .def("num_states", &GraphOutputSearch::num_states)
-        .def("num_steps", &GraphOutputSearch::num_steps)
-        //.def("heap_size", &GraphOutputSearch::heap_size)
-        .def("get_solution", &GraphOutputSearch::get_solution)
-        .def("time_since_start", &GraphOutputSearch::time_since_start)
-        .def("current_bounds", &GraphOutputSearch::current_bounds_with_base_score)
-        .def("get_eps", &GraphOutputSearch::get_eps)
-        .def("set_eps", &GraphOutputSearch::set_eps)
-        .def("set_eps_increment", &GraphOutputSearch::set_eps_increment)
-        //.def_readwrite("max_mem_size", &NodeSearch::max_mem_size)
-        .def("set_mem_capacity", &GraphOutputSearch::set_mem_capacity)
-        .def_readonly("snapshots", &GraphOutputSearch::snapshots)
-        .def("prune", [](GraphOutputSearch& s, const py::list& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            return s.prune_by_box(b);
-        })
-        .def_readwrite("use_dynprog_heuristic", &GraphOutputSearch::use_dynprog_heuristic)
-        .def_readwrite("break_steps_when_n_new_solutions", &GraphOutputSearch::break_steps_when_n_new_solutions)
-        .def_readwrite("stop_when_solution_eps_equals", &GraphOutputSearch::stop_when_solution_eps_equals)
-        .def_readwrite("stop_when_num_solutions_equals", &GraphOutputSearch::stop_when_num_solutions_equals)
-        .def_readwrite("stop_when_up_bound_less_than", &GraphOutputSearch::stop_when_up_bound_less_than)
-        .def_readwrite("stop_when_solution_output_greater_than", &GraphOutputSearch::stop_when_solution_output_greater_than)
-        ; // GraphOutputSearch
-
-    py::class_<GraphRobustnessSearch>(m, "GraphRobustnessSearch")
-        .def(py::init<const AddTree&, const std::vector<FloatT>&, FloatT>())
-        .def("step", &GraphRobustnessSearch::step)
-        .def("steps", &GraphRobustnessSearch::steps)
-        .def("step_for", &GraphRobustnessSearch::step_for)
-        .def("stop_conditions_met", &GraphRobustnessSearch::stop_conditions_met)
-        .def("num_solutions", &GraphRobustnessSearch::num_solutions)
-        .def("num_states", &GraphRobustnessSearch::num_states)
-        .def("num_steps", &GraphRobustnessSearch::num_steps)
-        .def("get_solution", &GraphRobustnessSearch::get_solution)
-        .def("time_since_start", &GraphRobustnessSearch::time_since_start)
-        .def("set_eps", &GraphRobustnessSearch::set_eps)
-        .def("get_eps", &GraphRobustnessSearch::get_eps)
-        //.def_readonly("snapshots", &GraphRobustnessSearch::snapshots)
-        .def("prune", [](GraphRobustnessSearch& s, const py::list& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            return s.prune_by_box(b);
-        })
-        .def_readwrite("output_threshold", &GraphRobustnessSearch::output_threshold)
-        .def_readwrite("stop_when_num_solutions_equals", &GraphRobustnessSearch::stop_when_num_solutions_equals)
-
-        ; // GraphRobustnessSearch
-
-    py::class_<Snapshot>(m, "Snapshot")
-        .def_readonly("time", &Snapshot::time)
-        .def_readonly("num_steps", &Snapshot::num_steps)
-        //.def_readonly("num_impossible", &Snapshot::num_impossible)
-        .def_readonly("num_solutions", &Snapshot::num_solutions)
-        .def_readonly("num_states", &Snapshot::num_states)
-        .def_readonly("eps", &Snapshot::eps)
-        .def_readonly("bounds", &Snapshot::bounds)
-        ; // Snapshot
-
-    py::class_<Solution>(m, "Solution")
-        .def_readonly("state_index", &Solution::state_index)
-        .def_readonly("solution_index", &Solution::solution_index)
-        .def_readonly("eps", &Solution::eps)
-        .def_readonly("delta", &Solution::delta)
-        .def_readonly("output", &Solution::output)
-        .def_readonly("nodes", &Solution::nodes)
-        .def_readonly("time", &Solution::time)
-        .def("box", [](const Solution& s) {
-            py::dict d;
-            for (auto&& [feat_id, dom] : s.box)
-                d[py::int_(feat_id)] = dom;
-            return d;
-        })
-        .def("__str__", [](const Solution& s) { return tostr(s); })
-        ; // Solution
-    */
-
     py::enum_<StopReason>(m, "StopReason")
         .value("NONE", StopReason::NONE)
         .value("NO_MORE_OPEN", StopReason::NO_MORE_OPEN)
@@ -485,6 +403,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("time_since_start", &VSearch::time_since_start)
         .def("current_bounds", &VSearch::current_bounds)
         .def("get_solution", &VSearch::get_solution)
+        .def("get_solution_nodes", &VSearch::get_solution_nodes)
         .def("is_optimal", &VSearch::is_optimal)
         .def("base_score", &VSearch::base_score)
         .def("get_at_output_for_box", [](const VSearch& s, const py::list& pybox) {
@@ -522,9 +441,36 @@ PYBIND11_MODULE(pyveritas, m) {
             return py::none();
         })
 
+        .def("add_onehot_constraint", [](std::shared_ptr<VSearch> s, const std::vector<FeatId>& feat_ids) {
+            if (auto* v = dynamic_cast<Search<MaxOutputHeuristic>*>(s.get()))
+            {
+                constraints::onehot(*v, feat_ids);
+            }
+            else {
+                throw std::runtime_error("unsupported VSearch subtype");
+            }
+            return py::none();
+
+            })
+
+        .def("add_sqdist1_constraint", [](std::shared_ptr<VSearch> s, FeatId x, FeatId y, FeatId d, FloatT x0, FloatT y0) {
+            if (auto* v = dynamic_cast<Search<MaxOutputHeuristic>*>(s.get()))
+            {
+                constraints::sqdist1(*v, x, y, d, x0, y0);
+            }
+            else {
+                throw std::runtime_error("unsupported VSearch subtype");
+            }
+            return py::none();
+
+            })
+
+
+
         // stats
         .def_readonly("num_steps", &VSearch::num_steps)
         .def_readonly("num_rejected_solutions", &VSearch::num_rejected_solutions)
+        .def_readonly("num_rejected_states", &VSearch::num_rejected_states)
         .def_readonly("snapshots", &VSearch::snapshots)
 
         // options
@@ -541,64 +487,6 @@ PYBIND11_MODULE(pyveritas, m) {
         .def_readwrite("stop_when_upper_less_than",           &VSearch::stop_when_upper_less_than)
         .def_readwrite("stop_when_lower_greater_than",        &VSearch::stop_when_lower_greater_than)
         ; // VSearch
-
-    /*
-    using MaxOutputSearch = Search<MaxOutputHeuristic>;
-    using MaxOutputSolution = Solution<MaxOutputHeuristic::State>;
-
-    py::class_<MaxOutputSearch>(m, "MaxOutputSearch")
-        .def(py::init<const AddTree&>())
-        .def("step", &MaxOutputSearch::step)
-        .def("steps", &MaxOutputSearch::steps)
-        .def("step_for", &MaxOutputSearch::step_for)
-        .def("num_solutions", &MaxOutputSearch::num_solutions)
-        .def("num_open", &MaxOutputSearch::num_open)
-        .def("set_mem_capacity", &MaxOutputSearch::set_mem_capacity)
-        .def("time_since_start", &MaxOutputSearch::time_since_start)
-        .def("current_bounds", &MaxOutputSearch::current_bounds)
-        .def("get_solution", &MaxOutputSearch::get_solution)
-        .def("is_optimal", &MaxOutputSearch::is_optimal)
-        .def("prune", [](MaxOutputSearch& s, const py::list& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            return s.prune_by_box(b);
-        })
-
-        // stats
-        .def_readonly("num_steps", &MaxOutputSearch::num_steps)
-        .def_readonly("num_rejected_solutions", &MaxOutputSearch::num_rejected_solutions)
-        .def_readonly("snapshots", &MaxOutputSearch::snapshots)
-
-        // options
-        .def_readwrite("eps", &MaxOutputSearch::eps)
-        .def_readwrite("debug", &MaxOutputSearch::debug)
-        .def_readwrite("max_focal_size", &MaxOutputSearch::max_focal_size)
-        .def_readwrite("auto_eps", &MaxOutputSearch::auto_eps)
-        .def_readwrite("reject_solution_when_output_less_than", &MaxOutputSearch::reject_solution_when_output_less_than)
-
-        // stop condition
-        .def_readwrite("stop_when_num_solutions_exceeds",     &MaxOutputSearch::stop_when_num_solutions_exceeds)
-        .def_readwrite("stop_when_num_new_solutions_exceeds", &MaxOutputSearch::stop_when_num_new_solutions_exceeds)
-        .def_readwrite("stop_when_optimal",                   &MaxOutputSearch::stop_when_optimal)
-        .def_readwrite("stop_when_upper_less_than",           &MaxOutputSearch::stop_when_upper_less_than)
-        .def_readwrite("stop_when_lower_greater_than",        &MaxOutputSearch::stop_when_lower_greater_than)
-
-
-        ; // MaxOutputSearch
-
-    py::class_<MaxOutputSolution>(m, "MaxOutputSolution")
-        .def_readonly("eps", &MaxOutputSolution::eps)
-        .def_readonly("time", &MaxOutputSolution::time)
-        .def_readonly("output", &MaxOutputSolution::output)
-        .def("box", [](const MaxOutputSolution& s) {
-            py::dict d;
-            for (auto&& [feat_id, dom] : s.state.box)
-                d[py::int_(feat_id)] = dom;
-            return d;
-        })
-        .def("__str__", [](const MaxOutputSolution& s) { return tostr(s); })
-        ; // Solution
-        */
 
     py::class_<Solution>(m, "Solution")
         .def_readonly("eps", &Solution::eps)
