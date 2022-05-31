@@ -62,12 +62,10 @@ tobox(py::object pybox)
         {
             d = py::cast<Domain>(x);
         }
-        if (!std::isinf(d.lo))
-            if (!refine_box(box, LtSplit(count, d.lo), false))
-                throw std::runtime_error("invalid box");
-        if (!std::isinf(d.hi))
-            if (!refine_box(box, LtSplit(count, d.hi), true))
-                throw std::runtime_error("invalid box");
+
+        if (!refine_box(box, count, d))
+            throw std::runtime_error("invalid box");
+
         //for (auto bb : box)//debug print
         //{
         //    if (bb.feat_id == count)
