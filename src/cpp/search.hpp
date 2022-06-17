@@ -371,9 +371,9 @@ namespace veritas {
                 auto &&[lo, hi, top] = current_bounds();
                 if (stop_when_optimal && is_optimal_(lo, hi, top))
                     stop_reason = StopReason::OPTIMAL;
-                else if (lo > stop_when_lower_greater_than)
+                else if (lo > stop_when_lower_greater_than-base_score())
                     stop_reason = StopReason::LOWER_GT;
-                else if (hi < stop_when_upper_less_than)
+                else if (hi < stop_when_upper_less_than-base_score())
                     stop_reason = StopReason::UPPER_LT;
             }
 
@@ -605,7 +605,7 @@ namespace veritas {
                 { // sol
                     time_since_start(),
                     eps,
-                    heuristic.output_overestimate(state), // output
+                    base_score() + heuristic.output_overestimate(state), // output
                     state.box,
                 }
             });
@@ -1112,7 +1112,7 @@ namespace veritas {
     std::shared_ptr<VSearch>
     VSearch::max_output(const AddTree& at)
     {
-        return std::unique_ptr<VSearch>(new Search<MaxOutputHeuristic>(at));
+        return std::shared_ptr<VSearch>(new Search<MaxOutputHeuristic>(at));
     }
 
     inline
@@ -1120,7 +1120,7 @@ namespace veritas {
     VSearch::min_dist_to_example(const AddTree& at,
             const std::vector<FloatT>& example, FloatT output_threshold)
     {
-        return std::unique_ptr<VSearch>(new Search<MinDistToExampleHeuristic>(
+        return std::shared_ptr<VSearch>(new Search<MinDistToExampleHeuristic>(
                     at, example, output_threshold));
     }
 
