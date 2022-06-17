@@ -12,8 +12,6 @@
 #include "domain.hpp"
 #include "tree.hpp"
 #include "block_store.hpp"
-//#include "graph.hpp"
-//#include "constraints.hpp"
 #include <iostream>
 #include <chrono>
 #include <map>
@@ -371,9 +369,9 @@ namespace veritas {
                 auto &&[lo, hi, top] = current_bounds();
                 if (stop_when_optimal && is_optimal_(lo, hi, top))
                     stop_reason = StopReason::OPTIMAL;
-                else if (lo > stop_when_lower_greater_than-base_score())
+                else if (lo > stop_when_lower_greater_than)
                     stop_reason = StopReason::LOWER_GT;
-                else if (hi < stop_when_upper_less_than-base_score())
+                else if (hi < stop_when_upper_less_than)
                     stop_reason = StopReason::UPPER_LT;
             }
 
@@ -512,7 +510,7 @@ namespace veritas {
                     }
                     else
                     {
-                        node_box = BoxRef::null_box();
+                        node_box = BoxRef::invalid_box();
                     }
                 }
             }
@@ -553,8 +551,12 @@ namespace veritas {
 
             // Push the first search state
             State initial_state, dummy_parent;
-            heuristic.update_heuristic(initial_state, *this, dummy_parent, at_.base_score);
-            push_(std::move(initial_state));
+            bool success = heuristic.update_heuristic(initial_state, *this,
+                    dummy_parent, at_.base_score);
+            if (success)
+                push_(std::move(initial_state));
+            else
+                std::cout << "Warning: initial_state invalid" << std::endl;
         }
 
         void compute_node_box_(size_t tree_index, Tree::ConstRef n)
@@ -605,7 +607,7 @@ namespace veritas {
                 { // sol
                     time_since_start(),
                     eps,
-                    base_score() + heuristic.output_overestimate(state), // output
+                    heuristic.output_overestimate(state), // output
                     state.box,
                 }
             });
@@ -649,7 +651,7 @@ namespace veritas {
             while ((leaf_id = workspace_.leafiter1.next()) != -1)
             {
                 BoxRef leaf_box = node_box_[next_tree][leaf_id];
-                if (leaf_box.is_null_box())
+                if (leaf_box.is_invalid_box())
                 {
                     //std::cout << "skip1" << leaf_id << " because constraints " << next_tree << std::endl;
                     continue;

@@ -41,11 +41,8 @@ namespace veritas {
                 NodeId leaf_id = -1;
                 while ((leaf_id = s.workspace_.leafiter2.next()) != -1)
                 {
-                    if (s.node_box_[tree_index][leaf_id].is_null_box())
-                    {
-                        //std::cout << "skipping2 " << leaf_id << " because constraints" << std::endl;
+                    if (s.node_box_[tree_index][leaf_id].is_invalid_box())
                         continue;
-                    }
                     max = std::max(t[leaf_id].leaf_value(), max);
                 }
                 h += max;
@@ -104,7 +101,6 @@ namespace veritas {
             //FloatT h = search.graph_.basic_remaining_upbound(out.indep_set+1,
             //        out.box);
             FloatT h = compute_basic_output_heuristic_(search, out);
-            //std::cout << h << ", " << h2 << std::endl;
 
             if (!std::isinf(h))
             {
@@ -278,7 +274,7 @@ namespace veritas {
                 while ((leaf_id = s.workspace_.leafiter2.next()) != -1)
                 {
                     BoxRef box = s.node_box_[tree_index][leaf_id];
-                    if (box.is_null_box())
+                    if (box.is_invalid_box())
                         continue;
 
                     FloatT lp = lp_state;
@@ -326,7 +322,7 @@ namespace veritas {
                 while ((leaf_id = s.workspace_.leafiter2.next()) != -1)
                 {
                     BoxRef box = s.node_box_[tree_index][leaf_id];
-                    if (box.is_null_box())
+                    if (box.is_invalid_box())
                         continue;
 
                     FloatT lp = lp_state;

@@ -24,7 +24,7 @@ def plot_img_solutions(imghat, solutions):
         x0, y0 = max(0.0, box[i].lo), max(0.0, box[j].lo)
         x1, y1 = min(100.0, box[i].hi), min(100.0, box[j].hi)
         w, h = x1-x0, y1-y0
-        print((x0, y0), (x1, y1), w, h, s.output)
+        #print((x0, y0), (x1, y1), w, h, s.output)
         rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,lw=1,ec=c,fc='none')
         ax.add_patch(rect)
 
@@ -120,7 +120,6 @@ class TestSearch(unittest.TestCase):
             #print(search.snapshots[-1].avg_focal_size)
         self.assertTrue(done == StopReason.NO_MORE_OPEN)
 
-        self.assertTrue(done)
         outputs_expected = sorted(np.unique(imghat[0:30, 0:30]), reverse=True)
         self.assertEqual(search.num_solutions(), len(outputs_expected));
 
@@ -216,13 +215,13 @@ class TestSearch(unittest.TestCase):
         print(search.step_for(1.0, 100))
 
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
-        for i, sol in enumerate(solutions):
-            print(at.eval([d.lo for d in sol.box().values()])[0],
-                    sol.output,
-                    search.get_solstate_field(i, "g"),
-                    search.get_solstate_field(i, "dist"),
-                    sol.box(), example, ypred, at.eval(get_closest_example(sol.box(), example)))
-
+#        for i, sol in enumerate(solutions):
+#            print(at.eval([d.lo for d in sol.box().values()])[0],
+#                    sol.output,
+#                    search.get_solstate_field(i, "g"),
+#                    search.get_solstate_field(i, "dist"),
+#                    sol.box(), example, ypred, at.eval(get_closest_example(sol.box(), example)))
+#
         print(search.current_bounds())
 
         #plot_img_solutions(imghat, solutions)

@@ -248,7 +248,11 @@ namespace veritas {
         explicit inline BoxRef(const T& t) : BoxRef(t.begin, t.end) {}
         /** A box with no domain restrictions representing the full input space. */
         inline static BoxRef null_box() { return {nullptr, nullptr}; }
+        inline static BoxRef invalid_box()
+        { return {nullptr, reinterpret_cast<const_iterator>(size_t(1))}; }
         inline bool is_null_box() const { return begin_ == nullptr; }
+        inline bool is_invalid_box() const
+        { return end_ == reinterpret_cast<const_iterator>(size_t(1)); }
         inline const_iterator begin() const { return begin_; }
         inline const_iterator end() const { return end_; }
 
