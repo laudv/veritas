@@ -152,6 +152,8 @@ class VeritasRobustnessSearch(RobustnessSearch):
             **kwargs):
         super().__init__(example, **kwargs)
         self.mem_capacity = mem_capacity
+        self.stop_when_num_solutions_exceeds = 1
+        self.keep_at_most_generated_examples = 1
 
         if source_at is not None and target_at is not None:
             self.at = target_at.concat_negated(source_at) # minimize source_at
@@ -167,7 +169,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         #s.set_example(self.example)
         s.stop_when_optimal = True
         s.stop_when_upper_less_than = 0.0
-        s.stop_when_num_solutions_exceeds = 1
+        s.stop_when_num_solutions_exceeds = self.stop_when_num_solutions_exceeds
         s.reject_solution_when_output_less_than = 0.0
         s.max_focal_size = 10000
         s.debug = False;
@@ -210,8 +212,11 @@ class VeritasRobustnessSearch(RobustnessSearch):
             if best_sol.output > 0.0:
                 #max_output_diff = upper_bound if best_sol.eps != 1.0 else best_sol.output
                 max_output_diff = best_sol.output
-                closest = get_closest_example(best_sol, self.example)
-                generated_examples = [closest]
+            how_many = min(s.num_solutions(), self.keep_at_most_generated_examples)
+            for i in range(how_many):
+                sol = s.get_solution(i)
+                closest = get_closest_example(sol, self.example)
+                generated_examples.append(closest)
 
         #print("VERITAS numsol", s.num_solutions())
         #print("VERITAS num rej sol", s.num_rejected_solutions)

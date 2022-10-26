@@ -34,7 +34,7 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
                 if not validl or not validr:
                     print(f"WARNING: invalid split, node domain of feat {feat_id} is {box[feat_id]}",
                           f"but split value is {split_value} (node {vnode})")
-                    print(vtree, end="")
+                    #print(vtree, end="")
                 if not validl:
                     print(" -> considering only right branch, not adding split")
                     stack.append((vnode, gnode.right_child))
