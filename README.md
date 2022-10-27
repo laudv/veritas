@@ -54,11 +54,11 @@ from veritas import *
 #
 #       F0 < 2                     F0 < 3
 #       /    \                     /    \         
-#   F0 < 1   F0 < 3     +     F1 < 5     F0 < 0
-#   /   \     /   \           /   \       /   \  
-#  1     2   3     4         10   20     30   F2 < 1
+#   F0 < 1   F0 < 3     +     F1 < 5     F1 < 0
+#   /   \     /   \           /   \       /    \
+#  3     4   5     6         30   40     50     F2
 #                                             /    \
-#                                            50    60
+#                                            70    80
 at = AddTree()
 t = at.add_tree();
 t.split(t.root(), 0, 2)   # split(node_id, feature_id, split_value)
