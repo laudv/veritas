@@ -919,13 +919,19 @@ namespace veritas {
                 //    <<", best=" << heuristic.open_score(open_[i_best]) << "/" << open_[i_best].indep_set << ": ";
                 //heuristic.print_state(std::cout, s);
 
-                FloatT oscore1 = heuristic.open_score(open_[2*i+1]);
-                if (2*i+1 < open_.size() && heuristic.cmp_open_score(oscore1, orelax))
-                    push_to_heap_(workspace_.focal, 2*i+1, cmp_i);
+                if (2*i+1 < open_.size())
+                {
+                    FloatT oscore1 = heuristic.open_score(open_[2*i+1]);
+                    if (heuristic.cmp_open_score(oscore1, orelax))
+                        push_to_heap_(workspace_.focal, 2*i+1, cmp_i);
+                }
 
-                FloatT oscore2 = heuristic.open_score(open_[2*i+2]);
-                if (2*i+2 < open_.size() && heuristic.cmp_open_score(oscore2, orelax))
-                    push_to_heap_(workspace_.focal, 2*i+2, cmp_i);
+                if (2*i+2 < open_.size())
+                {
+                    FloatT oscore2 = heuristic.open_score(open_[2*i+2]);
+                    if (heuristic.cmp_open_score(oscore2, orelax))
+                        push_to_heap_(workspace_.focal, 2*i+2, cmp_i);
+                }
             }
 
             sum_focal_size_ += focal_size;
