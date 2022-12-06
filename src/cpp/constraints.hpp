@@ -8,6 +8,7 @@
 #define VERITAS_CONSTRAINTS_HPP
 
 #include "search.hpp"
+#include <tuple>
 
 /**
  * Veritas constraints.
@@ -159,14 +160,17 @@ namespace veritas::constraints {
                 << (x0-dyM) << ", " << (x0-dym) << "; "
                 << (y0-dxM) << ", " << (y0-dxm) << std::endl;
 
-            ctx.intersect(x, x0-dyM, x0-dym);
-            ctx.intersect(y, y0-dxM, y0-dxm);
+            std::array<Domain, 2> x_options = {Domain(x0-dyM, x0-dym), Domain(dym+x0, dyM+x0)};
+            std::array<Domain, 2> y_options = {Domain(y0-dxM, y0-dxm), Domain(dxm+y0, dxM+y0)};
 
-            ctx.duplicate();
-
-            ctx.intersect(x, dym+x0, dyM+x0);
-            ctx.intersect(y, dxm+x0, dxM+x0);
+            ctx.intersect(make_tuple(x, x_options), make_tuple(y, y_options));
         }, grp);
+    }
+
+    template <typename H>
+    void arctan2_1(Search<H>& s, FeatId x, FeatId y, FeatId a, FloatT x0, FloatT y0)
+    {
+
     }
 
 } // namespace veritas::constraints

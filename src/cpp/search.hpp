@@ -12,10 +12,12 @@
 #include "domain.hpp"
 #include "tree.hpp"
 #include "block_store.hpp"
+#include <array>
 #include <iostream>
 #include <chrono>
 #include <map>
 #include <memory>
+#include <functional>
 
 #include <iomanip>
 
@@ -223,16 +225,21 @@ namespace veritas {
             , caret_(caret)
             , callback_group_(callback_group) {}
 
-        void duplicate() { search_.duplicate_expand_frame_(caret_+1); }
-
         void intersect(FeatId feat_id, Domain dom)
         {
             search_.intersect_flatbox_feat_dom_(caret_, feat_id, dom,
-                    callback_group_);
+                                                callback_group_);
         }
 
         void intersect(FeatId feat_id, FloatT lo, FloatT hi)
         { intersect(feat_id, Domain(lo, hi)); }
+
+        template <typename... Options>
+        void intersect(Options... options)
+        {
+            search_.set_flatbox_constraint_options_(caret_, callback_group_,
+                                                    options...);
+        }
 
         Domain get(FeatId feat_id) const
         { return search_.get_flatbox_feat_dom_(feat_id); }
@@ -718,6 +725,7 @@ namespace veritas {
         {
             size_t caret = 0;
             workspace_.reject_flag = false;
+            bool popped_frame = false;
 
             // pop frame from flatbox_frames into flatbox in workspace_
             if (workspace_.flatbox.empty())
@@ -730,10 +738,15 @@ namespace veritas {
                 std::cout << "popping frame from frames... "
                     << workspace_.flatbox_frames.size();
 
+                popped_frame = true;
+
                 // copy last frame to workspace_.flatbox
                 size_t begin = workspace_.flatbox_offset.back();
                 size_t end = workspace_.flatbox_frames.size();
+                std::cout << " begin=" << begin << ",";
+                std::cout << " end=" << end << " ";
                 workspace_.flatbox.resize(end-begin);
+                // (!!) best eens nakijken
                 std::copy(workspace_.flatbox_frames.begin()+begin,
                           workspace_.flatbox_frames.begin()+end,
                           workspace_.flatbox.begin());
@@ -745,6 +758,14 @@ namespace veritas {
                 workspace_.flatbox_caret.pop_back();
 
                 std::cout << " -> " << workspace_.flatbox_frames.size() << std::endl;
+
+                std::cout << "POPPED flatbox: " << std::endl;
+                FeatId feat_id = 0;
+                for (const Domain& dom : workspace_.flatbox)
+                {
+                    std::cout << "| - " << feat_id << " : " << dom << std::endl;
+                    ++feat_id;
+                }
             }
 
             // compare for changes with respect to state box, which
@@ -754,12 +775,12 @@ namespace veritas {
                 Domain old_dom;
                 if (i < workspace_.leafiter1.flatbox.size())
                     old_dom = workspace_.leafiter1.flatbox[i];
-                if (old_dom != workspace_.flatbox[i])
+                if (!popped_frame && old_dom != workspace_.flatbox[i])
                 {
-                    //std::cout << "notify " << i << ": "
-                    //    << old_dom
-                    //    << " -> "
-                    //    << workspace_.flatbox[i] << std::endl;
+                    std::cout << "notify " << i << ": "
+                        << old_dom
+                        << " -> "
+                        << workspace_.flatbox[i] << std::endl;
                     notify_flatbox_change_(i, static_cast<FeatId>(i),
                             workspace_.flatbox[i], /* callback group */ -1);
                     if (workspace_.reject_flag)
@@ -777,10 +798,18 @@ namespace veritas {
             {
                 // branch, put current flatbox on frame and continue with a 'new' one
                 // continue with the current one later (next call of pop_expand_frame_)
-                workspace_.flatbox_offset.push_back(workspace_.flatbox_offset.size());
+                workspace_.flatbox_offset.push_back(workspace_.flatbox_frames.size());
                 workspace_.flatbox_caret.push_back(caret);
                 for (const Domain& d : workspace_.flatbox)
                     workspace_.flatbox_frames.push_back(d);
+
+                //std::cout << "DUPLICATE flatbox: " << workspace_.flatbox_offset.size() << std::endl;
+                //FeatId feat_id = 0;
+                //for (const Domain& dom : workspace_.flatbox)
+                //{
+                //    std::cout << "| - " << feat_id << " : " << dom << std::endl;
+                //    ++feat_id;
+                //}
             }
             workspace_.reject_flag = false;
         }
@@ -798,7 +827,75 @@ namespace veritas {
                 if (old_dom != workspace_.flatbox[feat_id])
                     notify_flatbox_change_(caret, feat_id, dom, callback_group);
             }
-            else workspace_.reject_flag = true;
+            else
+            {
+                std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
+                workspace_.reject_flag = true;
+            }
+        }
+
+        template <size_t N, typename... Options> // recursive case
+        void set_flatbox_constraint_options_(
+                size_t caret, int callback_group,
+                std::tuple<FeatId, std::array<Domain, N>> option,
+                Options... rest)
+        {
+            auto&& [feat_id, doms] = option;
+            Domain old_dom = workspace_.flatbox[feat_id];
+
+            for (Domain dom : doms)
+            {
+                if (old_dom.overlaps(dom))
+                {
+                    workspace_.flatbox[feat_id] = old_dom.intersect(dom);
+
+                    std::cout << " - " << feat_id << ": " << dom << " (old " << old_dom << ")"
+                        << " -> " << workspace_.flatbox[feat_id]
+                        << std::endl;
+
+                    // recurse... until basecase below is reached
+                    set_flatbox_constraint_options_(caret, callback_group, rest...);
+
+                    if (old_dom != workspace_.flatbox[feat_id])
+                        notify_flatbox_change_(caret, feat_id, dom, callback_group);
+                }
+                else
+                {
+                    std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
+                    workspace_.reject_flag = true;
+                }
+            }
+        }
+
+        template <size_t N> // basecase
+        void set_flatbox_constraint_options_(
+                size_t caret, int callback_group,
+                std::tuple<FeatId, std::array<Domain, N>> option)
+        {
+            auto&& [feat_id, doms] = option;
+            Domain old_dom = workspace_.flatbox[feat_id];
+
+            for (Domain dom : doms)
+            {
+                if (old_dom.overlaps(dom))
+                {
+                    workspace_.flatbox[feat_id] = old_dom.intersect(dom);
+
+                    std::cout << " - " << feat_id << ": " << dom << " (old " << old_dom << ")"
+                        << " -> " << workspace_.flatbox[feat_id]
+                        << std::endl;
+
+                    if (old_dom != workspace_.flatbox[feat_id])
+                        notify_flatbox_change_(caret, feat_id, dom, callback_group);
+
+                    duplicate_expand_frame_(caret);
+                }
+                else
+                {
+                    std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
+                    workspace_.reject_flag = true;
+                }
+            }
         }
 
         Domain get_flatbox_feat_dom_(FeatId feat_id) const
@@ -812,6 +909,8 @@ namespace veritas {
         void notify_flatbox_change_(size_t caret, FeatId feat_id, Domain dom,
                 int callback_group)
         {
+            std::cout << "notify_flatbox_change_ caret=" << caret << ", feat_id=" << feat_id
+                      << ", " << dom << ", grp=" << callback_group << std::endl;
             if (static_cast<size_t>(feat_id) >= callbacks_.size())
                 return;
 

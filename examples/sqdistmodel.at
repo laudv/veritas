@@ -1,0 +1,11 @@
+{"base_score": 0, "trees": [
+{"feat_id": 2, "split_value": 2.99159,
+  "lt": {"feat_id": 1, "split_value": 2.66332,
+    "lt": {"leaf_value": 0.155045},
+    "gteq": {"leaf_value": 3.0028}
+  },
+  "gteq": {"feat_id": 0, "split_value": 2.0603,
+    "lt": {"leaf_value": 6.3624},
+    "gteq": {"leaf_value": 9.8911}
+  }
+}]}

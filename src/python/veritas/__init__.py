@@ -15,6 +15,13 @@ try: # fails when xgboost not installed
     del xgb
 except ModuleNotFoundError as e: pass
 
+try: # fails when xgboost not installed
+    from .lgb import \
+        addtree_from_lgb_model, \
+        addtrees_from_multiclass_lgb_model
+    del lgb
+except ModuleNotFoundError as e: pass
+
 try: # fails when sklearn not installed
     from .sklearn import \
         addtree_from_sklearn_ensemble, \
