@@ -152,13 +152,13 @@ namespace veritas::constraints {
             FloatT dxm = std::sqrt(std::max(0.0, pow2(domd.lo) - pow2(x1M)));
             FloatT dxM = std::sqrt(std::max(0.0, pow2(domd.hi) - pow2(x1m)));
 
-            std::cout << "(1) " << domx << ", " << domy << ", " << domd << " "
-                << (dym+x0) << ", " << (dyM+x0) << "; "
-                << (dxm+x0) << ", " << (dxM+x0) << std::endl;
+            //std::cout << "(1) " << domx << ", " << domy << ", " << domd << " "
+            //    << (dym+x0) << ", " << (dyM+x0) << "; "
+            //    << (dxm+y0) << ", " << (dxM+y0) << std::endl;
 
-            std::cout  << "(2) " << domx << ", " << domy << ", " << domd << " "
-                << (x0-dyM) << ", " << (x0-dym) << "; "
-                << (y0-dxM) << ", " << (y0-dxm) << std::endl;
+            //std::cout  << "(2) " << domx << ", " << domy << ", " << domd << " "
+            //    << (x0-dyM) << ", " << (x0-dym) << "; "
+            //    << (y0-dxM) << ", " << (y0-dxm) << std::endl;
 
             std::array<Domain, 2> x_options = {Domain(x0-dyM, x0-dym), Domain(dym+x0, dyM+x0)};
             std::array<Domain, 2> y_options = {Domain(y0-dxM, y0-dxm), Domain(dxm+y0, dxM+y0)};

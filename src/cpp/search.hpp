@@ -20,6 +20,7 @@
 #include <functional>
 
 #include <iomanip>
+#include <stdexcept>
 
 namespace veritas {
 
@@ -237,8 +238,8 @@ namespace veritas {
         template <typename... Options>
         void intersect(Options... options)
         {
-            search_.set_flatbox_constraint_options_(caret_, callback_group_,
-                                                    options...);
+            search_.intersect_multiple_options_(caret_, callback_group_,
+                                                options...);
         }
 
         Domain get(FeatId feat_id) const
@@ -347,6 +348,11 @@ namespace veritas {
             }
             else
             {
+                std::cout << "EXPAND flatbox: g=" << state.g << ", h=" << state.h << std::endl;
+                FeatId feat_id = 0;
+                for (const Domain& dom : workspace_.flatbox)
+                    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+
                 expand_(state);
             }
 
@@ -609,12 +615,14 @@ namespace veritas {
         /** \return solution index */
         size_t push_solution_(const State& state)
         {
+            FloatT output = heuristic.output_overestimate(state);
+
             solutions_.push_back({
                 state,
                 { // sol
                     time_since_start(),
                     eps,
-                    heuristic.output_overestimate(state), // output
+                    output,
                     state.box,
                 }
             });
@@ -693,6 +701,7 @@ namespace veritas {
                 //    std::cout << "overlaps but doesn't actually overlap??\n";
                 //}
 
+                workspace_.flatbox_frames.clear();
                 workspace_.flatbox_offset.clear();
                 workspace_.flatbox_caret.clear();
                 workspace_.flatbox.resize(workspace_.leafiter1.flatbox.size());
@@ -711,6 +720,11 @@ namespace veritas {
                     workspace_.flatbox[feat_id] = new_dom;
                 }
 
+                std::cout << "EXPAND CHILD flatbox: " << std::endl;
+                FeatId feat_id = 0;
+                for (const Domain& dom : workspace_.flatbox)
+                    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+
                 while (pop_expand_frame_())
                     construct_and_push_state_(state, t[leaf_id].leaf_value());
             }
@@ -724,94 +738,210 @@ namespace veritas {
         bool pop_expand_frame_()
         {
             size_t caret = 0;
-            workspace_.reject_flag = false;
-            bool popped_frame = false;
 
-            // pop frame from flatbox_frames into flatbox in workspace_
-            if (workspace_.flatbox.empty())
-            {
-                // no more frames
-                if (workspace_.flatbox_frames.empty())
-                    return false;
+            while (!workspace_.flatbox_frames.empty() ||
+                   !workspace_.flatbox.empty()) {
 
-                // continue with a frame on the framestack
-                std::cout << "popping frame from frames... "
-                    << workspace_.flatbox_frames.size();
-
-                popped_frame = true;
-
-                // copy last frame to workspace_.flatbox
-                size_t begin = workspace_.flatbox_offset.back();
-                size_t end = workspace_.flatbox_frames.size();
-                std::cout << " begin=" << begin << ",";
-                std::cout << " end=" << end << " ";
-                workspace_.flatbox.resize(end-begin);
-                // (!!) best eens nakijken
-                std::copy(workspace_.flatbox_frames.begin()+begin,
-                          workspace_.flatbox_frames.begin()+end,
-                          workspace_.flatbox.begin());
-                caret = workspace_.flatbox_caret.back();
-
-                // drop frame from flatbox_frames
-                workspace_.flatbox_frames.resize(begin);
-                workspace_.flatbox_offset.pop_back();
-                workspace_.flatbox_caret.pop_back();
-
-                std::cout << " -> " << workspace_.flatbox_frames.size() << std::endl;
-
-                std::cout << "POPPED flatbox: " << std::endl;
-                FeatId feat_id = 0;
-                for (const Domain& dom : workspace_.flatbox)
+                // Prefer states on stack over what is currently in flatbox
+                // (insersect with multiple options pushes everything and leaves
+                // flatbox in 'old' state)
+                if (!workspace_.flatbox_frames.empty())
                 {
-                    std::cout << "| - " << feat_id << " : " << dom << std::endl;
-                    ++feat_id;
-                }
-            }
+                    // copy last frame to workspace_.flatbox
+                    size_t begin = workspace_.flatbox_offset.back();
+                    size_t end = workspace_.flatbox_frames.size();
+                    workspace_.flatbox.resize(end-begin);
+                    std::copy(workspace_.flatbox_frames.begin()+begin,
+                              workspace_.flatbox_frames.begin()+end,
+                              workspace_.flatbox.begin());
 
-            // compare for changes with respect to state box, which
-            // conveniently happens to be in leafiter1's flatbox!
-            for (size_t i = caret; i < workspace_.flatbox.size(); ++i)
-            {
+                    caret = workspace_.flatbox_caret.back() + 1;
+
+                    // drop frame from flatbox_frames
+                    workspace_.flatbox_frames.resize(begin);
+                    workspace_.flatbox_offset.pop_back();
+                    workspace_.flatbox_caret.pop_back();
+
+                    std::cout << "POPPED flatbox: caret=" << caret << std::endl;
+                    FeatId feat_id = 0;
+                    for (const Domain& dom : workspace_.flatbox)
+                        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+                }
+                else
+                {
+                    std::cout << "USING FLATBOX STRAIGHT AWAY caret=" << caret << std::endl;
+                    FeatId feat_id = 0;
+                    for (const Domain& dom : workspace_.flatbox)
+                        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+                }
+
+                
+                if (++caret >= workspace_.flatbox.size())
+                    break;
+
+                size_t flatbox_stack_size = workspace_.flatbox_frames.size();
                 Domain old_dom;
-                if (i < workspace_.leafiter1.flatbox.size())
-                    old_dom = workspace_.leafiter1.flatbox[i];
-                if (!popped_frame && old_dom != workspace_.flatbox[i])
+                if (caret < workspace_.leafiter1.flatbox.size())
+                    old_dom = workspace_.leafiter1.flatbox[caret];
+                if (old_dom != workspace_.flatbox[caret])
                 {
-                    std::cout << "notify " << i << ": "
-                        << old_dom
-                        << " -> "
-                        << workspace_.flatbox[i] << std::endl;
-                    notify_flatbox_change_(i, static_cast<FeatId>(i),
-                            workspace_.flatbox[i], /* callback group */ -1);
+                    //std::cout << "notify " << i << ": "
+                    //    << old_dom
+                    //    << " -> "
+                    //    << workspace_.flatbox[i] << std::endl;
+                    notify_flatbox_change_(caret, static_cast<FeatId>(caret),
+                            workspace_.flatbox[caret], /* callback group */ -1);
                     if (workspace_.reject_flag)
-                        break;
+                    {
+                        workspace_.reject_flag = false;
+                        workspace_.flatbox.clear();
+                        ++num_rejected_states;
+                    }
+
+                    // have more frames been pushed? then ignore this frame and pop the next one
+                    if (workspace_.flatbox_frames.size() != flatbox_stack_size)
+                        workspace_.flatbox.clear();
                 }
             }
 
-            return true;
+            return !workspace_.flatbox.empty();
+
+            //// if previous notifications created multiple states, then ignore
+            //// what is currently in flatbox and pop a frame from the stack
+            //if (!workspace_.flatbox_frames.empty())
+            //{
+            //    // copy last frame to workspace_.flatbox
+            //    size_t begin = workspace_.flatbox_offset.back();
+            //    size_t end = workspace_.flatbox_frames.size();
+            //    workspace_.flatbox.resize(end-begin);
+            //    std::copy(workspace_.flatbox_frames.begin()+begin,
+            //              workspace_.flatbox_frames.begin()+end,
+            //              workspace_.flatbox.begin());
+
+            //    //do we still need the carets?
+            //    caret = workspace_.flatbox_caret.back() + 1;
+
+            //    // drop frame from flatbox_frames
+            //    workspace_.flatbox_frames.resize(begin);
+            //    workspace_.flatbox_offset.pop_back();
+            //    workspace_.flatbox_caret.pop_back();
+
+            //    std::cout << "POPPED flatbox: caret=" << caret << std::endl;
+            //    FeatId feat_id = 0;
+            //    for (const Domain& dom : workspace_.flatbox)
+            //        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+            //}
+            //else
+            //{
+            //    std::cout << "USING FLATBOX STRAIGHT AWAY " << workspace_.flatbox_offset.size() << std::endl;
+            //    FeatId feat_id = 0;
+            //    for (const Domain& dom : workspace_.flatbox)
+            //        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+            //}
+
+            //if (!workspace_.flatbox.empty())
+            //{
+            //    // compare for changes with respect to state box, which
+            //    // conveniently happens to be in leafiter1's flatbox!
+            //    for (size_t i = caret; i < workspace_.flatbox.size(); ++i)
+            //    {
+            //        Domain old_dom;
+            //        if (i < workspace_.leafiter1.flatbox.size())
+            //            old_dom = workspace_.leafiter1.flatbox[i];
+            //        if (old_dom != workspace_.flatbox[i])
+            //        {
+            //            //std::cout << "notify " << i << ": "
+            //            //    << old_dom
+            //            //    << " -> "
+            //            //    << workspace_.flatbox[i] << std::endl;
+            //            notify_flatbox_change_(i, static_cast<FeatId>(i),
+            //                    workspace_.flatbox[i], /* callback group */ -1);
+            //            if (workspace_.reject_flag)
+            //            {
+            //                workspace_.reject_flag = false;
+            //                workspace_.flatbox.clear();
+            //                ++num_rejected_states;
+            //                break;
+            //            }
+            //        }
+            //    }
+            //}
+            //
+            ///////////////////////////////////////////////////////////////////////////////
+
+            //// pop frame from flatbox_frames into flatbox in workspace_
+            //if (workspace_.flatbox.empty())
+            //{
+            //    // no more frames
+            //    if (workspace_.flatbox_frames.empty())
+            //        return false;
+
+            //    // continue with a frame on the framestack
+            //    popped_frame = true;
+
+            //    // copy last frame to workspace_.flatbox
+            //    size_t begin = workspace_.flatbox_offset.back();
+            //    size_t end = workspace_.flatbox_frames.size();
+            //    workspace_.flatbox.resize(end-begin);
+            //    std::copy(workspace_.flatbox_frames.begin()+begin,
+            //              workspace_.flatbox_frames.begin()+end,
+            //              workspace_.flatbox.begin());
+            //    caret = workspace_.flatbox_caret.back();
+
+            //    // drop frame from flatbox_frames
+            //    workspace_.flatbox_frames.resize(begin);
+            //    workspace_.flatbox_offset.pop_back();
+            //    workspace_.flatbox_caret.pop_back();
+
+            //    std::cout << "POPPED flatbox: " << std::endl;
+            //    FeatId feat_id = 0;
+            //    for (const Domain& dom : workspace_.flatbox)
+            //        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+            //}
+            //else {
+            //    std::cout << "USING FLATBOX STRAIGHT AWAY " << workspace_.flatbox_offset.size() << std::endl;
+            //    FeatId feat_id = 0;
+            //    for (const Domain& dom : workspace_.flatbox)
+            //        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+            //}
+
+            //// compare for changes with respect to state box, which
+            //// conveniently happens to be in leafiter1's flatbox!
+            //for (size_t i = caret; i < workspace_.flatbox.size(); ++i)
+            //{
+            //    Domain old_dom;
+            //    if (i < workspace_.leafiter1.flatbox.size())
+            //        old_dom = workspace_.leafiter1.flatbox[i];
+            //    if (!popped_frame && old_dom != workspace_.flatbox[i])
+            //    {
+            //        //std::cout << "notify " << i << ": "
+            //        //    << old_dom
+            //        //    << " -> "
+            //        //    << workspace_.flatbox[i] << std::endl;
+            //        notify_flatbox_change_(i, static_cast<FeatId>(i),
+            //                workspace_.flatbox[i], /* callback group */ -1);
+            //        if (workspace_.reject_flag)
+            //            break;
+            //    }
+            //}
         }
 
         /* assumes workspace_.flatbox and workspace_.flatbox_stack set */
         void duplicate_expand_frame_(size_t caret)
         {
-            if (!workspace_.reject_flag)
-            {
-                // branch, put current flatbox on frame and continue with a 'new' one
-                // continue with the current one later (next call of pop_expand_frame_)
-                workspace_.flatbox_offset.push_back(workspace_.flatbox_frames.size());
-                workspace_.flatbox_caret.push_back(caret);
-                for (const Domain& d : workspace_.flatbox)
-                    workspace_.flatbox_frames.push_back(d);
+            // branch, put current flatbox on frame and continue with a 'new' one
+            // continue with the current one later (next call of pop_expand_frame_)
+            workspace_.flatbox_offset.push_back(workspace_.flatbox_frames.size());
+            workspace_.flatbox_caret.push_back(caret);
+            for (const Domain& d : workspace_.flatbox)
+                workspace_.flatbox_frames.push_back(d);
 
-                //std::cout << "DUPLICATE flatbox: " << workspace_.flatbox_offset.size() << std::endl;
-                //FeatId feat_id = 0;
-                //for (const Domain& dom : workspace_.flatbox)
-                //{
-                //    std::cout << "| - " << feat_id << " : " << dom << std::endl;
-                //    ++feat_id;
-                //}
-            }
-            workspace_.reject_flag = false;
+            std::cout << "DUPLICATE flatbox: "
+                      << workspace_.flatbox_offset.size() << ", "
+                      << workspace_.flatbox_frames.size() << std::endl;
+            FeatId feat_id = 0;
+            for (const Domain& dom : workspace_.flatbox)
+                std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
         }
 
         void intersect_flatbox_feat_dom_(size_t caret, FeatId feat_id, Domain dom,
@@ -835,7 +965,7 @@ namespace veritas {
         }
 
         template <size_t N, typename... Options> // recursive case
-        void set_flatbox_constraint_options_(
+        void intersect_multiple_options_(
                 size_t caret, int callback_group,
                 std::tuple<FeatId, std::array<Domain, N>> option,
                 Options... rest)
@@ -843,8 +973,10 @@ namespace veritas {
             auto&& [feat_id, doms] = option;
             Domain old_dom = workspace_.flatbox[feat_id];
 
-            for (Domain dom : doms)
+            for (size_t k = 0; k < doms.size(); ++k)
             {
+                Domain dom = doms[k];
+
                 if (old_dom.overlaps(dom))
                 {
                     workspace_.flatbox[feat_id] = old_dom.intersect(dom);
@@ -854,29 +986,33 @@ namespace veritas {
                         << std::endl;
 
                     // recurse... until basecase below is reached
-                    set_flatbox_constraint_options_(caret, callback_group, rest...);
+                    intersect_multiple_options_(caret, callback_group, rest...);
 
                     if (old_dom != workspace_.flatbox[feat_id])
                         notify_flatbox_change_(caret, feat_id, dom, callback_group);
+
+                    // reset workspace to old value for next iteration!
+                    workspace_.flatbox[feat_id] = old_dom;
                 }
                 else
                 {
-                    std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
-                    workspace_.reject_flag = true;
+                    std::cout << "REJECT " << old_dom << ", " << dom << std::endl;
                 }
             }
         }
 
         template <size_t N> // basecase
-        void set_flatbox_constraint_options_(
+        void intersect_multiple_options_(
                 size_t caret, int callback_group,
                 std::tuple<FeatId, std::array<Domain, N>> option)
         {
             auto&& [feat_id, doms] = option;
             Domain old_dom = workspace_.flatbox[feat_id];
 
-            for (Domain dom : doms)
+            for (size_t k = 0; k < doms.size(); ++k)
             {
+                Domain dom = doms[k];
+
                 if (old_dom.overlaps(dom))
                 {
                     workspace_.flatbox[feat_id] = old_dom.intersect(dom);
@@ -889,11 +1025,13 @@ namespace veritas {
                         notify_flatbox_change_(caret, feat_id, dom, callback_group);
 
                     duplicate_expand_frame_(caret);
+
+                    // reset workspace to old value for next iteration
+                    workspace_.flatbox[feat_id] = old_dom;
                 }
                 else
                 {
-                    std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
-                    workspace_.reject_flag = true;
+                    std::cout << "REJECT " << old_dom << ", " << dom << std::endl;
                 }
             }
         }
@@ -909,8 +1047,8 @@ namespace veritas {
         void notify_flatbox_change_(size_t caret, FeatId feat_id, Domain dom,
                 int callback_group)
         {
-            std::cout << "notify_flatbox_change_ caret=" << caret << ", feat_id=" << feat_id
-                      << ", " << dom << ", grp=" << callback_group << std::endl;
+            //std::cout << "notify_flatbox_change_ caret=" << caret << ", feat_id=" << feat_id
+            //          << ", " << dom << ", grp=" << callback_group << std::endl;
             if (static_cast<size_t>(feat_id) >= callbacks_.size())
                 return;
 
@@ -929,27 +1067,29 @@ namespace veritas {
 
         void construct_and_push_state_(const State& parent, FloatT leaf_value)
         {
-            if (!workspace_.reject_flag)
-            {
-                // copy flatbox back to {(feat_id, dom)} box
-                FeatId feat_id = 0;
-                for (const Domain& d : workspace_.flatbox)
-                {
-                    if (!d.is_everything())
-                        workspace_.box.push_back({feat_id, d});
-                    ++feat_id;
-                }
+            if (workspace_.reject_flag)
+                std::runtime_error("invalid state");
 
-                State new_state;
-                new_state.indep_set = parent.indep_set + 1;
-                new_state.box = BoxRef(store_.store(workspace_.box, remaining_mem_capacity()));
-                if (heuristic.update_heuristic(new_state, *this, parent, leaf_value))
-                    push_(std::move(new_state));
-            }
-            else
+            // copy flatbox back to {(feat_id, dom)} box
+            FeatId feat_id = 0;
+            for (const Domain& d : workspace_.flatbox)
             {
-                ++num_rejected_states;
-                //std::cout << "state rejected" << std::endl;
+                if (!d.is_everything())
+                    workspace_.box.push_back({feat_id, d});
+                ++feat_id;
+            }
+
+            State new_state;
+            new_state.indep_set = parent.indep_set + 1;
+            new_state.box = BoxRef(store_.store(workspace_.box, remaining_mem_capacity()));
+            if (heuristic.update_heuristic(new_state, *this, parent, leaf_value))
+            {
+                std::cout << "NEW_STATE flatbox: g=" << new_state.g << ", h=" << new_state.h << std::endl;
+                FeatId feat_id = 0;
+                for (const Domain& dom : workspace_.flatbox)
+                    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+
+                push_(std::move(new_state));
             }
 
             workspace_.flatbox.clear();
