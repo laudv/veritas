@@ -80,7 +80,7 @@ class RobustnessSearch:
                       f" {maybe_sat_str} for delta {old_delta:.5f}" #/{best_example_delta:.5f}"
                       f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]", end="")
                 if len(generated_examples):
-                    print(" (!) ex.w/ delta", best_example_delta-self.guard)
+                    print(f" (!) ex.w/ delta {best_example_delta-self.guard:.4f}")
                 else: print()
             else: # no adv. can exist
                 if delta == upper and lower == 0.0:
@@ -173,7 +173,9 @@ class VeritasRobustnessSearch(RobustnessSearch):
         s.reject_solution_when_output_less_than = 0.0
         s.max_focal_size = 10000
         s.debug = False;
-        s.auto_eps = True;
+        #s.auto_eps = True;
+        s.auto_eps = False
+        s.eps = 0.05
 
         s.set_mem_capacity(self.mem_capacity)
         box = [Domain(x-delta, x+delta) for x in self.example]
@@ -216,6 +218,13 @@ class VeritasRobustnessSearch(RobustnessSearch):
             for i in range(how_many):
                 sol = s.get_solution(i)
                 closest = get_closest_example(sol, self.example)
+                sol_nodes = np.array(s.get_solution_nodes(i))
+                eval_nodes = np.array([t.eval_node(closest)[0] for t in self.at])
+                assert all(sol_nodes == eval_nodes)
+                #for m in np.flatnonzero(sol_nodes != eval_nodes):
+                #    a, b = sol_nodes[m], eval_nodes[m]
+                #    print(f"   sol  {m}.{a}", self.at[m].compute_box(a), self.at[m].get_leaf_value(a))
+                #    print(f"   eval {m}.{b}", self.at[m].compute_box(b), self.at[m].get_leaf_value(b))
                 generated_examples.append(closest)
 
         #print("VERITAS numsol", s.num_solutions())

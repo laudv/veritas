@@ -125,11 +125,11 @@ namespace veritas::constraints {
             FloatT y1M = std::max(std::abs(domy.lo-y0), std::abs(y0-domy.hi));
             FloatT dlo = std::sqrt(pow2(x1m) + pow2(y1m));
             FloatT dhi = std::sqrt(pow2(x1M) + pow2(y1M));
-            std::cout
-                << domx << " " << domy << " "
-                << x1m << " " << y1m << " " << x1M << " " << y1M
-                << " -> " << dlo << " " << dhi
-                << std::endl;
+            //std::cout
+            //    << domx << " " << domy << " "
+            //    << x1m << " " << y1m << " " << x1M << " " << y1M
+            //    << " -> " << dlo << " " << dhi
+            //    << std::endl;
             ctx.intersect(d, dlo, dhi);
         };
 

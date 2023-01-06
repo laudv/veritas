@@ -13,10 +13,8 @@ from veritas import Solution
 #
 # Take `example = np.zeros(num_attributes)` if you just want an example.
 #
-# \param guard Added value to avoid numerical issues causing the feature value
-# to be out of the domain
 # \param featmap Mapping of feature ids, see FeatMap
-def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
+def get_closest_example(solution_or_box, example, featmap=None):
     num_attributes = len(example)
 
     if featmap is None:
@@ -47,7 +45,7 @@ def get_closest_example(solution_or_box, example, guard=1e-4, featmap=None):
             dist_lo = abs(dom.lo - x)
             dist_hi = abs(x - dom.hi)
             if dist_lo > dist_hi:
-                closest[feat_id] = dom.hi - guard
+                closest[feat_id] = dom.hi
             else:
                 closest[feat_id] = dom.lo
 

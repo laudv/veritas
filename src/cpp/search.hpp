@@ -343,16 +343,14 @@ namespace veritas {
                     ++num_rejected_solutions;
                 }
                 else
+                {
                     push_solution_(state);
+                }
                 increase_eps_();
             }
             else
             {
-                std::cout << "EXPAND flatbox: g=" << state.g << ", h=" << state.h << std::endl;
-                FeatId feat_id = 0;
-                for (const Domain& dom : workspace_.flatbox)
-                    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
-
+                //std::cout << "EXPAND: g=" << state.g << ", h=" << state.h << std::endl;
                 expand_(state);
             }
 
@@ -720,10 +718,10 @@ namespace veritas {
                     workspace_.flatbox[feat_id] = new_dom;
                 }
 
-                std::cout << "EXPAND CHILD flatbox: " << std::endl;
-                FeatId feat_id = 0;
-                for (const Domain& dom : workspace_.flatbox)
-                    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+                //std::cout << "EXPAND CHILD flatbox: " << std::endl;
+                //FeatId feat_id = 0;
+                //for (const Domain& dom : workspace_.flatbox)
+                //    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
 
                 while (pop_expand_frame_())
                     construct_and_push_state_(state, t[leaf_id].leaf_value());
@@ -762,17 +760,17 @@ namespace veritas {
                     workspace_.flatbox_offset.pop_back();
                     workspace_.flatbox_caret.pop_back();
 
-                    std::cout << "POPPED flatbox: caret=" << caret << std::endl;
-                    FeatId feat_id = 0;
-                    for (const Domain& dom : workspace_.flatbox)
-                        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+                    //std::cout << "POPPED flatbox: caret=" << caret << std::endl;
+                    //FeatId feat_id = 0;
+                    //for (const Domain& dom : workspace_.flatbox)
+                    //    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
                 }
                 else
                 {
-                    std::cout << "USING FLATBOX STRAIGHT AWAY caret=" << caret << std::endl;
-                    FeatId feat_id = 0;
-                    for (const Domain& dom : workspace_.flatbox)
-                        std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+                    //std::cout << "USING FLATBOX STRAIGHT AWAY caret=" << caret << std::endl;
+                    //FeatId feat_id = 0;
+                    //for (const Domain& dom : workspace_.flatbox)
+                    //    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
                 }
 
                 
@@ -785,15 +783,16 @@ namespace veritas {
                     old_dom = workspace_.leafiter1.flatbox[caret];
                 if (old_dom != workspace_.flatbox[caret])
                 {
-                    //std::cout << "notify " << i << ": "
+                    //std::cout << "notify " << caret << ": "
                     //    << old_dom
                     //    << " -> "
-                    //    << workspace_.flatbox[i] << std::endl;
+                    //    << workspace_.flatbox[caret] << std::endl;
+                    workspace_.reject_flag = false;
                     notify_flatbox_change_(caret, static_cast<FeatId>(caret),
                             workspace_.flatbox[caret], /* callback group */ -1);
                     if (workspace_.reject_flag)
                     {
-                        workspace_.reject_flag = false;
+                        std::cout << "REJECTED\n";
                         workspace_.flatbox.clear();
                         ++num_rejected_states;
                     }
@@ -936,12 +935,12 @@ namespace veritas {
             for (const Domain& d : workspace_.flatbox)
                 workspace_.flatbox_frames.push_back(d);
 
-            std::cout << "DUPLICATE flatbox: "
-                      << workspace_.flatbox_offset.size() << ", "
-                      << workspace_.flatbox_frames.size() << std::endl;
-            FeatId feat_id = 0;
-            for (const Domain& dom : workspace_.flatbox)
-                std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+            //std::cout << "DUPLICATE flatbox: "
+            //          << workspace_.flatbox_offset.size() << ", "
+            //          << workspace_.flatbox_frames.size() << std::endl;
+            //FeatId feat_id = 0;
+            //for (const Domain& dom : workspace_.flatbox)
+            //    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
         }
 
         void intersect_flatbox_feat_dom_(size_t caret, FeatId feat_id, Domain dom,
@@ -959,7 +958,7 @@ namespace veritas {
             }
             else
             {
-                std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
+                //std::cout << "reject_flag=True " << old_dom << ", " << dom << std::endl;
                 workspace_.reject_flag = true;
             }
         }
@@ -981,9 +980,9 @@ namespace veritas {
                 {
                     workspace_.flatbox[feat_id] = old_dom.intersect(dom);
 
-                    std::cout << " - " << feat_id << ": " << dom << " (old " << old_dom << ")"
-                        << " -> " << workspace_.flatbox[feat_id]
-                        << std::endl;
+                    //std::cout << " - " << feat_id << ": " << dom << " (old " << old_dom << ")"
+                    //    << " -> " << workspace_.flatbox[feat_id]
+                    //    << std::endl;
 
                     // recurse... until basecase below is reached
                     intersect_multiple_options_(caret, callback_group, rest...);
@@ -996,7 +995,7 @@ namespace veritas {
                 }
                 else
                 {
-                    std::cout << "REJECT " << old_dom << ", " << dom << std::endl;
+                    //std::cout << "REJECT " << old_dom << ", " << dom << std::endl;
                 }
             }
         }
@@ -1017,9 +1016,9 @@ namespace veritas {
                 {
                     workspace_.flatbox[feat_id] = old_dom.intersect(dom);
 
-                    std::cout << " - " << feat_id << ": " << dom << " (old " << old_dom << ")"
-                        << " -> " << workspace_.flatbox[feat_id]
-                        << std::endl;
+                    //std::cout << " - " << feat_id << ": " << dom << " (old " << old_dom << ")"
+                    //    << " -> " << workspace_.flatbox[feat_id]
+                    //    << std::endl;
 
                     if (old_dom != workspace_.flatbox[feat_id])
                         notify_flatbox_change_(caret, feat_id, dom, callback_group);
@@ -1031,7 +1030,7 @@ namespace veritas {
                 }
                 else
                 {
-                    std::cout << "REJECT " << old_dom << ", " << dom << std::endl;
+                    //std::cout << "REJECT " << old_dom << ", " << dom << std::endl;
                 }
             }
         }
@@ -1084,10 +1083,10 @@ namespace veritas {
             new_state.box = BoxRef(store_.store(workspace_.box, remaining_mem_capacity()));
             if (heuristic.update_heuristic(new_state, *this, parent, leaf_value))
             {
-                std::cout << "NEW_STATE flatbox: g=" << new_state.g << ", h=" << new_state.h << std::endl;
-                FeatId feat_id = 0;
-                for (const Domain& dom : workspace_.flatbox)
-                    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
+                //std::cout << "NEW_STATE flatbox: g=" << new_state.g << ", h=" << new_state.h << std::endl;
+                //FeatId feat_id = 0;
+                //for (const Domain& dom : workspace_.flatbox)
+                //    std::cout << "| - " << (feat_id++) << " : " << dom << std::endl;
 
                 push_(std::move(new_state));
             }
