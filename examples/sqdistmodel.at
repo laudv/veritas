@@ -1,11 +1,23 @@
 {"base_score": 0, "trees": [
-{"feat_id": 0, "split_value": 2.0,
-  "lt": {"feat_id": 2, "split_value": 3.0,
-    "lt": {"leaf_value": 1.87219},
-    "gteq": {"leaf_value": 5.11843}
+{"feat_id": 0, "split_value": 2.51256,
+  "lt": {"feat_id": 2, "split_value": 3.0048,
+    "lt": {"feat_id": 1, "split_value": 0.904523,
+      "lt": {"leaf_value": 0.887361},
+      "gteq": {"leaf_value": 3.98064}
+    },
+    "gteq": {"feat_id": 0, "split_value": 2.01005,
+      "lt": {"leaf_value": 5},
+      "gteq": {"leaf_value": 6.46744}
+    }
   },
-  "gteq": {"feat_id": 1, "split_value": 1.0,
-    "lt": {"leaf_value": 6.5042},
-    "gteq": {"leaf_value": 12.0444}
+  "gteq": {"feat_id": 1, "split_value": 1.45729,
+    "lt": {"feat_id": 0, "split_value": 3.76884,
+      "lt": {"leaf_value": 5.33887},
+      "gteq": {"leaf_value": 7.66953}
+    },
+    "gteq": {"feat_id": 2, "split_value": 5.04631,
+      "lt": {"leaf_value": 10.2501},
+      "gteq": {"leaf_value": 13.6803}
+    }
   }
 }]}
