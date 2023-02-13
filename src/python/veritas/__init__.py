@@ -93,14 +93,18 @@ setattr(AddTree, "__iter__", __addtree_iter)
 setattr(AddTree, "eval", __addtree_eval)
 
 __tree_eval_cpp = Tree.eval
-def __tree_eval(self, data):
+def __tree_eval(self, data, nid=None):
     data = np.array(data, dtype=np.float32)
-    return __tree_eval_cpp(self, data)
+    if nid is None:
+        nid = self.root()
+    return __tree_eval_cpp(self, data, nid)
 
 __tree_eval_node_cpp = Tree.eval_node
-def __tree_eval_node(self, data):
+def __tree_eval_node(self, data, nid=None):
     data = np.array(data, dtype=np.float32)
-    return __tree_eval_node_cpp(self, data)
+    if nid is None:
+        nid = self.root()
+    return __tree_eval_node_cpp(self, data, nid)
 
 setattr(Tree, "eval", __tree_eval)
 setattr(Tree, "eval_node", __tree_eval_node)

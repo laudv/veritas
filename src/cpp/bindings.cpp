@@ -202,7 +202,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("leaf_value_variance", [](TreeRef& r) { return r.get().leaf_value_variance(); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(fid); })
-        .def("eval", [](const TreeRef& r, py::handle arr) {
+        .def("eval", [](const TreeRef& r, py::handle arr, NodeId nid) {
             data d = get_data(arr);
 
             auto result = py::array_t<FloatT>(d.num_rows);
@@ -210,11 +210,11 @@ PYBIND11_MODULE(pyveritas, m) {
             FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = r.get().eval(d.row(i));
+                out_ptr[i] = r.get()[nid].eval(d.row(i));
 
             return result;
         })
-        .def("eval_node", [](const TreeRef& r, py::handle arr) {
+        .def("eval_node", [](const TreeRef& r, py::handle arr, NodeId nid) {
             data d = get_data(arr);
 
             auto result = py::array_t<NodeId>(d.num_rows);
@@ -222,10 +222,11 @@ PYBIND11_MODULE(pyveritas, m) {
             NodeId *out_ptr = static_cast<NodeId *>(out.ptr);
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = r.get().eval_node(d.row(i));
+                out_ptr[i] = r.get()[nid].eval_node(d.row(i));
 
             return result;
         })
+
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
         .def("compute_box", [](const TreeRef& r, NodeId n) {
             Box box = r.get()[n].compute_box();
