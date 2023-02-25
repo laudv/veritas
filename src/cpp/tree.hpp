@@ -3,9 +3,9 @@
  *
  * The Veritas internal tree representation. Trees are binary and only support
  * less-than splits. Binary splits can be achieved (given data is in {0, 1})
- * using `LtSplit(feat_id, BOOL_SPLIT_VALUE=1.0)`.
+ * using `LtSplit(feat_id, BOOL_SPLIT_VALUE=0.5)`.
  *
- * Copyright 2022 DTAI Research Group - KU Leuven.
+ * Copyright 2023 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
 */
@@ -13,7 +13,11 @@
 #ifndef VERITAS_TREE_HPP
 #define VERITAS_TREE_HPP
 
-#include "domain.hpp"
+#include "basics.hpp"
+#include "interval.hpp"
+#include "box.hpp"
+
+#include <type_traits>
 #include <vector>
 #include <iostream>
 #include <numeric> // std::accumulate
@@ -21,31 +25,37 @@
 
 namespace veritas {
 
-    class Tree;
+    template <typename SplitT, typename ValueT>
+    class GTree; // generic tree
 
     namespace inner {
-        struct NodeLeaf { FloatT leaf_value; };
+        template <typename ValueT>
+        struct NodeLeaf { ValueT leaf_value; };
+
+        template <typename SplitT>
         struct NodeInternal {
-            NodeId left; // right = left + 1;
-            LtSplit split;
+            NodeId left; // right = left + 1
+            SplitT split;
         };
 
+        template <typename SplitT, typename ValueT>
         struct Node {
             NodeId id;
             NodeId parent; /* root has itself as parent */
             int tree_size; /* size of tree w/ this node as root; tree_size==1 => leaf node */
 
             union {
-                inner::NodeLeaf leaf;
-                inner::NodeInternal internal;
+                inner::NodeLeaf<ValueT> leaf;
+                inner::NodeInternal<SplitT> internal;
             };
 
             //inline Node() : id(-1), parent(-1), tree_size(-1) {}
 
             /** new leaf node */
-            inline Node(NodeId id, NodeId parent) : id(id), parent(parent), tree_size(1), leaf{} {}
-            inline Node(const Node& o) : id(o.id), parent(o.parent), tree_size(o.tree_size), leaf{}
-            {
+            inline Node(NodeId id, NodeId parent)
+                : id(id), parent(parent), tree_size(1), leaf{} {}
+            inline Node(const Node &o)
+                : id(o.id), parent(o.parent), tree_size(o.tree_size), leaf{} {
                 if (o.is_leaf()) leaf = o.leaf;
                 else             internal = o.internal;
             }
@@ -53,14 +63,16 @@ namespace veritas {
             inline bool is_leaf() const { return tree_size == 1; }
         };
 
+        template <typename SplitT, typename ValueT>
         struct ConstRef {
-            using TreePtr = const Tree *;
-            using TreeRef = const Tree&;
+            using TreePtr = const GTree<SplitT, ValueT> *;
+            using TreeRef = const GTree<SplitT, ValueT>&;
             using is_mut_type = std::false_type;
         };
+        template <typename SplitT, typename ValueT>
         struct MutRef {
-            using TreePtr = Tree *;
-            using TreeRef = Tree&;
+            using TreePtr = GTree<SplitT, ValueT> *;
+            using TreeRef = GTree<SplitT, ValueT>&;
             using is_mut_type = std::true_type;
         };
     } // namespace inner
@@ -84,31 +96,39 @@ namespace veritas {
      *
      * You can convert a mut ref into a const ref using `veritas::NodeRef::to_const()`.
      */
-    template <typename RefT /* inner::ConstRef or inner::MutRef */>
+    template <typename SplitT, typename ValueT, typename RefT /* inner::ConstRef or inner::MutRef */>
     class NodeRef {
     public:
+        using SelfT = NodeRef<SplitT, ValueT, RefT>;
+        using ConstSelfT = NodeRef<SplitT, ValueT, inner::ConstRef<SplitT, ValueT>>;
+        using MutSelfT = NodeRef<SplitT, ValueT, inner::MutRef<SplitT, ValueT>>;
         using TreePtr = typename RefT::TreePtr;
         using TreeRef = typename RefT::TreeRef;
+        using NodeT = inner::Node<SplitT, ValueT>;
+        using BoxT = GBox<typename SplitT::ValueT>;
+        using SplitType = SplitT;
+        using ValueType = ValueT;
+        using SplitMapT = std::unordered_map<FeatId, std::vector<typename SplitT::ValueT>>;
 
     private:
         TreePtr tree_;
         NodeId node_id_;
 
-        inline const inner::Node& node() const { return tree_->nodes_[node_id_]; };
+        inline const NodeT& node() const { return tree_->nodes_[node_id_]; };
 
         template <typename T=RefT>
-        inline std::enable_if_t<T::is_mut_type::value, inner::Node&> node()
+        inline std::enable_if_t<T::is_mut_type::value, NodeT&> node()
         { return tree_->nodes_[node_id_]; }
 
     public:
         inline NodeRef(TreePtr tree, NodeId node_id) : tree_(tree), node_id_(node_id) {}
         inline NodeRef(TreeRef tree, NodeId node_id) : tree_(&tree), node_id_(node_id) {}
-        inline NodeRef(const NodeRef<RefT>& o) : tree_(o.tree_), node_id_(o.node_id_) {}
-        inline NodeRef<RefT>& operator=(const NodeRef<RefT>& o)
+        inline NodeRef(const SelfT& o) : tree_(o.tree_), node_id_(o.node_id_) {}
+        inline SelfT& operator=(const SelfT& o)
         { tree_ = o.tree_; node_id_ = o.node_id_; return *this; }
 
         /** Convert this to a constant reference. */
-        inline NodeRef<inner::ConstRef> to_const() const { return { tree_, node_id_ }; }
+        inline ConstSelfT to_const() const { return { tree_, node_id_ }; }
 
         inline bool is_root() const { return node().parent == node().id; }
         inline bool is_leaf() const { return node().is_leaf(); }
@@ -119,19 +139,19 @@ namespace veritas {
         /** Get the node id of this node. */
         inline NodeId id() const { return node_id_; }
         /** Navigate to the left child. */
-        inline NodeRef<RefT> left() const
+        inline SelfT left() const
         {
             if (is_leaf()) throw std::runtime_error("left of leaf");
             return { tree_, node().internal.left };
         }
         /** Navigate to the right child. */
-        inline NodeRef<RefT> right() const
+        inline SelfT right() const
         {
             if (is_leaf()) throw std::runtime_error("right of leaf");
             return { tree_, node().internal.left + 1 };
         }
         /** Navigate to the parent of this node. */
-        inline NodeRef<RefT> parent() const
+        inline SelfT parent() const
         {
             if (is_root()) throw std::runtime_error("parent of root");
             return { tree_, node().parent };
@@ -144,7 +164,7 @@ namespace veritas {
         inline int depth() const
         {
             int depth = 0;
-            NodeRef n(*this);
+            SelfT n(*this);
             while (!n.is_root())
             {
                 n = n.parent();
@@ -154,7 +174,7 @@ namespace veritas {
         }
 
         /** Access the split of this internal node. */
-        inline LtSplit get_split() const
+        inline SplitType get_split() const
         {
             if (is_leaf()) throw std::runtime_error("get_split of leaf");
             return node().internal.split;
@@ -179,14 +199,14 @@ namespace veritas {
         /** Split this leaf node. */
         template <typename T=RefT>
         inline std::enable_if_t<T::is_mut_type::value, void>
-        split(LtSplit split)
+        split(SplitType split)
         {
             if (is_internal()) throw std::runtime_error("split internal");
 
             NodeId left_id = static_cast<NodeId>(tree_->nodes_.size());
 
-            inner::Node left(left_id,      id());
-            inner::Node right(left_id + 1, id());
+            NodeT left(left_id,      id());
+            NodeT right(left_id + 1, id());
 
             tree_->nodes_.push_back(left);
             tree_->nodes_.push_back(right);
@@ -195,7 +215,7 @@ namespace veritas {
             node().internal.left = left_id;
 
             node().tree_size = 3;
-            NodeRef n(*this);
+            SelfT n(*this);
             while (!n.is_root())
             {
                 n = n.parent();
@@ -203,16 +223,23 @@ namespace veritas {
             }
         }
 
-        /** Boolean split; uses LtSplit with BOOL_SPLIT_VALUE */
-        template <typename T=RefT>
-        inline std::enable_if_t<T::is_mut_type::value, void>
-        split(FeatId feat_id) { split({feat_id, BOOL_SPLIT_VALUE}); } // bool split
+        /**
+         * Boolean split; uses SplitType with BOOL_SPLIT_VALUE
+         * (only SplitType::ValueT==FloatT)
+         */
+        template <typename T = RefT, typename ST = SplitT>
+        inline std::enable_if_t<
+            T::is_mut_type::value,
+            std::enable_if_t<std::is_same_v<typename ST::ValueT, FloatT>>>
+        split(FeatId feat_id) {
+            split({feat_id, BOOL_SPLIT_VALUE});
+        } // bool split
 
         /** Count the number of leafs in this (sub)tree. */
         inline size_t num_leafs() const
         { return is_leaf() ? 1 : left().num_leafs() + right().num_leafs(); }
 
-        bool operator==(const NodeRef<inner::ConstRef>& other) const
+        bool operator==(const ConstSelfT& other) const
         {
             if (is_internal() && other.is_internal())
                 return get_split() == other.get_split()
@@ -254,10 +281,25 @@ namespace veritas {
             else ids.push_back(id());
         }
 
-        /** Get the domain restrictions on the features in this node. */
-        Box compute_box() const;
+        void collect_split_values(SplitMapT& splits) const
+        {
+            if (is_leaf()) return;
+
+            const auto& split = get_split();
+            auto search = splits.find(split.feat_id);
+            if (search != splits.end()) { // found it!
+                splits[split.feat_id].push_back(split.split_value);
+            } else {
+                splits.emplace(split.feat_id, typename SplitMapT::mapped_type{
+                                                  split.split_value});
+            }
+
+            right().collect_split_values(splits);
+            left().collect_split_values(splits);
+        }
+
         /** Like NodeRef::compute_box(), but write to given Box */
-        bool compute_box(Box& box) const;
+        bool compute_box(BoxT& box) const;
 
         void print_node(std::ostream& strm, int depth) const;
         void to_json(std::ostream& strm, int depth) const;
@@ -276,19 +318,25 @@ namespace veritas {
     /**
      * A binary decision tree with less-than splits.
      */
-    class Tree {
+    template <typename SplitT, typename ValueT>
+    class GTree {
     public:
-        using ConstRef = NodeRef<inner::ConstRef>;
-        using MutRef = NodeRef<inner::MutRef>;
+        using SelfT = GTree<SplitT, ValueT>;
+        using ConstRef = NodeRef<SplitT, ValueT, inner::ConstRef<SplitT, ValueT>>;
+        using MutRef = NodeRef<SplitT, ValueT, inner::MutRef<SplitT, ValueT>>;
+        using SplitType = SplitT;
+        using ValueType = ValueT;
+        using BoxRefT = GBoxRef<typename SplitT::ValueT>;
+        using SplitMapT = typename ConstRef::SplitMapT;
 
     private:
         friend ConstRef;
         friend MutRef;
 
-        std::vector<inner::Node> nodes_;
+        std::vector<inner::Node<SplitT, ValueT>> nodes_;
 
     public:
-        inline Tree() { clear(); }
+        inline GTree() { clear(); }
         /** Const NodeRef to root node */
         inline ConstRef root() const { return (*this)[0]; }
         /** Const NodeRef to root node */
@@ -315,18 +363,16 @@ namespace veritas {
 
         /** Like Tree::operator[](NodeId), but with bounds check. */
         inline ConstRef node_const(NodeId id) const { // range checked
-            #ifndef VERITAS_SAFETY_CHECKS_DISABLED
-            check_node_id(id);
-            #endif
+            if constexpr (check_sanity())
+                check_node_id(id);
 
             return { *this, id };
         }
 
         /** Like Tree::operator[](NodeId), but with bounds check. */
         inline MutRef node_mut(NodeId id) { // range checked
-            #ifndef VERITAS_SAFETY_CHECKS_DISABLED
-            check_node_id(id);
-            #endif
+            if constexpr (check_sanity())
+                check_node_id(id);
 
             return { *this, id };
         }
@@ -338,17 +384,31 @@ namespace veritas {
         inline void from_json(std::istream& strm) { root().from_json(strm); };
 
         /** Prune all branches that are never taken for examples in the given box. */
-        Tree prune(BoxRef box) const;
+        //SelfT prune(const BoxRefT& box) const;
         /** See NodeRef::find_minmax_leaf_value */
-        std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
+        //std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
         /** See NodeRef::get_leaf_ids */
         std::vector<NodeId> get_leaf_ids() const { return root().get_leaf_ids(); }
         /** Limit depth and replace leaf values with max leaf value in subtree. */
-        Tree limit_depth(int max_depth) const;
+        //SelfT limit_depth(int max_depth) const;
         /** Compute the variance of the leaf values */
-        FloatT leaf_value_variance() const;
+        //FloatT leaf_value_variance() const;
         /** Construct a new tree with negated leaf values. */
-        Tree negate_leaf_values() const;
+        //SelfT negate_leaf_values() const;
+
+        /** Map feature -> [list of split values, sorted, unique]. */
+        SplitMapT get_splits() const {
+            SplitMapT splits;
+            root().collect_split_values(splits);
+
+            // sort the split values, remove duplicates
+            for (auto& n : splits) {
+                auto& v = n.second;
+                std::sort(v.begin(), v.end());
+                v.erase(std::unique(v.begin(), v.end()), v.end());
+            }
+            return splits;
+        }
 
         /** Evaluate this tree on an instance. */
         FloatT eval(const data& row) const { return root().eval(row); }
@@ -356,20 +416,23 @@ namespace veritas {
          * instead of leaf value. */
         NodeId eval_node(const data& data) const { return root().eval_node(data); }
 
-        bool operator==(const Tree& other) const { return root() == other.root(); }
-    }; // Tree
+        bool operator==(const SelfT& other) const { return root() == other.root(); }
+    }; // GTree
 
-    std::ostream& operator<<(std::ostream& strm, const Tree& t);
+    template <typename SplitT, typename ValueT>
+    std::ostream& operator<<(std::ostream& strm, const GTree<SplitT, ValueT>& t);
 
 
 
+    using Tree = GTree<LtSplit, FloatT>;
+    using TreeFp = GTree<LtSplitFp, FpT>;
 
     /** Additive ensemble of Trees. A sum of Trees. */
     class AddTree {
     public:
         using const_iterator = std::vector<Tree>::const_iterator;
         using iterator = std::vector<Tree>::iterator;
-        using SplitMapT = std::unordered_map<FeatId, std::vector<FloatT>>;
+        using SplitMapT = typename Tree::SplitMapT;
     private:
         std::vector<Tree> trees_;
 
@@ -445,7 +508,7 @@ namespace veritas {
 
         /** Compute the intersection of the boxes of all leaf nodes. See
          * Tree::compute_box */
-        void compute_box(Box& box, const std::vector<NodeId> node_ids) const;
+        void compute_box(Box& box, const std::vector<NodeId>& node_ids) const;
 
         bool operator==(const AddTree& other) const
         {

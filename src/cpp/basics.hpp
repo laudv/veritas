@@ -15,8 +15,7 @@
 
 namespace veritas {
     using FloatT = float;
-
-    static const FloatT FLOATT_INF = std::numeric_limits<FloatT>::infinity();
+    using FpT = int; // Fixed point precision type
 
     using NodeId = int;
     using FeatId = int;
@@ -71,7 +70,7 @@ namespace veritas {
             };
         }
 
-        data(std::vector<FloatT>& v)
+        explicit data(std::vector<FloatT>& v)
             : ptr(&v[0])
             , num_rows(1), num_cols(v.size())
             , stride_row(0), stride_col(1) {}
@@ -88,6 +87,16 @@ namespace veritas {
             << ", shape=" << d.num_rows << ", " << d.num_cols
             << ", strides=" << d.stride_row << ", " << d.stride_col
             << '}';
+    }
+
+    constexpr inline bool check_sanity() {
+#ifndef VERITAS_SANITY_CHECKS
+        return false;
+#elif VERITAS_SANITY_CHECKS == 1
+        return true;
+#else
+        return false;
+#endif // !VERITAS_SANITY_CHECKS
     }
 }
 

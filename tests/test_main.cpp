@@ -1,13 +1,4 @@
-#include "features.hpp"
-#include "search.hpp"
-#include "constraints.hpp"
-
 #include <iostream>
-#include <fstream>
-#include <assert.h>
-#include <algorithm>
-
-using namespace veritas;
 
 /*
 void test_very_simple()
@@ -280,231 +271,231 @@ void test_box_checker2()
 }
 */
 
-void test_tree1()
-{
-    Tree tree;
-    auto n = tree.root();
-    n.split({1, 12.3});
-    n.left().set_leaf_value(4);
-    n.right().set_leaf_value(9.4);
-
-    assert(n.is_root());
-    assert(!n.left().is_root());
-    assert(n.left().is_leaf());
-    assert(n.left().leaf_value() == 4);
-    assert(n.num_leafs() == 2);
-    assert(n.tree_size() == 3);
-}
-
-void test_tree2()
-{
-    AddTree at;
-    Tree& t = at.add_tree();
-    t.root().split({1, 2.0});
-    t.root().left().split({2, 4.0});
-    t.root().left().right().split({2, 8.0});
-    auto splits = at.get_splits();
-
-    assert(splits[1][0] == 2.0);
-    assert(splits[2][0] == 4.0);
-    assert(splits[2][1] == 8.0);
-    assert(splits[1].size() == 1);
-    assert(splits[2].size() == 2);
-}
-
-void test_tree3()
-{
-    AddTree at;
-    Tree& t = at.add_tree();
-    t.root().split({1, 8.0});
-    t.root().left().split({1, 2.0});
-    t.root().left().right().split({1, 4.0});
-
-    {
-        auto n = at[0].root().left().right().left();
-        auto doms = n.compute_box();
-        assert(doms[0].feat_id == 1);
-        std::cout << at[0] << std::endl << doms[0].domain << std::endl;
-        assert(doms[0].domain == Domain::exclusive(2.0, 4.0));
-    }
-    {
-        auto n = at[0].root().left().right().right();
-        auto doms = n.compute_box();
-        assert(doms[0].feat_id == 1);
-        assert(doms[0].domain == Domain::exclusive(4.0, 8.0));
-    }
-    {
-        auto n = at[0].root().left();
-        auto doms = n.compute_box();
-        assert(doms[0].feat_id == 1);
-        assert(doms[0].domain == Domain::from_hi_exclusive(8.0));
-    }
-}
-
-void test_json1() {
-  std::stringstream s;
-
-  Tree tree;
-  auto n = tree.root();
-  n.split({1, 12.3});
-  n.left().set_leaf_value(4);
-  n.right().split({2, 1351});
-  n.right().left().set_leaf_value(9.4);
-  n.right().right().set_leaf_value(9.5);
-
-  tree.to_json(s);
-
-  Tree tree2;
-  tree2.from_json(s);
-
-  assert(tree == tree2);
-}
-
-void test_json2() {
-  std::stringstream s;
-
-  AddTree at;
-  at.base_score = 124.2;
-  {
-      Tree& tree = at.add_tree();
-      auto n = tree.root();
-      n.split({1, 12.3});
-      n.left().set_leaf_value(4);
-      n.right().split({2, 1351});
-      n.right().left().set_leaf_value(9.4);
-      n.right().right().set_leaf_value(9.5);
-  }
-  {
-      Tree& tree = at.add_tree();
-      tree.root().set_leaf_value(14.129);
-  }
-  {
-      Tree& tree = at.add_tree();
-      tree.root().split({1, 23.4});
-      tree.root().left().set_leaf_value(-124.2);
-      tree.root().right().set_leaf_value(-8.2);
-  }
-
-  at.to_json(s);
-  AddTree at2;
-  //std::cout << s.str() << std::endl;
-  at2.from_json(s);
-
-  assert(at == at2);
-}
-
-void test_eval1()
-{
-    AddTree at;
-    Tree& t = at.add_tree();;
-    t.root().split({0, 1.5});
-    t.root().left().split({1, 1.5});
-    t.root().left().left().split({2, 1.5});
-    t.root().left().left().left().set_leaf_value(1.0);
-    t.root().left().left().right().set_leaf_value(2.0);
-    t.root().left().right().set_leaf_value(3.0);
-    t.root().right().set_leaf_value(4.0);
-
-    std::vector<FloatT> buf = {1, 1, 1,  // 1
-                               2, 1, 1,  // 4
-                               2, 2, 1,  // 4
-                               2, 2, 2,  // 4
-                               1, 2, 2,  // 3
-                               1, 1, 2,  // 2
-                               1, 2, 1, // 3
-                               2, 1, 2}; // 4
-    data d {&buf[0], 8, 3, 3, 1};
-
-    assert(d.row(6)[0] == 1);
-    assert(d.row(6)[1] == 2);
-    assert(d.row(6)[2] == 1);
-
-    std::vector<FloatT> expected {1, 4, 4, 4, 3, 2, 3, 4};
-
-    for (size_t i = 0; i < 8; ++i)
-    {
-        FloatT v = at.eval(d.row(i));
-        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
-        assert(v == expected.at(i));
-    }
-}
-
-void test_eval2()
-{
-    AddTree at;
-    {
-        Tree& t = at.add_tree();;
-        t.root().split({0, 1.5});
-        t.root().left().split({1, 1.5});
-        t.root().left().left().split({2, 1.5});
-        t.root().left().left().left().set_leaf_value(1.0);
-        t.root().left().left().right().set_leaf_value(2.0);
-        t.root().left().right().set_leaf_value(3.0);
-        t.root().right().set_leaf_value(4.0);
-    }
-    {
-        Tree& t = at.add_tree();
-        t.root().set_leaf_value(10.0);
-    }
-
-    std::vector<FloatT> buf = {1, 2, 2, 2, 1, 1, 1, 2,
-                               1, 1, 2, 2, 2, 1, 2, 1,
-                               1, 1, 1, 2, 2, 2, 1, 2};
-    data d {&buf[0], 8, 3, 1, 8};
-
-    assert(d.row(6)[0] == 1);
-    assert(d.row(6)[1] == 2);
-    assert(d.row(6)[2] == 1);
-
-    std::vector<FloatT> expected0 {1, 4, 4, 4, 3, 2, 3, 4};
-    std::vector<FloatT> expected {11, 14, 14, 14, 13, 12, 13, 14};
-
-    for (size_t i = 0; i < 8; ++i)
-    {
-        FloatT v = at.eval(d.row(i));
-        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
-        assert(v == expected.at(i));
-        v = at[0].eval(d.row(i));
-        assert(v == expected0.at(i));
-    }
-}
-
-void test_prune1()
-{
-    AddTree at;
-    Tree& t = at.add_tree();
-    t.root().split({1, 8.0});
-    t.root().left().split({1, 2.0});
-    t.root().left().right().split({1, 4.0});
-
-    Box box = {{1, {2.5, 5.0}}};
-
-    //std::cout << at[0] << std::endl;
-    AddTree new_at = at.prune(box);
-    //std::cout << new_at[0] << std::endl;
-
-    assert(new_at.num_leafs() == 2);
-    assert(new_at.num_nodes() == 3);
-}
-
-void test_block_store1()
-{
-    size_t max_mem = 1024*1024; // 1mb
-    BlockStore<int> store;
-
-    std::vector<int> v {1, 2, 3, 4, 5};
-
-    auto r = store.store(v, max_mem-store.get_used_mem_size());
-
-    assert(r.begin[0] == 1);
-    assert(r.begin[1] == 2);
-    assert(r.begin[2] == 3);
-    assert(r.begin[3] == 4);
-    assert(r.begin[4] == 5);
-    assert(r.end == r.begin+5);
-
-    assert(store.get_used_mem_size() == 5*4);
-}
+//void test_tree1()
+//{
+//    Tree tree;
+//    auto n = tree.root();
+//    n.split({1, 12.3});
+//    n.left().set_leaf_value(4);
+//    n.right().set_leaf_value(9.4);
+//
+//    assert(n.is_root());
+//    assert(!n.left().is_root());
+//    assert(n.left().is_leaf());
+//    assert(n.left().leaf_value() == 4);
+//    assert(n.num_leafs() == 2);
+//    assert(n.tree_size() == 3);
+//}
+//
+//void test_tree2()
+//{
+//    AddTree at;
+//    Tree& t = at.add_tree();
+//    t.root().split({1, 2.0});
+//    t.root().left().split({2, 4.0});
+//    t.root().left().right().split({2, 8.0});
+//    auto splits = at.get_splits();
+//
+//    assert(splits[1][0] == 2.0);
+//    assert(splits[2][0] == 4.0);
+//    assert(splits[2][1] == 8.0);
+//    assert(splits[1].size() == 1);
+//    assert(splits[2].size() == 2);
+//}
+//
+//void test_tree3()
+//{
+//    AddTree at;
+//    Tree& t = at.add_tree();
+//    t.root().split({1, 8.0});
+//    t.root().left().split({1, 2.0});
+//    t.root().left().right().split({1, 4.0});
+//
+//    {
+//        auto n = at[0].root().left().right().left();
+//        auto doms = n.compute_box();
+//        assert(doms[0].feat_id == 1);
+//        std::cout << at[0] << std::endl << doms[0].domain << std::endl;
+//        assert(doms[0].domain == Domain::exclusive(2.0, 4.0));
+//    }
+//    {
+//        auto n = at[0].root().left().right().right();
+//        auto doms = n.compute_box();
+//        assert(doms[0].feat_id == 1);
+//        assert(doms[0].domain == Domain::exclusive(4.0, 8.0));
+//    }
+//    {
+//        auto n = at[0].root().left();
+//        auto doms = n.compute_box();
+//        assert(doms[0].feat_id == 1);
+//        assert(doms[0].domain == Domain::from_hi_exclusive(8.0));
+//    }
+//}
+//
+//void test_json1() {
+//  std::stringstream s;
+//
+//  Tree tree;
+//  auto n = tree.root();
+//  n.split({1, 12.3});
+//  n.left().set_leaf_value(4);
+//  n.right().split({2, 1351});
+//  n.right().left().set_leaf_value(9.4);
+//  n.right().right().set_leaf_value(9.5);
+//
+//  tree.to_json(s);
+//
+//  Tree tree2;
+//  tree2.from_json(s);
+//
+//  assert(tree == tree2);
+//}
+//
+//void test_json2() {
+//  std::stringstream s;
+//
+//  AddTree at;
+//  at.base_score = 124.2;
+//  {
+//      Tree& tree = at.add_tree();
+//      auto n = tree.root();
+//      n.split({1, 12.3});
+//      n.left().set_leaf_value(4);
+//      n.right().split({2, 1351});
+//      n.right().left().set_leaf_value(9.4);
+//      n.right().right().set_leaf_value(9.5);
+//  }
+//  {
+//      Tree& tree = at.add_tree();
+//      tree.root().set_leaf_value(14.129);
+//  }
+//  {
+//      Tree& tree = at.add_tree();
+//      tree.root().split({1, 23.4});
+//      tree.root().left().set_leaf_value(-124.2);
+//      tree.root().right().set_leaf_value(-8.2);
+//  }
+//
+//  at.to_json(s);
+//  AddTree at2;
+//  //std::cout << s.str() << std::endl;
+//  at2.from_json(s);
+//
+//  assert(at == at2);
+//}
+//
+//void test_eval1()
+//{
+//    AddTree at;
+//    Tree& t = at.add_tree();;
+//    t.root().split({0, 1.5});
+//    t.root().left().split({1, 1.5});
+//    t.root().left().left().split({2, 1.5});
+//    t.root().left().left().left().set_leaf_value(1.0);
+//    t.root().left().left().right().set_leaf_value(2.0);
+//    t.root().left().right().set_leaf_value(3.0);
+//    t.root().right().set_leaf_value(4.0);
+//
+//    std::vector<FloatT> buf = {1, 1, 1,  // 1
+//                               2, 1, 1,  // 4
+//                               2, 2, 1,  // 4
+//                               2, 2, 2,  // 4
+//                               1, 2, 2,  // 3
+//                               1, 1, 2,  // 2
+//                               1, 2, 1, // 3
+//                               2, 1, 2}; // 4
+//    data d {&buf[0], 8, 3, 3, 1};
+//
+//    assert(d.row(6)[0] == 1);
+//    assert(d.row(6)[1] == 2);
+//    assert(d.row(6)[2] == 1);
+//
+//    std::vector<FloatT> expected {1, 4, 4, 4, 3, 2, 3, 4};
+//
+//    for (size_t i = 0; i < 8; ++i)
+//    {
+//        FloatT v = at.eval(d.row(i));
+//        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
+//        assert(v == expected.at(i));
+//    }
+//}
+//
+//void test_eval2()
+//{
+//    AddTree at;
+//    {
+//        Tree& t = at.add_tree();;
+//        t.root().split({0, 1.5});
+//        t.root().left().split({1, 1.5});
+//        t.root().left().left().split({2, 1.5});
+//        t.root().left().left().left().set_leaf_value(1.0);
+//        t.root().left().left().right().set_leaf_value(2.0);
+//        t.root().left().right().set_leaf_value(3.0);
+//        t.root().right().set_leaf_value(4.0);
+//    }
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().set_leaf_value(10.0);
+//    }
+//
+//    std::vector<FloatT> buf = {1, 2, 2, 2, 1, 1, 1, 2,
+//                               1, 1, 2, 2, 2, 1, 2, 1,
+//                               1, 1, 1, 2, 2, 2, 1, 2};
+//    data d {&buf[0], 8, 3, 1, 8};
+//
+//    assert(d.row(6)[0] == 1);
+//    assert(d.row(6)[1] == 2);
+//    assert(d.row(6)[2] == 1);
+//
+//    std::vector<FloatT> expected0 {1, 4, 4, 4, 3, 2, 3, 4};
+//    std::vector<FloatT> expected {11, 14, 14, 14, 13, 12, 13, 14};
+//
+//    for (size_t i = 0; i < 8; ++i)
+//    {
+//        FloatT v = at.eval(d.row(i));
+//        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
+//        assert(v == expected.at(i));
+//        v = at[0].eval(d.row(i));
+//        assert(v == expected0.at(i));
+//    }
+//}
+//
+//void test_prune1()
+//{
+//    AddTree at;
+//    Tree& t = at.add_tree();
+//    t.root().split({1, 8.0});
+//    t.root().left().split({1, 2.0});
+//    t.root().left().right().split({1, 4.0});
+//
+//    Box box = {{1, {2.5, 5.0}}};
+//
+//    //std::cout << at[0] << std::endl;
+//    AddTree new_at = at.prune(box);
+//    //std::cout << new_at[0] << std::endl;
+//
+//    assert(new_at.num_leafs() == 2);
+//    assert(new_at.num_nodes() == 3);
+//}
+//
+//void test_block_store1()
+//{
+//    size_t max_mem = 1024*1024; // 1mb
+//    BlockStore<int> store;
+//
+//    std::vector<int> v {1, 2, 3, 4, 5};
+//
+//    auto r = store.store(v, max_mem-store.get_used_mem_size());
+//
+//    assert(r.begin[0] == 1);
+//    assert(r.begin[1] == 2);
+//    assert(r.begin[2] == 3);
+//    assert(r.begin[3] == 4);
+//    assert(r.begin[4] == 5);
+//    assert(r.end == r.begin+5);
+//
+//    assert(store.get_used_mem_size() == 5*4);
+//}
 
 //void test_graph1()
 //{
@@ -596,76 +587,76 @@ void test_block_store1()
 //    }
 //}
 
-void test_feat_map1()
-{
-    std::vector<std::string> features = {"feat16", "feat2", "feat3=4", "feat4"};
-    FeatMap map(features);
-    map.share_all_features_between_instances();
-    map.use_same_id_for(map.get_feat_id("feat3=4"), map.get_feat_id("feat4"));
-
-    assert(map.get_feat_id("feat2") == 1);
-    std::vector<FeatId> expected {0, 1, 2, 2, 0, 1, 2, 2};
-    for (auto index : map)
-        assert(map.get_feat_id(index) == expected[index]);
-
-    for (auto index : map.iter_instance(0))
-        assert(map.get_feat_id(index) == expected[index]);
-    for (auto index : map.iter_instance(1))
-    {
-        assert(index >= 4);
-        assert(map.get_feat_id(index) == expected[index]);
-    }
-
-    //std::cout << map << std::endl;
-
-    for (auto&&[k,v]:map.get_indices_map(0)) { assert(k < 4); assert(v < 4); }
-    for (auto&&[k,v]:map.get_indices_map(1)) { assert(k < 4); assert(v >= 4); }
-}
-
-void test_feat_map2()
-{
-    FeatMap map(5);
-    map.use_same_id_for(0, 2);
-    map.use_same_id_for(0, 8);
-
-    assert(map.get_feat_id("feature0", 0) == 0);
-    assert(map.get_feat_id("feature2", 0) == 0);
-    assert(map.get_feat_id("feature3", 1) == 0);
-    assert(map.get_feat_id("feature0", 1) == 5);
-}
-
-void test_feat_map3()
-{
-    FeatMap map(3);
-    map.use_same_id_for(0, 0);
-    map.use_same_id_for(1, 0);
-    map.use_same_id_for(map.get_index(0, 1), 0);
-
-    AddTree at;
-    {
-        Tree& t = at.add_tree();
-        t.root().split({0, 0.3});
-        t.root().left().split({1, 0.3});
-        t.root().left().right().split({2, 0.3});
-    }
-
-    AddTree renamed0 = map.transform(at, 0);
-    AddTree renamed1 = map.transform(at, 1);
-
-    //std::cout << at[0] << std::endl;
-    //std::cout << renamed0[0] << std::endl;
-    //std::cout << renamed1[0] << std::endl;
-
-    //std::cout << map << std::endl;
-
-    assert(renamed0[0].root().get_split().feat_id == 0);
-    assert(renamed0[0].root().left().get_split().feat_id == 0);
-    assert(renamed0[0].root().left().right().get_split().feat_id == 2);
-
-    assert(renamed1[0].root().get_split().feat_id == 0);
-    assert(renamed1[0].root().left().get_split().feat_id == 4);
-    assert(renamed1[0].root().left().right().get_split().feat_id == 5);
-}
+//void test_feat_map1()
+//{
+//    std::vector<std::string> features = {"feat16", "feat2", "feat3=4", "feat4"};
+//    FeatMap map(features);
+//    map.share_all_features_between_instances();
+//    map.use_same_id_for(map.get_feat_id("feat3=4"), map.get_feat_id("feat4"));
+//
+//    assert(map.get_feat_id("feat2") == 1);
+//    std::vector<FeatId> expected {0, 1, 2, 2, 0, 1, 2, 2};
+//    for (auto index : map)
+//        assert(map.get_feat_id(index) == expected[index]);
+//
+//    for (auto index : map.iter_instance(0))
+//        assert(map.get_feat_id(index) == expected[index]);
+//    for (auto index : map.iter_instance(1))
+//    {
+//        assert(index >= 4);
+//        assert(map.get_feat_id(index) == expected[index]);
+//    }
+//
+//    //std::cout << map << std::endl;
+//
+//    for (auto&&[k,v]:map.get_indices_map(0)) { assert(k < 4); assert(v < 4); }
+//    for (auto&&[k,v]:map.get_indices_map(1)) { assert(k < 4); assert(v >= 4); }
+//}
+//
+//void test_feat_map2()
+//{
+//    FeatMap map(5);
+//    map.use_same_id_for(0, 2);
+//    map.use_same_id_for(0, 8);
+//
+//    assert(map.get_feat_id("feature0", 0) == 0);
+//    assert(map.get_feat_id("feature2", 0) == 0);
+//    assert(map.get_feat_id("feature3", 1) == 0);
+//    assert(map.get_feat_id("feature0", 1) == 5);
+//}
+//
+//void test_feat_map3()
+//{
+//    FeatMap map(3);
+//    map.use_same_id_for(0, 0);
+//    map.use_same_id_for(1, 0);
+//    map.use_same_id_for(map.get_index(0, 1), 0);
+//
+//    AddTree at;
+//    {
+//        Tree& t = at.add_tree();
+//        t.root().split({0, 0.3});
+//        t.root().left().split({1, 0.3});
+//        t.root().left().right().split({2, 0.3});
+//    }
+//
+//    AddTree renamed0 = map.transform(at, 0);
+//    AddTree renamed1 = map.transform(at, 1);
+//
+//    //std::cout << at[0] << std::endl;
+//    //std::cout << renamed0[0] << std::endl;
+//    //std::cout << renamed1[0] << std::endl;
+//
+//    //std::cout << map << std::endl;
+//
+//    assert(renamed0[0].root().get_split().feat_id == 0);
+//    assert(renamed0[0].root().left().get_split().feat_id == 0);
+//    assert(renamed0[0].root().left().right().get_split().feat_id == 2);
+//
+//    assert(renamed1[0].root().get_split().feat_id == 0);
+//    assert(renamed1[0].root().left().get_split().feat_id == 4);
+//    assert(renamed1[0].root().left().right().get_split().feat_id == 5);
+//}
 
 /*
 void test_graph_search1()
@@ -887,7 +878,6 @@ void test_constraints1()
         std::cout << sol.output << " box " << sol.box << std::endl;
     }
 }
-*/
 
 void test_get_domain_from_box()
 {
@@ -1012,40 +1002,26 @@ void test_search1()
 
     //std::cout << t << std::endl;
 }
+*/
 
-int main()
-{
-    //test_tree1();
-    //test_tree2();
-    //test_tree3();
-    //test_json1();
-    //test_json2();
+int main_template();
+int main_interval();
+int main_box();
+int main_tree();
 
-    //test_eval1();
-    //test_eval2();
+int main(int argc, char **args) {
+    if (argc != 2) {
+        std::cerr << "argument error\n";
+        return 1;
+    }
 
-    //test_prune1();
-    //test_block_store1();
+    std::string t{args[1]};
 
-    //test_graph1();
+    if (t == "template") return main_template();
+    if (t == "interval") return main_interval();
+    if (t == "box") return main_box();
+    if (t == "tree") return main_tree();
 
-    //test_node_search1();
-    
-    //test_feat_map1();
-    //test_feat_map2();
-    //test_feat_map3();
-
-
-    //test_graph_search1();
-    //test_graph_search2();
-    //test_graph_search3();
-
-    //test_robustness_search1();
-
-    //test_graph_simplify();
-
-    //test_constraints1();
-    
-    //test_get_domain_from_box();
-    test_search1();
+    std::cerr << "unknown test\n";
+    return 2;
 }

@@ -122,18 +122,22 @@ namespace veritas {
     const Domain TRUE_DOMAIN = Domain::from_lo(BOOL_SPLIT_VALUE);
 
     /** A domain annotated with its feature id. */
+    template <typename DomT>
     struct DomainPair {
         FeatId feat_id;
-        Domain domain;
+        DomT domain;
     };
 
     /** A __sorted__ list of pairs */
-    using Box = std::vector<DomainPair>;
+    template <typename DomT>
+    using Box = std::vector<DomainPair<DomT>>;
 
 
 
     /** A less than split on a feature */
     struct LtSplit {
+        using DomainT = Domain;
+
         FeatId feat_id;
         FloatT split_value;
 
@@ -164,9 +168,10 @@ namespace veritas {
      * no entry exists, then it is inserted in the right place so that the box
      * remains sorted on feat_id.
      */
-    inline Domain& get_domain(Box& box, FeatId feat_id)
+    template <typename DomT>
+    inline DomT& get_domain(Box<DomT>& box, FeatId feat_id)
     {
-        auto it = std::find_if(box.begin(), box.end(), [feat_id](const DomainPair& p)
+        auto it = std::find_if(box.begin(), box.end(), [feat_id](const DomainPair<DomT>& p)
                 { return p.feat_id == feat_id; });
 
         // domain not in box, insert and ensure sorted
@@ -199,7 +204,8 @@ namespace veritas {
      * `feat_id`, then intersect it. If it does not overlap, then return false,
      * else return true.
      */
-    inline bool refine_box(Box& box, FeatId feat_id, const Domain& dom)
+    template <typename DomT>
+    inline bool refine_box(Box<DomT>& box, FeatId feat_id, const Domain& dom)
     {
         Domain& new_dom = get_domain(box, feat_id);
         if (!new_dom.overlaps(dom))
@@ -211,7 +217,8 @@ namespace veritas {
     /**
      * See ::refine_box() and LtSplit::get_domains()
      */
-    inline bool refine_box(Box& doms, const LtSplit& split, bool from_left_child)
+    template <typename DomT>
+    inline bool refine_box(Box<DomT>& doms, const LtSplit& split, bool from_left_child)
     {
         Domain dom = from_left_child
             ? std::get<0>(split.get_domains())
@@ -227,16 +234,17 @@ namespace veritas {
      * BoxRefs are used in search spaces (GraphSearch) in combination with
      * stable pointers into a BlockStore.
      */
+    template <typename DomT>
     class BoxRef {
     public:
-        using const_iterator = const DomainPair *;
+        using const_iterator = const DomainPair<DomT> *;
 
     private:
         const_iterator begin_, end_;
 
     public:
         inline BoxRef(const_iterator b, const_iterator e) : begin_(b), end_(e) {}
-        inline BoxRef(const Box& d) : BoxRef(nullptr, nullptr)
+        inline BoxRef(const Box<DomT>& d) : BoxRef(nullptr, nullptr)
         {
             if (d.size() != 0)
             {
@@ -345,14 +353,15 @@ namespace veritas {
      *
      * It is assumed that both boxes overlap.
      */
+    template <typename DomT>
     inline void
-    combine_boxes(const BoxRef& a, const BoxRef& b, bool copy_b, Box& out)
+    combine_boxes(const BoxRef<DomT>& a, const BoxRef<DomT>& b, bool copy_b, Box<DomT>& out)
     {
         if (!out.empty())
             throw std::runtime_error("output box is not empty");
 
-        const DomainPair *it0 = a.begin();
-        const DomainPair *it1 = b.begin();
+        const DomainPair<DomT> *it0 = a.begin();
+        const DomainPair<DomT> *it1 = b.begin();
 
         // assume sorted
         while (it0 != a.end() && it1 != b.end())
@@ -383,9 +392,10 @@ namespace veritas {
             out.push_back(*it1); // copy
     }
 
+    template <typename DomT>
     inline
     std::ostream&
-    operator<<(std::ostream& s, const BoxRef& box)
+    operator<<(std::ostream& s, const BoxRef<DomT>& box)
     {
         s << "Box { ";
         for (auto&& [id, dom] : box)
