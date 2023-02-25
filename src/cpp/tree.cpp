@@ -16,13 +16,14 @@ namespace veritas {
 
     namespace inner {
 
+        template <typename RefT>
         static bool
         compute_box(
-                Tree::ConstRef node,
-                Box& box,
+                RefT node,
+                GBox<typename RefT::SplitType::ValueT>& box,
                 bool from_left_child)
         {
-            bool success = refine_box(box, node.get_split(), from_left_child);
+            bool success = box.refine_box(node.get_split(), from_left_child);
             if (!success)
                 return false;
 
@@ -34,20 +35,9 @@ namespace veritas {
 
     } // namespace inner
 
-    template <typename RefT>
-    Box
-    NodeRef<RefT>::compute_box() const
-    {
-        Box box;
-        bool success = compute_box(box);
-        if (!success)
-            throw std::runtime_error("compute_box fail, non-overlapping splits");
-        return box;
-    }
-
-    template <typename RefT>
+    template <typename SplitT, typename ValueT, typename RefT>
     bool
-    NodeRef<RefT>::compute_box(Box& box) const
+    NodeRef<SplitT, ValueT, RefT>::compute_box(BoxT& box) const
     {
         if (!is_root())
             return inner::compute_box(parent().to_const(), box, is_left_child());
@@ -55,25 +45,24 @@ namespace veritas {
     }
 
     template // manual template instantiation
-    Box
-    NodeRef<inner::ConstRef>::compute_box() const;
-
-    template // manual template instantiation
-    Box
-    NodeRef<inner::MutRef>::compute_box() const;
+    bool
+    NodeRef<LtSplit, FloatT, inner::ConstRef<LtSplit, FloatT>>::compute_box(BoxT&) const;
 
     template // manual template instantiation
     bool
-    NodeRef<inner::ConstRef>::compute_box(Box&) const;
+    NodeRef<LtSplit, FloatT, inner::MutRef<LtSplit, FloatT>>::compute_box(BoxT&) const;
 
     template // manual template instantiation
     bool
-    NodeRef<inner::MutRef>::compute_box(Box&) const;
+    NodeRef<LtSplitFp, FpT, inner::ConstRef<LtSplitFp, FpT>>::compute_box(BoxT&) const;
 
+    template // manual template instantiation
+    bool
+    NodeRef<LtSplitFp, FpT, inner::MutRef<LtSplitFp, FpT>>::compute_box(BoxT&) const;
 
-    template <typename RefT>
+    template <typename SplitT, typename ValueT, typename RefT>
     void
-    NodeRef<RefT>::print_node(std::ostream& strm, int depth) const
+    NodeRef<SplitT, ValueT, RefT>::print_node(std::ostream& strm, int depth) const
     {
         int i = 1;
         for (; i < depth; ++i)
@@ -102,9 +91,9 @@ namespace veritas {
         }
     }
 
-    template <typename RefT>
+    template <typename SplitT, typename ValueT, typename RefT>
     void
-    NodeRef<RefT>::to_json(std::ostream& s, int depth) const
+    NodeRef<SplitT, ValueT, RefT>::to_json(std::ostream& s, int depth) const
     {
         if (is_leaf())
         {
@@ -128,13 +117,13 @@ namespace veritas {
         }
     }
 
-    template void NodeRef<inner::ConstRef>::to_json(std::ostream&, int) const;
-    template void NodeRef<inner::MutRef>::to_json(std::ostream&, int) const;
+    //template void NodeRef<inner::ConstRef>::to_json(std::ostream&, int) const;
+    //template void NodeRef<inner::MutRef>::to_json(std::ostream&, int) const;
 
-    template <typename RefT>
+    template <typename SplitT, typename ValueT, typename RefT>
     template <typename T>
     std::enable_if_t<T::is_mut_type::value, void>
-    NodeRef<RefT>::from_json(std::istream& s)
+    NodeRef<SplitT, ValueT, RefT>::from_json(std::istream& s)
     {
         std::string buf;
         FloatT leaf_value, split_value;
@@ -190,75 +179,76 @@ namespace veritas {
 
     //template int NodeRef<inner::MutRef>::from_json(std::istream&);
 
-    template <typename RefT>
+    template <typename SplitT, typename ValueT, typename RefT>
     FloatT
-    NodeRef<RefT>::eval(const data& row) const
+    NodeRef<SplitT, ValueT, RefT>::eval(const data& row) const
     {
         if (is_leaf()) return leaf_value();
         return get_split().test(row) ? left().eval(row) : right().eval(row);
     }
 
-    template FloatT NodeRef<inner::ConstRef>::eval(const data&) const;
-    template FloatT NodeRef<inner::MutRef>::eval(const data&) const;
+    //template FloatT NodeRef<inner::ConstRef>::eval(const data&) const;
+    //template FloatT NodeRef<inner::MutRef>::eval(const data&) const;
 
-    template <typename RefT>
+    template <typename SplitT, typename ValueT, typename RefT>
     NodeId
-    NodeRef<RefT>::eval_node(const data& row) const
+    NodeRef<SplitT, ValueT, RefT>::eval_node(const data& row) const
     {
         if (is_leaf()) return id();
         return get_split().test(row) ? left().eval_node(row) : right().eval_node(row);
     }
 
-    template NodeId NodeRef<inner::ConstRef>::eval_node(const data&) const;
-    template NodeId NodeRef<inner::MutRef>::eval_node(const data&) const;
+    //template NodeId NodeRef<inner::ConstRef>::eval_node(const data&) const;
+    //template NodeId NodeRef<inner::MutRef>::eval_node(const data&) const;
 
-    Tree
-    Tree::prune(BoxRef box) const
-    {
-        std::stack<ConstRef, std::vector<ConstRef>> stack1;
-        std::stack<MutRef, std::vector<MutRef>> stack2;
-
-        Tree new_tree;
-        stack1.push(root());
-        stack2.push(new_tree.root());
-
-        while (stack1.size() != 0)
-        {
-            ConstRef n1 = stack1.top();
-            stack1.pop();
-            MutRef n2 = stack2.top();
-
-            if (n1.is_leaf())
-            {
-                stack2.pop();
-                n2.set_leaf_value(n1.leaf_value());
-            }
-            else
-            {
-                Domain ldom, rdom;
-                int flag = box.overlaps(n1.get_split());
-
-                if (flag == (BoxRef::OVERLAPS_LEFT | BoxRef::OVERLAPS_RIGHT))
-                {
-                    stack2.pop();
-                    n2.split(n1.get_split());
-                    stack2.push(n2.right());
-                    stack2.push(n2.left());
-                }
-
-                if ((flag & BoxRef::OVERLAPS_RIGHT) != 0)
-                {
-                    stack1.push(n1.right());
-                }
-                if ((flag & BoxRef::OVERLAPS_LEFT) != 0)
-                {
-                    stack1.push(n1.left());
-                }
-            }
-        }
-
-        return new_tree;
-    }
+    //template <typename SplitT, typename ValueT>
+    //GTree<SplitT, ValueT>
+    //GTree<SplitT, ValueT>::prune(const BoxRefT<typename SplitT::Interval::ValueT>& box) const
+    //{
+    //    std::stack<ConstRef, std::vector<ConstRef>> stack1;
+    //    std::stack<MutRef, std::vector<MutRef>> stack2;
+    //
+    //    Tree new_tree;
+    //    stack1.push(root());
+    //    stack2.push(new_tree.root());
+    //
+    //    while (stack1.size() != 0)
+    //    {
+    //        ConstRef n1 = stack1.top();
+    //        stack1.pop();
+    //        MutRef n2 = stack2.top();
+    //
+    //        if (n1.is_leaf())
+    //        {
+    //            stack2.pop();
+    //            n2.set_leaf_value(n1.leaf_value());
+    //        }
+    //        else
+    //        {
+    //            Domain ldom, rdom;
+    //            int flag = box.overlaps(n1.get_split());
+    //
+    //            if (flag == (BoxRef::OVERLAPS_LEFT | BoxRef::OVERLAPS_RIGHT))
+    //            {
+    //                stack2.pop();
+    //                n2.split(n1.get_split());
+    //                stack2.push(n2.right());
+    //                stack2.push(n2.left());
+    //            }
+    //
+    //            if ((flag & BoxRef::OVERLAPS_RIGHT) != 0)
+    //            {
+    //                stack1.push(n1.right());
+    //            }
+    //            if ((flag & BoxRef::OVERLAPS_LEFT) != 0)
+    //            {
+    //                stack1.push(n1.left());
+    //            }
+    //        }
+    //    }
+    //
+    //    return new_tree;
+    //}
 
     //std::tuple<FloatT, FloatT>
     //Tree::find_minmax_leaf_value() const
@@ -289,91 +279,91 @@ namespace veritas {
     //    return {min, max};
     //}
 
-    Tree
-    Tree::limit_depth(int max_depth) const
-    {
-        Tree new_tree;
+    //Tree
+    //Tree::limit_depth(int max_depth) const
+    //{
+    //    Tree new_tree;
 
-        std::stack<std::tuple<ConstRef, MutRef, int>,
-            std::vector<std::tuple<ConstRef, MutRef, int>>> stack;
-        stack.push({root(), new_tree.root(), 0});
+    //    std::stack<std::tuple<ConstRef, MutRef, int>,
+    //        std::vector<std::tuple<ConstRef, MutRef, int>>> stack;
+    //    stack.push({root(), new_tree.root(), 0});
 
-        while (stack.size() != 0)
-        {
-            auto [n, m, depth] = stack.top();
-            stack.pop();
+    //    while (stack.size() != 0)
+    //    {
+    //        auto [n, m, depth] = stack.top();
+    //        stack.pop();
 
-            if (depth < max_depth && n.is_internal())
-            {
-                m.split(n.get_split());
-                stack.push({n.right(), m.right(), depth+1});
-                stack.push({n.left(), m.left(), depth+1});
-            }
-            else
-            {
-                // set leaf value to maximum leaf value in subtree
-                m.set_leaf_value(std::get<1>(n.find_minmax_leaf_value()));
-            }
-        }
+    //        if (depth < max_depth && n.is_internal())
+    //        {
+    //            m.split(n.get_split());
+    //            stack.push({n.right(), m.right(), depth+1});
+    //            stack.push({n.left(), m.left(), depth+1});
+    //        }
+    //        else
+    //        {
+    //            // set leaf value to maximum leaf value in subtree
+    //            m.set_leaf_value(std::get<1>(n.find_minmax_leaf_value()));
+    //        }
+    //    }
 
-        return new_tree;
-    }
+    //    return new_tree;
+    //}
 
-    FloatT
-    Tree::leaf_value_variance() const
-    {
-        std::stack<ConstRef, std::vector<ConstRef>> stack;
-        stack.push(root());
+    //FloatT
+    //Tree::leaf_value_variance() const
+    //{
+    //    std::stack<ConstRef, std::vector<ConstRef>> stack;
+    //    stack.push(root());
 
-        double sum = 0.0, sum2 = 0.0;
-        int count = 0;
-        while (!stack.empty())
-        {
-            ConstRef n = stack.top();
-            stack.pop();
+    //    double sum = 0.0, sum2 = 0.0;
+    //    int count = 0;
+    //    while (!stack.empty())
+    //    {
+    //        ConstRef n = stack.top();
+    //        stack.pop();
 
-            if (n.is_internal())
-            {
-                stack.push(n.right());
-                stack.push(n.left());
-            }
-            else
-            {
-                double lv = static_cast<double>(n.leaf_value());
-                sum += lv;
-                sum2 += lv * lv;
-                count += 1;
-            }
-        }
+    //        if (n.is_internal())
+    //        {
+    //            stack.push(n.right());
+    //            stack.push(n.left());
+    //        }
+    //        else
+    //        {
+    //            double lv = static_cast<double>(n.leaf_value());
+    //            sum += lv;
+    //            sum2 += lv * lv;
+    //            count += 1;
+    //        }
+    //    }
 
-        return static_cast<FloatT>((sum2 - (sum*sum) / count) / count);
-    }
+    //    return static_cast<FloatT>((sum2 - (sum*sum) / count) / count);
+    //}
 
-    Tree
-    Tree::negate_leaf_values() const
-    {
-        Tree new_tree;
+    //Tree
+    //Tree::negate_leaf_values() const
+    //{
+    //    Tree new_tree;
 
-        std::stack<std::tuple<ConstRef, MutRef>,
-            std::vector<std::tuple<ConstRef, MutRef>>> stack;
-        stack.push({root(), new_tree.root()});
+    //    std::stack<std::tuple<ConstRef, MutRef>,
+    //        std::vector<std::tuple<ConstRef, MutRef>>> stack;
+    //    stack.push({root(), new_tree.root()});
 
-        while (stack.size() != 0)
-        {
-            auto [n, m] = stack.top();
-            stack.pop();
+    //    while (stack.size() != 0)
+    //    {
+    //        auto [n, m] = stack.top();
+    //        stack.pop();
 
-            if (n.is_internal())
-            {
-                m.split(n.get_split());
-                stack.push({n.right(), m.right()});
-                stack.push({n.left(), m.left()});
-            }
-            else m.set_leaf_value(-n.leaf_value());
-        }
+    //        if (n.is_internal())
+    //        {
+    //            m.split(n.get_split());
+    //            stack.push({n.right(), m.right()});
+    //            stack.push({n.left(), m.left()});
+    //        }
+    //        else m.set_leaf_value(-n.leaf_value());
+    //    }
 
-        return new_tree;
-    }
+    //    return new_tree;
+    //}
 
     std::ostream&
     operator<<(std::ostream& strm, const Tree& t)
@@ -399,35 +389,14 @@ namespace veritas {
         return c;
     }
 
-    namespace inner {
-        static
-        void
-        collect_split_values(AddTree::SplitMapT& splits, const Tree::ConstRef& node)
-        {
-            if (node.is_leaf()) return;
-
-            // insert split values
-            const LtSplit& split = node.get_split();
-            auto search = splits.find(split.feat_id);
-            if (search != splits.end()) // found it!
-                splits[split.feat_id].push_back(split.split_value);
-            else
-                splits.emplace(split.feat_id, std::vector<FloatT>{split.split_value});
-
-            collect_split_values(splits, node.right());
-            collect_split_values(splits, node.left());
-        }
-
-    } /* namespace inner */
-
     std::unordered_map<FeatId, std::vector<FloatT>>
     AddTree::get_splits() const
     {
-        std::unordered_map<FeatId, std::vector<FloatT>> splits;
+        SplitMapT splits;
 
         // collect all the split values
         for (const Tree& tree : trees_)
-            inner::collect_split_values(splits, tree.root());
+            tree.root().collect_split_values(splits);
 
         // sort the split values, remove duplicates
         for (auto& n : splits)
@@ -443,93 +412,95 @@ namespace veritas {
     AddTree
     AddTree::prune(BoxRef box) const
     {
-        AddTree new_at;
-        for (const Tree& t : *this)
-            new_at.add_tree(t.prune(box));
-        return new_at;
+        throw std::runtime_error("not implemented");
+        //AddTree new_at;
+        //for (const Tree& t : *this)
+        //    new_at.add_tree(t.prune(box));
+        //return new_at;
     }
 
     AddTree
     AddTree::neutralize_negative_leaf_values() const
     {
-        AddTree new_at;
-        new_at.base_score = base_score;
-        for (const Tree& tree : *this)
-        {
-            Tree& new_tree = new_at.add_tree();
-            std::stack<Tree::ConstRef, std::vector<Tree::ConstRef>> stack1;
-            std::stack<Tree::MutRef, std::vector<Tree::MutRef>> stack2;
-            stack1.push(tree.root());
-            stack2.push(new_tree.root());
+        throw std::runtime_error("not implemented");
+        //AddTree new_at;
+        //new_at.base_score = base_score;
+        //for (const Tree& tree : *this)
+        //{
+        //    Tree& new_tree = new_at.add_tree();
+        //    std::stack<Tree::ConstRef, std::vector<Tree::ConstRef>> stack1;
+        //    std::stack<Tree::MutRef, std::vector<Tree::MutRef>> stack2;
+        //    stack1.push(tree.root());
+        //    stack2.push(new_tree.root());
 
-            FloatT offset = std::min<FloatT>(0.0, std::get<0>(tree.find_minmax_leaf_value()));
-            new_at.base_score += offset;
+        //    FloatT offset = std::min<FloatT>(0.0, std::get<0>(tree.find_minmax_leaf_value()));
+        //    new_at.base_score += offset;
 
-            while (stack1.size() > 0)
-            {
-                auto n1 = stack1.top(); stack1.pop();
-                auto n2 = stack2.top(); stack2.pop();
-                if (n1.is_internal())
-                {
-                    n2.split(n1.get_split());
-                    stack1.push(n1.right()); stack1.push(n1.left());
-                    stack2.push(n2.right()); stack2.push(n2.left());
-                }
-                else
-                {
-                    n2.set_leaf_value(n1.leaf_value() - offset);
-                }
-            }
+        //    while (stack1.size() > 0)
+        //    {
+        //        auto n1 = stack1.top(); stack1.pop();
+        //        auto n2 = stack2.top(); stack2.pop();
+        //        if (n1.is_internal())
+        //        {
+        //            n2.split(n1.get_split());
+        //            stack1.push(n1.right()); stack1.push(n1.left());
+        //            stack2.push(n2.right()); stack2.push(n2.left());
+        //        }
+        //        else
+        //        {
+        //            n2.set_leaf_value(n1.leaf_value() - offset);
+        //        }
+        //    }
 
-        }
-        //std::cout << "neutralize_negative_leaf_values: base_score "
-        //    << base_score << " -> " << new_at.base_score << std::endl;
-        return new_at;
+        //}
+        ////std::cout << "neutralize_negative_leaf_values: base_score "
+        ////    << base_score << " -> " << new_at.base_score << std::endl;
+        //return new_at;
     }
 
-    AddTree
-    AddTree::limit_depth(int max_depth) const
-    {
-        AddTree new_at;
-        new_at.base_score = base_score;
-        for (const Tree& tree : *this)
-            new_at.add_tree(tree.limit_depth(max_depth));
-        return new_at;
-    }
+    //AddTree
+    //AddTree::limit_depth(int max_depth) const
+    //{
+    //    AddTree new_at;
+    //    new_at.base_score = base_score;
+    //    for (const Tree& tree : *this)
+    //        new_at.add_tree(tree.limit_depth(max_depth));
+    //    return new_at;
+    //}
 
-    AddTree
-    AddTree::sort_by_leaf_value_variance() const
-    {
-        std::vector<std::tuple<size_t, FloatT>> v;
-        for (size_t i = 0; i < size(); ++i)
-            v.push_back({i, trees_[i].leaf_value_variance()});
-        std::sort(v.begin(), v.end(), [](const auto& v, const auto& w) {
-            return std::get<1>(v) > std::get<1>(w); // sort desc
-        });
+    //AddTree
+    //AddTree::sort_by_leaf_value_variance() const
+    //{
+    //    std::vector<std::tuple<size_t, FloatT>> v;
+    //    for (size_t i = 0; i < size(); ++i)
+    //        v.push_back({i, trees_[i].leaf_value_variance()});
+    //    std::sort(v.begin(), v.end(), [](const auto& v, const auto& w) {
+    //        return std::get<1>(v) > std::get<1>(w); // sort desc
+    //    });
 
-        AddTree new_at;
-        for (auto [id, x] : v)
-        {
-            std::cout << "id: " << id << ", var: " << x << std::endl;
-            new_at.add_tree(trees_[id]);
-        }
-        return new_at;
-    }
-    AddTree
-    AddTree::concat_negated(const AddTree& other) const
-    {
-        AddTree new_at(*this);
-        new_at.base_score -= other.base_score;
-        for (const Tree& t : other)
-            new_at.add_tree(t.negate_leaf_values());
-        return new_at;
-    }
+    //    AddTree new_at;
+    //    for (auto [id, x] : v)
+    //    {
+    //        std::cout << "id: " << id << ", var: " << x << std::endl;
+    //        new_at.add_tree(trees_[id]);
+    //    }
+    //    return new_at;
+    //}
+    //AddTree
+    //AddTree::concat_negated(const AddTree& other) const
+    //{
+    //    AddTree new_at(*this);
+    //    new_at.base_score -= other.base_score;
+    //    for (const Tree& t : other)
+    //        new_at.add_tree(t.negate_leaf_values());
+    //    return new_at;
+    //}
 
-    AddTree
-    AddTree::negate_leaf_values() const
-    {
-        return AddTree().concat_negated(*this);
-    }
+    //AddTree
+    //AddTree::negate_leaf_values() const
+    //{
+    //    return AddTree().concat_negated(*this);
+    //}
 
     std::ostream&
     operator<<(std::ostream& strm, const AddTree& at)
@@ -613,7 +584,7 @@ namespace veritas {
     } 
 
     void
-    AddTree::compute_box(Box& box, const std::vector<NodeId> node_ids) const
+    AddTree::compute_box(Box& box, const std::vector<NodeId>& node_ids) const
     {
         if (size() != node_ids.size())
             throw std::runtime_error("compute_box: one node_id per tree in AddTree");

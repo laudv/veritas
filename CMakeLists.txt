@@ -42,8 +42,16 @@ endif ()
 #endif()
 
 # multi-threading
-find_package(Threads REQUIRED)
-target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+#find_package(Threads REQUIRED)
+#target_link_libraries(${PROJECT_NAME} PRIVATE Threads::Threads)
+
+option(VERITAS_SANITY_CHECKS
+    "Enable additional sanity checks slowing down Veritas" OFF)
+if (VERITAS_SANITY_CHECKS)
+    target_compile_definitions(${PROJECT_NAME} PUBLIC VERITAS_SANITY_CHECKS=1)
+else()
+    target_compile_definitions(${PROJECT_NAME} PUBLIC VERITAS_SANITY_CHECKS=0)
+endif (VERITAS_SANITY_CHECKS)
 
 option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
 if (BUILD_PYTHON_BINDINGS)
@@ -51,17 +59,30 @@ if (BUILD_PYTHON_BINDINGS)
     add_subdirectory(lib/pybind11)
     pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
     target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
-
 endif (BUILD_PYTHON_BINDINGS)
 
 option(BUILD_TESTS "Build C++ test files" OFF)
 if (BUILD_TESTS)
-    SET(TEST_DIR "tests")
-    SET(TESTS
-        "${TEST_DIR}/test_main.cpp")
+    include(CTest)
+    set(TEST_DIR "tests")
+    set(TESTS
+        "${TEST_DIR}/test_main.cpp"
+        "${TEST_DIR}/test_template.cpp"
+        "${TEST_DIR}/test_interval.cpp"
+        "${TEST_DIR}/test_box.cpp"
+        "${TEST_DIR}/test_tree.cpp"
+    )
 
     # Generate a test executable
-    #include_directories(lib/catch/include)
     add_executable("test${PROJECT_NAME}" ${TESTS})
-    target_link_libraries("test${PROJECT_NAME}" PRIVATE "${PROJECT_NAME}")
+    target_link_libraries("test${PROJECT_NAME}" "${PROJECT_NAME}")
+
+    add_test(NAME test_template
+        COMMAND "test${PROJECT_NAME}" template)
+    add_test(NAME test_interval
+        COMMAND "test${PROJECT_NAME}" interval)
+    add_test(NAME test_box
+        COMMAND "test${PROJECT_NAME}" box)
+    add_test(NAME test_tree
+        COMMAND "test${PROJECT_NAME}" tree)
 endif (BUILD_TESTS)
