@@ -893,6 +893,7 @@ int main_interval();
 int main_box();
 int main_tree();
 int main_json_io();
+int main_fp();
 
 int main(int argc, char **args) {
     if (argc != 2) {
@@ -907,6 +908,7 @@ int main(int argc, char **args) {
     if (t == "box") return main_box();
     if (t == "tree") return main_tree();
     if (t == "json_io") return main_json_io();
+    if (t == "fp") return main_fp();
 
     std::cerr << "unknown test\n";
     return 2;

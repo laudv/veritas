@@ -73,8 +73,15 @@ int test_intersect() {
 
 int test_contains() {
     bool result = true
+        && Interval(0.0, 1.0).contains(0.0)
         && Interval(0.0, 1.0).contains(0.5)
-        && !Interval(0.0, 1.0).contains(1.5);
+        && !Interval(0.0, 1.0).contains(1.5)
+        && IntervalFp(0, 10).contains(0)
+        && IntervalFp(0, 10).contains(5)
+        && !IntervalFp(0, 10).contains(-1)
+        && !IntervalFp(0, 10).contains(10)
+        && !IntervalFp(0, 10).contains(11)
+        ;
 
     std::cout << "test_contains " << result << std::endl;
     return result;

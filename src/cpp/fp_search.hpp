@@ -13,121 +13,122 @@
 #ifndef VERITAS_FP_SEARCH_HPP
 #define VERITAS_FP_SEARCH_HPP
 
-#include <memory>
-
-#include "domain.hpp"
-#include "tree.hpp"
 #include "block_store.hpp"
+#include "box.hpp"
+#include "interval.hpp"
+#include "tree.hpp"
+
+#include <memory>
 
 namespace veritas {
 
-    struct Settings {
-
-        /**
-         * Discount factor of state score h in order to qualify for the focal
-         * list.
-         */
-        FloatT focal_eps;
-
-        /** Default settings. */
-        Settings()
-            : focal_eps{0.8}
-        {}
-    };
-
-    struct MaxCmp {
-        bool operator()(FloatT a, FloatT b) { return a > b; }
-    };
-
-    struct MinCmp {
-        bool operator()(FloatT a, FloatT b) { return a < b; }
-    };
+struct Settings {
 
     /**
-     * A state for ensemble output optimization.
+     * Discount factor of state score h in order to qualify for the focal
+     * list.
      */
-    struct OutputState {
-        /**
-         * Sum of uniquely selected leaf values so far.
-         */
-        FloatT output;
+    FloatT focal_eps;
 
-        /**
-         * Overestimate (maximization) or underestimate (minimization) of output
-         * that can still be added to g by trees for which multiple leaves are
-         * still reachable.
-         */
-        FloatT heuristic;
+    /** Default settings. */
+    Settings()
+        : focal_eps{0.8}
+    {}
+};
 
-        /**
-         * Cached focal score, computed by heuristic computation.
-         */
-        FloatT focal;
+struct MaxCmp {
+    bool operator()(FloatT a, FloatT b) { return a > b; }
+};
 
-        /**
-         * Which tree do we merge into this state next? This is determined by
-         * the heuristic computation.
-         */
-        int next_tree;
+struct MinCmp {
+    bool operator()(FloatT a, FloatT b) { return a < b; }
+};
 
-        /**
-         * Scoring function for this state for the open list.
-         */
-        FloatT open_score() const {
-            return output + heuristic;
-        }
+/**
+ * A state for ensemble output optimization.
+ */
+struct OutputState {
+    /**
+     * Sum of uniquely selected leaf values so far.
+     */
+    FloatT output;
 
-        /**
-         * Scoring function for this state for the focal list.
-         */
-        FloatT focal_score() const {
-            return focal;
-        }
-    };
+    /**
+     * Overestimate (maximization) or underestimate (minimization) of output
+     * that can still be added to g by trees for which multiple leaves are
+     * still reachable.
+     */
+    FloatT heuristic;
 
-    namespace heuristic_detail {
+    /**
+     * Cached focal score, computed by heuristic computation.
+     */
+    FloatT focal;
 
-        FloatT compute_basic_output_heuristic();
+    /**
+     * Which tree do we merge into this state next? This is determined by
+     * the heuristic computation.
+     */
+    int next_tree;
 
-    } // namespace heuristic_detail
+    /**
+     * Scoring function for this state for the open list.
+     */
+    FloatT open_score() const {
+        return output + heuristic;
+    }
 
-    template <typename OpenCmp, typename FocalCmp>
-    struct BasicOutputHeuristic {
-        using State = OutputState;
+    /**
+     * Scoring function for this state for the focal list.
+     */
+    FloatT focal_score() const {
+        return focal;
+    }
+};
 
-        OpenCmp open_cmp;
-        FocalCmp focal_cmp;
+namespace heuristic_detail {
 
-        BasicOutputHeuristic() : open_cmp{}, focal_cmp{} {}
+    FloatT compute_basic_output_heuristic();
 
-        void update(State& out)
-        {
+} // namespace heuristic_detail
 
-        }
-    };
+template <typename OpenCmp, typename FocalCmp>
+struct BasicOutputHeuristic {
+    using State = OutputState;
 
-    template <typename OpenCmp, typename FocalCmp>
-    struct CountingOutputHeuristic
-        : public BasicOutputHeuristic<OpenCmp, FocalCmp> {
+    OpenCmp open_cmp;
+    FocalCmp focal_cmp;
 
-    };
+    BasicOutputHeuristic() : open_cmp{}, focal_cmp{} {}
 
-    template <typename Heuristic>
-    class SearchImpl {
-    public:
-        using State = typename Heuristic::State;
+    void update(State& out)
+    {
 
-        Settings settings;
+    }
+};
 
-    private:
-        std::shared_ptr<Heuristic> h_;
+template <typename OpenCmp, typename FocalCmp>
+struct CountingOutputHeuristic
+    : public BasicOutputHeuristic<OpenCmp, FocalCmp> {
 
-    public:
-        SearchImpl(std::shared_ptr<Heuristic> h, Settings s = {}) // takes shared ownership of heuristic
-            : settings{s}
-            , h_{std::move(h)}
-        {}
-    };
+};
+
+template <typename Heuristic>
+class SearchImpl {
+public:
+    using State = typename Heuristic::State;
+
+    Settings settings;
+
+private:
+    std::shared_ptr<Heuristic> h_;
+
+public:
+    SearchImpl(std::shared_ptr<Heuristic> h, Settings s = {}) // takes shared ownership of heuristic
+        : settings{s}
+        , h_{std::move(h)}
+    {}
+};
 
 } // namespace veritas
 

@@ -54,15 +54,11 @@ template <typename T> struct GInterval { // generic interval
     inline bool operator==(const GInterval& o) const { return o.lo == lo && o.hi == hi; }
     inline bool operator!=(const GInterval& o) const { return !(*this == o); }
     inline bool is_everything() const { return *this == GInterval(); }
+    inline bool contains(T v) { return lo <= v && v < hi; }
     inline bool overlaps(const GInterval& o) const {
         // [     )
         //       [    )    hi is exclusive
         return lo < o.hi && hi > o.lo;
-    }
-    template <typename TT=T>
-    inline std::enable_if_t<std::is_same_v<TT, FloatT>, bool>
-    contains(FloatT v) {
-        return lo <= v && v < hi;
     }
 
     inline GInterval intersect(const GInterval& o) const {
