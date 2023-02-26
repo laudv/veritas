@@ -103,6 +103,7 @@ struct GLtSplit { // generic LtSplit
     FeatId feat_id;
     ValueT split_value;
 
+    inline GLtSplit() : feat_id{}, split_value{} {}
     inline GLtSplit(FeatId f, ValueT v) : feat_id{f}, split_value{v} {}
 
     /** True goes left, false goes right */
@@ -111,7 +112,7 @@ struct GLtSplit { // generic LtSplit
     /** Evaluate this split on an instance (FloatT only). */
     template <typename TT=T>
     inline std::enable_if_t<std::is_same_v<TT, FloatT>, bool>
-    test(const data &row) {
+    test(const data<ValueT> &row) const {
         return test(row[feat_id]);
     }
 
@@ -134,7 +135,10 @@ std::ostream &operator<<(std::ostream &strm, const GLtSplit<T> &s) {
 using LtSplit = GLtSplit<FloatT>;
 using LtSplitFp = GLtSplit<FpT>;
 
-
+/** A boolean < 0.5 split for features with values {0.0, 1.0} */
+inline LtSplit bool_ltsplit(FeatId feat_id) {
+    return LtSplit(feat_id, BOOL_SPLIT_VALUE);
+}
 
 
 

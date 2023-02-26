@@ -8,6 +8,8 @@ set(SOURCE_DIR "src/cpp")
 include_directories(${SOURCE_DIR})
 set(SOURCES
     "${SOURCE_DIR}/tree.cpp"
+    "${SOURCE_DIR}/addtree.cpp"
+    "${SOURCE_DIR}/json_io.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -71,6 +73,7 @@ if (BUILD_TESTS)
         "${TEST_DIR}/test_interval.cpp"
         "${TEST_DIR}/test_box.cpp"
         "${TEST_DIR}/test_tree.cpp"
+        "${TEST_DIR}/test_json_io.cpp"
     )
 
     # Generate a test executable
@@ -85,4 +88,6 @@ if (BUILD_TESTS)
         COMMAND "test${PROJECT_NAME}" box)
     add_test(NAME test_tree
         COMMAND "test${PROJECT_NAME}" tree)
+    add_test(NAME test_json_io
+        COMMAND "test${PROJECT_NAME}" json_io)
 endif (BUILD_TESTS)

@@ -72,7 +72,7 @@ public:
             std::find_if(begin(), end(), [feat_id](const GIntervalPair<T>& p) {
                 return p.feat_id >= feat_id;
             });
-        if (it->feat_id != feat_id)
+        if (it == end() || it->feat_id != feat_id)
             it = buf_.insert(it, GIntervalPair<T>(feat_id, GInterval<T>()));
 
         return it->interval;

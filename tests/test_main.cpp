@@ -271,86 +271,6 @@ void test_box_checker2()
 }
 */
 
-//void test_tree1()
-//{
-//    Tree tree;
-//    auto n = tree.root();
-//    n.split({1, 12.3});
-//    n.left().set_leaf_value(4);
-//    n.right().set_leaf_value(9.4);
-//
-//    assert(n.is_root());
-//    assert(!n.left().is_root());
-//    assert(n.left().is_leaf());
-//    assert(n.left().leaf_value() == 4);
-//    assert(n.num_leafs() == 2);
-//    assert(n.tree_size() == 3);
-//}
-//
-//void test_tree2()
-//{
-//    AddTree at;
-//    Tree& t = at.add_tree();
-//    t.root().split({1, 2.0});
-//    t.root().left().split({2, 4.0});
-//    t.root().left().right().split({2, 8.0});
-//    auto splits = at.get_splits();
-//
-//    assert(splits[1][0] == 2.0);
-//    assert(splits[2][0] == 4.0);
-//    assert(splits[2][1] == 8.0);
-//    assert(splits[1].size() == 1);
-//    assert(splits[2].size() == 2);
-//}
-//
-//void test_tree3()
-//{
-//    AddTree at;
-//    Tree& t = at.add_tree();
-//    t.root().split({1, 8.0});
-//    t.root().left().split({1, 2.0});
-//    t.root().left().right().split({1, 4.0});
-//
-//    {
-//        auto n = at[0].root().left().right().left();
-//        auto doms = n.compute_box();
-//        assert(doms[0].feat_id == 1);
-//        std::cout << at[0] << std::endl << doms[0].domain << std::endl;
-//        assert(doms[0].domain == Domain::exclusive(2.0, 4.0));
-//    }
-//    {
-//        auto n = at[0].root().left().right().right();
-//        auto doms = n.compute_box();
-//        assert(doms[0].feat_id == 1);
-//        assert(doms[0].domain == Domain::exclusive(4.0, 8.0));
-//    }
-//    {
-//        auto n = at[0].root().left();
-//        auto doms = n.compute_box();
-//        assert(doms[0].feat_id == 1);
-//        assert(doms[0].domain == Domain::from_hi_exclusive(8.0));
-//    }
-//}
-//
-//void test_json1() {
-//  std::stringstream s;
-//
-//  Tree tree;
-//  auto n = tree.root();
-//  n.split({1, 12.3});
-//  n.left().set_leaf_value(4);
-//  n.right().split({2, 1351});
-//  n.right().left().set_leaf_value(9.4);
-//  n.right().right().set_leaf_value(9.5);
-//
-//  tree.to_json(s);
-//
-//  Tree tree2;
-//  tree2.from_json(s);
-//
-//  assert(tree == tree2);
-//}
-//
 //void test_json2() {
 //  std::stringstream s;
 //
@@ -382,42 +302,6 @@ void test_box_checker2()
 //  at2.from_json(s);
 //
 //  assert(at == at2);
-//}
-//
-//void test_eval1()
-//{
-//    AddTree at;
-//    Tree& t = at.add_tree();;
-//    t.root().split({0, 1.5});
-//    t.root().left().split({1, 1.5});
-//    t.root().left().left().split({2, 1.5});
-//    t.root().left().left().left().set_leaf_value(1.0);
-//    t.root().left().left().right().set_leaf_value(2.0);
-//    t.root().left().right().set_leaf_value(3.0);
-//    t.root().right().set_leaf_value(4.0);
-//
-//    std::vector<FloatT> buf = {1, 1, 1,  // 1
-//                               2, 1, 1,  // 4
-//                               2, 2, 1,  // 4
-//                               2, 2, 2,  // 4
-//                               1, 2, 2,  // 3
-//                               1, 1, 2,  // 2
-//                               1, 2, 1, // 3
-//                               2, 1, 2}; // 4
-//    data d {&buf[0], 8, 3, 3, 1};
-//
-//    assert(d.row(6)[0] == 1);
-//    assert(d.row(6)[1] == 2);
-//    assert(d.row(6)[2] == 1);
-//
-//    std::vector<FloatT> expected {1, 4, 4, 4, 3, 2, 3, 4};
-//
-//    for (size_t i = 0; i < 8; ++i)
-//    {
-//        FloatT v = at.eval(d.row(i));
-//        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
-//        assert(v == expected.at(i));
-//    }
 //}
 //
 //void test_eval2()
@@ -1008,6 +892,7 @@ int main_template();
 int main_interval();
 int main_box();
 int main_tree();
+int main_json_io();
 
 int main(int argc, char **args) {
     if (argc != 2) {
@@ -1021,6 +906,7 @@ int main(int argc, char **args) {
     if (t == "interval") return main_interval();
     if (t == "box") return main_box();
     if (t == "tree") return main_tree();
+    if (t == "json_io") return main_json_io();
 
     std::cerr << "unknown test\n";
     return 2;
