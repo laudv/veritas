@@ -15,7 +15,6 @@
 #include "tree.hpp"
 
 #include <memory>
-#include <numeric>
 
 namespace veritas {
 
@@ -74,12 +73,13 @@ public:
     inline const TreeT& operator[](size_t i) const { return *trees_.at(i); }
     inline std::shared_ptr<TreeT> get(size_t i) { return trees_.at(i); }
 
-    inline iterator begin() { return trees_.begin(); }
-    inline const_iterator begin() const { return trees_.begin(); }
-    inline const_iterator cbegin() const { return trees_.cbegin(); }
-    inline iterator end() { return trees_.end(); }
-    inline const_iterator end() const { return trees_.end(); }
-    inline const_iterator cend() const { return trees_.cend(); }
+    // I don't like the std::shared_ptr here, would prefer (const) AddTree&
+    //inline iterator begin() { return trees_.begin(); }
+    //inline const_iterator begin() const { return trees_.begin(); }
+    //inline const_iterator cbegin() const { return trees_.cbegin(); }
+    //inline iterator end() { return trees_.end(); }
+    //inline const_iterator end() const { return trees_.end(); }
+    //inline const_iterator cend() const { return trees_.cend(); }
 
     /** Number of trees. */
     inline size_t size() const { return trees_.size(); }
@@ -110,8 +110,10 @@ public:
     /** Evaluate the ensemble. This is the sum of the evaluations of the
      * trees. See TreeT::eval. */
     ValueType eval(const data<SplitValueT>& row) const {
-        auto op = [&row](ValueType v, const TreeT& t) { return v + t.eval(row); };
-        return std::accumulate(begin(), end(), base_score, op);
+        ValueType res = base_score;
+        for (size_t i = 0; i < size(); ++i)
+            res += trees_[i]->eval(row);
+        return res;
     }
 
     /** Compute the intersection of the boxes of all leaf nodes. See

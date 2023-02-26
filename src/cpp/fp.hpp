@@ -12,8 +12,9 @@
 #define VERITAS_FP_HPP
 
 #include "basics.hpp"
-#include "domain.hpp"
+#include "interval.hpp"
 #include "tree.hpp"
+#include "addtree.hpp"
 #include <algorithm>
 #include <iostream>
 #include <stdexcept>
@@ -22,71 +23,127 @@
 
 namespace veritas {
 
-    using FpT = int;
+class FpMap {
+public:
+    using Id = int;
+    using Map = std::vector<std::vector<FloatT>>;
 
-    static const FpT FpT_MIN = std::numeric_limits<FpT>::min();
-    static const FpT FpT_MAX = std::numeric_limits<FpT>::max();
+    Map edges_; // FeatId -> {sorted split values}
+    bool finalized_;
 
-    struct FpDomain {
-        FpT lo;
-        FpT hi;
+public:
+    FpMap() : edges_{}, finalized_{true} {}
 
-        inline FpDomain(FpT l=FpT_MIN, FpT h=FpT_MAX) : lo(l), hi(h) {}
+    inline void add(const AddTree& at) {
+      for (size_t i = 0; i < at.size(); ++i)
+        add(at[i]);
+    }
 
-        inline bool is_everything() const { return lo == FpT_MIN && hi == FpT_MAX; }
-        inline bool overlaps(const FpDomain& other)
-        {
-            return lo < other.hi && hi > other.lo;
+    inline void add(const Tree& t) { add(t, t.root()); }
+
+    inline void add(const LtSplit& s) { add(s.feat_id, s.split_value); }
+
+    inline void add(const Tree& t, NodeId id) {
+        if (t.is_internal(id)) {
+            add(t.get_split(id));
+            add(t, t.left(id));
+            add(t, t.right(id));
         }
-    };
+    }
 
-    class FpMap {
-    public:
-        using Id = int;
-        using Map = std::vector<std::vector<FloatT>>;
+    inline void add(FeatId fid, FloatT value) {
+        if (fid < 0)
+            throw std::runtime_error("invalid feat_id < 0");
+        while (edges_.size() < static_cast<size_t>(fid)+1)
+            edges_.push_back({Limits<FloatT>::max});
+        edges_[fid].push_back(value);
+        finalized_ = false;
+    }
 
-        Map edges_;
-        bool finalized_;
+    inline void finalize() {
+        for (auto& v : edges_)
+            std::sort(v.begin(), v.end());
+        finalized_ = true;
+    }
 
-    public:
-        FpMap() : edges_{}, finalized_{true} {}
+    inline void ensure_finalized() const {
+        if (!finalized_)
+            throw std::runtime_error("FpMap not finalized");
+    }
 
-        inline void add(const AddTree& at) { for (auto t : at) add(t); }
-        inline void add(const Tree& t) { add(t.root_const()); }
-        inline void add(Tree::ConstRef n) { if (n.is_internal()) add(n.get_split()); }
-        inline void add(const LtSplit& s) { add(s.feat_id, s.split_value); }
-        inline void add(FeatId fid, FloatT value)
-        {
-            if (fid < 0)
-                throw std::runtime_error("invalid feat_id < 0");
-            while (edges_.size() < static_cast<size_t>(fid))
-                edges_.push_back({-FLOATT_INF, FLOATT_INF});
-            edges_[fid].push_back(value);
-            finalized_ = false;
+    // invariant: tree.eval(val) == tree_fp.eval(transform(val))
+    inline FpT transform(FeatId id, FloatT val) const {
+        ensure_finalized();
+
+        const auto& vs = edges_.at(id);
+        auto it = std::upper_bound(vs.begin(), vs.end(), val);
+        if (it == vs.end())
+            throw std::runtime_error("illegal state");
+        FpT x = static_cast<FpT>(it - vs.begin());
+        std::cout << "map(" << id << ", " << val << ") = " << x << std::endl;
+        return x;
+    }
+
+    inline FpT operator()(FeatId id, FloatT val) const {
+        return transform(id, val);
+    }
+
+    inline FpT transform_exact(FeatId id, FloatT val) const {
+        ensure_finalized();
+
+        const auto& vs = edges_.at(id);
+        auto it = std::lower_bound(vs.begin(), vs.end(), val);
+        if (it == vs.end())
+            throw std::runtime_error("illegal state");
+        if (*it != val) {
+            std::cout << "not exact: find " << *it << ", " << val << std::endl;
+            throw std::runtime_error("not exact");
         }
+        FpT x = static_cast<FpT>(it - vs.begin());
+        std::cout << "map(" << id << ", " << val << ") = " << x << std::endl;
+        return x;
+    }
 
-        inline void finalize()
-        {
-            for (const auto& v : edges_)
-                std::sort(v.begin(), v.end());
-            finalized_ = true;
+    inline FpT transform_exact(const LtSplit& s) const {
+        return transform_exact(s.feat_id, s.split_value);
+    }
+
+    inline TreeFp transform(const Tree& t) const {
+        TreeFp u;
+        transform(t, u, t.root());
+        return u;
+    }
+
+    inline void transform(const Tree& t, TreeFp& tfp, NodeId id) const {
+        if (t.is_leaf(id)) {
+            tfp.leaf_value(id) = t.leaf_value(id);
+        } else {
+            LtSplit s = t.get_split(id);
+            LtSplitFp sfp{s.feat_id, transform_exact(s)};
+            tfp.split(id, sfp);
+            transform(t, tfp, t.left(id));
+            transform(t, tfp, t.right(id));
         }
+    }
 
-        inline FpDomain transform(const Domain& dom) const
-        {
-            if (!finalized_)
-                throw std::runtime_error("FpMap not finalized");
+    inline AddTreeFp transform(const AddTree& at) const {
+        AddTreeFp atfp;
+        for (size_t i = 0; i < at.size(); ++i)
+            atfp.add_tree(transform(at[i]));
+        return atfp;
+    }
 
-            // TODO
-            throw std::runtime_error("not implemented");
-            return {};
+    inline void print() const {
+        FeatId id = 0;
+        for (const auto& vs : edges_) {
+            std::cout << "FeatId" << id++ << ": ";
+            for (FloatT v : vs)
+                std::cout << v << ' ';
+            std::cout << "\n";
         }
+    }
 
-        inline void transform(const AddTree& at) const
-        {
-
-        }
-    };
+}; // class FpMap
 
 } // namespace veritas
 

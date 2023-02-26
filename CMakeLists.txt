@@ -74,6 +74,7 @@ if (BUILD_TESTS)
         "${TEST_DIR}/test_box.cpp"
         "${TEST_DIR}/test_tree.cpp"
         "${TEST_DIR}/test_json_io.cpp"
+        "${TEST_DIR}/test_fp.cpp"
     )
 
     # Generate a test executable
@@ -90,4 +91,6 @@ if (BUILD_TESTS)
         COMMAND "test${PROJECT_NAME}" tree)
     add_test(NAME test_json_io
         COMMAND "test${PROJECT_NAME}" json_io)
+    add_test(NAME test_fp
+        COMMAND "test${PROJECT_NAME}" fp)
 endif (BUILD_TESTS)
