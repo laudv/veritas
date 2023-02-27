@@ -16,6 +16,7 @@
 #include "tree.hpp"
 #include "addtree.hpp"
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <stdexcept>
 #include <vector>
@@ -28,11 +29,11 @@ public:
     using Id = int;
     using Map = std::vector<std::vector<FloatT>>;
 
-    Map edges_; // FeatId -> {sorted split values}
+    Map splits_; // FeatId -> {sorted split values}
     bool finalized_;
 
 public:
-    FpMap() : edges_{}, finalized_{true} {}
+    FpMap() : splits_{}, finalized_{true} {}
 
     inline void add(const AddTree& at) {
       for (size_t i = 0; i < at.size(); ++i)
@@ -54,14 +55,15 @@ public:
     inline void add(FeatId fid, FloatT value) {
         if (fid < 0)
             throw std::runtime_error("invalid feat_id < 0");
-        while (edges_.size() < static_cast<size_t>(fid)+1)
-            edges_.push_back({Limits<FloatT>::max});
-        edges_[fid].push_back(value);
+        while (splits_.size() < static_cast<size_t>(fid)+1)
+            splits_.emplace_back(); // new empty vector
+        splits_[fid].push_back(value);
         finalized_ = false;
     }
 
     inline void finalize() {
-        for (auto& v : edges_)
+        // TODO also remove duplicates!!
+        for (auto& v : splits_)
             std::sort(v.begin(), v.end());
         finalized_ = true;
     }
@@ -72,40 +74,58 @@ public:
     }
 
     // invariant: tree.eval(val) == tree_fp.eval(transform(val))
-    inline FpT transform(FeatId id, FloatT val) const {
+    inline FpT transform(FeatId feat_id, FloatT val) const {
         ensure_finalized();
 
-        const auto& vs = edges_.at(id);
-        auto it = std::upper_bound(vs.begin(), vs.end(), val);
-        if (it == vs.end())
-            throw std::runtime_error("illegal state");
+        const auto& vs = splits_.at(feat_id);
+        auto it = std::lower_bound(vs.begin(), vs.end(), val,
+                                   std::less_equal<FloatT>());
+        // it might be == end()!
         FpT x = static_cast<FpT>(it - vs.begin());
-        std::cout << "map(" << id << ", " << val << ") = " << x << std::endl;
+        //std::cout << "transform(" << id << ", " << val << ") = " << x << " \n";
         return x;
     }
 
-    inline FpT operator()(FeatId id, FloatT val) const {
-        return transform(id, val);
+    inline FpT transform(const LtSplit& s) const {
+        return transform(s.feat_id, s.split_value);
     }
 
-    inline FpT transform_exact(FeatId id, FloatT val) const {
+    inline IntervalFp interval(FeatId feat_id, FloatT val) const {
+        FpT valfp = transform(feat_id, val);
+        return {valfp, valfp+1};
+    }
+
+    inline IntervalFp transform(FeatId id, const Interval& ival) const {
         ensure_finalized();
 
-        const auto& vs = edges_.at(id);
-        auto it = std::lower_bound(vs.begin(), vs.end(), val);
-        if (it == vs.end())
-            throw std::runtime_error("illegal state");
-        if (*it != val) {
-            std::cout << "not exact: find " << *it << ", " << val << std::endl;
-            throw std::runtime_error("not exact");
-        }
-        FpT x = static_cast<FpT>(it - vs.begin());
-        std::cout << "map(" << id << ", " << val << ") = " << x << std::endl;
-        return x;
-    }
+        const auto& vs = splits_.at(id);
+        auto it_lo = std::lower_bound(vs.begin(), vs.end(), ival.lo,
+                                      std::less_equal<FloatT>());
+        auto it_hi = std::upper_bound(it_lo, vs.end(), ival.hi,
+                                      std::less_equal<FloatT>());
 
-    inline FpT transform_exact(const LtSplit& s) const {
-        return transform_exact(s.feat_id, s.split_value);
+        //std::cout << "lo " << ival.lo << "->"
+        //          << ((it_lo == vs.end()) ? Limits<FloatT>::max : *it_lo)
+        //          << ",  hi " << ival.hi << "->"
+        //          << ((it_hi == vs.end()) ? Limits<FloatT>::max : *it_hi)
+        //          << std::endl;
+
+        FpT lo = static_cast<FpT>(it_lo - vs.begin());
+        FpT hi = static_cast<FpT>(it_hi - vs.begin()) + 1;
+
+        // If ival.lo is smaller than any split, then the interval is
+        // unconstrained to the left
+        if (lo == 0)
+            lo = Limits<FpT>::min;
+
+        // If ival.hi is larger than any split, then the interval is
+        // unconstrained to the right
+        if (hi > static_cast<FpT>(vs.size()))
+            hi = Limits<FpT>::max;
+
+        IntervalFp ivalfp{lo, hi};
+        //std::cout << "transform(" << id << ", " << ival << ") -> " << ivalfp << std::endl;
+        return ivalfp;
     }
 
     inline TreeFp transform(const Tree& t) const {
@@ -119,7 +139,7 @@ public:
             tfp.leaf_value(id) = t.leaf_value(id);
         } else {
             LtSplit s = t.get_split(id);
-            LtSplitFp sfp{s.feat_id, transform_exact(s)};
+            LtSplitFp sfp{s.feat_id, transform(s)};
             tfp.split(id, sfp);
             transform(t, tfp, t.left(id));
             transform(t, tfp, t.right(id));
@@ -133,9 +153,22 @@ public:
         return atfp;
     }
 
+    inline FloatT itransform(FeatId id, FpT valfp) const {
+        if (valfp <= 0)
+            return Limits<FloatT>::min;
+        const auto& vs = splits_.at(id);
+        if (valfp > static_cast<FpT>(vs.size()))
+            return Limits<FloatT>::max;
+        return vs[valfp-1];
+    }
+
+    inline Interval itransform(FeatId id, const IntervalFp& ivalfp) const {
+        return {itransform(id, ivalfp.lo), itransform(id, ivalfp.hi)};
+    }
+
     inline void print() const {
         FeatId id = 0;
-        for (const auto& vs : edges_) {
+        for (const auto& vs : splits_) {
             std::cout << "FeatId" << id++ << ": ";
             for (FloatT v : vs)
                 std::cout << v << ' ';
