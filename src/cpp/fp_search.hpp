@@ -17,7 +17,10 @@
 #include "box.hpp"
 #include "interval.hpp"
 #include "tree.hpp"
+#include "addtree.hpp"
 
+#include <chrono>
+#include <functional>
 #include <memory>
 
 namespace veritas {
@@ -28,107 +31,103 @@ struct Settings {
      * Discount factor of state score h in order to qualify for the focal
      * list.
      */
-    FloatT focal_eps;
-
-    /** Default settings. */
-    Settings()
-        : focal_eps{0.8}
-    {}
-};
-
-struct MaxCmp {
-    bool operator()(FloatT a, FloatT b) { return a > b; }
-};
-
-struct MinCmp {
-    bool operator()(FloatT a, FloatT b) { return a < b; }
-};
-
-/**
- * A state for ensemble output optimization.
- */
-struct OutputState {
-    /**
-     * Sum of uniquely selected leaf values so far.
-     */
-    FloatT output;
+    FloatT focal_eps = 0.8;
 
     /**
-     * Overestimate (maximization) or underestimate (minimization) of output
-     * that can still be added to g by trees for which multiple leaves are
-     * still reachable.
+     * Maximum size of of the focal list. The size of the list is limited by
+     * this number and by the number of states that are at least as good as
+     * `focal_eps` compared to the current optimal.
      */
-    FloatT heuristic;
+    size_t max_focal_size = 1000;
 
     /**
-     * Cached focal score, computed by heuristic computation.
+     * In bytes, how much memory can Veritas spend on search states.
+     * Default: 1 GiB
      */
-    FloatT focal;
-
-    /**
-     * Which tree do we merge into this state next? This is determined by
-     * the heuristic computation.
-     */
-    int next_tree;
-
-    /**
-     * Scoring function for this state for the open list.
-     */
-    FloatT open_score() const {
-        return output + heuristic;
-    }
-
-    /**
-     * Scoring function for this state for the focal list.
-     */
-    FloatT focal_score() const {
-        return focal;
-    }
+    size_t max_memory = size_t(1024)*1024*1024;
 };
 
-namespace heuristic_detail {
-
-    FloatT compute_basic_output_heuristic();
-
-} // namespace heuristic_detail
-
-template <typename OpenCmp, typename FocalCmp>
-struct BasicOutputHeuristic {
-    using State = OutputState;
-
-    OpenCmp open_cmp;
-    FocalCmp focal_cmp;
-
-    BasicOutputHeuristic() : open_cmp{}, focal_cmp{} {}
-
-    void update(State& out)
-    {
-
-    }
+struct Statistics {
+    size_t num_steps = 0;
 };
 
-template <typename OpenCmp, typename FocalCmp>
-struct CountingOutputHeuristic
-    : public BasicOutputHeuristic<OpenCmp, FocalCmp> {
-
+enum class StopReason {
+    NONE,
+    NO_MORE_OPEN,
+    NUM_SOLUTIONS_EXCEEDED,
+    NUM_NEW_SOLUTIONS_EXCEEDED,
+    OPTIMAL,
+    UPPER_LT,
+    LOWER_GT,
 };
 
-template <typename Heuristic>
-class SearchImpl {
+std::ostream& operator<<(std::ostream& strm, StopReason r);
+
+struct Bounds {
+    FloatT lower_bound;
+    FloatT upper_bound;
+};
+
+using time_clock = std::chrono::high_resolution_clock;
+using time_point = std::chrono::time_point<time_clock>;
+
+class Search {
 public:
-    using State = typename Heuristic::State;
-
     Settings settings;
+    Statistics stats;
 
-private:
-    std::shared_ptr<Heuristic> h_;
+protected:
+    AddTree at_;
+    time_point start_time_;
+
+    inline Search(const AddTree& at)
+        : settings{}
+        , stats{}
+        , at_{at}
+        , start_time_{time_clock::now()}
+    {}
+
+public: // Constructor methods
+
+    static std::shared_ptr<Search> max_output(const AddTree& at);
+    static std::shared_ptr<Search> min_output(const AddTree& at);
 
 public:
-    SearchImpl(std::shared_ptr<Heuristic> h, Settings s = {}) // takes shared ownership of heuristic
-        : settings{s}
-        , h_{std::move(h)}
-    {}
-};
+    virtual ~Search() { /* required, otherwise pybind11 memory leak */ }
+
+public: // abstract interface methods
+    virtual StopReason step() = 0;
+    virtual StopReason steps(size_t num_steps) = 0;
+    virtual StopReason step_for(double num_seconds, size_t num_steps) = 0;
+
+    virtual size_t num_open() const = 0;
+    virtual bool is_optimal() const = 0;
+    virtual size_t num_solutions() const = 0;
+    //virtual const Solution& get_solution(size_t solution_index) const = 0;
+
+    virtual void set_mem_capacity(size_t bytes) = 0;
+
+    virtual size_t remaining_mem_capacity() const = 0;
+    virtual size_t used_mem_size() const = 0;
+    virtual Bounds current_bounds() const = 0;
+
+public: // utility
+    double time_since_start() const;
+
+
+}; // abstract class Search
+
+
+
+
+
+
+
+
+
+
+
+
 
 } // namespace veritas
 

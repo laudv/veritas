@@ -81,21 +81,13 @@ int test_to_flatbox() {
         && fbox.at(1) == IntervalFp()
         && fbox.at(2) == IntervalFp(0, 2);
 
-    if (check_sanity()) {
-        FlatBoxFp fbox{}; // not enough space in vector
-        try {
-            b1.to_flatbox(fbox);
-            result = false;
-        } catch (const std::out_of_range& e) {}
-    }
-
     std::cout << "test_to_flatbox " << result << std::endl;
     return result;
 }
 
 int test_combine_boxes() {
-    BoxFp::BufT buf1{{0, {0, 5}}, {1, {0, 9}}};
-    BoxFp::BufT buf2{{0, {-1, 2}}, {5, {0, 2}}};
+    BoxFp::BufT buf1{{0, {1, 5}}, {1, {0, 9}}};
+    BoxFp::BufT buf2{{0, {0, 2}}, {5, {0, 2}}};
     BoxFp::BufT buf3;
     BoxFp b3{buf3};
 
@@ -104,7 +96,7 @@ int test_combine_boxes() {
 
     bool result = true
         && buf3.size() == 3
-        && buf3.at(0) == IntervalPairFp(0, {0, 2})
+        && buf3.at(0) == IntervalPairFp(0, {1, 2})
         && buf3.at(1) == IntervalPairFp(1, {0, 9})
         && buf3.at(2) == IntervalPairFp(5, {0, 2});
 
@@ -114,12 +106,12 @@ int test_combine_boxes() {
 
     result = result
         && buf3.size() == 2
-        && buf3.at(0) == IntervalPairFp(0, {0, 2})
+        && buf3.at(0) == IntervalPairFp(0, {1, 2})
         && buf3.at(1) == IntervalPairFp(1, {0, 9});
 
     if (check_sanity()) {
         try {
-            BoxFp::BufT buf4{{0, {-1, 0}}}; // does not overlap with buf1
+            BoxFp::BufT buf4{{0, {0, 1}}}; // does not overlap with buf1
             b3.clear();
             b3.combine_boxes(BoxRefFp(buf1), BoxRefFp(buf4), false);
             result = false;

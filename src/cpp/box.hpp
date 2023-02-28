@@ -193,13 +193,15 @@ public:
 
     inline void to_flatbox(FlatBoxT& fbox) const {
         std::fill(fbox.begin(), fbox.end(), GInterval<T>());
+        if (empty()) return;
 
-        for (auto &&[feat_id, ival] : *this) {
-            if constexpr (check_sanity())
-                fbox.at(feat_id) = ival;
-            else
-                fbox[feat_id] = ival;
-        }
+        // feat_ids are sorted, so last one is max
+        FeatId max_feat_id = (end()-1)->feat_id;
+        if (fbox.size() <= static_cast<size_t>(max_feat_id))
+            fbox.resize(max_feat_id+1);
+
+        for (auto &&[feat_id, ival] : *this)
+            fbox[feat_id] = ival;
     }
 
     FlatBoxT to_flatbox() const {

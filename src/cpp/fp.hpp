@@ -90,10 +90,10 @@ public:
         return transform(s.feat_id, s.split_value);
     }
 
-    inline IntervalFp interval(FeatId feat_id, FloatT val) const {
-        FpT valfp = transform(feat_id, val);
-        return {valfp, valfp+1};
-    }
+    //inline IntervalFp interval(FeatId feat_id, FloatT val) const {
+    //    FpT valfp = transform(feat_id, val);
+    //    return {valfp, valfp+1};
+    //}
 
     inline IntervalFp transform(FeatId id, const Interval& ival) const {
         ensure_finalized();
