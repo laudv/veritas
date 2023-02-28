@@ -23,14 +23,14 @@ int test_is_everything() {
 }
 
 int test_overlaps() {
-    IntervalFp ival0{0, 10};
-    IntervalFp ival1{0, 10}; // yes
-    IntervalFp ival2{-10, 10}; // yes
-    IntervalFp ival3{-10, 20}; // yes
+    IntervalFp ival0{2, 10};
+    IntervalFp ival1{2, 10}; // yes
+    IntervalFp ival2{0, 10}; // yes
+    IntervalFp ival3{0, 20}; // yes
     IntervalFp ival4{3, 20}; // yes
     IntervalFp ival5{3, 5}; // yes
     IntervalFp ival6{100, 400}; // no
-    IntervalFp ival7{-100, -10}; // no
+    IntervalFp ival7{0, 2}; // no
 
     bool result = true
         &&  ival0.overlaps(ival1)
@@ -49,8 +49,8 @@ int test_intersect() {
     bool result = true
         && IntervalFp(0, 1).intersect({0, 1}) == IntervalFp(0, 1)
         && IntervalFp(0, 10).intersect({5, 10}) == IntervalFp(5, 10)
-        && IntervalFp(0, 10).intersect({-2, 5}) == IntervalFp(0, 5)
-        && IntervalFp(0, 2).intersect({-2, 5}) == IntervalFp(0, 2)
+        && IntervalFp(2, 10).intersect({0, 5}) == IntervalFp(2, 5)
+        && IntervalFp(1, 2).intersect({0, 5}) == IntervalFp(1, 2)
         && Interval(0.0, 1.0).intersect({0.0, 1.0}) == Interval(0.0, 1.0)
         && Interval(0.0, 10.0).intersect({5.0, 10.0}) == Interval(5.0, 10.0)
         && Interval(0.0, 10.0).intersect({-2.0, 5.0}) == Interval(0.0, 5.0)
@@ -59,7 +59,7 @@ int test_intersect() {
     if (check_sanity()) {
         bool catch_result;
         try {
-            auto x = IntervalFp(0, 2).intersect({-2, -1});
+            auto x = IntervalFp(0, 2).intersect({6, 9});
             catch_result = x == IntervalFp();
         } catch (const std::invalid_argument& e) {
             catch_result = true;

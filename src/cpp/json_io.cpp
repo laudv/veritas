@@ -171,6 +171,17 @@ struct EncDec<FpT> {
 };
 
 template <>
+struct EncDec<int> {
+    const char *name() const { return "int"; }
+    void encode(std::ostream& s, const int& f) const {
+        s << f;
+    }
+    bool decode(JsonStream& s, int& value) const {
+        return s >> value;
+    }
+};
+
+template <>
 struct EncDec<std::string> {
     const char *name() const { return "std::string"; }
     void encode(std::ostream& s, const std::string& f) const {

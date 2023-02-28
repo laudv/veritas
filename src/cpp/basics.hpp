@@ -14,8 +14,8 @@
 #include <limits>
 
 namespace veritas {
-    using FloatT = float;
-    using FpT = int; // Fixed point precision type
+    using FloatT = double;
+    using FpT = unsigned short; // Fixed point precision type
 
     using NodeId = int;
     using FeatId = int;
@@ -26,7 +26,7 @@ namespace veritas {
     // should also try branchless binary search later
     // `l` is typically a fairly short list of sorted feature ids
     /** branchless linear scan search --> we hope the compiler vectorizes this */
-    inline size_t linear_search(const std::vector<FeatId> l, FeatId x)
+    inline size_t linear_search(const std::vector<FeatId>& l, FeatId x)
     {
         size_t cnt = 0;
         for (const auto& v : l)
