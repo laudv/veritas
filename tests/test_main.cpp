@@ -894,8 +894,8 @@ int main_box();
 int main_tree();
 int main_json_io();
 int main_fp();
-int main_search();
 int main_leafiter();
+int main_search();
 
 int main(int argc, char **args) {
     if (argc != 2) {
@@ -912,7 +912,7 @@ int main(int argc, char **args) {
     if (t == "json_io") return main_json_io();
     if (t == "fp") return main_fp();
     if (t == "leafiter") return main_leafiter();
-    //if (t == "search") return main_search();
+    if (t == "search") return main_search();
 
     std::cerr << "unknown test\n";
     return 2;

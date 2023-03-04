@@ -10,7 +10,7 @@ set(SOURCES
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/addtree.cpp"
     "${SOURCE_DIR}/json_io.cpp"
-    #"${SOURCE_DIR}/fp_search.cpp"
+    "${SOURCE_DIR}/fp_search.cpp"
     )
 
 set(CMAKE_CXX_STANDARD 17)
@@ -77,7 +77,7 @@ if (BUILD_TESTS)
         "${TEST_DIR}/test_json_io.cpp"
         "${TEST_DIR}/test_fp.cpp"
         "${TEST_DIR}/test_leafiter.cpp"
-        #"${TEST_DIR}/test_search.cpp"
+        "${TEST_DIR}/test_search.cpp"
     )
 
     # Generate a test executable
@@ -98,6 +98,6 @@ if (BUILD_TESTS)
         COMMAND "test${PROJECT_NAME}" fp)
     add_test(NAME test_leafiter
         COMMAND "test${PROJECT_NAME}" leafiter)
-    #add_test(NAME test_search
-    #    COMMAND "test${PROJECT_NAME}" search)
+    add_test(NAME test_search
+        COMMAND "test${PROJECT_NAME}" search)
 endif (BUILD_TESTS)

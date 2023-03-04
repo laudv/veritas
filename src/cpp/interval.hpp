@@ -17,16 +17,6 @@
 
 namespace veritas {
 
-template <typename T> struct Limits {};
-template <> struct Limits<FloatT> {
-    static constexpr FloatT min = -std::numeric_limits<FloatT>::infinity();
-    static constexpr FloatT max = +std::numeric_limits<FloatT>::infinity();
-};
-template <> struct Limits<FpT> {
-    static constexpr FpT min = std::numeric_limits<FpT>::min();
-    static constexpr FpT max = std::numeric_limits<FpT>::max();
-};
-
 template <typename T> struct GInterval { // generic interval
     using ValueT = T;
 
