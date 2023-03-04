@@ -322,8 +322,22 @@ public:
 
     /** Prune all branches that are never taken for examples in the given box. */
     //SelfT prune(const BoxRefT& box) const;
+
     /** See NodeRef::find_minmax_leaf_value */
-    //std::tuple<FloatT, FloatT> find_minmax_leaf_value() const { return root().find_minmax_leaf_value(); }
+    std::tuple<ValueT, ValueT> find_minmax_leaf_value(NodeId id) const {
+        if (is_internal(id)) {
+            auto&& [rmin, rmax] = find_minmax_leaf_value(right(id));
+            auto&& [lmin, lmax] = find_minmax_leaf_value(left(id));
+            return { std::min(lmin, rmin), std::max(lmax, rmax) };
+        } else {
+            return { leaf_value(id), leaf_value(id) };
+        }
+    }
+
+    inline std::tuple<ValueT, ValueT> find_minmax_leaf_value() const {
+        return find_minmax_leaf_value(root());
+    }
+
     /** Limit depth and replace leaf values with max leaf value in subtree. */
     //SelfT limit_depth(int max_depth) const;
     /** Compute the variance of the leaf values */

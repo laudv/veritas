@@ -163,6 +163,7 @@ struct OutputHeuristic {
 
     void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
                        State &state) {
+        state.gscore = at.base_score;
         state.hscore = 0.0;
         state.next_tree = -1;
         FloatT best_of_best =
@@ -654,7 +655,7 @@ Search::min_output(const AddTree& at, const FlatBox& prune_box) {
 Search::Search(Settings s, const AddTree& at, const FlatBox& prune_box)
     : settings{s}
     , stats{}
-    , at_{at}
+    , at_{at.neutralize_negative_leaf_values()}
     , atfp_{}
     , fpmap_{}
     , start_time_{time_clock::now()}

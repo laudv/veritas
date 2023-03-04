@@ -96,9 +96,7 @@ struct GLtSplit { // generic LtSplit
     inline bool test(T v) const { return v < split_value; }
 
     /** Evaluate this split on an instance (FloatT only). */
-    template <typename TT=T>
-    inline std::enable_if_t<std::is_same_v<TT, FloatT>, bool>
-    test(const data<ValueT> &row) const {
+    bool test(const data<T>& row) const {
         return test(row[feat_id]);
     }
 

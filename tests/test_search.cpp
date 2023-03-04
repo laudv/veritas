@@ -7,11 +7,12 @@ using namespace veritas;
 
 AddTree get_simple_addtree1() {
     AddTree at;
+    at.base_score = 2;
     {
         Tree& t = at.add_tree();
         t.split(t[""], {1, 5.0});
-        t.leaf_value(t["l"]) = 2.0;
-        t.leaf_value(t["r"]) = 4.0;
+        t.leaf_value(t["l"]) = 0.0;
+        t.leaf_value(t["r"]) = 2.0;
     }
     {
         Tree& t = at.add_tree();
@@ -97,6 +98,8 @@ int test_simple1_2() {
 
 int test_simple1_3() {
     AddTree at = get_simple_addtree1();
+
+    std::cout << at << std::endl;
 
     // no prune box, but we set a setting
     auto s = Search::max_output(at);

@@ -170,6 +170,7 @@ public:
 
     inline AddTreeFp transform(const AddTree& at) const {
         AddTreeFp atfp;
+        atfp.base_score = at.base_score;
         for (size_t i = 0; i < at.size(); ++i)
             atfp.add_tree(transform(at[i]));
         return atfp;
