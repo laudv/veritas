@@ -29,7 +29,7 @@ public:
     using ValueType = typename TreeT::ValueType;
     using SplitMapT = typename TreeT::SplitMapT;
 
-    using TreeVecT = std::vector<std::shared_ptr<TreeT>>;
+    using TreeVecT = std::vector<TreeT>;
     using const_iterator = typename TreeVecT::const_iterator;
     using iterator = typename TreeVecT::iterator;
 private:
@@ -50,36 +50,28 @@ public:
 
     /** Add a new empty tree to the ensemble. */
     inline TreeT& add_tree() {
-        auto t = std::make_shared<TreeT>();
-        trees_.push_back(t);
-        return *t;
+        return trees_.emplace_back();
     }
     /** Add a tree to the ensemble. */
     inline void add_tree(TreeT&& t) {
-        trees_.push_back(std::make_shared<TreeT>(std::move(t)));
+        trees_.push_back(std::move(t));
     }
     /** Add a tree to the ensemble. */
     inline void add_tree(const TreeT& t) {
-        trees_.push_back(std::make_shared<TreeT>(t));
-    }
-    /** Add a tree to the ensemble. */
-    inline void add_tree(std::shared_ptr<TreeT> t) {
-        trees_.push_back(std::move(t));
+        trees_.push_back(t);
     }
 
     /** Get mutable reference to tree `i` */
-    inline TreeT& operator[](size_t i) { return *trees_.at(i); }
+    inline TreeT& operator[](size_t i) { return trees_.at(i); }
     /** Get const reference to tree `i` */
-    inline const TreeT& operator[](size_t i) const { return *trees_.at(i); }
-    inline std::shared_ptr<TreeT> get(size_t i) { return trees_.at(i); }
+    inline const TreeT& operator[](size_t i) const { return trees_.at(i); }
 
-    // I don't like the std::shared_ptr here, would prefer (const) AddTree&
-    //inline iterator begin() { return trees_.begin(); }
-    //inline const_iterator begin() const { return trees_.begin(); }
-    //inline const_iterator cbegin() const { return trees_.cbegin(); }
-    //inline iterator end() { return trees_.end(); }
-    //inline const_iterator end() const { return trees_.end(); }
-    //inline const_iterator cend() const { return trees_.cend(); }
+    inline iterator begin() { return trees_.begin(); }
+    inline const_iterator begin() const { return trees_.begin(); }
+    inline const_iterator cbegin() const { return trees_.cbegin(); }
+    inline iterator end() { return trees_.end(); }
+    inline const_iterator end() const { return trees_.end(); }
+    inline const_iterator cend() const { return trees_.cend(); }
 
     /** Number of trees. */
     inline size_t size() const { return trees_.size(); }
@@ -114,7 +106,7 @@ public:
     ValueType eval(const data<SplitValueT>& row) const {
         ValueType res = base_score;
         for (size_t i = 0; i < size(); ++i)
-            res += trees_[i]->eval(row);
+            res += trees_[i].eval(row);
         return res;
     }
 
@@ -127,7 +119,7 @@ public:
         if (size() != other.size()) { return false; }
         if (base_score != other.base_score) { return false; }
         for (size_t i = 0; i < size(); ++i) {
-            if (*trees_[i] != *other.trees_[i]) {
+            if (trees_[i] != other.trees_[i]) {
                 return false;
             }
         }

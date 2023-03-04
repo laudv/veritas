@@ -336,11 +336,10 @@ template <typename TreeT>
 void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& at) {
     s << "{\"base_score\": ";
     json_detail::EncDec<typename TreeT::ValueType>().encode(s, at.base_score);
-    s << "{\"num_trees\": ";
+    s << ", \"num_trees\": ";
     json_detail::EncDec<size_t>().encode(s, at.size());
     s << ", \"trees\": [\n";
-    for (size_t i = 0; i < at.size(); ++i)
-    {
+    for (size_t i = 0; i < at.size(); ++i) {
         if (i != 0)
             s << ',' << std::endl;
         tree_to_json(s, at[i]);
@@ -373,5 +372,114 @@ AddTreeT addtree_from_json(std::istream &std_s) {
 
 template AddTree addtree_from_json(std::istream &s);
 template AddTreeFp addtree_from_json(std::istream &s);
+
+
+
+
+
+// OLD JSON FORMAT
+void tree_from_oldjson(std::istream& s, Tree& tree, NodeId id) {
+    std::string buf;
+    FloatT leaf_value, split_value;
+    FeatId feat_id;
+    char c;
+
+    while (s.get(c))
+    {
+        switch (c)
+        {
+            case ' ':
+            case '\n':
+            case '{':
+            case ',':
+                break;
+            case '"':
+            case '\'':
+                buf.clear();
+                while (s.get(c))
+                    if (c != '"') buf.push_back(c); else break;
+                break;
+            case '}':
+                goto the_end;
+            case ':':
+                if (buf == "feat_id")
+                    s >> feat_id;
+                else if (buf == "split_value")
+                    s >> split_value;
+                else if (buf == "leaf_value") {
+                    s >> leaf_value;
+                    tree.leaf_value(id) = leaf_value;
+                }
+                else if (buf == "lt") { // left branch 
+                    tree.split(id, {feat_id, split_value});
+                    tree_from_oldjson(s, tree, tree.left(id));
+                }
+                else if (buf == "gteq") { // expected after lt (split already applied)
+                    tree_from_oldjson(s, tree, tree.right(id));
+                }
+                else
+                    throw std::runtime_error("tree parse error: unknown key");
+                break;
+            default:
+                throw std::runtime_error("tree parse error: unexpected char");
+        }
+    }
+
+    the_end: return;
+}
+
+AddTree addtree_from_oldjson(std::istream& s)
+{
+    AddTree at;
+
+    std::string buf;
+    char c;
+    Tree tree;
+
+    while (s.get(c)) {
+        switch (c) {
+            case ' ':
+            case '\n':
+            case ',':
+            case '{':
+                break;
+            case '"':
+            case '\'':
+                buf.clear();
+                while (s.get(c))
+                    if (c != '"') buf.push_back(c); else break;
+                break;
+            case ':':
+                if (buf == "base_score")
+                    s >> at.base_score;
+                else if (buf == "trees")
+                    goto loop2;
+                else
+                    throw std::runtime_error("addtree parse error: unknown key");
+                break;
+            default:
+                throw std::runtime_error("addtree parse error: unexpected char");
+        }
+    }
+
+    loop2: while (s.get(c)) {
+        switch (c) {
+            case ' ':
+            case ']':
+            case '}':
+            case '\n':
+                break;
+            case '[':
+            case ',': {
+                Tree& t = at.add_tree();
+                tree_from_oldjson(s, t, t.root());
+                break;
+            }
+            default:
+                throw std::runtime_error("addtree parse error (2): unexpected char");
+        }
+    }
+    return at;
+} 
 
 } // namespace veritas

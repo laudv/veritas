@@ -14,16 +14,16 @@ namespace veritas {
 template <typename TreeT>
 size_t GAddTree<TreeT>::num_nodes() const {
     size_t c = 0;
-    for (size_t i = 0; i < size(); ++i)
-        c += trees_[i]->num_nodes();
+    for (const TreeT& tree : *this)
+        c += tree.num_nodes();
     return c;
 }
 
 template <typename TreeT>
 size_t GAddTree<TreeT>::num_leafs() const {
     size_t c = 0;
-    for (size_t i = 0; i < size(); ++i)
-        c += trees_[i]->num_leaves();
+    for (const TreeT& tree : *this)
+        c += tree.num_leaves();
     return c;
 }
 
@@ -33,8 +33,7 @@ GAddTree<TreeT>::get_splits() const {
     SplitMapT splits;
 
     // collect all the split values
-    for (size_t i = 0; i < size(); ++i) {
-        const TreeT& tree = *trees_[i];
+    for (const TreeT& tree : *this) {
         tree.collect_split_values(tree.root(), splits);
     }
 
@@ -64,7 +63,7 @@ GAddTree<TreeT>
 GAddTree<TreeT>::neutralize_negative_leaf_values() const {
     GAddTree<TreeT> new_at = *this;
     for (size_t i = 0; i < size(); ++i) {
-        const TreeT& tree = *trees_[i];
+        const TreeT& tree = trees_[i];
         TreeT& new_tree = new_at[i];
         auto&& [min, max] = tree.find_minmax_leaf_value();
 
@@ -233,7 +232,7 @@ GAddTree<TreeT>::compute_box(typename TreeT::BoxT& box,
 
     for (size_t tree_index = 0; tree_index < size(); ++tree_index) {
         NodeId leaf_id = node_ids[tree_index];
-        trees_[tree_index]->compute_box(leaf_id, box);
+        trees_[tree_index].compute_box(leaf_id, box);
     }
 }
 

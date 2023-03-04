@@ -1,6 +1,7 @@
 #include "tree.hpp"
 #include "json_io.hpp"
 #include <ostream>
+#include <fstream>
 
 using namespace veritas;
 
@@ -64,7 +65,7 @@ int test_json3() {
     }
 
     addtree_to_json(s, at);
-    //std::cout << s.str();
+    std::cout << s.str();
     std::flush(std::cout);
 
     AddTreeFp at2 = addtree_from_json<AddTreeFp>(s);
@@ -93,12 +94,38 @@ int test_json4() {
     return result;
 }
 
+int test_oldjson() {
+    std::ifstream f("./tests/models/xgb-img-hard.json");
+    if (!f) // from build/temp.linux... folder
+        f = std::ifstream("../../tests/models/xgb-img-hard.json");
+    if (!f) {
+        std::cout << "cannot read xgb-img-hard.json\n";
+        return false;
+    }
+    AddTree at = addtree_from_oldjson(f);
+
+    //std::cout << at[0] << std::endl;
+    std::cout << at << std::endl;
+
+    int result = 1
+        && at.size() == 50
+        && at[0].get_split(at[0].root()) == LtSplit(0, 63)
+        && at[0].leaf_value(at[0]["lllll"]) == 37.7239
+        && at[0].leaf_value(at[0]["llllr"]) == 44.5408
+        && at[49].leaf_value(at[49]["llllll"]) == -0.0201895
+        && at[49].leaf_value(at[49]["lllllr"]) == 0.0045661
+        ;
+    std::cout << "test_oldjson " << result << std::endl;
+    return result;
+}
+
 int main_json_io() {
     int result = 1
         && test_json1()
         && test_json2()
         && test_json3()
         && test_json4()
+        && test_oldjson()
         ;
     return !result;
 }
