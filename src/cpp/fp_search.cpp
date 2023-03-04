@@ -380,9 +380,9 @@ private:
         State state = pop_from_focal_();
 
         if (is_solution_(state)) {
-            std::cout << "SOLUTION FOUND "
-                << "open_score=" << state.open_score()
-                << ", focal_score=" << state.focal_score() << '\n';
+            //std::cout << "SOLUTION FOUND "
+            //    << "open_score=" << state.open_score()
+            //    << ", focal_score=" << state.focal_score() << '\n';
             push_solution_(std::move(state));
         } else {
             expand_(state);
@@ -421,6 +421,12 @@ private:
     }
 
     void expand_(const State& state) {
+        //std::cout << "EXPANDING o=" << state.open_score()
+        //          << ", f=" << state.focal_score()
+        //          << ", next=" << state.next_tree
+        //          << ", t=" << time_since_start() << "s"
+        //          << ", m=" << (get_used_memory()/1024.0/1024.0) << "mb"
+        //          << std::endl;
         const TreeFp& t = atfp_[state.next_tree];
         leafiter_.setup(t, state.box, prune_box_);
 
@@ -667,6 +673,10 @@ Search::Search(Settings s, const AddTree& at, const FlatBox& prune_box)
     fpmap_.add(prune_box);
     fpmap_.finalize();
     atfp_ = fpmap_.transform(at_);
+
+    std::cout << "BASESCORE " << at.base_score << std::endl;
+    std::cout << "BASESCORE " << at_.base_score << std::endl;
+    std::cout << "BASESCORE " << atfp_.base_score << std::endl;
 
     // Convert prune_box to fixed precision, and push to leafiter
     int feat_id = 0;

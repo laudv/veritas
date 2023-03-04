@@ -245,7 +245,8 @@ public:
     }
 
     inline size_t num_nodes() const {
-        return static_cast<size_t>(tree_size(root()));
+        //return static_cast<size_t>(tree_size(root()));
+        return nodes_.size();
     }
 
     inline std::vector<NodeId> get_leaf_ids() const {

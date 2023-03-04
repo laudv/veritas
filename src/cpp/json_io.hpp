@@ -27,6 +27,8 @@ void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& t);
 template <typename AddTreeT>
 AddTreeT addtree_from_json(std::istream& s);
 
+AddTree addtree_from_oldjson(std::istream& s);
+
 } // namespace veritas
 
 #endif // VERITAS_JSONIO_HPP
