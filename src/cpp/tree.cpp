@@ -64,120 +64,91 @@ namespace veritas {
     //    return new_tree;
     //}
 
-    //std::tuple<FloatT, FloatT>
-    //Tree::find_minmax_leaf_value() const
-    //{
-    //    FloatT min = +FLOATT_INF;
-    //    FloatT max = -FLOATT_INF;
+// Tree
+// Tree::limit_depth(int max_depth) const
+//{
+//     Tree new_tree;
 
-    //    std::stack<ConstRef, std::vector<ConstRef>> stack;
-    //    stack.push(root());
+//    std::stack<std::tuple<ConstRef, MutRef, int>,
+//        std::vector<std::tuple<ConstRef, MutRef, int>>> stack;
+//    stack.push({root(), new_tree.root(), 0});
 
-    //    while (stack.size() != 0)
-    //    {
-    //        ConstRef n = stack.top();
-    //        stack.pop();
+//    while (stack.size() != 0)
+//    {
+//        auto [n, m, depth] = stack.top();
+//        stack.pop();
 
-    //        if (n.is_internal())
-    //        {
-    //            stack.push(n.right());
-    //            stack.push(n.left());
-    //        }
-    //        else
-    //        {
-    //            min = std::min(min, n.leaf_value());
-    //            max = std::max(max, n.leaf_value());
-    //        }
-    //    }
+//        if (depth < max_depth && n.is_internal())
+//        {
+//            m.split(n.get_split());
+//            stack.push({n.right(), m.right(), depth+1});
+//            stack.push({n.left(), m.left(), depth+1});
+//        }
+//        else
+//        {
+//            // set leaf value to maximum leaf value in subtree
+//            m.set_leaf_value(std::get<1>(n.find_minmax_leaf_value()));
+//        }
+//    }
 
-    //    return {min, max};
-    //}
+//    return new_tree;
+//}
 
-    //Tree
-    //Tree::limit_depth(int max_depth) const
-    //{
-    //    Tree new_tree;
+// FloatT
+// Tree::leaf_value_variance() const
+//{
+//     std::stack<ConstRef, std::vector<ConstRef>> stack;
+//     stack.push(root());
 
-    //    std::stack<std::tuple<ConstRef, MutRef, int>,
-    //        std::vector<std::tuple<ConstRef, MutRef, int>>> stack;
-    //    stack.push({root(), new_tree.root(), 0});
+//    double sum = 0.0, sum2 = 0.0;
+//    int count = 0;
+//    while (!stack.empty())
+//    {
+//        ConstRef n = stack.top();
+//        stack.pop();
 
-    //    while (stack.size() != 0)
-    //    {
-    //        auto [n, m, depth] = stack.top();
-    //        stack.pop();
+//        if (n.is_internal())
+//        {
+//            stack.push(n.right());
+//            stack.push(n.left());
+//        }
+//        else
+//        {
+//            double lv = static_cast<double>(n.leaf_value());
+//            sum += lv;
+//            sum2 += lv * lv;
+//            count += 1;
+//        }
+//    }
 
-    //        if (depth < max_depth && n.is_internal())
-    //        {
-    //            m.split(n.get_split());
-    //            stack.push({n.right(), m.right(), depth+1});
-    //            stack.push({n.left(), m.left(), depth+1});
-    //        }
-    //        else
-    //        {
-    //            // set leaf value to maximum leaf value in subtree
-    //            m.set_leaf_value(std::get<1>(n.find_minmax_leaf_value()));
-    //        }
-    //    }
+//    return static_cast<FloatT>((sum2 - (sum*sum) / count) / count);
+//}
 
-    //    return new_tree;
-    //}
+// Tree
+// Tree::negate_leaf_values() const
+//{
+//     Tree new_tree;
 
-    //FloatT
-    //Tree::leaf_value_variance() const
-    //{
-    //    std::stack<ConstRef, std::vector<ConstRef>> stack;
-    //    stack.push(root());
+//    std::stack<std::tuple<ConstRef, MutRef>,
+//        std::vector<std::tuple<ConstRef, MutRef>>> stack;
+//    stack.push({root(), new_tree.root()});
 
-    //    double sum = 0.0, sum2 = 0.0;
-    //    int count = 0;
-    //    while (!stack.empty())
-    //    {
-    //        ConstRef n = stack.top();
-    //        stack.pop();
+//    while (stack.size() != 0)
+//    {
+//        auto [n, m] = stack.top();
+//        stack.pop();
 
-    //        if (n.is_internal())
-    //        {
-    //            stack.push(n.right());
-    //            stack.push(n.left());
-    //        }
-    //        else
-    //        {
-    //            double lv = static_cast<double>(n.leaf_value());
-    //            sum += lv;
-    //            sum2 += lv * lv;
-    //            count += 1;
-    //        }
-    //    }
+//        if (n.is_internal())
+//        {
+//            m.split(n.get_split());
+//            stack.push({n.right(), m.right()});
+//            stack.push({n.left(), m.left()});
+//        }
+//        else m.set_leaf_value(-n.leaf_value());
+//    }
 
-    //    return static_cast<FloatT>((sum2 - (sum*sum) / count) / count);
-    //}
-
-    //Tree
-    //Tree::negate_leaf_values() const
-    //{
-    //    Tree new_tree;
-
-    //    std::stack<std::tuple<ConstRef, MutRef>,
-    //        std::vector<std::tuple<ConstRef, MutRef>>> stack;
-    //    stack.push({root(), new_tree.root()});
-
-    //    while (stack.size() != 0)
-    //    {
-    //        auto [n, m] = stack.top();
-    //        stack.pop();
-
-    //        if (n.is_internal())
-    //        {
-    //            m.split(n.get_split());
-    //            stack.push({n.right(), m.right()});
-    //            stack.push({n.left(), m.left()});
-    //        }
-    //        else m.set_leaf_value(-n.leaf_value());
-    //    }
-
-    //    return new_tree;
-    //}
+//    return new_tree;
+//}
 
 
 } // namespace veritas

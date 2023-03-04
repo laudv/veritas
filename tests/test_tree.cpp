@@ -105,8 +105,7 @@ int test_get_splits2() {
     return result;
 }
 
-int test_compute_box1()
-{
+int test_compute_box1() {
     Tree t;
     t.split(t.root(), {1, 8.0});
     t.split(t["l"], {1, 2.0});
@@ -131,8 +130,7 @@ int test_compute_box1()
     return result;
 }
 
-int test_eval1()
-{
+int test_eval1() {
     GTree<LtSplit, int> t;
     t.split(t.root(), {0, 1.5});
     t.split(t["l"], {1, 1.5});
@@ -168,6 +166,32 @@ int test_eval1()
     }
 
     std::cout << "test_eval1 " << result << std::endl;
+    return result;
+}
+
+int test_find_minmax() {
+    GTree<LtSplit, int> t;
+    t.split(t.root(), {0, 1.5});
+    t.split(t["l"], {1, 1.5});
+    t.split(t["ll"], {2, 1.5});
+    t.leaf_value(t["lll"]) = 1;
+    t.leaf_value(t["llr"]) = 2;
+    t.leaf_value(t["lr"]) = 3;
+    t.leaf_value(t["r"]) = 4;
+
+    auto&& [min, max] = t.find_minmax_leaf_value();
+
+    bool result = true
+        && min == 1
+        && max == 4;
+
+    auto&& [min2, max2] = t.find_minmax_leaf_value(t["l"]);
+
+    result = result
+        && min2 == 1
+        && max2 == 2;
+
+    std::cout << "test_find_minmax " << result << std::endl;
     return result;
 }
 

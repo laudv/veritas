@@ -38,15 +38,15 @@ private:
 public:
     ValueType base_score; /**< Constant value added to the output of the ensemble. */
     inline GAddTree() : base_score{} {} ;
-    /** Copy trees (begin, begin+num) from given `at`. */
-    inline GAddTree(const GAddTree& at, size_t begin, size_t num)
-        : trees_()
-        , base_score(begin == 0 ? at.base_score : ValueType{}) {
-        if (begin < at.size() && (begin+num) <= at.size())
-            trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
-        else
-            throw std::runtime_error("out of bounds");
-    }
+    ///** Copy trees (begin, begin+num) from given `at`. */
+    //inline GAddTree(const GAddTree& at, size_t begin, size_t num)
+    //    : trees_()
+    //    , base_score(begin == 0 ? at.base_score : ValueType{}) {
+    //    if (begin < at.size() && (begin+num) <= at.size())
+    //        trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
+    //    else
+    //        throw std::runtime_error("out of bounds");
+    //}
 
     /** Add a new empty tree to the ensemble. */
     inline TreeT& add_tree() {
@@ -92,10 +92,12 @@ public:
     /** Prune each tree in the ensemble. See TreeT::prune. */
     //GAddTree prune(BoxRef box) const;
 
-    ///** Avoid negative leaf values by adding a constant positive value to
-    // * the leaf values, and subtracting this value from the #base_score.
-    // * (base_score-offset) + ({leafs} + offset) */
-    //GAddTree neutralize_negative_leaf_values() const;
+    /**
+     * Avoid negative leaf values by adding a constant positive value to
+     * the leaf values, and subtracting this value from the #base_score.
+     * (base_score-offset) + ({leafs} + offset)
+     */
+    GAddTree neutralize_negative_leaf_values() const;
     ///** Replace internal nodes at deeper depths by a leaf node with maximum
     // * leaf value in subtree */
     //GAddTree limit_depth(int max_depth) const;
@@ -118,7 +120,8 @@ public:
 
     /** Compute the intersection of the boxes of all leaf nodes. See
      * TreeT::compute_box */
-    void compute_box(Box& box, const std::vector<NodeId>& node_ids) const;
+    void compute_box(typename TreeT::BoxT& box,
+            const std::vector<NodeId>& node_ids) const;
 
     bool operator==(const GAddTree& other) const {
         if (size() != other.size()) { return false; }
@@ -140,6 +143,7 @@ std::ostream& operator<<(std::ostream& strm, const GAddTree<TreeT>& at);
 
 using AddTree = GAddTree<Tree>;
 using AddTreeFp = GAddTree<TreeFp>;
+
 
 } // namespace veritas
 
