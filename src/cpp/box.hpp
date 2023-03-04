@@ -99,11 +99,11 @@ public:
      */
     inline bool refine_box(const GLtSplit<T>& split, bool from_left_child)
     {
-        auto dom = from_left_child
+        auto ival = from_left_child
             ? std::get<0>(split.get_intervals())
             : std::get<1>(split.get_intervals());
 
-        return refine_box(split.feat_id, dom);
+        return refine_box(split.feat_id, ival);
     }
 
     inline void combine_boxes(const GBoxRef<T>& a, const GBoxRef<T>& b, bool copy_b) {
@@ -162,6 +162,7 @@ private:
     const_iterator begin_, end_;
 
 public:
+    inline GBoxRef() : begin_{nullptr}, end_{nullptr} {}
     inline GBoxRef(const BoxT& b) : begin_{b.begin()}, end_{b.end()} {}
     inline GBoxRef(const_iterator b, const_iterator e) : begin_{b}, end_{e} {}
 
@@ -191,17 +192,18 @@ public:
         return true;
     }
 
-    inline void to_flatbox(FlatBoxT& fbox) const {
-        std::fill(fbox.begin(), fbox.end(), GInterval<T>());
+    inline void to_flatbox(FlatBoxT& fbox, bool clear) const {
+        if (clear)
+            std::fill(fbox.begin(), fbox.end(), GInterval<T>());
         if (empty()) return;
 
         // feat_ids are sorted, so last one is max
         FeatId max_feat_id = (end()-1)->feat_id;
         if (fbox.size() <= static_cast<size_t>(max_feat_id))
-            fbox.resize(max_feat_id+1);
+            fbox.resize(max_feat_id+1, GInterval<T>());
 
         for (auto &&[feat_id, ival] : *this)
-            fbox[feat_id] = ival;
+            fbox[feat_id] = fbox[feat_id].intersect(ival);
     }
 
     FlatBoxT to_flatbox() const {

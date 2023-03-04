@@ -40,14 +40,18 @@ public:
         stack_.push_back(t.root());
     }
 
-    void setup_flatbox(BoxRefT box) {
-        box.to_flatbox(flatbox);
+    void setup_flatbox(BoxRefT box, const FlatBoxT& prune_box) {
+        if (prune_box.size() > flatbox.size())
+            flatbox.resize(prune_box.size(), IntervalT());
+        std::fill(flatbox.begin(), flatbox.end(), IntervalT());
+        std::copy(prune_box.begin(), prune_box.end(), flatbox.begin());
+        box.to_flatbox(flatbox, false);
     }
 
     /* setup the iterator */
-    void setup(const TreeT& t, BoxRefT box) {
+    void setup(const TreeT& t, BoxRefT box, const FlatBoxT& prune_box) {
         setup_tree(t);
-        setup_flatbox(box);
+        setup_flatbox(box, prune_box);
     }
 
     /* find next overlapping leaf */

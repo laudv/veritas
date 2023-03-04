@@ -74,7 +74,7 @@ int test_to_flatbox() {
     BoxFp::BufT buf1{{0, {0, 1}}, {2, {0, 2}}};
     BoxRefFp b1{buf1};
 
-    b1.to_flatbox(fbox);
+    b1.to_flatbox(fbox, true);
 
     bool result = true
         && fbox.at(0) == IntervalFp(0, 1)

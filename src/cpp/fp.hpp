@@ -12,6 +12,7 @@
 #define VERITAS_FP_HPP
 
 #include "basics.hpp"
+#include "box.hpp"
 #include "interval.hpp"
 #include "tree.hpp"
 #include "addtree.hpp"
@@ -36,8 +37,8 @@ public:
     FpMap() : splits_{}, finalized_{true} {}
 
     inline void add(const AddTree& at) {
-      for (size_t i = 0; i < at.size(); ++i)
-        add(at[i]);
+        for (size_t i = 0; i < at.size(); ++i)
+            add(at[i]);
     }
 
     inline void add(const Tree& t) { add(t, t.root()); }
@@ -52,6 +53,25 @@ public:
         }
     }
 
+    inline void add(BoxRef box) {
+        for (const IntervalPair& pair : box)
+            add(pair);
+    }
+
+    inline void add(FlatBox box) {
+        for (int feat_id = 0; feat_id < static_cast<int>(box.size()); ++feat_id)
+            add(feat_id, box[feat_id]);
+    }
+
+    inline void add(const IntervalPair& pair) {
+        add(pair.feat_id, pair.interval);
+    }
+
+    inline void add(FeatId feat_id, Interval ival) {
+        if (!ival.lo_is_unbound()) add(feat_id, ival.lo);
+        if (!ival.hi_is_unbound()) add(feat_id, ival.hi);
+    }
+
     inline void add(FeatId fid, FloatT value) {
         if (fid < 0)
             throw std::runtime_error("invalid feat_id < 0");
@@ -62,9 +82,11 @@ public:
     }
 
     inline void finalize() {
-        // TODO also remove duplicates!!
-        for (auto& v : splits_)
+        // Sort and remove duplicates
+        for (auto& v : splits_) {
             std::sort(v.begin(), v.end());
+            v.erase(std::unique(v.begin(), v.end()), v.end());
+        }
         finalized_ = true;
     }
 

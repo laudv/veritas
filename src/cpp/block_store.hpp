@@ -21,7 +21,11 @@ namespace veritas {
  */
 template <typename T>
 class BlockStore {
+public:
     using Block = std::vector<T>;
+    using const_iterator = typename Block::const_iterator;
+
+private:
     std::vector<Block> blocks_;
 
     Block& get_block_with_remaining_capacity(size_t cap, size_t rem_memory_capacity)
@@ -54,14 +58,13 @@ class BlockStore {
 
 public:
     struct Ref {
-        const T *begin;
-        const T *end;
+        const_iterator begin;
+        const_iterator end;
     };
 
     const static size_t MIN_BLOCK_SIZE = 5*1024*1024 / sizeof(T); // 5MB
 
-    BlockStore()
-    {
+    BlockStore() : blocks_{} {
         Block block;
         block.reserve(MIN_BLOCK_SIZE);
         blocks_.push_back(std::move(block));
@@ -71,18 +74,18 @@ public:
     BlockStore(const BlockStore&) = delete;
     BlockStore& operator=(const BlockStore&) = delete;
     BlockStore(BlockStore&& o) { std::swap(blocks_, o.blocks_); }
-    BlockStore& operator=(BlockStore&& o) { std::swap(blocks_, o.blocks_); return *this; }
+    BlockStore& operator=(BlockStore&& o) {
+        std::swap(blocks_, o.blocks_); return *this;
+    }
 
-    size_t get_mem_size() const
-    {
+    size_t get_mem_size() const {
         size_t mem = 0;
         for (const Block& b : blocks_)
             mem += b.capacity() * sizeof(T);
         return mem;
     }
 
-    size_t get_used_mem_size() const
-    {
+    size_t get_used_mem_size() const {
         size_t mem = 0;
         for (const Block& b : blocks_)
             mem += b.size() * sizeof(T);
@@ -101,9 +104,10 @@ public:
         for (; begin != end; ++begin)
             block.push_back(*begin);
 
-        const T *ptr = &block[start_index];
+        auto b = block.begin() + start_index;
+        auto e = b + size;
 
-        return { ptr, ptr + size };
+        return { b, e };
     }
 
     template <typename Container>
