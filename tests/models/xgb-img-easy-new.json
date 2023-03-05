@@ -1,0 +1,1757 @@
+{"base_score": 0.5, "num_trees": 10, "trees": [
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 63},
+    "left": {
+      "split": {"feat_id": 1, "split_value": 37},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 16},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 14},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 11},
+            "left": {"leaf_value": 47.1548},
+            "right": {"leaf_value": 55.6761}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 12},
+            "left": {"leaf_value": 59.0181},
+            "right": {"leaf_value": 71.1452}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 52},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 8},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 21},
+              "left": {"leaf_value": 66.6098},
+              "right": {"leaf_value": 85.008}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 44},
+              "left": {"leaf_value": 97.8924},
+              "right": {"leaf_value": 86.5858}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 24},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 58},
+              "left": {"leaf_value": 79.1724},
+              "right": {"leaf_value": 69.4587}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 57},
+              "left": {"leaf_value": 66.1477},
+              "right": {"leaf_value": 53.1203}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 91},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 30},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 44},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 15},
+              "left": {"leaf_value": 57.5165},
+              "right": {"leaf_value": 73.1722}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 23},
+              "left": {"leaf_value": 55.8852},
+              "right": {"leaf_value": 59.9144}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 61},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 52},
+              "left": {"leaf_value": 70.7363},
+              "right": {"leaf_value": 47.0151}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 37},
+              "left": {"leaf_value": 67.2725},
+              "right": {"leaf_value": 84.3835}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 12},
+          "left": {"leaf_value": 57.4266},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 95},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 40},
+              "left": {"leaf_value": 41.8938},
+              "right": {"leaf_value": 60.6559}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 59},
+              "left": {"leaf_value": 40.3633},
+              "right": {"leaf_value": 23.5}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 66},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 29},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 76},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 17},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 71},
+              "left": {"leaf_value": 62.854},
+              "right": {"leaf_value": 53.6831}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 71},
+              "left": {"leaf_value": 51.0515},
+              "right": {"leaf_value": 42.0738}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 10},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 5},
+              "left": {"leaf_value": 51.1901},
+              "right": {"leaf_value": 42.6942}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 20},
+              "left": {"leaf_value": 34.0311},
+              "right": {"leaf_value": 27.0184}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 74},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 42},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 37},
+              "left": {"leaf_value": 42.4438},
+              "right": {"leaf_value": 35.558}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 68},
+              "left": {"leaf_value": 33.0826},
+              "right": {"leaf_value": 20.5138}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 61},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 39},
+              "left": {"leaf_value": 18.8755},
+              "right": {"leaf_value": 7.81501}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 81},
+              "left": {"leaf_value": 19.6181},
+              "right": {"leaf_value": 32.8099}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 91},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 83},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 68},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 87},
+              "left": {"leaf_value": 55.2712},
+              "right": {"leaf_value": 40.381}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 78},
+              "left": {"leaf_value": 36.1096},
+              "right": {"leaf_value": 46.4901}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 71},
+            "left": {"leaf_value": 51.189},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 87},
+              "left": {"leaf_value": 70.0366},
+              "right": {"leaf_value": 56.7391}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 81},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 95},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 66},
+              "left": {"leaf_value": 28.6154},
+              "right": {"leaf_value": 17.5492}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 77},
+              "left": {"leaf_value": 4.47183},
+              "right": {"leaf_value": 12.2619}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 96},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 94},
+              "left": {"leaf_value": 44.3664},
+              "right": {"leaf_value": 34.8462}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 98},
+              "left": {"leaf_value": 27.0256},
+              "right": {"leaf_value": 18.5513}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 60},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 20},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 42},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 13},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 9},
+            "left": {"leaf_value": 21.911},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 20},
+              "left": {"leaf_value": 26.6703},
+              "right": {"leaf_value": 30.5318}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 15},
+            "left": {"leaf_value": 30.7744},
+            "right": {"leaf_value": 37.2735}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 6},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 59},
+            "left": {"leaf_value": 27.0104},
+            "right": {"leaf_value": 32.6154}},
+          "right": {"leaf_value": 26.3176}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 86},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 31},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 49},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 11},
+              "left": {"leaf_value": 43.5606},
+              "right": {"leaf_value": 53.8279}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 55},
+              "left": {"leaf_value": 42.1521},
+              "right": {"leaf_value": 36.5143}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 64},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 48},
+              "left": {"leaf_value": 37.0837},
+              "right": {"leaf_value": 27.9143}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 35},
+              "left": {"leaf_value": 31.9151},
+              "right": {"leaf_value": 47.9927}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 42},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 96},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 36},
+              "left": {"leaf_value": 16.9054},
+              "right": {"leaf_value": 22.56}},
+            "right": {"leaf_value": 14.2586}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 97},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 56},
+              "left": {"leaf_value": 37.5008},
+              "right": {"leaf_value": 26.1406}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 56},
+              "left": {"leaf_value": 22.2179},
+              "right": {"leaf_value": 11.7781}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 68},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 26},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 80},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 68},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 20},
+              "left": {"leaf_value": 33.9693},
+              "right": {"leaf_value": 27.0942}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 11},
+              "left": {"leaf_value": 30.0092},
+              "right": {"leaf_value": 22.7648}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 8},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 3},
+              "left": {"leaf_value": 26.2918},
+              "right": {"leaf_value": 21.7265}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 15},
+              "left": {"leaf_value": 17.8231},
+              "right": {"leaf_value": 13.5852}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 81},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 46},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 35},
+              "left": {"leaf_value": 22.1989},
+              "right": {"leaf_value": 18.223}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 70},
+              "left": {"leaf_value": 16.0029},
+              "right": {"leaf_value": 7.23456}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 59},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 35},
+              "left": {"leaf_value": 8.21408},
+              "right": {"leaf_value": 0.400176}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 64},
+              "left": {"leaf_value": 13.8873},
+              "right": {"leaf_value": 21.1158}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 89},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 86},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 66},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 63},
+              "left": {"leaf_value": 25.5652},
+              "right": {"leaf_value": 31.0606}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 80},
+              "left": {"leaf_value": 20.7552},
+              "right": {"leaf_value": 26.7135}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 74},
+            "left": {"leaf_value": 30.4149},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 84},
+              "left": {"leaf_value": 39.8116},
+              "right": {"leaf_value": 33.4138}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 84},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 97},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 66},
+              "left": {"leaf_value": 15.8605},
+              "right": {"leaf_value": 8.8863}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 65},
+              "left": {"leaf_value": 6.06778},
+              "right": {"leaf_value": 0.896436}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 95},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 93},
+              "left": {"leaf_value": 26.0586},
+              "right": {"leaf_value": 20.6303}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": 15.2063},
+              "right": {"leaf_value": 8.21116}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 58},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 24},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 47},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 18},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 9},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 5},
+              "left": {"leaf_value": 8.37539},
+              "right": {"leaf_value": 13.6039}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 17},
+              "left": {"leaf_value": 13.8865},
+              "right": {"leaf_value": 17.3987}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 13},
+            "left": {"leaf_value": 17.1771},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 33},
+              "left": {"leaf_value": 24.7095},
+              "right": {"leaf_value": 18.662}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 8},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 75},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 3},
+              "left": {"leaf_value": 16.1984},
+              "right": {"leaf_value": 12.7283}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 96},
+              "left": {"leaf_value": 17.7715},
+              "right": {"leaf_value": 13.1672}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 84},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 64},
+              "left": {"leaf_value": 11.6305},
+              "right": {"leaf_value": 13.9061}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 15},
+              "left": {"leaf_value": 13.6395},
+              "right": {"leaf_value": 9.81181}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 84},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 28},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 39},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 6},
+              "left": {"leaf_value": 18.4221},
+              "right": {"leaf_value": 30.3352}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 54},
+              "left": {"leaf_value": 23.0772},
+              "right": {"leaf_value": 19.1271}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 66},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 42},
+              "left": {"leaf_value": 21.2785},
+              "right": {"leaf_value": 16.443}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 41},
+              "left": {"leaf_value": 18.2148},
+              "right": {"leaf_value": 29.3337}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 44},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 39},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 94},
+              "left": {"leaf_value": 7.82524},
+              "right": {"leaf_value": 6.30076}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 93},
+              "left": {"leaf_value": 14.2429},
+              "right": {"leaf_value": 7.97117}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 93},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 55},
+              "left": {"leaf_value": 23.6257},
+              "right": {"leaf_value": 16.8943}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": 14.9281},
+              "right": {"leaf_value": 6.99141}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 14},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 84},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 66},
+          "left": {"leaf_value": 19.3018},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 7},
+            "left": {"leaf_value": 16.3938},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 73},
+              "left": {"leaf_value": 14.9982},
+              "right": {"leaf_value": 12.1444}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 4},
+          "left": {"leaf_value": 12.0862},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 87},
+            "left": {"leaf_value": 10.2598},
+            "right": {"leaf_value": 8.46873}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 63},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 86},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 44},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 69},
+              "left": {"leaf_value": 12.9004},
+              "right": {"leaf_value": 9.68289}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 66},
+              "left": {"leaf_value": 7.12893},
+              "right": {"leaf_value": 3.15848}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 31},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 24},
+              "left": {"leaf_value": 6.50386},
+              "right": {"leaf_value": 3.82739}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 57},
+              "left": {"leaf_value": -1.95572},
+              "right": {"leaf_value": 6.89875}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 93},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 87},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 85},
+              "left": {"leaf_value": 12.3612},
+              "right": {"leaf_value": 8.0385}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 97},
+              "left": {"leaf_value": 18.3736},
+              "right": {"leaf_value": 11.8916}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 78},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 65},
+              "left": {"leaf_value": 5.65925},
+              "right": {"leaf_value": -1.12759}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 97},
+              "left": {"leaf_value": 9.82297},
+              "right": {"leaf_value": 4.8365}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 56},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 26},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 40},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 19},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 18},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 8},
+              "left": {"leaf_value": 5.23932},
+              "right": {"leaf_value": 7.11199}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 32},
+              "left": {"leaf_value": 9.34595},
+              "right": {"leaf_value": 7.16455}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 14},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 4},
+              "left": {"leaf_value": 5.99122},
+              "right": {"leaf_value": 9.82903}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 22},
+              "left": {"leaf_value": 11.2105},
+              "right": {"leaf_value": 15.2868}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 4},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 55},
+            "left": {"leaf_value": 6.55326},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 98},
+              "left": {"leaf_value": 9.22777},
+              "right": {"leaf_value": 3.96255}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 23},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 66},
+              "left": {"leaf_value": 6.12266},
+              "right": {"leaf_value": 6.83729}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 78},
+              "left": {"leaf_value": 6.29407},
+              "right": {"leaf_value": 3.65537}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 82},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 68},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 42},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 46},
+              "left": {"leaf_value": 13.942},
+              "right": {"leaf_value": 9.10131}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 58},
+              "left": {"leaf_value": 8.49405},
+              "right": {"leaf_value": 13.7436}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 43},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 78},
+              "left": {"leaf_value": 12.3382},
+              "right": {"leaf_value": 6.92947}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 54},
+              "left": {"leaf_value": 19.2603},
+              "right": {"leaf_value": 11.1573}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 45},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 34},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 91},
+              "left": {"leaf_value": 0.973449},
+              "right": {"leaf_value": 3.86393}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 94},
+              "left": {"leaf_value": 6.23709},
+              "right": {"leaf_value": 3.06343}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 88},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 54},
+              "left": {"leaf_value": 15.7001},
+              "right": {"leaf_value": 9.77071}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 98},
+              "left": {"leaf_value": 9.60682},
+              "right": {"leaf_value": 4.82821}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 22},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 73},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 65},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 19},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 61},
+              "left": {"leaf_value": 11.0015},
+              "right": {"leaf_value": 9.18021}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 58},
+              "left": {"leaf_value": 4.4369},
+              "right": {"leaf_value": 8.6938}}},
+          "right": {"leaf_value": 7.91805}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 7},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 86},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 2},
+              "left": {"leaf_value": 9.80485},
+              "right": {"leaf_value": 7.57271}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 2},
+              "left": {"leaf_value": 7.10508},
+              "right": {"leaf_value": 4.93196}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 83},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 76},
+              "left": {"leaf_value": 3.94706},
+              "right": {"leaf_value": 6.19159}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 12},
+              "left": {"leaf_value": 4.37575},
+              "right": {"leaf_value": 3.36743}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 70},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 94},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 41},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 91},
+              "left": {"leaf_value": 5.07558},
+              "right": {"leaf_value": 2.20884}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 58},
+              "left": {"leaf_value": 1.35683},
+              "right": {"leaf_value": 3.65672}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 58},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 30},
+              "left": {"leaf_value": 0.0505784},
+              "right": {"leaf_value": -3.53579}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 98},
+              "left": {"leaf_value": 3.46344},
+              "right": {"leaf_value": -0.144605}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 86},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 88},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 70},
+              "left": {"leaf_value": 8.6923},
+              "right": {"leaf_value": 6.31797}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 98},
+              "left": {"leaf_value": 12.2159},
+              "right": {"leaf_value": 6.31493}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 76},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 67},
+              "left": {"leaf_value": 5.07991},
+              "right": {"leaf_value": -2.42117}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 96},
+              "left": {"leaf_value": 6.53878},
+              "right": {"leaf_value": 2.75165}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 67},
+    "left": {
+      "split": {"feat_id": 1, "split_value": 34},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 14},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 6},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 3},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 4},
+              "left": {"leaf_value": -0.429499},
+              "right": {"leaf_value": 1.35365}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 13},
+              "left": {"leaf_value": 2.23187},
+              "right": {"leaf_value": 0.269132}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 10},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 23},
+              "left": {"leaf_value": 2.87856},
+              "right": {"leaf_value": 3.99511}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 22},
+              "left": {"leaf_value": 3.95875},
+              "right": {"leaf_value": 5.99352}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 4},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 42},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 21},
+              "left": {"leaf_value": 4.20844},
+              "right": {"leaf_value": 1.29848}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 61},
+              "left": {"leaf_value": 5.47706},
+              "right": {"leaf_value": 3.67129}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 47},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 14},
+              "left": {"leaf_value": 5.55},
+              "right": {"leaf_value": 8.07722}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 21},
+              "left": {"leaf_value": 6.26251},
+              "right": {"leaf_value": 3.70572}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 57},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 46},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 49},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 31},
+              "left": {"leaf_value": 4.04165},
+              "right": {"leaf_value": 6.64281}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 43},
+              "left": {"leaf_value": 2.26265},
+              "right": {"leaf_value": -0.803355}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 46},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 63},
+              "left": {"leaf_value": 1.03026},
+              "right": {"leaf_value": 3.62472}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 52},
+              "left": {"leaf_value": -3.04857},
+              "right": {"leaf_value": 0.0876889}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 81},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 32},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 61},
+              "left": {"leaf_value": 2.48976},
+              "right": {"leaf_value": 3.86365}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 55},
+              "left": {"leaf_value": 7.69539},
+              "right": {"leaf_value": 5.1005}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 10},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 92},
+              "left": {"leaf_value": 5.98102},
+              "right": {"leaf_value": 3.70705}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 40},
+              "left": {"leaf_value": 1.86415},
+              "right": {"leaf_value": 3.9643}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 73},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 49},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 89},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 78},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 44},
+              "left": {"leaf_value": 3.27988},
+              "right": {"leaf_value": 7.2899}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 12},
+              "left": {"leaf_value": 3.70662},
+              "right": {"leaf_value": 1.95861}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 33},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 23},
+              "left": {"leaf_value": 2.11889},
+              "right": {"leaf_value": 0.720641}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 92},
+              "left": {"leaf_value": -0.519081},
+              "right": {"leaf_value": -2.42151}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 85},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 71},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 64},
+              "left": {"leaf_value": -0.0814597},
+              "right": {"leaf_value": 4.08816}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 52},
+              "left": {"leaf_value": 1.26743},
+              "right": {"leaf_value": -2.13974}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 56},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 54},
+              "left": {"leaf_value": -2.7797},
+              "right": {"leaf_value": -0.951704}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 96},
+              "left": {"leaf_value": 3.32399},
+              "right": {"leaf_value": 0.361948}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 83},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 79},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 71},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 68},
+              "left": {"leaf_value": 3.73637},
+              "right": {"leaf_value": 7.74505}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 76},
+              "left": {"leaf_value": 1.05686},
+              "right": {"leaf_value": 4.04636}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 76},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 99},
+              "left": {"leaf_value": 4.34854},
+              "right": {"leaf_value": 0.466553}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 96},
+              "left": {"leaf_value": 8.37287},
+              "right": {"leaf_value": 5.35308}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 75},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 69},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 92},
+              "left": {"leaf_value": 2.36716},
+              "right": {"leaf_value": -1.34727}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 74},
+              "left": {"leaf_value": -3.03671},
+              "right": {"leaf_value": 0.126711}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 92},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 79},
+              "left": {"leaf_value": 1.77753},
+              "right": {"leaf_value": 4.50494}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 98},
+              "left": {"leaf_value": 2.23412},
+              "right": {"leaf_value": -1.2229}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 55},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 27},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 29},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 23},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 19},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 14},
+              "left": {"leaf_value": 1.73095},
+              "right": {"leaf_value": 0.874392}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 8},
+              "left": {"leaf_value": 1.24713},
+              "right": {"leaf_value": 3.29094}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 15},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 10},
+              "left": {"leaf_value": 1.66556},
+              "right": {"leaf_value": 3.52518}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 25},
+              "left": {"leaf_value": 6.85274},
+              "right": {"leaf_value": 4.18646}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 2},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 94},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 1},
+              "left": {"leaf_value": 3.60204},
+              "right": {"leaf_value": 2.73083}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": 0.712398},
+              "right": {"leaf_value": -0.459623}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 91},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 89},
+              "left": {"leaf_value": 1.54509},
+              "right": {"leaf_value": 0.260377}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 93},
+              "left": {"leaf_value": 3.11878},
+              "right": {"leaf_value": 1.67321}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 25},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 3},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 35},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 2},
+              "left": {"leaf_value": -1.34412},
+              "right": {"leaf_value": 0.397224}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 2},
+              "left": {"leaf_value": 1.34886},
+              "right": {"leaf_value": 2.81674}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 15},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 42},
+              "left": {"leaf_value": 2.35601},
+              "right": {"leaf_value": 5.397}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 36},
+              "left": {"leaf_value": 8.07843},
+              "right": {"leaf_value": 3.92552}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 89},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 59},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 39},
+              "left": {"leaf_value": 3.44007},
+              "right": {"leaf_value": 0.995443}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 44},
+              "left": {"leaf_value": 2.46148},
+              "right": {"leaf_value": 5.32543}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 47},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 91},
+              "left": {"leaf_value": -2.832},
+              "right": {"leaf_value": 1.05567}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 53},
+              "left": {"leaf_value": 4.10497},
+              "right": {"leaf_value": 1.01497}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 98},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 72},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 33},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 78},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 65},
+              "left": {"leaf_value": 2.44332},
+              "right": {"leaf_value": 1.86082}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 13},
+              "left": {"leaf_value": 1.57164},
+              "right": {"leaf_value": 0.645505}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 60},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 64},
+              "left": {"leaf_value": -0.402355},
+              "right": {"leaf_value": -3.79775}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 67},
+              "left": {"leaf_value": 2.13686},
+              "right": {"leaf_value": 0.239947}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 82},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 60},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 56},
+              "left": {"leaf_value": 2.7027},
+              "right": {"leaf_value": -0.0989484}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 75},
+              "left": {"leaf_value": 1.87528},
+              "right": {"leaf_value": 3.60451}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 75},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 69},
+              "left": {"leaf_value": 0.961566},
+              "right": {"leaf_value": -1.49187}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 99},
+              "left": {"leaf_value": 2.00899},
+              "right": {"leaf_value": -1.24812}}}}},
+      "right": {
+        "split": {"feat_id": 0, "split_value": 67},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 99},
+          "left": {"leaf_value": -3.47021},
+          "right": {"leaf_value": -5.7852}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 87},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 76},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": 0.532084},
+              "right": {"leaf_value": 0.0820837}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": -0.884762},
+              "right": {"leaf_value": -3.42703}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 97},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 89},
+              "left": {"leaf_value": 0.267088},
+              "right": {"leaf_value": 1.72599}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 99},
+              "left": {"leaf_value": -0.441508},
+              "right": {"leaf_value": -1.37509}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 54},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 18},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 77},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 16},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 15},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 39},
+              "left": {"leaf_value": 0.895323},
+              "right": {"leaf_value": 0.215968}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 37},
+              "left": {"leaf_value": 4.94025},
+              "right": {"leaf_value": 0.360263}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 37},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 17},
+              "left": {"leaf_value": -3.98019},
+              "right": {"leaf_value": -0.256502}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 51},
+              "left": {"leaf_value": 2.80569},
+              "right": {"leaf_value": 1.0788}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 14},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 91},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 12},
+              "left": {"leaf_value": 2.20293},
+              "right": {"leaf_value": 0.998701}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 12},
+              "left": {"leaf_value": 0.616137},
+              "right": {"leaf_value": 3.45955}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 86},
+            "left": {"leaf_value": 1.39612},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 91},
+              "left": {"leaf_value": -1.16862},
+              "right": {"leaf_value": 0.855044}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 45},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 37},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 35},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 35},
+              "left": {"leaf_value": 2.37342},
+              "right": {"leaf_value": 1.2863}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 44},
+              "left": {"leaf_value": -2.36539},
+              "right": {"leaf_value": -0.0719314}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 39},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 38},
+              "left": {"leaf_value": 6.81774},
+              "right": {"leaf_value": 5.11504}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 34},
+              "left": {"leaf_value": 1.31826},
+              "right": {"leaf_value": 2.86673}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 46},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 79},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 63},
+              "left": {"leaf_value": 0.500533},
+              "right": {"leaf_value": 2.06714}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 86},
+              "left": {"leaf_value": -1.12977},
+              "right": {"leaf_value": 0.579431}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 55},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 52},
+              "left": {"leaf_value": -2.76991},
+              "right": {"leaf_value": 1.55057}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 94},
+              "left": {"leaf_value": 3.17716},
+              "right": {"leaf_value": 1.0179}}}}}},
+    "right": {
+      "split": {"feat_id": 0, "split_value": 96},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 94},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 73},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 48},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 88},
+              "left": {"leaf_value": 0.884348},
+              "right": {"leaf_value": 0.202503}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 56},
+              "left": {"leaf_value": -0.90583},
+              "right": {"leaf_value": 0.639543}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 90},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 70},
+              "left": {"leaf_value": 1.41798},
+              "right": {"leaf_value": 0.368258}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 90},
+              "left": {"leaf_value": 3.54526},
+              "right": {"leaf_value": 1.4491}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 88},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 95},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 72},
+              "left": {"leaf_value": -4.76954},
+              "right": {"leaf_value": -0.441342}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 96},
+              "left": {"leaf_value": 0.813782},
+              "right": {"leaf_value": -0.979325}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 98},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 89},
+              "left": {"leaf_value": 1.01485},
+              "right": {"leaf_value": 3.00068}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": 1.38956},
+              "right": {"leaf_value": 0.554077}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 18},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 99},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 97},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 2},
+              "left": {"leaf_value": 1.21211},
+              "right": {"leaf_value": 0.300941}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 10},
+              "left": {"leaf_value": 0.826904},
+              "right": {"leaf_value": 1.56704}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 4},
+            "left": {"leaf_value": 1.34569},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 17},
+              "left": {"leaf_value": 2.81428},
+              "right": {"leaf_value": 0.811987}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 63},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 39},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 27},
+              "left": {"leaf_value": -0.235234},
+              "right": {"leaf_value": -3.61044}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 61},
+              "left": {"leaf_value": -0.493709},
+              "right": {"leaf_value": -3.32546}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 99},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 90},
+              "left": {"leaf_value": 1.30068},
+              "right": {"leaf_value": -0.321912}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 71},
+              "left": {"leaf_value": 0.265538},
+              "right": {"leaf_value": -0.920302}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 0, "split_value": 53},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 28},
+      "left": {
+        "split": {"feat_id": 1, "split_value": 3},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 21},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 17},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 11},
+              "left": {"leaf_value": -0.556174},
+              "right": {"leaf_value": -1.51428}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 19},
+              "left": {"leaf_value": 0.917518},
+              "right": {"leaf_value": 2.38928}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 23},
+            "left": {"leaf_value": -2.84562},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 26},
+              "left": {"leaf_value": -0.231982},
+              "right": {"leaf_value": -2.4524}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 2},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 7},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 6},
+              "left": {"leaf_value": -0.834953},
+              "right": {"leaf_value": -0.13797}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 93},
+              "left": {"leaf_value": 1.24328},
+              "right": {"leaf_value": 0.00849889}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 50},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 10},
+              "left": {"leaf_value": 0.0141292},
+              "right": {"leaf_value": 0.860623}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 24},
+              "left": {"leaf_value": 0.384024},
+              "right": {"leaf_value": -0.515645}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 94},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 91},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 90},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 70},
+              "left": {"leaf_value": 0.759599},
+              "right": {"leaf_value": 1.44107}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 30},
+              "left": {"leaf_value": -0.743342},
+              "right": {"leaf_value": -3.24267}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 92},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 35},
+              "left": {"leaf_value": 2.51336},
+              "right": {"leaf_value": 5.39708}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 48},
+              "left": {"leaf_value": 0.806237},
+              "right": {"leaf_value": 2.27869}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 48},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 42},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 38},
+              "left": {"leaf_value": -0.990152},
+              "right": {"leaf_value": 0.640491}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 95},
+              "left": {"leaf_value": -3.2949},
+              "right": {"leaf_value": -0.828307}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 95},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 52},
+              "left": {"leaf_value": -0.311536},
+              "right": {"leaf_value": -1.06971}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 96},
+              "left": {"leaf_value": 3.92238},
+              "right": {"leaf_value": 0.40447}}}}}},
+    "right": {
+      "split": {"feat_id": 0, "split_value": 63},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 62},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 28},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 24},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 18},
+              "left": {"leaf_value": 1.24661},
+              "right": {"leaf_value": -0.774189}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 57},
+              "left": {"leaf_value": 0.99472},
+              "right": {"leaf_value": 4.218}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 55},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 54},
+              "left": {"leaf_value": 0.798912},
+              "right": {"leaf_value": -1.57753}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 61},
+              "left": {"leaf_value": 6.1072},
+              "right": {"leaf_value": -0.357277}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 61},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 59},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 32},
+              "left": {"leaf_value": -0.897041},
+              "right": {"leaf_value": -2.47191}},
+            "right": {"leaf_value": 3.77314}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 84},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 65},
+              "left": {"leaf_value": -5.66605},
+              "right": {"leaf_value": -2.76577}},
+            "right": {"leaf_value": -5.68972}}}},
+      "right": {
+        "split": {"feat_id": 0, "split_value": 65},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 59},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 17},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 64},
+              "left": {"leaf_value": 0.912375},
+              "right": {"leaf_value": 0.0790418}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 24},
+              "left": {"leaf_value": 3.06652},
+              "right": {"leaf_value": 1.4706}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 68},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 60},
+              "left": {"leaf_value": 3.58396},
+              "right": {"leaf_value": 11.028}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 93},
+              "left": {"leaf_value": 4.31493},
+              "right": {"leaf_value": -0.58378}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 2},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 71},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 68},
+              "left": {"leaf_value": 0.261222},
+              "right": {"leaf_value": 0.842829}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 82},
+              "left": {"leaf_value": 2.95829},
+              "right": {"leaf_value": 1.38616}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 76},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 55},
+              "left": {"leaf_value": 0.707895},
+              "right": {"leaf_value": -0.91423}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 57},
+              "left": {"leaf_value": 0.0262925},
+              "right": {"leaf_value": 0.677616}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 1, "split_value": 98},
+    "left": {
+      "split": {"feat_id": 0, "split_value": 70},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 63},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 61},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 60},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 26},
+              "left": {"leaf_value": 0.581334},
+              "right": {"leaf_value": 0.179329}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 58},
+              "left": {"leaf_value": 0.968879},
+              "right": {"leaf_value": 2.84077}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 83},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 62},
+              "left": {"leaf_value": -0.120794},
+              "right": {"leaf_value": -1.03625}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 95},
+              "left": {"leaf_value": -3.18036},
+              "right": {"leaf_value": 0.990224}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 61},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 54},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 44},
+              "left": {"leaf_value": 0.15129},
+              "right": {"leaf_value": 1.31685}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 65},
+              "left": {"leaf_value": 0.94179},
+              "right": {"leaf_value": -2.7705}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 66},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 67},
+              "left": {"leaf_value": 7.3584},
+              "right": {"leaf_value": 2.67428}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 92},
+              "left": {"leaf_value": 1.7021},
+              "right": {"leaf_value": -0.878303}}}}},
+      "right": {
+        "split": {"feat_id": 0, "split_value": 74},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 56},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 46},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 30},
+              "left": {"leaf_value": 0.433886},
+              "right": {"leaf_value": -2.06365}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 53},
+              "left": {"leaf_value": 4.30998},
+              "right": {"leaf_value": 0.550864}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 64},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 72},
+              "left": {"leaf_value": -3.93816},
+              "right": {"leaf_value": -6.95385}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 71},
+              "left": {"leaf_value": -2.29267},
+              "right": {"leaf_value": -0.44873}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 98},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 45},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 29},
+              "left": {"leaf_value": -0.0151644},
+              "right": {"leaf_value": 1.1976}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 57},
+              "left": {"leaf_value": -0.693629},
+              "right": {"leaf_value": 0.315138}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 23},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 18},
+              "left": {"leaf_value": 1.04105},
+              "right": {"leaf_value": 0.194488}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 39},
+              "left": {"leaf_value": -2.74414},
+              "right": {"leaf_value": -0.442311}}}}}},
+    "right": {
+      "split": {"feat_id": 0, "split_value": 67},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 16},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 12},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 9},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 6},
+              "left": {"leaf_value": -0.286017},
+              "right": {"leaf_value": 1.44862}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 11},
+              "left": {"leaf_value": -0.671974},
+              "right": {"leaf_value": -2.08616}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 13},
+            "left": {"leaf_value": 2.15379},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": 0.615097},
+              "right": {"leaf_value": 0.240097}}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 20},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 17},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": -0.151611},
+              "right": {"leaf_value": -0.651611}},
+            "right": {"leaf_value": -3.25259}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 57},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 56},
+              "left": {"leaf_value": -0.761411},
+              "right": {"leaf_value": 0.606303}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": -1.08374},
+              "right": {"leaf_value": -2.53435}}}}},
+      "right": {
+        "split": {"feat_id": 0, "split_value": 76},
+        "left": {"leaf_value": 1.07473},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 82},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 99},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 79},
+              "left": {"leaf_value": -0.770519},
+              "right": {"leaf_value": 0.103528}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 77},
+              "left": {"leaf_value": -0.499425},
+              "right": {"leaf_value": -2.67372}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 95},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 91},
+              "left": {"leaf_value": -0.287402},
+              "right": {"leaf_value": 0.685466}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 99},
+              "left": {"leaf_value": -0.214227},
+              "right": {"leaf_value": -0.979955}}}}}}}
+},
+{"split_type": "LtSplit", "value_type": "FloatT",
+  "structure": {
+    "split": {"feat_id": 1, "split_value": 69},
+    "left": {
+      "split": {"feat_id": 1, "split_value": 50},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 84},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 37},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 36},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 23},
+              "left": {"leaf_value": -0.17958},
+              "right": {"leaf_value": 0.29232}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 74},
+              "left": {"leaf_value": -2.02595},
+              "right": {"leaf_value": 0.281021}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 74},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 45},
+              "left": {"leaf_value": 0.806428},
+              "right": {"leaf_value": -0.218101}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 39},
+              "left": {"leaf_value": -0.919883},
+              "right": {"leaf_value": 2.71104}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 43},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 86},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 17},
+              "left": {"leaf_value": 0.357467},
+              "right": {"leaf_value": -1.09102}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 90},
+              "left": {"leaf_value": 0.632222},
+              "right": {"leaf_value": -0.0552141}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 94},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 46},
+              "left": {"leaf_value": -1.84938},
+              "right": {"leaf_value": -3.01569}},
+            "right": {
+              "split": {"feat_id": 1, "split_value": 45},
+              "left": {"leaf_value": -0.672794},
+              "right": {"leaf_value": 0.0108945}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 56},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 20},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 18},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 15},
+              "left": {"leaf_value": -0.471233},
+              "right": {"leaf_value": 0.435597}},
+            "right": {"leaf_value": 2.23344}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 68},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 33},
+              "left": {"leaf_value": -1.79625},
+              "right": {"leaf_value": -1.19306}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 77},
+              "left": {"leaf_value": 1.99301},
+              "right": {"leaf_value": -1.2644}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 66},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 65},
+            "left": {
+              "split": {"feat_id": 1, "split_value": 61},
+              "left": {"leaf_value": 0.418614},
+              "right": {"leaf_value": -0.350418}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 63},
+              "left": {"leaf_value": 0.222191},
+              "right": {"leaf_value": 3.29881}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 37},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 19},
+              "left": {"leaf_value": -0.337994},
+              "right": {"leaf_value": 1.9302}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 60},
+              "left": {"leaf_value": -3.02551},
+              "right": {"leaf_value": -1.07811}}}}}},
+    "right": {
+      "split": {"feat_id": 1, "split_value": 80},
+      "left": {
+        "split": {"feat_id": 0, "split_value": 39},
+        "left": {
+          "split": {"feat_id": 0, "split_value": 37},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 33},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 26},
+              "left": {"leaf_value": 0.357746},
+              "right": {"leaf_value": -0.693965}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 35},
+              "left": {"leaf_value": 3.35916},
+              "right": {"leaf_value": 0.365512}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 38},
+            "left": {"leaf_value": -4.38807},
+            "right": {"leaf_value": -1.80474}}},
+        "right": {
+          "split": {"feat_id": 0, "split_value": 52},
+          "left": {
+            "split": {"feat_id": 1, "split_value": 71},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 45},
+              "left": {"leaf_value": -0.367752},
+              "right": {"leaf_value": 0.698379}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 45},
+              "left": {"leaf_value": 1.73659},
+              "right": {"leaf_value": 3.43759}}},
+          "right": {
+            "split": {"feat_id": 1, "split_value": 76},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 72},
+              "left": {"leaf_value": 0.531504},
+              "right": {"leaf_value": -0.365143}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 89},
+              "left": {"leaf_value": 0.815888},
+              "right": {"leaf_value": 1.53262}}}}},
+      "right": {
+        "split": {"feat_id": 1, "split_value": 91},
+        "left": {
+          "split": {"feat_id": 1, "split_value": 90},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 13},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 6},
+              "left": {"leaf_value": 0.381219},
+              "right": {"leaf_value": 1.3592}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 33},
+              "left": {"leaf_value": -1.04553},
+              "right": {"leaf_value": 0.25437}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 12},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 11},
+              "left": {"leaf_value": 1.0051},
+              "right": {"leaf_value": -0.0175819}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 53},
+              "left": {"leaf_value": -1.82972},
+              "right": {"leaf_value": -2.39244}}}},
+        "right": {
+          "split": {"feat_id": 1, "split_value": 92},
+          "left": {
+            "split": {"feat_id": 0, "split_value": 20},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 12},
+              "left": {"leaf_value": -0.422602},
+              "right": {"leaf_value": 0.76471}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 84},
+              "left": {"leaf_value": 3.48046},
+              "right": {"leaf_value": 0.344112}}},
+          "right": {
+            "split": {"feat_id": 0, "split_value": 81},
+            "left": {
+              "split": {"feat_id": 0, "split_value": 72},
+              "left": {"leaf_value": 0.117453},
+              "right": {"leaf_value": 1.53131}},
+            "right": {
+              "split": {"feat_id": 0, "split_value": 86},
+              "left": {"leaf_value": -2.55731},
+              "right": {"leaf_value": 0.0721551}}}}}}}
+}
+]}

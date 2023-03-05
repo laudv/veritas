@@ -21,7 +21,7 @@
 import timeit, time
 import gurobipy as gu
 import numpy as np
-from veritas import AddTree, Domain
+from veritas import AddTree, Interval
 
 DUMMY_AT = AddTree()
 
@@ -316,7 +316,7 @@ class KantchelianBase:
                 if pvar.x <= 0.5:
                     #print("NEG ", attribute, split_value)
                     lo = split_value # pick last active pvar we encouter!
-            intervals[attribute] = Domain.exclusive(lo, hi)
+            intervals[attribute] = Interval(lo, hi)
         return {attr: intervals[attr] for attr in sorted(intervals)}
 
     def _extract_ensemble_output(self, at, node_info_per_tree):

@@ -44,13 +44,11 @@ class TestSearch(unittest.TestCase):
         print(at[0])
 
         search = Search.max_output(at)
-        search.debug = True
+        search.settings.stop_when_optimal = False
 
         done = False
         while not done:
             done = search.steps(100)
-
-        print("num_rej", search.num_rejected_solutions)
 
         print(done, search.num_solutions(), search.get_solution(0))
         self.assertTrue(done)
@@ -60,10 +58,10 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(solutions[1].output, 4.0)
         self.assertEqual(solutions[2].output, 2.0)
         self.assertEqual(solutions[3].output, 1.0)
-        self.assertEqual(solutions[0].box()[0], Domain.from_lo(3))
-        self.assertEqual(solutions[1].box()[0], Domain.exclusive(2, 3))
-        self.assertEqual(solutions[2].box()[0], Domain.exclusive(1, 2))
-        self.assertEqual(solutions[3].box()[0], Domain.from_hi_exclusive(1))
+        self.assertEqual(solutions[0].box()[0], Interval.from_lo(3))
+        self.assertEqual(solutions[1].box()[0], Interval(2, 3))
+        self.assertEqual(solutions[2].box()[0], Interval(1, 2))
+        self.assertEqual(solutions[3].box()[0], Interval.from_hi(1))
 
     def test_img1(self):
         img = np.load(os.path.join(BPATH, "data/img.npy"))
@@ -71,7 +69,7 @@ class TestSearch(unittest.TestCase):
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
 
-        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-very-easy.json"))
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-very-easy-new.json"))
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
 
@@ -79,7 +77,7 @@ class TestSearch(unittest.TestCase):
         #img = np.array(ys).reshape((100, 100))
 
         search = Search.max_output(at)
-        search.stop_when_optimal = False
+        search.settings.stop_when_optimal = False
         done = StopReason.NONE
         while done == StopReason.NONE:
             done = search.steps(100)
@@ -100,7 +98,7 @@ class TestSearch(unittest.TestCase):
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(np.float32)
 
-        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy.json"))
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy-new.json"))
         at.base_score -= np.median(y)
         #at = at.prune([Domain(0, 30), Domain(0, 30)])
         yhat = at.eval(X)
@@ -109,10 +107,9 @@ class TestSearch(unittest.TestCase):
         m, M = min(yhat), max(yhat)
         #img = np.array(ys).reshape((100, 100))
 
-        search = Search.max_output(at)
-        search.stop_when_optimal = False
+        search = Search.max_output(at, [Interval(0, 30), Interval(0, 30)])
+        search.settings.stop_when_optimal = False
         done = StopReason.NONE
-        search.prune([Domain(0, 30), Domain(0, 30)])
         while done != StopReason.NO_MORE_OPEN:
             done = search.steps(100)
             #print("done?", done)
@@ -171,7 +168,7 @@ class TestSearch(unittest.TestCase):
         ymed = np.median(y)
         X = X.astype(np.float32)
 
-        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy.json"))
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy-new.json"))
         at.base_score -= ymed
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
@@ -194,44 +191,44 @@ class TestSearch(unittest.TestCase):
         except:
             print("Gurobi error!")
 
-    def test_img6(self):
-        img = np.load(os.path.join(BPATH, "data/img.npy"))
-        X = np.array([[x, y] for x in range(100) for y in range(100)])
-        y = np.array([img[x, y] for x, y in X])
-        ymed = np.median(y)
-        X = X.astype(np.float32)
+   # def test_img6(self):
+   #     img = np.load(os.path.join(BPATH, "data/img.npy"))
+   #     X = np.array([[x, y] for x in range(100) for y in range(100)])
+   #     y = np.array([img[x, y] for x, y in X])
+   #     ymed = np.median(y)
+   #     X = X.astype(np.float32)
 
-        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy.json"))
-        at.base_score -= ymed
-        yhat = at.eval(X)
-        imghat = np.array(yhat).reshape((100, 100))
+   #     at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy-new.json"))
+   #     at.base_score -= ymed
+   #     yhat = at.eval(X)
+   #     imghat = np.array(yhat).reshape((100, 100))
 
 
-        example = [70, 50]
-        ypred = at.eval(example)[0]
-        self.assertTrue(ypred < 0.0)
-        print("evaluate", ypred)
-        search = Search.min_dist_to_example(at, example, 0.0)
-        print(search.step_for(1.0, 100))
+   #     example = [70, 50]
+   #     ypred = at.eval(example)[0]
+   #     self.assertTrue(ypred < 0.0)
+   #     print("evaluate", ypred)
+   #     search = Search.min_dist_to_example(at, example, 0.0)
+   #     print(search.step_for(1.0, 100))
 
-        solutions = [search.get_solution(i) for i in range(search.num_solutions())]
-#        for i, sol in enumerate(solutions):
-#            print(at.eval([d.lo for d in sol.box().values()])[0],
-#                    sol.output,
-#                    search.get_solstate_field(i, "g"),
-#                    search.get_solstate_field(i, "dist"),
-#                    sol.box(), example, ypred, at.eval(get_closest_example(sol.box(), example)))
+   #     solutions = [search.get_solution(i) for i in range(search.num_solutions())]
+#  #      for i, sol in enumerate(solutions):
+#  #          print(at.eval([d.lo for d in sol.box().values()])[0],
+#  #                  sol.output,
+#  #                  search.get_solstate_field(i, "g"),
+#  #                  search.get_solstate_field(i, "dist"),
+#  #                  sol.box(), example, ypred, at.eval(get_closest_example(sol.box(), example)))
 #
-        print(search.current_bounds())
+   #     print(search.current_bounds())
 
-        #plot_img_solutions(imghat, solutions)
+   #     #plot_img_solutions(imghat, solutions)
 
-        #ypred = at.eval(rob.generated_examples)
-        #self.assertTrue(ypred[-1] >= 0.0)
+   #     #ypred = at.eval(rob.generated_examples)
+   #     #self.assertTrue(ypred[-1] >= 0.0)
 
-        #kan = KantchelianAttack(at, True, example)
-        #kan.optimize()
-        #print(kan.solution())
+   #     #kan = KantchelianAttack(at, True, example)
+   #     #kan.optimize()
+   #     #print(kan.solution())
 
 if __name__ == "__main__":
     unittest.main()

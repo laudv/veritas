@@ -9,7 +9,7 @@
 # Author: Laurens Devos
 
 import numpy as np
-from . import AddTree, Domain
+from . import AddTree, Interval
 from .sklearn import RfAddTree
 
 import groot.model
@@ -28,11 +28,11 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
             thrs = gnode.threshold
             split_value = np.nextafter(np.float32(thrs), np.float32(np.inf)) # <= splits
             box = vtree.compute_box(vnode)
-            doml, domr = Domain().split(split_value)
+            doml, domr = Interval().split(split_value)
             if feat_id in box:
                 validl, validr = doml.overlaps(box[feat_id]), domr.overlaps(box[feat_id])
                 if not validl or not validr:
-                    print(f"WARNING: invalid split, node domain of feat {feat_id} is {box[feat_id]}",
+                    print(f"WARNING: invalid split, node interval of feat {feat_id} is {box[feat_id]}",
                           f"but split value is {split_value} (node {vnode})")
                     #print(vtree, end="")
                 if not validl:

@@ -44,12 +44,6 @@ struct Settings {
     size_t max_focal_size = 1000;
 
     /**
-     * In bytes, how much memory can Veritas spend on search states.
-     * Default: 4 GiB
-     */
-    size_t max_memory = size_t(4)*1024*1024*1024;
-
-    /**
      * Stop Search::steps(..) and Search::step_for(..) when this number of solutions
      * have been found.
      */

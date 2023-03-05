@@ -208,7 +208,7 @@ public:
 
     FlatBoxT to_flatbox() const {
         FlatBoxT b;
-        to_flatbox(b);
+        to_flatbox(b, false);
         return b;
     }
 };
