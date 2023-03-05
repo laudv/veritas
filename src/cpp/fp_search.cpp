@@ -665,7 +665,7 @@ Search::Search(Settings s, const AddTree& at, const FlatBox& prune_box)
     , atfp_{}
     , fpmap_{}
     , start_time_{time_clock::now()}
-    , max_memory_{settings.max_memory}
+    , max_memory_{size_t(4)*1024*1024*1024}
     , store_{}
     , prune_box_{}
 {
@@ -673,10 +673,6 @@ Search::Search(Settings s, const AddTree& at, const FlatBox& prune_box)
     fpmap_.add(prune_box);
     fpmap_.finalize();
     atfp_ = fpmap_.transform(at_);
-
-    std::cout << "BASESCORE " << at.base_score << std::endl;
-    std::cout << "BASESCORE " << at_.base_score << std::endl;
-    std::cout << "BASESCORE " << atfp_.base_score << std::endl;
 
     // Convert prune_box to fixed precision, and push to leafiter
     int feat_id = 0;
@@ -710,7 +706,7 @@ std::ostream& operator<<(std::ostream& s, const Bounds& bounds) {
 
 std::ostream& operator<<(std::ostream& s, const Solution& sol) {
     BoxRef box{sol.box.begin(), sol.box.end()};
-    return s << "Solution(box=" << box << ", output=" << sol.output << ')';
+    return s << "Solution(" << box << ", output=" << sol.output << ')';
 }
 
 } // namespace veritas

@@ -55,10 +55,10 @@ __copyright__ = "Copyright (c) 2022 DTAI Research Group, KU Leuven"
 
 
 
-def __domain_hash(self):
+def __interval_hash(self):
     return hash((self.lo, self.hi))
 
-setattr(Domain, "hash", __domain_hash)
+setattr(Interval, "hash", __interval_hash)
 
 def __addtree_write(self, f, compress=False):
     if compress:
@@ -73,7 +73,7 @@ def __addtree_read(f, compressed=False):
     if compressed:
         with gzip.open(f, "rb") as fh:
             json = fh.read()
-            return AddTree.from_json(json.decode("utf-8"))
+            return AddTree.from_json(json.decode("asci"))
     else:
         with open(f, "r") as fh:
             return AddTree.from_json(fh.read())
@@ -82,9 +82,11 @@ def __addtree_iter(self):
     for i in range(len(self)):
         yield self[i]
 
+FloatT = np.float64
+
 __addtree_eval_cpp = AddTree.eval
 def __addtree_eval(self, data):
-    data = np.array(data, dtype=np.float32)
+    data = np.array(data, dtype=FloatT)
     return __addtree_eval_cpp(self, data)
 
 setattr(AddTree, "write", __addtree_write)
@@ -94,14 +96,14 @@ setattr(AddTree, "eval", __addtree_eval)
 
 __tree_eval_cpp = Tree.eval
 def __tree_eval(self, data, nid=None):
-    data = np.array(data, dtype=np.float32)
+    data = np.array(data, dtype=FloatT)
     if nid is None:
         nid = self.root()
     return __tree_eval_cpp(self, data, nid)
 
 __tree_eval_node_cpp = Tree.eval_node
 def __tree_eval_node(self, data, nid=None):
-    data = np.array(data, dtype=np.float32)
+    data = np.array(data, dtype=FloatT)
     if nid is None:
         nid = self.root()
     return __tree_eval_node_cpp(self, data, nid)

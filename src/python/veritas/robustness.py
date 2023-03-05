@@ -7,7 +7,7 @@
 import timeit, time, os, contextlib
 import numpy as np
 
-from . import AddTree, Search, get_closest_example, Domain
+from . import AddTree, Search, get_closest_example, Interval
 
 try:
     from .kantchelian import KantchelianOutputOpt
@@ -165,28 +165,24 @@ class VeritasRobustnessSearch(RobustnessSearch):
             raise RuntimeError("source_at and target_at None")
 
     def get_search(self, delta):
-        s = Search.max_output(self.at)
+        box = [Interval(x-delta, x+delta) for x in self.example]
+        s = Search.max_output(self.at, box)
         #s.set_example(self.example)
-        s.stop_when_optimal = True
-        s.stop_when_upper_less_than = 0.0
-        s.stop_when_num_solutions_exceeds = self.stop_when_num_solutions_exceeds
-        s.reject_solution_when_output_less_than = 0.0
-        s.max_focal_size = 10000
-        s.debug = False;
-        #s.auto_eps = True;
-        s.auto_eps = False
-        s.eps = 0.05
+        s.settings.stop_when_optimal = True
+        s.settings.ignore_state_when_worse_than = 0.0
+        s.settings.stop_when_num_solutions_exceeds =\
+                self.stop_when_num_solutions_exceeds
+        s.settings.max_focal_size = 10000
+        s.settings.focal_eps = 0.5
 
-        s.set_mem_capacity(self.mem_capacity)
-        box = [Domain(x-delta, x+delta) for x in self.example]
-        s.prune(box)
+        s.set_max_memory(self.mem_capacity)
         return s
 
     def get_max_output_difference(self, delta, max_time):
         s = self.get_search(delta)
 
         #milp = KantchelianOutputOpt(self.at, silent=True)
-        #milp.constrain_to_box([Domain(x-delta, x+delta) for x in self.example])
+        #milp.constrain_to_box([Interval(x-delta, x+delta) for x in self.example])
         #milp.model.update()
         #m = milp.model.relax()
         #print()
@@ -205,7 +201,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         #print()
 
         stop_reason = s.step_for(max_time, 100)
-        upper_bound = s.current_bounds()[1]
+        upper_bound = s.current_bounds().best
         #print("stop reason", stop_reason, upper_bound)
         max_output_diff = upper_bound
         generated_examples = []
@@ -218,9 +214,9 @@ class VeritasRobustnessSearch(RobustnessSearch):
             for i in range(how_many):
                 sol = s.get_solution(i)
                 closest = get_closest_example(sol, self.example)
-                sol_nodes = np.array(s.get_solution_nodes(i))
-                eval_nodes = np.array([t.eval_node(closest)[0] for t in self.at])
-                assert all(sol_nodes == eval_nodes)
+                #sol_nodes = np.array(s.get_solution_nodes(i))
+                #eval_nodes = np.array([t.eval_node(closest)[0] for t in self.at])
+                #assert all(sol_nodes == eval_nodes)
                 #for m in np.flatnonzero(sol_nodes != eval_nodes):
                 #    a, b = sol_nodes[m], eval_nodes[m]
                 #    print(f"   sol  {m}.{a}", self.at[m].compute_box(a), self.at[m].get_leaf_value(a))
@@ -252,7 +248,7 @@ class MilpRobustnessSearch(RobustnessSearch):
 
     def get_milp(self, delta, rem_time):
         milp = KantchelianOutputOpt(self.at, silent=self.silent, max_time=rem_time)
-        box = [Domain(x-delta, x+delta) for x in self.example]
+        box = [Interval(x-delta, x+delta) for x in self.example]
         milp.constrain_to_box(box)
         return milp
 

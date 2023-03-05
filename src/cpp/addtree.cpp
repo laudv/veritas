@@ -232,7 +232,11 @@ GAddTree<TreeT>::compute_box(typename TreeT::BoxT& box,
 
     for (size_t tree_index = 0; tree_index < size(); ++tree_index) {
         NodeId leaf_id = node_ids[tree_index];
-        trees_[tree_index].compute_box(leaf_id, box);
+        const TreeT& tree = trees_[tree_index];
+        if (!tree.is_leaf(leaf_id))
+            throw std::runtime_error("leaf_id does not point to leaf");
+        if (!tree.compute_box(leaf_id, box))
+            throw std::runtime_error("leaves with non-overlapping boxes");
     }
 }
 

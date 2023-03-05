@@ -17,12 +17,10 @@
 #include <pybind11/numpy.h>
 #include <pybind11/iostream.h>
 
-#include "domain.hpp"
-#include "features.hpp"
+#include "interval.hpp"
+#include "json_io.hpp"
 #include "tree.hpp"
-//#include "graph_search.hpp"
-#include "search.hpp"
-#include "constraints.hpp"
+#include "fp_search.hpp"
 
 namespace py = pybind11;
 using namespace veritas;
@@ -36,34 +34,29 @@ std::string tostr(const T& o)
 }
 
 /** Convert between Python list and C++ Veritas box. */
-Box
-tobox(py::object pybox)
-{
-    Box box;
+Box::BufT tobox(py::object pybox) {
+    Box::BufT buf;
+    Box box{buf};
     FeatId count = 0;
 
-    for (const auto& x : pybox)
-    {
-        Domain d;
-        if (py::isinstance<py::tuple>(x))
-        {
+    for (const auto& x : pybox) {
+        Interval d;
+        if (py::isinstance<py::tuple>(x)) {
             py::tuple t = py::cast<py::tuple>(x);
             FeatId id = py::cast<FeatId>(t[0]);
-            d = py::cast<Domain>(t[1]);
+            d = py::cast<Interval>(t[1]);
             count = id;
         }
-        else if (py::isinstance<py::int_>(x)) // iterating dict
-        {
+        else if (py::isinstance<py::int_>(x)) { // iterating dict
             FeatId id = py::cast<FeatId>(x);
-            d = py::cast<Domain>(pybox[x]);
+            d = py::cast<Interval>(pybox[x]);
             count = id;
         }
-        else if (py::isinstance<Domain>(x))
-        {
-            d = py::cast<Domain>(x);
+        else if (py::isinstance<Interval>(x)) {
+            d = py::cast<Interval>(x);
         }
 
-        if (!refine_box(box, count, d))
+        if (!box.refine_box(count, d))
             throw std::runtime_error("invalid box");
 
         //for (auto bb : box)//debug print
@@ -77,12 +70,11 @@ tobox(py::object pybox)
         //}
         ++count;
     }
-    return box;
+    return buf;
 }
 
-data
-get_data(py::handle h)
-{
+data<FloatT>
+get_data(py::handle h) {
     auto arr = py::array::ensure(h);
     if (!arr) throw std::runtime_error("invalid eval array");
     if (!arr.dtype().is(pybind11::dtype::of<FloatT>()))
@@ -90,15 +82,12 @@ get_data(py::handle h)
 
     py::buffer_info buf = arr.request();
     data d { static_cast<FloatT *>(buf.ptr), 0, 0, 0, 0 };
-    if (buf.ndim == 1)
-    {
+    if (buf.ndim == 1) {
         d.num_rows = 1;
         d.num_cols = buf.shape[0];
         d.stride_row = 0; // there is only one row
         d.stride_col = buf.strides[0] / sizeof(FloatT);
-    }
-    else if (buf.ndim == 2)
-    {
+    } else if (buf.ndim == 2) {
         d.num_rows = buf.shape[0];
         d.num_cols = buf.shape[1];
         d.stride_row = buf.strides[0] / sizeof(FloatT);
@@ -120,42 +109,39 @@ PYBIND11_MODULE(pyveritas, m) {
                 std::cout, py::module::import("sys").attr("stdout")),
             [](void *sor) { delete static_cast<py::scoped_ostream_redirect *>(sor); });
 
-    py::class_<Domain>(m, "Domain")
+    py::class_<Interval>(m, "Interval")
         .def(py::init<>())
         .def(py::init<FloatT, FloatT>())
-        .def_static("from_lo", &Domain::from_lo)
-        .def_static("from_hi_exclusive", &Domain::from_hi_exclusive)
-        .def_static("from_hi_inclusive", &Domain::from_hi_inclusive)
-        .def_static("exclusive", &Domain::exclusive)
-        .def_static("inclusive", &Domain::inclusive)
-        .def_readwrite("lo", &Domain::lo)
-        .def_readwrite("hi", &Domain::hi)
-        .def("lo_is_inf", &Domain::lo_is_inf)
-        .def("hi_is_inf", &Domain::hi_is_inf)
-        .def("contains", &Domain::contains)
-        .def("overlaps", &Domain::overlaps)
-        .def("intersect", &Domain::intersect)
-        .def("is_everything", &Domain::is_everything)
-        .def("split", &Domain::split)
-        .def("__eq__", [](const Domain& s, const Domain& t) { return s == t; })
-        .def("__repr__", [](const Domain& d) { return tostr(d); })
-        .def("__iter__", [](const Domain& d) { return py::iter(py::make_tuple(d.lo, d.hi)); })
+        .def_static("from_lo", &Interval::from_lo)
+        .def_static("from_hi", &Interval::from_hi)
+        .def_readwrite("lo", &Interval::lo)
+        .def_readwrite("hi", &Interval::hi)
+        .def("lo_is_unbound", &Interval::lo_is_unbound)
+        .def("hi_is_unbound", &Interval::hi_is_unbound)
+        .def("contains", &Interval::contains)
+        .def("overlaps", &Interval::overlaps)
+        .def("intersect", &Interval::intersect)
+        .def("is_everything", &Interval::is_everything)
+        .def("split", &Interval::split)
+        .def("__eq__", [](const Interval& s, const Interval& t) { return s == t; })
+        .def("__repr__", [](const Interval& d) { return tostr(d); })
+        .def("__iter__", [](const Interval& d) { return py::iter(py::make_tuple(d.lo, d.hi)); })
         .def(py::pickle(
-            [](const Domain& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
+            [](const Interval& d) { return py::make_tuple(d.lo, d.hi); }, // __getstate__
             [](py::tuple t) { // __setstate__
                 if (t.size() != 2) throw std::runtime_error("invalid pickle state");
-                return Domain(t[0].cast<FloatT>(), t[1].cast<FloatT>());
+                return Interval(t[0].cast<FloatT>(), t[1].cast<FloatT>());
             }))
-        ; // Domain
+        ; // Interval
 
     m.attr("BOOL_SPLIT_VALUE") = BOOL_SPLIT_VALUE;
     m.attr("TRUE_DOMAIN") = TRUE_DOMAIN;
     m.attr("FALSE_DOMAIN") = FALSE_DOMAIN;
 
-    py::class_<DomainPair>(m, "DomainPair")
-        .def_readonly("feat_id", &DomainPair::feat_id)
-        .def_readonly("domain", &DomainPair::domain)
-        ; // DomainPair
+    py::class_<IntervalPair>(m, "IntervalPair")
+        .def_readonly("feat_id", &IntervalPair::feat_id)
+        .def_readonly("interval", &IntervalPair::interval)
+        ; // IntervalPair
 
     py::class_<LtSplit>(m, "LtSplit")
         .def(py::init<FeatId, FloatT>())
@@ -182,26 +168,25 @@ PYBIND11_MODULE(pyveritas, m) {
     };
 
     py::class_<TreeRef>(m, "Tree")
-        .def("root", [](const TreeRef& r) { return r.get().root().id(); })
-        .def("num_leafs", [](const TreeRef& r) { return r.get().num_leafs(); })
+        .def("root", [](const TreeRef& r) { return r.get().root(); })
+        .def("num_leaves", [](const TreeRef& r) { return r.get().num_leaves(); })
         .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
-        .def("is_root", [](const TreeRef& r, NodeId n) { return r.get()[n].is_root(); })
-        .def("is_leaf", [](const TreeRef& r, NodeId n) { return r.get()[n].is_leaf(); })
-        .def("is_internal", [](const TreeRef& r, NodeId n) { return r.get()[n].is_internal(); })
-        .def("left", [](const TreeRef& r, NodeId n) { return r.get()[n].left().id(); })
-        .def("right", [](const TreeRef& r, NodeId n) { return r.get()[n].right().id(); })
-        .def("parent", [](const TreeRef& r, NodeId n) { return r.get()[n].parent().id(); })
-        .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get()[n].tree_size(); })
-        .def("depth", [](const TreeRef& r, NodeId n) { return r.get()[n].depth(); })
-        .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get()[n].leaf_value(); })
-        .def("get_split", [](const TreeRef& r, NodeId n) { return r.get()[n].get_split(); })
-        .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get()[n].set_leaf_value(v); })
+        .def("is_root", [](const TreeRef& r, NodeId n) { return r.get().is_root(n); })
+        .def("is_leaf", [](const TreeRef& r, NodeId n) { return r.get().is_leaf(n); })
+        .def("is_internal", [](const TreeRef& r, NodeId n) { return r.get().is_internal(n); })
+        .def("left", [](const TreeRef& r, NodeId n) { return r.get().left(n); })
+        .def("right", [](const TreeRef& r, NodeId n) { return r.get().right(n); })
+        .def("parent", [](const TreeRef& r, NodeId n) { return r.get().parent(n); })
+        .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get().tree_size(n); })
+        .def("depth", [](const TreeRef& r, NodeId n) { return r.get().depth(n); })
+        .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get().leaf_value(n); })
+        .def("get_split", [](const TreeRef& r, NodeId n) { return r.get().get_split(n); })
+        .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get().leaf_value(n) = v; })
         .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n)
-                { return r.get()[n].find_minmax_leaf_value(); })
-        .def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
-        .def("leaf_value_variance", [](TreeRef& r) { return r.get().leaf_value_variance(); })
-        .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get()[n].split({fid, sv}); })
-        .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get()[n].split(fid); })
+                { return r.get().find_minmax_leaf_value(n); })
+        //.def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
+        .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get().split(n, {fid, sv}); })
+        .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get().split(n, bool_ltsplit(fid)); })
         .def("eval", [](const TreeRef& r, py::handle arr, NodeId nid) {
             data d = get_data(arr);
 
@@ -210,7 +195,7 @@ PYBIND11_MODULE(pyveritas, m) {
             FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = r.get()[nid].eval(d.row(i));
+                out_ptr[i] = r.get().eval(nid, d.row(i));
 
             return result;
         })
@@ -222,32 +207,36 @@ PYBIND11_MODULE(pyveritas, m) {
             NodeId *out_ptr = static_cast<NodeId *>(out.ptr);
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = r.get()[nid].eval_node(d.row(i));
+                out_ptr[i] = r.get().eval_node(nid, d.row(i));
 
             return result;
         })
 
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
         .def("compute_box", [](const TreeRef& r, NodeId n) {
-            Box box = r.get()[n].compute_box();
+            Box::BufT buf;
+            Box box{buf};
+            r.get().compute_box(n, box);
             py::dict d;
             for (auto&& [feat_id, dom] : box)
                 d[py::int_(feat_id)] = dom;
             return d;
         })
-        .def("prune", [](const TreeRef& r, const py::object& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            AddTree at;
-            Tree t = r.get().prune(b);
-            at.add_tree(std::move(t));
-            return at;
-        })
+        // TODO
+        //.def("prune", [](const TreeRef& r, const py::object& pybox) {
+        //    Box::BufT buf = tobox(pybox);
+        //    Box box{buf};
+        //    BoxRef b(box);
+        //    AddTree at;
+        //    Tree t = r.get().prune(b);
+        //    at.add_tree(std::move(t));
+        //    return at;
+        //})
         ; // TreeRef
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<>())
-        .def(py::init<const AddTree&, size_t, size_t>())
+        //.def(py::init<const AddTree&, size_t, size_t>())
         .def_readwrite("base_score", &AddTree::base_score)
         .def("copy", [](const AddTree& at) { return AddTree(at); })
         .def("__getitem__", [](const std::shared_ptr<AddTree>& at, size_t i) {
@@ -264,24 +253,27 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("add_tree", [](const std::shared_ptr<AddTree>& at, const TreeRef& tref) {
                 at->add_tree(tref.get()); // copy
                 return TreeRef{at, at->size()-1}; })
-        .def("prune", [](AddTree& at, const py::object& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            //py::print("pruning AddTree using box", tostr(b));
-            return at.prune(b);
-        })
+        // TODO
+        //.def("prune", [](AddTree& at, const py::object& pybox) {
+        //    Box box = tobox(pybox);
+        //    BoxRef b(box);
+        //    //py::print("pruning AddTree using box", tostr(b));
+        //    return at.prune(b);
+        //})
         .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
-        .def("negate_leaf_values", &AddTree::negate_leaf_values)
+        //.def("negate_leaf_values", &AddTree::negate_leaf_values)
         .def("to_json", [](const AddTree& at) {
-            std::stringstream s;
-            at.to_json(s);
-            return s.str();
+            std::stringstream ss;
+            addtree_to_json(ss, at);
+            return ss.str();
         })
         .def_static("from_json", [](const std::string& json) {
-            AddTree at;
             std::stringstream s(json);
-            at.from_json(s);
-            return at;
+            return addtree_from_json<AddTree>(s);
+        })
+        .def_static("from_oldjson", [](const std::string& json) {
+            std::stringstream s(json);
+            return addtree_from_oldjson(s);
         })
         .def("eval", [](const AddTree& at, py::handle arr) {
             data d = get_data(arr);
@@ -299,81 +291,71 @@ PYBIND11_MODULE(pyveritas, m) {
             if (at.size() != leaf_ids.size())
                 throw std::runtime_error("one leaf_id per tree in AddTree");
 
-            Box box;
-            for (size_t tree_index = 0; tree_index < at.size(); ++tree_index)
-            {
-                NodeId leaf_id = leaf_ids[tree_index];
-                const Tree& tree = at[tree_index];
-                auto node = tree[leaf_id];
-                if (!node.is_leaf())
-                    throw std::runtime_error("leaf_id does not point to leaf");
-                bool success = node.compute_box(box);
-                if (!success)
-                    throw std::runtime_error("non-overlapping leafs");
-            }
+            Box::BufT buf;
+            Box box{buf};
+            at.compute_box(box, leaf_ids);
 
             py::dict d;
             for (auto&& [feat_id, dom] : box)
                 d[py::int_(feat_id)] = dom;
             return d;
         })
-        .def("concat_negated", &AddTree::concat_negated)
         .def("__str__", [](const AddTree& at) { return tostr(at); })
         .def(py::pickle(
             [](const AddTree& at) { // __getstate__
                 std::stringstream s;
-                at.to_json(s);
+                addtree_to_json(s, at);
                 return s.str();
             },
             [](const std::string& json) { // __setstate__
                 AddTree at;
                 std::stringstream s(json);
-                at.from_json(s);
+                return addtree_from_json<AddTree>(s);
                 return at;
             }))
         ; // AddTree
 
-    py::class_<FeatMap>(m, "FeatMap")
-        .def(py::init<FeatId>())
-        .def(py::init<const std::vector<std::string>&>())
-        .def("num_features", &FeatMap::num_features)
-        .def("__len__", &FeatMap::num_features)
-        .def("get_index", [](const FeatMap& fm, FeatId id, int inst) { return fm.get_index(id, inst); })
-        .def("get_index", [](const FeatMap& fm, const std::string& n, int inst) { return fm.get_index(n, inst); })
-        .def("get_instance", &FeatMap::get_instance)
-        .def("get_name", &FeatMap::get_name)
-        .def("get_indices_map", [](const FeatMap& fm) {
-            auto map = fm.get_indices_map();
-            py::object d = py::dict();
-            for (auto&& [id, idx] : map)
-            {
-                if (d.contains(py::int_(id)))
-                {
-                    py::list l = d[py::int_(id)];
-                    l.append(py::int_(idx));
-                }
-                else
-                {
-                    py::list l;
-                    l.append(py::int_(idx));
-                    d[py::int_(id)] = l;
-                }
-            }
-            return d;
-        })
-        .def("share_all_features_between_instances", &FeatMap::share_all_features_between_instances)
-        .def("get_feat_id", [](const FeatMap& fm, FeatId id) { return fm.get_feat_id(id); })
-        .def("get_feat_id", [](const FeatMap& fm, const std::string& n, int i) { return fm.get_feat_id(n, i); })
-        .def("use_same_id_for", &FeatMap::use_same_id_for)
-        .def("transform", [](const FeatMap& fm, const AddTree& at, int i) { return fm.transform(at, i); })
-        .def("__iter__", [](const FeatMap &fm) { return py::make_iterator(fm.begin(), fm.end()); },
-                    py::keep_alive<0, 1>())
-        .def("iter_instance", [](const FeatMap& fm, int i) {
-                auto h = fm.iter_instance(i);
-                return py::make_iterator(h.begin(), h.end()); },
-                py::keep_alive<0, 1>())
-        .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
-        ; // FeatMap
+    //py::class_<FeatMap>(m, "FeatMap")
+    //    .def(py::init<FeatId>())
+    //    .def(py::init<const std::vector<std::string>&>())
+    //    .def("num_features", &FeatMap::num_features)
+    //    .def("__len__", &FeatMap::num_features)
+    //    .def("get_index", [](const FeatMap& fm, FeatId id, int inst) { return fm.get_index(id, inst); })
+    //    .def("get_index", [](const FeatMap& fm, const std::string& n, int inst) { return fm.get_index(n, inst); })
+    //    .def("get_instance", &FeatMap::get_instance)
+    //    .def("get_name", &FeatMap::get_name)
+    //    .def("get_indices_map", [](const FeatMap& fm) {
+    //        auto map = fm.get_indices_map();
+    //        py::object d = py::dict();
+    //        for (auto&& [id, idx] : map)
+    //        {
+    //            if (d.contains(py::int_(id)))
+    //            {
+    //                py::list l = d[py::int_(id)];
+    //                l.append(py::int_(idx));
+    //            }
+    //            else
+    //            {
+    //                py::list l;
+    //                l.append(py::int_(idx));
+    //                d[py::int_(id)] = l;
+    //            }
+    //        }
+    //        return d;
+    //    })
+    //    .def("share_all_features_between_instances", &FeatMap::share_all_features_between_instances)
+    //    .def("get_feat_id", [](const FeatMap& fm, FeatId id) { return fm.get_feat_id(id); })
+    //    .def("get_feat_id", [](const FeatMap& fm, const std::string& n, int i) { return fm.get_feat_id(n, i); })
+    //    .def("use_same_id_for", &FeatMap::use_same_id_for)
+    //    .def("transform", [](const FeatMap& fm, const AddTree& at, int i) { return fm.transform(at, i); })
+    //    .def("__iter__", [](const FeatMap &fm) { return py::make_iterator(fm.begin(), fm.end()); },
+    //                py::keep_alive<0, 1>())
+    //    .def("iter_instance", [](const FeatMap& fm, int i) {
+    //            auto h = fm.iter_instance(i);
+    //            return py::make_iterator(h.begin(), h.end()); },
+    //            py::keep_alive<0, 1>())
+    //    .def("__str__", [](const FeatMap& fm) { return tostr(fm); })
+    //    ; // FeatMap
 
     py::enum_<StopReason>(m, "StopReason")
         .value("NONE", StopReason::NONE)
@@ -381,134 +363,82 @@ PYBIND11_MODULE(pyveritas, m) {
         .value("NUM_SOLUTIONS_EXCEEDED", StopReason::NUM_SOLUTIONS_EXCEEDED)
         .value("NUM_NEW_SOLUTIONS_EXCEEDED", StopReason::NUM_NEW_SOLUTIONS_EXCEEDED)
         .value("OPTIMAL", StopReason::OPTIMAL)
-        .value("UPPER_LT", StopReason::UPPER_LT)
-        .value("LOWER_GT", StopReason::LOWER_GT)
+        .value("ATLEAST_BOUND_BETTER_THAN", StopReason::ATLEAST_BOUND_BETTER_THAN)
+        .value("OUT_OF_TIME", StopReason::OUT_OF_TIME)
+        .value("OUT_OF_MEMORY", StopReason::OUT_OF_MEMORY)
         ; // StopReason
+    
+    py::class_<Bounds>(m, "Bounds")
+        .def_readonly("atleast", &Bounds::atleast)
+        .def_readonly("best", &Bounds::best)
+        .def_readonly("top_of_open", &Bounds::top_of_open)
+        ; // Bounds
+    
+    py::class_<Statistics>(m, "Statistics")
+        .def_readonly("num_steps", &Statistics::num_steps)
+        .def_readonly("num_states_ignored", &Statistics::num_states_ignored)
+        ; // Statistics
 
+    py::class_<Settings>(m, "Settings")
+        .def_readwrite("focal_eps", &Settings::focal_eps)
+        .def_readwrite("max_focal_size", &Settings::max_focal_size)
+        .def_readwrite("stop_when_num_solutions_exceeds",
+                &Settings::stop_when_num_solutions_exceeds)
+        .def_readwrite("stop_when_num_new_solutions_exceeds",
+                &Settings::stop_when_num_new_solutions_exceeds)
+        .def_readwrite("stop_when_optimal",
+                &Settings::stop_when_optimal)
+        .def_readwrite("ignore_state_when_worse_than",
+                &Settings::ignore_state_when_worse_than)
+        .def_readwrite("stop_when_atleast_bound_better_than",
+                &Settings::stop_when_atleast_bound_better_than)
+        ; // Settings
 
-    py::class_<VSearch, std::shared_ptr<VSearch>>(m, "Search")
-        .def_static("max_output", &VSearch::max_output)
-        .def_static("min_dist_to_example", &VSearch::min_dist_to_example)
-        .def("step", &VSearch::step)
-        .def("steps", &VSearch::steps)
-        .def("step_for", &VSearch::step_for)
-        .def("steps", &VSearch::steps)
-        .def("step_for", &VSearch::step_for)
-        .def("num_solutions", &VSearch::num_solutions)
-        .def("num_open", &VSearch::num_open)
-        .def("set_mem_capacity", &VSearch::set_mem_capacity)
-        .def("remaining_mem_capacity", &VSearch::remaining_mem_capacity)
-        .def("used_mem_size", &VSearch::used_mem_size)
-        .def("time_since_start", &VSearch::time_since_start)
-        .def("current_bounds", &VSearch::current_bounds)
-        .def("get_solution", &VSearch::get_solution)
-        .def("get_solution_nodes", &VSearch::get_solution_nodes)
-        .def("is_optimal", &VSearch::is_optimal)
-        .def("base_score", &VSearch::base_score)
-        .def("get_at_output_for_box", [](const VSearch& s, const py::list& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            return s.get_at_output_for_box(b);
+    py::class_<Search, std::shared_ptr<Search>>(m, "Search")
+        .def_static("max_output", [](const AddTree& at, const py::object& pybox) {
+            auto buf = tobox(pybox);
+            auto fbox = BoxRef(buf).to_flatbox();
+            return Search::max_output(at, fbox);
+        }, py::arg("at"), py::arg("prune_box") = py::list())
+        .def_static("min_output", [](const AddTree& at, const py::object& pybox) {
+            auto buf = tobox(pybox);
+            auto fbox = BoxRef(buf).to_flatbox();
+            return Search::min_output(at, fbox);
         })
-        .def("prune", [](VSearch& s, const py::object& pybox) {
-            Box box = tobox(pybox);
-            BoxRef b(box);
-            return s.prune_by_box(b);
-        })
-        .def("get_solstate_field", [](const VSearch& s, size_t index, const std::string& field) -> py::object {
-            if (const auto* v = dynamic_cast<const Search<MaxOutputHeuristic>*>(&s))
-            {
-                const auto& s = v->get_solution_state(index);
-                if (field == "g")
-                    return py::float_(s.g);
-                if (field == "h")
-                    return py::float_(s.h);
-            }
-            else if(const auto* v = dynamic_cast<const Search<MinDistToExampleHeuristic>*>(&s))
-            {
-                const auto& s = v->get_solution_state(index);
-                if (field == "g")
-                    return py::float_(s.g);
-                if (field == "h")
-                    return py::float_(s.h);
-                if (field == "dist")
-                    return py::float_(s.dist);
-            }
-            else {
-                throw std::runtime_error("unsupported VSearch subtype");
-            }
-            return py::none();
-        })
-
-        .def("add_onehot_constraint", [](std::shared_ptr<VSearch> s, const std::vector<FeatId>& feat_ids) {
-            if (auto* v = dynamic_cast<Search<MaxOutputHeuristic>*>(s.get()))
-            {
-                constraints::onehot(*v, feat_ids);
-            }
-            else {
-                throw std::runtime_error("unsupported VSearch subtype");
-            }
-            return py::none();
-
-            })
-
-        .def("add_sqdist1_constraint", [](std::shared_ptr<VSearch> s, FeatId x, FeatId y, FeatId d, FloatT x0, FloatT y0) {
-            if (auto* v = dynamic_cast<Search<MaxOutputHeuristic>*>(s.get()))
-            {
-                constraints::sqdist1(*v, x, y, d, x0, y0);
-            }
-            else {
-                throw std::runtime_error("unsupported VSearch subtype");
-            }
-            return py::none();
-
-            })
-
-
-
-        // stats
-        .def_readonly("num_steps", &VSearch::num_steps)
-        .def_readonly("num_rejected_solutions", &VSearch::num_rejected_solutions)
-        .def_readonly("num_rejected_states", &VSearch::num_rejected_states)
-        .def_readonly("snapshots", &VSearch::snapshots)
-
-        // options
-        .def_readwrite("eps", &VSearch::eps)
-        .def_readwrite("debug", &VSearch::debug)
-        .def_readwrite("max_focal_size", &VSearch::max_focal_size)
-        .def_readwrite("auto_eps", &VSearch::auto_eps)
-        .def_readwrite("reject_solution_when_output_less_than", &VSearch::reject_solution_when_output_less_than)
-
-        // stop condition
-        .def_readwrite("stop_when_num_solutions_exceeds",     &VSearch::stop_when_num_solutions_exceeds)
-        .def_readwrite("stop_when_num_new_solutions_exceeds", &VSearch::stop_when_num_new_solutions_exceeds)
-        .def_readwrite("stop_when_optimal",                   &VSearch::stop_when_optimal)
-        .def_readwrite("stop_when_upper_less_than",           &VSearch::stop_when_upper_less_than)
-        .def_readwrite("stop_when_lower_greater_than",        &VSearch::stop_when_lower_greater_than)
-        ; // VSearch
+        .def("step", &Search::step)
+        .def("steps", &Search::steps)
+        .def("step_for", &Search::step_for)
+        .def("num_solutions", &Search::num_solutions)
+        .def("num_open", &Search::num_open)
+        .def("get_max_memory", &Search::get_max_memory)
+        .def("set_max_memory", &Search::set_max_memory)
+        .def("get_used_memory", &Search::get_used_memory)
+        .def("time_since_start", &Search::time_since_start)
+        .def("current_bounds", &Search::current_bounds)
+        .def("get_solution", &Search::get_solution)
+        //.def("get_solution_nodes", &Search::get_solution_nodes)
+        .def("is_optimal", &Search::is_optimal)
+//        .def("get_at_output_for_box", [](const VSearch& s, const py::list& pybox) {
+//            Box box = tobox(pybox);
+//            BoxRef b(box);
+//            return s.get_at_output_for_box(b);
+//        })
+        .def_readonly("stats", &Search::stats)
+        .def_readwrite("settings", &Search::settings)
+        ; // Search
 
     py::class_<Solution>(m, "Solution")
-        .def_readonly("eps", &Solution::eps)
+        //.def_readonly("eps", &Solution::eps)
         .def_readonly("time", &Solution::time)
         .def_readonly("output", &Solution::output)
         .def("box", [](const Solution& s) {
             py::dict d;
-            for (auto&& [feat_id, dom] : s.box)
-                d[py::int_(feat_id)] = dom;
+            for (auto&& [feat_id, ival] : s.box)
+                d[py::int_(feat_id)] = ival;
             return d;
         })
         .def("__str__", [](const Solution& s) { return tostr(s); })
         ; // Solution
-
-    py::class_<Snapshot>(m, "Snapshot")
-        .def_readonly("time", &Snapshot::time)
-        .def_readonly("num_steps", &Snapshot::num_steps)
-        .def_readonly("num_solutions", &Snapshot::num_solutions)
-        .def_readonly("num_open", &Snapshot::num_open)
-        .def_readonly("eps", &Snapshot::eps)
-        .def_readonly("bounds", &Snapshot::bounds)
-        .def_readonly("avg_focal_size", &Snapshot::avg_focal_size)
-        ; // Snapshot
 
 
 
