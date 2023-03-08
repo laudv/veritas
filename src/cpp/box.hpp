@@ -172,8 +172,7 @@ public:
     inline bool empty() const { return size() == 0; }
 
     /** Do the intervals for the corresponding feature ids overlap? */
-    inline bool overlaps(const GBoxRef& other) const
-    {
+    inline bool overlaps(const GBoxRef& other) const {
         auto it0 = begin_;
         auto it1 = other.begin_;
 
@@ -190,6 +189,14 @@ public:
         }
 
         return true;
+    }
+
+    inline GInterval<T> get(FeatId feat_id) const {
+        for (auto it = begin_; it < end_; ++it) {
+            if (it->feat_id == feat_id)
+                return it->interval;
+        }
+        return {};
     }
 
     inline void to_flatbox(FlatBoxT& fbox, bool clear) const {

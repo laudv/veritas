@@ -47,16 +47,16 @@ GAddTree<TreeT>::get_splits() const {
     return splits;
 }
 
-//template <typename TreeT>
-//GAddTree<TreeT>
-//GAddTree<TreeT>::prune(BoxRef box) const
-//{
-//    throw std::runtime_error("not implemented");
-//    //GAddTree<TreeT> new_at;
-//    //for (const Tree& t : *this)
-//    //    new_at.add_tree(t.prune(box));
-//    //return new_at;
-//}
+template <typename TreeT>
+GAddTree<TreeT>
+GAddTree<TreeT>::prune(const BoxRefT& box) const
+{
+    GAddTree<TreeT> new_at;
+    new_at.base_score = base_score;
+    for (const TreeT& t : *this)
+        new_at.add_tree(t.prune(box));
+    return new_at;
+}
 
 template <typename TreeT>
 GAddTree<TreeT>

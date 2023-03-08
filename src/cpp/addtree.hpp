@@ -28,6 +28,7 @@ public:
     using SplitValueT = typename TreeT::SplitValueT;
     using ValueType = typename TreeT::ValueType;
     using SplitMapT = typename TreeT::SplitMapT;
+    using BoxRefT = typename TreeT::BoxRefT;
 
     using TreeVecT = std::vector<TreeT>;
     using const_iterator = typename TreeVecT::const_iterator;
@@ -82,7 +83,7 @@ public:
     /** Map feature -> [list of split values, sorted, unique]. */
     SplitMapT get_splits() const;
     /** Prune each tree in the ensemble. See TreeT::prune. */
-    //GAddTree prune(BoxRef box) const;
+    GAddTree prune(const BoxRefT& box) const;
 
     /**
      * Avoid negative leaf values by adding a constant positive value to

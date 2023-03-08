@@ -195,6 +195,73 @@ int test_find_minmax() {
     return result;
 }
 
+int test_prune1() {
+    TreeFp t;
+    t.split(t[""], {1, 5});
+    t.leaf_value(t["l"]) = 4;
+    t.leaf_value(t["r"]) = 2;
+
+    BoxFp::BufT buf {{1, {2,4}}}; // left only
+    TreeFp tleft = t.prune(BoxRefFp(buf));
+    buf = {{1, {5,8}}};
+    TreeFp tright = t.prune(BoxRefFp(buf));
+    buf = {{1, {4,8}}};
+    TreeFp tboth = t.prune(BoxRefFp(buf));
+
+    bool result = true
+        && tleft.is_root(tleft.root())
+        && tright.is_root(tright.root())
+        && tleft.leaf_value(tleft.root()) == 4
+        && tright.leaf_value(tright.root()) == 2
+        && tboth.num_nodes() == 3
+        && tboth.get_split(tboth.root()) == LtSplitFp{1, 5}
+        && tboth.leaf_value(tboth["l"]) == 4
+        && tboth.leaf_value(tboth["r"]) == 2
+        ;
+
+    std::cout << "test_prune1 " << result << std::endl;
+    return result;
+}
+
+int test_prune2() {
+    TreeFp t;
+    t.split(t[""], {1, 5});
+    t.split(t["l"], {1, 4});
+    t.split(t["ll"], {1, 3});
+    t.split(t["lll"], {1, 2});
+    t.leaf_value(t["r"]) = 5;
+    t.leaf_value(t["lr"]) = 4;
+    t.leaf_value(t["llr"]) = 3;
+    t.leaf_value(t["lllr"]) = 2;
+    t.leaf_value(t["llll"]) = 1;
+
+
+    std::cout << t << std::endl;
+
+    bool result = true;
+
+    std::vector<FpT> d {0, 1};
+    d[1] = 1; result &= t.eval(data<FpT>(d)) == 1.0;
+    d[1] = 2; result &= t.eval(data<FpT>(d)) == 2.0;
+    d[1] = 3; result &= t.eval(data<FpT>(d)) == 3.0;
+    d[1] = 4; result &= t.eval(data<FpT>(d)) == 4.0;
+    d[1] = 5; result &= t.eval(data<FpT>(d)) == 5.0;
+    d[1] = 6; result &= t.eval(data<FpT>(d)) == 5.0;
+
+    BoxFp::BufT buf {{1, {2,4}}}; // left only
+    TreeFp tp = t.prune(BoxRefFp(buf));
+
+    result = result
+        && tp.num_nodes() == 3
+        && tp.get_split(tp.root()) == LtSplitFp(1, 3)
+        && tp.leaf_value(tp["l"]) == 2.0
+        && tp.leaf_value(tp["r"]) == 3.0
+        ;
+
+    std::cout << "test_prune2 " << result << std::endl;
+    return result;
+}
+
 int main_tree() {
     int result = 1
         && test_tree1()
@@ -204,6 +271,8 @@ int main_tree() {
         && test_get_splits2()
         && test_compute_box1()
         && test_eval1()
+        && test_prune1()
+        && test_prune2()
         ;
     return !result;
 }
