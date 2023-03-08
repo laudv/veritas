@@ -110,6 +110,7 @@ public:
     using SelfT = GTree<SplitT, ValueT>;
     using SplitType = SplitT;
     using SplitValueT = typename SplitT::ValueT;
+    using IntervalType = typename SplitT::IntervalT;
     using ValueType = ValueT;
     using BoxT = GBox<SplitValueT>;
     using BoxRefT = GBoxRef<SplitValueT>;
@@ -322,7 +323,7 @@ public:
 
 
     /** Prune all branches that are never taken for examples in the given box. */
-    //SelfT prune(const BoxRefT& box) const;
+    SelfT prune(const BoxRefT& box) const;
 
     /** See NodeRef::find_minmax_leaf_value */
     std::tuple<ValueT, ValueT> find_minmax_leaf_value(NodeId id) const {

@@ -12,57 +12,55 @@
 #include <iostream>
 #include <stdexcept>
 #include <type_traits>
+#include <vector>
+#include <stack>
 
 namespace veritas {
 
-    //template <typename SplitT, typename ValueT>
-    //GTree<SplitT, ValueT>
-    //GTree<SplitT, ValueT>::prune(const BoxRefT<typename SplitT::Interval::ValueT>& box) const
-    //{
-    //    std::stack<ConstRef, std::vector<ConstRef>> stack1;
-    //    std::stack<MutRef, std::vector<MutRef>> stack2;
-    //
-    //    Tree new_tree;
-    //    stack1.push(root());
-    //    stack2.push(new_tree.root());
-    //
-    //    while (stack1.size() != 0)
-    //    {
-    //        ConstRef n1 = stack1.top();
-    //        stack1.pop();
-    //        MutRef n2 = stack2.top();
-    //
-    //        if (n1.is_leaf())
-    //        {
-    //            stack2.pop();
-    //            n2.set_leaf_value(n1.leaf_value());
-    //        }
-    //        else
-    //        {
-    //            Domain ldom, rdom;
-    //            int flag = box.overlaps(n1.get_split());
-    //
-    //            if (flag == (BoxRef::OVERLAPS_LEFT | BoxRef::OVERLAPS_RIGHT))
-    //            {
-    //                stack2.pop();
-    //                n2.split(n1.get_split());
-    //                stack2.push(n2.right());
-    //                stack2.push(n2.left());
-    //            }
-    //
-    //            if ((flag & BoxRef::OVERLAPS_RIGHT) != 0)
-    //            {
-    //                stack1.push(n1.right());
-    //            }
-    //            if ((flag & BoxRef::OVERLAPS_LEFT) != 0)
-    //            {
-    //                stack1.push(n1.left());
-    //            }
-    //        }
-    //    }
-    //
-    //    return new_tree;
-    //}
+template <typename SplitT, typename ValueT>
+GTree<SplitT, ValueT>
+GTree<SplitT, ValueT>::prune(const BoxRefT& box) const {
+    std::stack<NodeId, std::vector<NodeId>> stack1;
+    std::stack<NodeId, std::vector<NodeId>> stack2;
+
+    GTree<SplitT, ValueT> new_tree;
+    stack1.push(root());
+    stack2.push(new_tree.root());
+
+    while (stack1.size() != 0) {
+        size_t n1 = stack1.top();
+        stack1.pop();
+        size_t n2 = stack2.top();
+
+        if (is_leaf(n1)) {
+            stack2.pop();
+            new_tree.leaf_value(n2) = leaf_value(n1);
+        } else {
+            const auto& split = get_split(n1);
+            auto&& [ival_l, ival_r] = split.get_intervals();
+            auto box_ival = box.get(split.feat_id);
+
+            bool overlaps_left = box_ival.overlaps(ival_l);
+            bool overlaps_right = box_ival.overlaps(ival_r);
+
+            if (overlaps_left && overlaps_right) {
+                stack2.pop();
+                new_tree.split(n2, split);
+                stack2.push(new_tree.right(n2));
+                stack2.push(new_tree.left(n2));
+            }
+
+            if (overlaps_right) {
+                stack1.push(right(n1));
+            }
+            if (overlaps_left) {
+                stack1.push(left(n1));
+            }
+        }
+    }
+
+    return new_tree;
+}
 
 // Tree
 // Tree::limit_depth(int max_depth) const
@@ -149,6 +147,10 @@ namespace veritas {
 
 //    return new_tree;
 //}
+
+
+template class GTree<LtSplit, FloatT>;
+template class GTree<LtSplitFp, FloatT>;
 
 
 } // namespace veritas
