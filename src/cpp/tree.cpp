@@ -122,31 +122,30 @@ GTree<SplitT, ValueT>::prune(const BoxRefT& box) const {
 //    return static_cast<FloatT>((sum2 - (sum*sum) / count) / count);
 //}
 
-// Tree
-// Tree::negate_leaf_values() const
-//{
-//     Tree new_tree;
+template <typename SplitT, typename ValueT>
+GTree<SplitT, ValueT>
+GTree<SplitT, ValueT>::negate_leaf_values() const {
+    const GTree<SplitT, ValueT>& tn = *this;
+    GTree<SplitT, ValueT> tm;
 
-//    std::stack<std::tuple<ConstRef, MutRef>,
-//        std::vector<std::tuple<ConstRef, MutRef>>> stack;
-//    stack.push({root(), new_tree.root()});
+    std::stack<std::tuple<NodeId, NodeId>,
+        std::vector<std::tuple<NodeId, NodeId>>> stack;
+    stack.push({root(), tm.root()});
 
-//    while (stack.size() != 0)
-//    {
-//        auto [n, m] = stack.top();
-//        stack.pop();
+    while (stack.size() != 0) {
+        auto [n, m] = stack.top();
+        stack.pop();
 
-//        if (n.is_internal())
-//        {
-//            m.split(n.get_split());
-//            stack.push({n.right(), m.right()});
-//            stack.push({n.left(), m.left()});
-//        }
-//        else m.set_leaf_value(-n.leaf_value());
-//    }
+        if (tn.is_internal(n)) {
+            tm.split(m, tn.get_split(n));
+            stack.push({tn.right(n), tm.right(m)});
+            stack.push({tn.left(n), tm.left(m)});
+        }
+        else tm.leaf_value(m) = -tn.leaf_value(n);
+    }
 
-//    return new_tree;
-//}
+    return tm;
+}
 
 
 template class GTree<LtSplit, FloatT>;

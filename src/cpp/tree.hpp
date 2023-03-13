@@ -345,7 +345,7 @@ public:
     /** Compute the variance of the leaf values */
     //FloatT leaf_value_variance() const;
     /** Construct a new tree with negated leaf values. */
-    //SelfT negate_leaf_values() const;
+    SelfT negate_leaf_values() const;
 
     /** Map feature -> [list of split values, sorted, unique]. */
     SplitMapT get_splits() const {

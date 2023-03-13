@@ -262,6 +262,23 @@ int test_prune2() {
     return result;
 }
 
+int test_negate_leaf_values() {
+    TreeFp t;
+    t.split(t[""], {1, 5});
+    t.leaf_value(t["l"]) = 4;
+    t.leaf_value(t["r"]) = 2;
+
+    TreeFp tneg = t.negate_leaf_values();
+
+    int result = true
+        && tneg.leaf_value(tneg["l"]) == -4
+        && tneg.leaf_value(tneg["r"]) == -2
+        ;
+
+    std::cout << "test_negate_leaf_values " << result << std::endl;
+    return result;
+}
+
 int main_tree() {
     int result = 1
         && test_tree1()
@@ -273,6 +290,7 @@ int main_tree() {
         && test_eval1()
         && test_prune1()
         && test_prune2()
+        && test_negate_leaf_values()
         ;
     return !result;
 }

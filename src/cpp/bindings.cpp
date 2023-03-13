@@ -256,7 +256,8 @@ PYBIND11_MODULE(pyveritas, m) {
             return at.prune(BoxRef{box});
         })
         .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
-        //.def("negate_leaf_values", &AddTree::negate_leaf_values)
+        .def("negate_leaf_values", &AddTree::negate_leaf_values)
+        .def("concat_negated", &AddTree::concat_negated)
         .def("to_json", [](const AddTree& at) {
             std::stringstream ss;
             addtree_to_json(ss, at);

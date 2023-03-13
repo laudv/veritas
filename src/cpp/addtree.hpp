@@ -97,10 +97,11 @@ public:
     ///** Sort the trees in the ensemble by leaf-value variance. Largest
     // * variance first. */
     //GAddTree sort_by_leaf_value_variance() const;
-    ///** Concatenate the negated trees of `other` to this tree. */
-    //GAddTree concat_negated(const GAddTree& other) const;
-    ///** Negate the leaf values of all trees. See TreeT::negate_leaf_values. */
-    //GAddTree negate_leaf_values() const;
+
+    /** Concatenate the negated trees of `other` to this tree. */
+    GAddTree concat_negated(const GAddTree& other) const;
+    /** Negate the leaf values of all trees. See TreeT::negate_leaf_values. */
+    GAddTree negate_leaf_values() const;
 
     /** Evaluate the ensemble. This is the sum of the evaluations of the
      * trees. See TreeT::eval. */
