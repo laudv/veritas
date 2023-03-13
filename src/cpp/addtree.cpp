@@ -117,23 +117,23 @@ GAddTree<TreeT>::neutralize_negative_leaf_values() const {
 //    }
 //    return new_at;
 //}
-//template <typename TreeT>
-//GAddTree<TreeT>
-//GAddTree<TreeT>::concat_negated(const GAddTree<TreeT>& other) const
-//{
-//    GAddTree<TreeT> new_at(*this);
-//    new_at.base_score -= other.base_score;
-//    for (const Tree& t : other)
-//        new_at.add_tree(t.negate_leaf_values());
-//    return new_at;
-//}
+template <typename TreeT>
+GAddTree<TreeT>
+GAddTree<TreeT>::concat_negated(const GAddTree<TreeT>& other) const
+{
+    GAddTree<TreeT> new_at(*this);
+    new_at.base_score -= other.base_score;
+    for (const TreeT& t : other)
+        new_at.add_tree(t.negate_leaf_values());
+    return new_at;
+}
 
-//template <typename TreeT>
-//GAddTree<TreeT>
-//GAddTree<TreeT>::negate_leaf_values() const
-//{
-//    return GAddTree<TreeT>().concat_negated(*this);
-//}
+template <typename TreeT>
+GAddTree<TreeT>
+GAddTree<TreeT>::negate_leaf_values() const
+{
+    return GAddTree<TreeT>().concat_negated(*this);
+}
 
 template <typename TreeT>
 std::ostream&
