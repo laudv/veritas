@@ -222,16 +222,13 @@ PYBIND11_MODULE(pyveritas, m) {
                 d[py::int_(feat_id)] = dom;
             return d;
         })
-        // TODO
-        //.def("prune", [](const TreeRef& r, const py::object& pybox) {
-        //    Box::BufT buf = tobox(pybox);
-        //    Box box{buf};
-        //    BoxRef b(box);
-        //    AddTree at;
-        //    Tree t = r.get().prune(b);
-        //    at.add_tree(std::move(t));
-        //    return at;
-        //})
+        .def("prune", [](const TreeRef& r, const py::object& pybox) {
+            Box::BufT buf = tobox(pybox);
+            Box box{buf};
+            AddTree at;
+            at.add_tree(r.get().prune(BoxRef{box}));
+            return at;
+        })
         ; // TreeRef
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
@@ -253,13 +250,11 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("add_tree", [](const std::shared_ptr<AddTree>& at, const TreeRef& tref) {
                 at->add_tree(tref.get()); // copy
                 return TreeRef{at, at->size()-1}; })
-        // TODO
-        //.def("prune", [](AddTree& at, const py::object& pybox) {
-        //    Box box = tobox(pybox);
-        //    BoxRef b(box);
-        //    //py::print("pruning AddTree using box", tostr(b));
-        //    return at.prune(b);
-        //})
+        .def("prune", [](AddTree& at, const py::object& pybox) {
+            Box::BufT buf = tobox(pybox);
+            Box box{buf};
+            return at.prune(BoxRef{box});
+        })
         .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
         //.def("negate_leaf_values", &AddTree::negate_leaf_values)
         .def("to_json", [](const AddTree& at) {
@@ -416,7 +411,7 @@ PYBIND11_MODULE(pyveritas, m) {
         .def("time_since_start", &Search::time_since_start)
         .def("current_bounds", &Search::current_bounds)
         .def("get_solution", &Search::get_solution)
-        //.def("get_solution_nodes", &Search::get_solution_nodes)
+        .def("get_solution_nodes", &Search::get_solution_nodes)
         .def("is_optimal", &Search::is_optimal)
 //        .def("get_at_output_for_box", [](const VSearch& s, const py::list& pybox) {
 //            Box box = tobox(pybox);
