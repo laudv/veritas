@@ -190,6 +190,7 @@ public: // abstract interface methods
     virtual size_t num_solutions() const = 0;
 
     virtual Solution get_solution(size_t solution_index) const = 0;
+    virtual std::vector<NodeId> get_solution_nodes(size_t solution_index) const = 0;
 
     virtual Bounds current_bounds() const = 0;
 

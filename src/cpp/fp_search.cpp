@@ -250,7 +250,7 @@ private:
     std::vector<State> open_;
     std::vector<size_t> focal_;
     std::vector<SolutionImpl<State>> solutions_;
-    LeafIter<TreeFp> leafiter_;
+    mutable LeafIter<TreeFp> leafiter_;
     BoxFp::BufT boxbuf_; // buffer to construct box of new state
 
 public:
@@ -334,6 +334,19 @@ public:
             sol.state.open_score(),
             sol.time
         };
+    }
+
+    std::vector<NodeId> get_solution_nodes(size_t solution_index) const override {
+        const auto& sol = solutions_.at(solution_index);
+        std::vector<NodeId> nodes;
+        for (const TreeFp& tree : atfp_) {
+            leafiter_.setup(tree, sol.state.box, prune_box_);
+            NodeId leaf_id = leafiter_.next();
+            if (leafiter_.next() != -1)
+                throw std::runtime_error("no unique output for box");
+            nodes.push_back(leaf_id);
+        }
+        return nodes;
     }
 
     Bounds current_bounds() const override {
