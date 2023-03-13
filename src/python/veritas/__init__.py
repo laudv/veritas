@@ -5,8 +5,8 @@
 import gzip
 import numpy as np
 
-from .pyveritas import *
-del pyveritas
+from .veritas_core import *
+del veritas_core
 
 try: # fails when xgboost not installed
     from .xgb import \

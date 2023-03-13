@@ -38,6 +38,28 @@ Veritas should work on Linux (GCC), Mac (LLVM), and Windows (MSVC). If you encou
 
 To pull the latest updates from Github, simply `git pull` the changes and reinstall using `pip`: `pip install --force-reinstall .`.
 
+## Development
+
+This is most likely not the proper way to use `skbuild`, but that's how I have been doing it.
+The editable install does not put the binary in the `src/python` folder, and it removes the build directory, so we use an editable `pip` install, and then manually invoke `cmake` to produce the shared `veritas_core` library.
+
+```
+git clone git@github.com:laudv/veritas.git veritas
+cd veritas
+pip install --editable .
+# this forgets to place the shared library in src/python/veritas, likely due to
+# wrong configuration but hey, doing it manually is faster than figuring that
+# out...
+mkdir manual_build
+cd manual_build
+cmake ..
+make -j4
+
+# replace <...> with your shared library, name depends on platform
+ln -sfr <veritas_core.cpython-*.so> ../src/python/veritas/
+```
+
+Using this setup, you can change C++ code, rebuild, and then immediately restart Python.
 
 ## Examples
 
@@ -141,7 +163,7 @@ This outputs:
 ```
 Global maximum
 - current best solution: 86.0 -> optimal solution
-- feature value ranges {0: Dom(>=3), 1: Dom(>=0), 2: Dom(>=0.5)}
+- feature value ranges {0: Interval(>=3), 1: Interval(>=0), 2: Interval(>=0.5)}
   which lead to leaf nodes [6, 8] with leaf values [6.0, 80.0]
 ```
 
@@ -161,10 +183,8 @@ Although the constraint is simple, it is very useful. The exact same pruning str
 
 ```python
 # If feature0 is between 3 and 5, what is the minimum possible output?
-prune_box = [(0, Domain(3, 5))]  # (feat_id, domain) list, sorted by feat_id
-at_neg = at.negate_leaf_values() # maximize with -leaf_values == minimize
-s = Search.max_output(at_neg)
-s.prune(prune_box)
+prune_box = [(0, Interval(3, 5))]  # (feat_id, domain) list, sorted by feat_id
+s = Search.min_output(at, prune_box)
 s.steps(100)
 
 print("Minimum with feature0 in [3, 5]")
@@ -183,8 +203,8 @@ The output is:
 
 ```
 Minimum with feature0 in [3, 5]
-- current best solution: 56.0 -> optimal solution
-- feature value ranges {0: Dom(3,5), 1: Dom(<=-1.4013e-45)}
+- current best solution: -56.0 -> optimal solution
+- feature value ranges {0: Interval(3,5), 1: Interval(<0)}
   which lead to leaf nodes [6, 5] with leaf values [6.0, 50.0]
 ```
 
@@ -296,7 +316,7 @@ Output:
 ```
 Maximum difference between instance0 and instance1
 - current best solution: 10.0 -> optimal solution
-- feature value ranges {0: Dom(>=3), 1: Dom(>=0), 2: Dom(>=0.5), 5: Dom(<=0.5)}
+- feature value ranges {0: Interval(>=3), 1: Interval(>=0), 2: Interval(>=0.5), 5: Interval(<0.5)}
   which lead to leaf nodes [6, 8, 6, 7] with leaf values [6.0, 80.0] [6.0, 70.0]
 ```
 
@@ -336,15 +356,7 @@ for i in range(s.num_solutions()):
 
 ```
 i   output     box
-0   42.0       {0: Dom(>=3), 1: Dom(>=0), 2: Dom(>=0.5)}
-1   32.0       {0: Dom(>=3), 1: Dom(>=0), 2: Dom(<=0.5)}
-2   12.0       {0: Dom(>=3), 1: Dom(<=-1.4013e-45)}
-3   1.0        {0: Dom(2,3), 1: Dom(>=5)}
-4   0.0        {0: Dom(1,2), 1: Dom(>=5)}
-5   -1.0       {0: Dom(<=1), 1: Dom(>=5)}
-6   -9.0       {0: Dom(2,3), 1: Dom(<=5)}
-7   -10.0      {0: Dom(1,2), 1: Dom(<=5)}
-8   -11.0      {0: Dom(<=1), 1: Dom(<=5)}
+0   42.0       {0: Interval(>=3), 1: Interval(>=0), 2: Interval(>=0.5)}
 ```
 
 The boxes above partition the input space. Remember that when a feature is not present in a box, it does not have an effect given the other feature values and can take on any value.
@@ -378,7 +390,7 @@ print("adversarial examples:", rob.generated_examples,
 
 Output:
 ```
-[0 0.0s]:   SAT for delta 5.00000 -> 0.50000 [0.00000, 1.00000] (!) ex.w/ delta 1.0
+[0 0.0s]:   SAT for delta 5.00000 -> 0.50000 [0.00000, 1.00000] (!) ex.w/ delta 1.0000
 [1 0.0s]: UNSAT for delta 0.50000 -> 0.75000 [0.50000, 1.00000]
 [2 0.0s]: UNSAT for delta 0.75000 -> 0.87500 [0.75000, 1.00000]
 [3 0.0s]: UNSAT for delta 0.87500 -> 0.93750 [0.87500, 1.00000]
@@ -441,7 +453,7 @@ print("{:<3} {:<10} {}".format("i", "output", "box"))
 for i in range(s.num_solutions()):
     sol = s.get_solution(i)
     print(f"{i:<3} {sol.output:<10} {sol.box()}")
-print("number of rejected states due to constraint:", s.num_rejected_states)
+#print("number of rejected states due to constraint:", s.num_rejected_states)
 ```
 
 Output:
@@ -458,11 +470,7 @@ Node(id=0, split=[F1 < 0.5], sz=3, left=1, right=2)
 
 Without one-hot constraint
 i   output     box
-0   200.0      {0: Dom(>=0.5), 1: Dom(>=0.5)}
-1   0.0        {0: Dom(>=0.5), 1: Dom(<=0.5)}
-2   0.0        {0: Dom(<=0.5), 1: Dom(>=0.5)}
-3   -200.0     {0: Dom(<=0.5), 1: Dom(<=0.5)}
-number of rejected states due to constraint: 0
+0   200.0      {0: Interval(>=0.5), 1: Interval(>=0.5)}
 ```
 
 When we inform Veritas that exactly one of the two features must be true:
@@ -471,14 +479,14 @@ When we inform Veritas that exactly one of the two features must be true:
 
 # With constraint:
 s = Search.max_output(at)
-s.add_onehot_constraint([0, 1])
+#s.add_onehot_constraint([0, 1]) # TODO add again
 s.steps(100)
 print("\nWith one-hot constraint")
 print("{:<3} {:<10} {}".format("i", "output", "box"))
 for i in range(s.num_solutions()):
     sol = s.get_solution(i)
     print(f"{i:<3} {sol.output:<10} {sol.box()}")
-print("number of rejected states due to constraint:", s.num_rejected_states)
+#print("number of rejected states due to constraint:", s.num_rejected_states)
 ```
 
 Output:
@@ -487,7 +495,5 @@ Output:
 
 With one-hot constraint
 i   output     box
-0   0.0        {0: Dom(<=0.5), 1: Dom(>=0.5)}
-1   0.0        {0: Dom(>=0.5), 1: Dom(<=0.5)}
-number of rejected states due to constraint: 1
+0   200.0      {0: Interval(>=0.5), 1: Interval(>=0.5)}
 ```
