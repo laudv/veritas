@@ -1,5 +1,9 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "ninja"]
+requires = [
+    "setuptools>=42",
+    "scikit-build>=0.13",
+    "wheel",
+]
 build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
@@ -7,6 +11,6 @@ skip = "*-win32 *-manylinux_i686 *-musllinux*"
 test-requires = ""
 test-command = "python -m unittest discover {project}/tests test_*.py"
 
- # Setuptools bug causes collision between pypy and cpython artifacts
- # (from pybind/cmake_example, is necessary)
-before-build = "rm -rf {project}/build"
+# Setuptools bug causes collision between pypy and cpython artifacts
+# (from pybind/cmake_example, is necessary)
+#before-build = "rm -rf {project}/build"

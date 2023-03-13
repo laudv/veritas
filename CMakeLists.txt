@@ -3,7 +3,11 @@
 cmake_minimum_required(VERSION 3.1)
 project(veritas)
 
+set(VERITAS_CORE, "${PROJECT_NAME}_core")
+
+set(SOURCE_DIR_PY "src/python")
 set(SOURCE_DIR "src/cpp")
+
 # Tell cmake that headers are also in source_dir
 include_directories(${SOURCE_DIR})
 set(SOURCES
@@ -60,8 +64,9 @@ option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
 if (BUILD_PYTHON_BINDINGS)
     #find_package(pybind11 REQUIRED)
     add_subdirectory(lib/pybind11)
-    pybind11_add_module("py${PROJECT_NAME}" "${SOURCE_DIR}/bindings.cpp")
-    target_link_libraries("py${PROJECT_NAME}" PRIVATE ${PROJECT_NAME})
+    pybind11_add_module("${PROJECT_NAME}_core" MODULE "${SOURCE_DIR}/bindings.cpp")
+    target_link_libraries("${PROJECT_NAME}_core" PRIVATE ${PROJECT_NAME})
+    install(TARGETS "${PROJECT_NAME}_core" DESTINATION "${SOURCE_DIR_PY}/${PROJECT_NAME}")
 endif (BUILD_PYTHON_BINDINGS)
 
 option(BUILD_TESTS "Build C++ test files" OFF)

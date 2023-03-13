@@ -64,10 +64,8 @@ if s.num_solutions() > 0:
 print("---------------\n")
 ### <PART min_output_constrained>
 # If feature0 is between 3 and 5, what is the minimum possible output?
-prune_box = [(0, Domain(3, 5))]  # (feat_id, domain) list, sorted by feat_id
-at_neg = at.negate_leaf_values() # maximize with -leaf_values == minimize
-s = Search.max_output(at_neg)
-s.prune(prune_box)
+prune_box = [(0, Interval(3, 5))]  # (feat_id, domain) list, sorted by feat_id
+s = Search.min_output(at, prune_box)
 s.steps(100)
 
 print("Minimum with feature0 in [3, 5]")
@@ -205,19 +203,19 @@ print("{:<3} {:<10} {}".format("i", "output", "box"))
 for i in range(s.num_solutions()):
     sol = s.get_solution(i)
     print(f"{i:<3} {sol.output:<10} {sol.box()}")
-print("number of rejected states due to constraint:", s.num_rejected_states)
+#print("number of rejected states due to constraint:", s.num_rejected_states)
 ### </part>
 
 ### <part onehot1>
 
 # With constraint:
 s = Search.max_output(at)
-s.add_onehot_constraint([0, 1])
+#s.add_onehot_constraint([0, 1]) # TODO add again
 s.steps(100)
 print("\nWith one-hot constraint")
 print("{:<3} {:<10} {}".format("i", "output", "box"))
 for i in range(s.num_solutions()):
     sol = s.get_solution(i)
     print(f"{i:<3} {sol.output:<10} {sol.box()}")
-print("number of rejected states due to constraint:", s.num_rejected_states)
+#print("number of rejected states due to constraint:", s.num_rejected_states)
 ### </part>

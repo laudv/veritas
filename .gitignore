@@ -1,4 +1,6 @@
 build
+manual_build
+_skbuild
 __pycache__
 .cache
 *egg-info
@@ -6,7 +8,6 @@ __pycache__
 compile_commands.json
 .gdb_history
 plots
-dask-worker-space
 sync.sh
 .clangd
 .ipynb_checkpoints

@@ -1,5 +1,5 @@
 /*
- * Copyright 2022 DTAI Research Group - KU Leuven.
+ * Copyright 2023 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
 */
@@ -9,6 +9,7 @@
 
 #include "basics.hpp"
 #include "tree.hpp"
+#include "addtree.hpp"
 
 #include <vector>
 #include <string>
@@ -25,8 +26,8 @@ namespace veritas {
      * from 0 for the first feature name, and len(features) for the last
      * feature name.
      *
-     * 
-     *
+     * TODO write tests for this
+     * TODO split interface and impl / template tree
      */
     class FeatMap {
         std::vector<std::string> names_;
@@ -122,7 +123,7 @@ namespace veritas {
             for (const Tree& t : at)
             {
                 Tree& new_t = new_at.add_tree();
-                transform(t.root(), new_t.root(), instance);
+                transform(t, t.root(), new_t, new_t.root(), instance);
             }
 
             return new_at;
@@ -217,25 +218,21 @@ namespace veritas {
          * Assumed is that the AddTree uses indexes as feature_ids not yet
          * offset for instance0 or instance1.
          */
-        void transform(Tree::ConstRef n, Tree::MutRef m, int instance) const
-        {
-            if (n.is_internal())
-            {
-                LtSplit s = n.get_split();
+        void transform(const Tree& tn, NodeId n, Tree& tm, NodeId m, int instance) const {
+            if (tn.is_internal(n)) {
+                LtSplit s = tn.get_split(n);
                 FeatId index = get_index(s.feat_id, instance);
                 if (static_cast<size_t>(index) >= feat_ids_.size())
                     throw std::runtime_error("feature index out of bounds");
                 FeatId feat_id = get_feat_id(index);
-                m.split({feat_id, s.split_value});
-                transform(n.right(), m.right(), instance);
-                transform(n.left(), m.left(), instance);
-            }
-            else
-            {
-                m.set_leaf_value(n.leaf_value());
+                tm.split(m, {feat_id, s.split_value});
+                transform(tn, tn.right(n), tm, tm.right(m), instance);
+                transform(tn, tn.left(n), tm, tm.left(m), instance);
+            } else {
+                tm.leaf_value(m) = tn.leaf_value(n);
             }
         }
-    };
+    }; // class FeatMap
 
     inline std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
     {
@@ -247,6 +244,6 @@ namespace veritas {
         s << '}';
         return s;
     }
-}
+} // namespace veritas
 
 #endif // VERITAS_FEAT_MAP_HPP
