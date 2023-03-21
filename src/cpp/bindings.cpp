@@ -185,7 +185,7 @@ PYBIND11_MODULE(veritas_core, m) {
         .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get().leaf_value(n) = v; })
         .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n)
                 { return r.get().find_minmax_leaf_value(n); })
-        //.def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
+        .def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get().split(n, {fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get().split(n, bool_ltsplit(fid)); })
         .def("eval", [](const TreeRef& r, py::handle arr, NodeId nid) {
@@ -401,7 +401,7 @@ PYBIND11_MODULE(veritas_core, m) {
             auto buf = tobox(pybox);
             auto fbox = BoxRef(buf).to_flatbox();
             return Search::min_output(at, fbox);
-        })
+        }, py::arg("at"), py::arg("prune_box") = py::list())
         .def("step", &Search::step)
         .def("steps", &Search::steps)
         .def("step_for", &Search::step_for)

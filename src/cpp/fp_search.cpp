@@ -145,21 +145,21 @@ struct OutputStateOpenIsWorse {
 };
 
 
-// *IsWorse has an operator()(a, b) which returns true when a is 'worse' than b,
-// i.e., b should be tried before a
-template <typename OpenIsWorse, typename FocalIsWorse, typename GScoreF>
+template <typename OpenIsWorse, typename FocalIsWorse, typename Sub>
 struct OutputHeuristic {
     using State = OutputState;
+
+    // *IsWorse has an operator()(a, b) which returns true when a is 'worse'
+    // than b, i.e., b should be tried before a
     using OpenIsWorseT = OpenIsWorse;
     using FocalIsWorseT = FocalIsWorse;
 
-    OutputStateOpenIsWorse<OpenIsWorse> open_isworse;
-    FocalIsWorse focal_isworse;
+    OutputStateOpenIsWorse<OpenIsWorseT> open_isworse;
+    FocalIsWorseT focal_isworse;
     LeafIter<TreeFp> leafiter;
-    GScoreF gscore_f;
 
-    OutputHeuristic(GScoreF f)
-        : open_isworse{}, focal_isworse{}, leafiter{}, gscore_f{f} {}
+    OutputHeuristic()
+        : open_isworse{}, focal_isworse{}, leafiter{} {}
 
     void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
                        State &state) {
@@ -167,12 +167,12 @@ struct OutputHeuristic {
         state.hscore = 0.0;
         state.next_tree = -1;
         FloatT best_of_best =
-            OrdLimit<FloatT, OpenIsWorse>::worst(open_isworse);
+            OrdLimit<FloatT, OpenIsWorseT>::worst(open_isworse);
 
         leafiter.setup_flatbox(state.box, prune_box);
         for (size_t tree_index = 0; tree_index < at.size(); ++tree_index) {
-            FloatT best = OrdLimit<FloatT, OpenIsWorse>::worst(open_isworse);;
-            const auto t = at[tree_index];
+            FloatT best = OrdLimit<FloatT, OpenIsWorseT>::worst(open_isworse);;
+            const auto& t = at[tree_index];
             leafiter.setup_tree(t);
             int num_leaves = 0;
             NodeId leaf_id = leafiter.next();
@@ -190,27 +190,50 @@ struct OutputHeuristic {
                     state.next_tree = static_cast<int>(tree_index);
                 }
             } else {
-                gscore_f(at, state, tree_index, leaf_id);
+                static_cast<Sub *>(this)->update_gscore(
+                        at, state, tree_index, leaf_id);
             }
         }
     }
-};
 
-struct BasicOutputGScore {
-    void operator()(const AddTreeFp& at, OutputState& state,
-                    size_t tree_index, NodeId leaf_id) {
-        state.gscore += at[tree_index].leaf_value(leaf_id);
-        state.fscore += 1; // deeper solution first
+    /** Sub needs to implement this: */
+    void update_gscore(const AddTreeFp& /*at*/, OutputState& /*state*/,
+                       size_t /*tree_index*/, NodeId /*leaf_id*/) {
+        throw std::runtime_error("call the override in Sub!");
+    };
+
+    /** Sub needs to implement this: */
+    void notify_new_solution(const AddTreeFp& /*at*/,
+                             const FlatBoxFp& /*prune_box*/,
+                             const State& /*state*/) {
+        throw std::runtime_error("call the override in Sub!");
     }
 };
 
 template <typename OpenIsWorse, typename FocalIsWorse>
 struct BasicOutputHeuristic
-    : public OutputHeuristic<OpenIsWorse, FocalIsWorse, BasicOutputGScore> {
+    : public OutputHeuristic<OpenIsWorse, FocalIsWorse,
+                             BasicOutputHeuristic<OpenIsWorse, FocalIsWorse>> {
 
-    using BaseT = OutputHeuristic<OpenIsWorse, FocalIsWorse, BasicOutputGScore>;
+    using OpenIsWorseT = OpenIsWorse;
+    using FocalIsWorseT = FocalIsWorse;
+    using SelfT = BasicOutputHeuristic<OpenIsWorse, FocalIsWorse>;
+    using BaseT = OutputHeuristic<OpenIsWorse, FocalIsWorse, SelfT>;
+    using State = typename BaseT::State;
 
-    BasicOutputHeuristic() : BaseT(BasicOutputGScore()) {}
+    BasicOutputHeuristic() : BaseT() {}
+
+    void update_gscore(const AddTreeFp& at, OutputState& state,
+                       size_t tree_index, NodeId leaf_id) {
+        state.gscore += at[tree_index].leaf_value(leaf_id);
+        state.fscore += 1; // deeper solution first
+    };
+
+    void notify_new_solution(const AddTreeFp& /*at*/,
+                             const FlatBoxFp& /*prune_box*/,
+                             const State& /*state*/) {
+        // nothing to do here
+    }
 };
 
 struct CountingOutputGScore {
@@ -222,15 +245,67 @@ struct CountingOutputGScore {
     }
 };
 
-//template <typename OpenIsWorse, typename FocalIsWorse>
-//struct CountingOutputHeuristic
-//    : public OutputHeuristic<OpenIsWorse, FocalIsWorse, CountingOutputGScore> {
-//
-//    CountingOutputHeuristic() : CountingOutputHeuristic(BasicOutputGScore()) {}
-//};
+template <typename OpenIsWorse, typename FocalIsWorse>
+struct CountingOutputHeuristic
+    : public OutputHeuristic<OpenIsWorse, FocalIsWorse,
+                             CountingOutputHeuristic<OpenIsWorse, FocalIsWorse>> {
+
+    using OpenIsWorseT = OpenIsWorse;
+    using FocalIsWorseT = FocalIsWorse;
+    using SelfT = CountingOutputHeuristic<OpenIsWorse, FocalIsWorse>;
+    using BaseT = OutputHeuristic<OpenIsWorse, FocalIsWorse, SelfT>;
+    using State = typename BaseT::State;
+
+    std::vector<std::vector<int>> counts;
+
+    CountingOutputHeuristic() : BaseT(), counts{} {}
+
+    void update_gscore(const AddTreeFp& at, OutputState& state,
+                       size_t tree_index, NodeId leaf_id) {
+        state.gscore += at[tree_index].leaf_value(leaf_id);
+        state.fscore += get_count_for(tree_index, leaf_id);
+    };
+
+    int get_count_for(size_t tree_index, NodeId leaf_id) const {
+        if (tree_index >= counts.size())
+            return 1;
+        const std::vector<int>& counts_for_tree = counts[tree_index];
+        if (counts_for_tree.size() >= static_cast<size_t>(leaf_id))
+            return 1;
+        return 1 + counts_for_tree[leaf_id];
+    }
+
+    void incr_count_for(size_t tree_index, NodeId leaf_id) {
+        if (tree_index >= counts.size())
+            counts.resize(tree_index+1);
+        std::vector<int>& counts_for_tree = counts[tree_index];
+        size_t leaf_id_size_t = static_cast<size_t>(leaf_id);
+        if (counts_for_tree.size() >= leaf_id_size_t)
+            counts_for_tree.resize(leaf_id_size_t+1);
+        ++counts_for_tree[leaf_id];
+    }
+
+    void notify_new_solution(const AddTreeFp& at,
+                             const FlatBoxFp& prune_box,
+                             const State& state) {
+        this->leafiter.setup_flatbox(state.box, prune_box);
+        for (size_t tree_index = 0; tree_index < at.size(); ++tree_index) {
+            const auto& t = at[tree_index];
+            this->leafiter.setup_tree(t);
+            NodeId leaf_id = this->leafiter.next();
+            if (leaf_id == -1)
+                throw std::runtime_error("leaf_id == -1?");
+            if (this->leafiter.next() != -1)
+                throw std::runtime_error("not a unique leaf");
+            incr_count_for(tree_index, leaf_id);
+        }
+    }
+};
 
 using MaxBasicOutputHeuristic = BasicOutputHeuristic<LessIsWorse, LessIsWorse>;
 using MinBasicOutputHeuristic = BasicOutputHeuristic<GreaterIsWorse, LessIsWorse>;
+using MaxCountingOutputHeuristic = CountingOutputHeuristic<LessIsWorse, LessIsWorse>;
+using MinCountingOutputHeuristic = CountingOutputHeuristic<GreaterIsWorse, LessIsWorse>;
 
 template <typename State>
 struct SolutionImpl {
@@ -637,6 +712,9 @@ private:
             std::move(state),
             time_since_start()
         );
+
+        const State& sol_state = solutions_.back().state;
+        heuristic->notify_new_solution(atfp_, prune_box_, sol_state);
 
         // sort solutions
         size_t i = solutions_.size()-1;

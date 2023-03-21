@@ -32,7 +32,7 @@ AddTree get_old_addtree(const char *x) {
     fname.append(".json");
     std::ifstream f(fname);
     if (!f) { // from build/temp.linux... folder
-        std::string fname2("../../");
+        std::string fname2("../");
         fname2.append(fname);
         std::cout << "second try from " << fname2 << std::endl;
         f = std::ifstream(fname2);
