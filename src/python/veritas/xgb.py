@@ -15,6 +15,8 @@ from xgboost.core import Booster
 from . import AddTree
 
 class GbAddTree(AddTree):
+    def predict(self, X):
+        return self.eval(X)
     def predict_proba(self, X):
         return 1/(1+np.exp(-self.eval(X)))
 

@@ -46,7 +46,9 @@ The editable install does not put the binary in the `src/python` folder, and it 
 ```
 git clone git@github.com:laudv/veritas.git veritas
 cd veritas
+git submodule init && git submodule update
 pip install --editable .
+
 # this forgets to place the shared library in src/python/veritas, likely due to
 # wrong configuration but hey, doing it manually is faster than figuring that
 # out...

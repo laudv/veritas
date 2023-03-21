@@ -11,6 +11,9 @@ import numpy as np
 from . import AddTree
 
 class RfAddTree(AddTree):
+    def predict(self, X):
+        return (self.eval(X) - self.base_score) / len(self)
+
     def predict_proba(self, X):
         return (self.eval(X) - self.base_score) / len(self)
 

@@ -97,7 +97,7 @@ int test_json4() {
 int test_oldjson() {
     std::ifstream f("./tests/models/xgb-img-hard.json");
     if (!f) // from build/temp.linux... folder
-        f = std::ifstream("../../tests/models/xgb-img-hard.json");
+        f = std::ifstream("../tests/models/xgb-img-hard.json");
     if (!f) {
         std::cout << "cannot read xgb-img-hard.json\n";
         return false;
