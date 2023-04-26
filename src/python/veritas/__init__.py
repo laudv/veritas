@@ -10,6 +10,7 @@ del veritas_core
 
 try: # fails when xgboost not installed
     from .xgb import \
+        GbAddTree, \
         addtree_from_xgb_model, \
         addtrees_from_multiclass_xgb_model
     del xgb
@@ -24,6 +25,8 @@ except ModuleNotFoundError as e: pass
 
 try: # fails when sklearn not installed
     from .sklearn import \
+        RfAddTree, \
+        addtree_from_sklearn_tree, \
         addtree_from_sklearn_ensemble, \
         addtrees_from_multiclass_sklearn_ensemble
     del sklearn

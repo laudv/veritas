@@ -79,8 +79,8 @@ GAddTree<TreeT>::neutralize_negative_leaf_values() const {
                 new_tree.leaf_value(id) -= offset;
 
     }
-    std::cout << "neutralize_negative_leaf_values: base_score "
-        << base_score << " -> " << new_at.base_score << std::endl;
+    //std::cout << "neutralize_negative_leaf_values: base_score "
+    //    << base_score << " -> " << new_at.base_score << std::endl;
     return new_at;
 }
 

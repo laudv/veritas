@@ -22,18 +22,19 @@ class GbAddTree(AddTree):
 
 def addtrees_from_multiclass_xgb_model(model, nclasses, feat2id_map=int):
     return [
-        addtree_from_xgb_model(model, feat2id_map, multiclass=(clazz, nclasses))
+        addtree_from_xgb_model(model, feat2id_map,
+                               multiclass=(clazz, nclasses),
+                               base_score=0.5)
         for clazz in range(nclasses)
     ]
 
 def addtree_from_xgb_model(model, feat2id_map=int,
-        multiclass=(0, 1)):
+        multiclass=(0, 1), base_score=0.0):
     """
     mulclass=(offset, num_classes): only loads tree offset, offset+num_classes,
     offset+2*num_classes...
     """
-    #base_score = 0.5
-    base_score = 0.0 # xgboost 1.4.2
+    #base_score = 0.5 # regression...
     if isinstance(model, XGBModel):
         base_score = model.base_score if model.base_score is not None else base_score
         model = model.get_booster()
