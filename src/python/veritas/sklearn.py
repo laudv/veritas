@@ -9,6 +9,7 @@
 import numpy as np
 
 from . import AddTree
+import sklearn.tree as sktree
 
 class RfAddTree(AddTree):
     def predict(self, X):
@@ -19,7 +20,12 @@ class RfAddTree(AddTree):
 
 # https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html
 
-def _addtree_from_sklearn_tree(at, tree, extract_value_fun):
+def addtree_from_sklearn_tree(at, tree, extract_value_fun):
+    if isinstance(tree, sktree.DecisionTreeClassifier):
+        tree = tree.tree_
+    elif isinstance(tree, sktree.DecisionTreeRegressor):
+        tree = tree.tree_
+
     t = at.add_tree()
     stack = [(0, t.root())]
     while len(stack) != 0:
@@ -49,17 +55,22 @@ def addtree_from_sklearn_ensemble(ensemble, extract_value_fun=None):
         if "Regressor" in type(ensemble).__name__:
             print("SKLEARN: regressor")
             extract_value_fun = lambda v: v[0]
+            base_score = 0.0
         elif "Classifier" in type(ensemble).__name__:
             print("SKLEARN: binary classifier")
             extract_value_fun = lambda v: (v[0][1]/sum(v[0])) # class ratio
+            base_score = -num_trees / 2.0
         else:
             raise RuntimeError("cannot determine extract_value_fun for:",
                     type(ensemble).__name__)
+    else:
+        base_score = -num_trees / 2.0
+
 
     at = RfAddTree()
     for tree in ensemble.estimators_:
-        _addtree_from_sklearn_tree(at, tree.tree_, extract_value_fun)
-    at.base_score = -num_trees / 2
+        addtree_from_sklearn_tree(at, tree.tree_, extract_value_fun)
+    at.base_score = base_score
     return at
     
 ## Extract `num_classes` Veritas AddTrees from a multi-class scikit learn
