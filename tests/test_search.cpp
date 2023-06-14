@@ -9,19 +9,19 @@
 using namespace veritas;
 
 AddTree get_simple_addtree1() {
-    AddTree at;
-    at.base_score = 2;
+    AddTree at(1);
+    at.base_score(0) = 2;
     {
         Tree& t = at.add_tree();
         t.split(t[""], {1, 5.0});
-        t.leaf_value(t["l"]) = 0.0;
-        t.leaf_value(t["r"]) = 2.0;
+        t.leaf_value(t["l"], 1) = 0.0;
+        t.leaf_value(t["r"], 1) = 2.0;
     }
     {
         Tree& t = at.add_tree();
         t.split(t[""], {1, 3.0});
-        t.leaf_value(t["l"]) = 10.0;
-        t.leaf_value(t["r"]) = -10.0;
+        t.leaf_value(t["l"], 1) = 10.0;
+        t.leaf_value(t["r"], 1) = -10.0;
     }
     return at;
 }
@@ -180,8 +180,10 @@ int test_old_at_easy() {
         for (auto&& [fid, ival] : sol.box)
             example[fid] = ival.lo;
 
-        FloatT out = at.eval(data<FloatT>(example));
-        result = result && (out == sol.output);
+        std::vector<FloatT> out { 0.0 };
+        data<FloatT> outdata(out);
+        at.eval(data<FloatT>(example), outdata);
+        result = result && (outdata[0] == sol.output);
     }
 
     std::cout << "test_old_at_easy " << result << std::endl;

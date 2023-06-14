@@ -41,7 +41,7 @@ def addtree_from_xgb_model(model, feat2id_map=int,
     assert isinstance(model, Booster), f"not xgb.Booster but {type(model)}"
 
     dump = model.get_dump("", dump_format="json")
-    at = GbAddTree()
+    at = GbAddTree(1)
 
     at.base_score = base_score
     offset, num_classes = multiclass
@@ -76,4 +76,4 @@ def _parse_tree(at, tree_dump, feat2id_map):
 
         else:
             leaf_value = node_json["leaf"]
-            tree.set_leaf_value(node, leaf_value)
+            tree.set_leaf_value(node, 0, leaf_value)

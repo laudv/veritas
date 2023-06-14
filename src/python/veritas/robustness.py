@@ -14,8 +14,6 @@ try:
 except:
     pass
 
-DUMMY_AT = AddTree()
-
 ## \ingroup python
 # \brief Base class binary robustness search
 class RobustnessSearch:

@@ -51,8 +51,8 @@ template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::prune(const BoxRefT& box) const
 {
-    GAddTree<TreeT> new_at;
-    new_at.base_score = base_score;
+    GAddTree<TreeT> new_at(num_leaf_values());
+    new_at.base_scores_ = base_scores_;
     for (const TreeT& t : *this)
         new_at.add_tree(t.prune(box));
     return new_at;
@@ -62,25 +62,24 @@ template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::neutralize_negative_leaf_values() const {
     GAddTree<TreeT> new_at = *this;
-    for (size_t i = 0; i < size(); ++i) {
-        const TreeT& tree = trees_[i];
-        TreeT& new_tree = new_at[i];
-        auto&& [min, max] = tree.find_minmax_leaf_value();
 
-        ValueType offset{};
-        offset = std::min(min, offset);
+    for (size_t m = 0; m < size(); ++m) {
+        const TreeT& tree = trees_[m];
+        TreeT& new_tree = new_at[m];
+        auto minmax = tree.find_minmax_leaf_value();
+        for (int c = 0; c < num_leaf_values(); ++c) {
+            auto &&[min, max] = minmax[c];
+            LeafValueType offset{};
+            offset = std::min(min, offset);
 
-        // add offset to base_score ...
-        new_at.base_score += offset;
-
-        // ... and subtract offsets from leaf_values
-        for (NodeId id = 0; id < static_cast<int>(tree.num_nodes()); ++id)
-            if (new_tree.is_leaf(id))
-                new_tree.leaf_value(id) -= offset;
-
+            // add offset to base_score ...
+            new_at.base_score(c) += offset;
+            // ... and subtract offsets from leaf_values
+            for (NodeId id = 0; id < static_cast<int>(tree.num_nodes()); ++id)
+                if (new_tree.is_leaf(id))
+                    new_tree.leaf_value(id, c) -= offset;
+        }
     }
-    //std::cout << "neutralize_negative_leaf_values: base_score "
-    //    << base_score << " -> " << new_at.base_score << std::endl;
     return new_at;
 }
 
@@ -119,10 +118,10 @@ GAddTree<TreeT>::neutralize_negative_leaf_values() const {
 //}
 template <typename TreeT>
 GAddTree<TreeT>
-GAddTree<TreeT>::concat_negated(const GAddTree<TreeT>& other) const
-{
+GAddTree<TreeT>::concat_negated(const GAddTree<TreeT>& other) const {
     GAddTree<TreeT> new_at(*this);
-    new_at.base_score -= other.base_score;
+    for (int i = 0; i < num_leaf_values(); ++i)
+        new_at.base_scores_[i] -= other.base_scores_[i];
     for (const TreeT& t : other)
         new_at.add_tree(t.negate_leaf_values());
     return new_at;
@@ -130,17 +129,19 @@ GAddTree<TreeT>::concat_negated(const GAddTree<TreeT>& other) const
 
 template <typename TreeT>
 GAddTree<TreeT>
-GAddTree<TreeT>::negate_leaf_values() const
-{
-    return GAddTree<TreeT>().concat_negated(*this);
+GAddTree<TreeT>::negate_leaf_values() const {
+    return GAddTree<TreeT>(num_leaf_values()).concat_negated(*this);
 }
 
 template <typename TreeT>
 std::ostream&
 operator<<(std::ostream& strm, const GAddTree<TreeT>& at) {
-    return
-        strm << "AddTree with " << at.size() << " trees and base_score "
-             << at.base_score;
+    strm << "AddTree with " << at.size() << " trees and base_scores [";
+    for (int i = 0; i < at.num_leaf_values(); ++i)
+        strm << (i>0 ? ", " : "") << at.base_score(i);
+    strm << ']';
+
+    return strm;
 }
 
 template std::ostream& operator<<(std::ostream&, const AddTree& at);

@@ -15,6 +15,7 @@
 #include "tree.hpp"
 
 #include <memory>
+#include <stdexcept>
 
 namespace veritas {
 
@@ -26,7 +27,7 @@ public:
     using TreeType = TreeT;
     using SplitType = typename TreeT::SplitType;
     using SplitValueT = typename TreeT::SplitValueT;
-    using ValueType = typename TreeT::ValueType;
+    using LeafValueType = typename TreeT::LeafValueType;
     using SplitMapT = typename TreeT::SplitMapT;
     using BoxRefT = typename TreeT::BoxRefT;
 
@@ -35,14 +36,18 @@ public:
     using iterator = typename TreeVecT::iterator;
 private:
     TreeVecT trees_;
+    std::vector<LeafValueType> base_scores_; /**< Constant value added to the output of the ensemble. */
 
 public:
-    ValueType base_score; /**< Constant value added to the output of the ensemble. */
-    inline GAddTree() : base_score{} {} ;
+    inline GAddTree(int nleaf_values_)
+        : trees_()
+        , base_scores_(nleaf_values_, {})
+    {}
+
     ///** Copy trees (begin, begin+num) from given `at`. */
     //inline GAddTree(const GAddTree& at, size_t begin, size_t num)
     //    : trees_()
-    //    , base_score(begin == 0 ? at.base_score : ValueType{}) {
+    //    , base_score(begin == 0 ? at.base_score : LeafValueType{}) {
     //    if (begin < at.size() && (begin+num) <= at.size())
     //        trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
     //    else
@@ -51,14 +56,18 @@ public:
 
     /** Add a new empty tree to the ensemble. */
     inline TreeT& add_tree() {
-        return trees_.emplace_back();
+        return trees_.emplace_back(num_leaf_values());
     }
     /** Add a tree to the ensemble. */
     inline void add_tree(TreeT&& t) {
+        if (t.num_leaf_values() != num_leaf_values())
+            throw std::runtime_error("num_leaf_values does not match");
         trees_.push_back(std::move(t));
     }
     /** Add a tree to the ensemble. */
     inline void add_tree(const TreeT& t) {
+        if (t.num_leaf_values() != num_leaf_values())
+            throw std::runtime_error("num_leaf_values does not match");
         trees_.push_back(t);
     }
 
@@ -66,6 +75,14 @@ public:
     inline TreeT& operator[](size_t i) { return trees_.at(i); }
     /** Get const reference to tree `i` */
     inline const TreeT& operator[](size_t i) const { return trees_.at(i); }
+
+    inline const LeafValueType& base_score(int index) const {
+        return base_scores_.at(index);
+    }
+
+    inline LeafValueType& base_score(int index) {
+        return base_scores_.at(index);
+    }
 
     inline iterator begin() { return trees_.begin(); }
     inline const_iterator begin() const { return trees_.begin(); }
@@ -76,6 +93,11 @@ public:
 
     /** Number of trees. */
     inline size_t size() const { return trees_.size(); }
+
+    /** Number of leaf values */
+    inline int num_leaf_values() const {
+        return static_cast<int>(base_scores_.size());
+    }
 
     size_t num_nodes() const;
     size_t num_leafs() const;
@@ -105,11 +127,11 @@ public:
 
     /** Evaluate the ensemble. This is the sum of the evaluations of the
      * trees. See TreeT::eval. */
-    ValueType eval(const data<SplitValueT>& row) const {
-        ValueType res = base_score;
-        for (size_t i = 0; i < size(); ++i)
-            res += trees_[i].eval(row);
-        return res;
+    void eval(const data<SplitValueT>& row, data<LeafValueType>& result) const {
+        for (int i = 0; i < num_leaf_values(); ++i)
+            result[i] = base_scores_[i];
+        for (size_t m = 0; m < size(); ++m)
+            trees_[m].eval(row, result);
     }
 
     /** Compute the intersection of the boxes of all leaf nodes. See
@@ -119,7 +141,7 @@ public:
 
     bool operator==(const GAddTree& other) const {
         if (size() != other.size()) { return false; }
-        if (base_score != other.base_score) { return false; }
+        if (base_scores_ != other.base_scores_) { return false; }
         for (size_t i = 0; i < size(); ++i) {
             if (trees_[i] != other.trees_[i]) {
                 return false;

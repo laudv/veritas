@@ -23,7 +23,7 @@ GTree<SplitT, ValueT>::prune(const BoxRefT& box) const {
     std::stack<NodeId, std::vector<NodeId>> stack1;
     std::stack<NodeId, std::vector<NodeId>> stack2;
 
-    GTree<SplitT, ValueT> new_tree;
+    GTree<SplitT, ValueT> new_tree(num_leaf_values());
     stack1.push(root());
     stack2.push(new_tree.root());
 
@@ -34,7 +34,8 @@ GTree<SplitT, ValueT>::prune(const BoxRefT& box) const {
 
         if (is_leaf(n1)) {
             stack2.pop();
-            new_tree.leaf_value(n2) = leaf_value(n1);
+            for (int i = 0; i < nleaf_values_; ++i)
+                new_tree.leaf_value(n2, i) = leaf_value(n1, i);
         } else {
             const auto& split = get_split(n1);
             auto&& [ival_l, ival_r] = split.get_intervals();
@@ -126,7 +127,7 @@ template <typename SplitT, typename ValueT>
 GTree<SplitT, ValueT>
 GTree<SplitT, ValueT>::negate_leaf_values() const {
     const GTree<SplitT, ValueT>& tn = *this;
-    GTree<SplitT, ValueT> tm;
+    GTree<SplitT, ValueT> tm(num_leaf_values());
 
     std::stack<std::tuple<NodeId, NodeId>,
         std::vector<std::tuple<NodeId, NodeId>>> stack;
@@ -141,7 +142,10 @@ GTree<SplitT, ValueT>::negate_leaf_values() const {
             stack.push({tn.right(n), tm.right(m)});
             stack.push({tn.left(n), tm.left(m)});
         }
-        else tm.leaf_value(m) = -tn.leaf_value(n);
+        else {
+            for (int i = 0; i < nleaf_values_; ++i)
+                tm.leaf_value(m, i) = -tn.leaf_value(n, i);
+        }
     }
 
     return tm;

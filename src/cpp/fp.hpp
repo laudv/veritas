@@ -151,14 +151,15 @@ public:
     }
 
     inline TreeFp transform(const Tree& t) const {
-        TreeFp u;
+        TreeFp u(t.num_leaf_values());
         transform(t, u, t.root());
         return u;
     }
 
     inline void transform(const Tree& t, TreeFp& tfp, NodeId id) const {
         if (t.is_leaf(id)) {
-            tfp.leaf_value(id) = t.leaf_value(id);
+            for (int i = 0; i < t.num_leaf_values(); ++i)
+                tfp.leaf_value(id, i) = t.leaf_value(id, i);
         } else {
             LtSplit s = t.get_split(id);
             LtSplitFp sfp{s.feat_id, transform(s)};
@@ -169,8 +170,9 @@ public:
     }
 
     inline AddTreeFp transform(const AddTree& at) const {
-        AddTreeFp atfp;
-        atfp.base_score = at.base_score;
+        AddTreeFp atfp(at.num_leaf_values());
+        for (int i = 0; i < at.num_leaf_values(); ++i)
+            atfp.base_score(i) = at.base_score(i);
         for (size_t i = 0; i < at.size(); ++i)
             atfp.add_tree(transform(at[i]));
         return atfp;

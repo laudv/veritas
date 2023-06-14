@@ -69,12 +69,14 @@ int test_fp_interval() {
 }
 
 int test_fp_with_tree1() {
-    Tree t;
+    Tree t(2);
     t.split(t.root(), {1, 4.1});
     t.split(t["l"], {1, 2.1});
     t.split(t["lr"], {1, 8.1});
-    t.leaf_value(t["ll"]) = 15.124;
-    t.leaf_value(t["r"]) = 12.22;
+    t.leaf_value(t["ll"], 0) = 15.124;
+    t.leaf_value(t["r"], 0) = 12.22;
+    t.leaf_value(t["ll"], 1) = 10.124;
+    t.leaf_value(t["r"], 1) = 10.222;
 
     FpMap map;
     map.add(t);
@@ -82,12 +84,14 @@ int test_fp_with_tree1() {
     map.add(1, 10.1241);
     map.finalize();
 
-    TreeFp tcheck;
+    TreeFp tcheck(2);
     tcheck.split(tcheck.root(), {1, 3});
     tcheck.split(tcheck["l"], {1, 1});
     tcheck.split(tcheck["lr"], {1, 4});
-    tcheck.leaf_value(tcheck["ll"]) = 15.124;
-    tcheck.leaf_value(tcheck["r"]) = 12.22;
+    tcheck.leaf_value(tcheck["ll"], 0) = 15.124;
+    tcheck.leaf_value(tcheck["r"], 0) = 12.22;
+    tcheck.leaf_value(tcheck["ll"], 1) = 10.124;
+    tcheck.leaf_value(tcheck["r"], 1) = 10.222;
 
     TreeFp tt = map.transform(t);
 

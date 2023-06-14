@@ -6,17 +6,17 @@
 using namespace veritas;
 
 int test_tree1() {
-    TreeFp t;
+    TreeFp t(1);
     t.split(t[""], {1, 5});
-    t.leaf_value(t["l"]) = 4;
-    t.leaf_value(t["r"]) = 2;
+    t.leaf_value(t["l"], 0) = 4;
+    t.leaf_value(t["r"], 0) = 2;
 
     bool result = true
         && t.get_split(0) == LtSplitFp(1, 5)
         && !t.is_root(t["l"])
         && t.is_leaf(t["l"])
-        && t.leaf_value(t["l"]) == 4
-        && t.leaf_value(t["r"]) == 2
+        && t.leaf_value(t["l"], 0) == 4
+        && t.leaf_value(t["r"], 0) == 2
         && t.num_leaves() == 2
         && t.tree_size(t.root()) == 3
         && t.tree_size(t["l"]) == 1
@@ -29,17 +29,17 @@ int test_tree1() {
 }
 
 int test_tree2() {
-    Tree t;
+    Tree t(1);
     t.split(t.root(), bool_ltsplit(1));
-    t.leaf_value(t["l"]) = 4;
-    t.leaf_value(t["r"]) = 2;
+    t.leaf_value(t["l"], 0) = 4;
+    t.leaf_value(t["r"], 0) = 2;
 
     bool result = true
         && t.get_split(0) == LtSplit(1, BOOL_SPLIT_VALUE)
         && !t.is_root(t["l"])
         && t.is_leaf(t["l"])
-        && t.leaf_value(t["l"]) == 4
-        && t.leaf_value(t["r"]) == 2
+        && t.leaf_value(t["l"], 0) == 4
+        && t.leaf_value(t["r"], 0) == 2
         && t.num_leaves() == 2
         && t.tree_size(t.root()) == 3
         && t.tree_size(t["l"]) == 1
@@ -51,16 +51,43 @@ int test_tree2() {
     return result;
 }
 
+int test_tree_multi() {
+    Tree t(2);
+    t.split(t.root(), bool_ltsplit(1));
+    t.leaf_value(t["l"], 0) = 4;
+    t.leaf_value(t["r"], 0) = 2;
+    t.leaf_value(t["l"], 1) = 8;
+    t.leaf_value(t["r"], 1) = 6;
+
+    bool result = true
+        && t.get_split(0) == LtSplit(1, BOOL_SPLIT_VALUE)
+        && !t.is_root(t["l"])
+        && t.is_leaf(t["l"])
+        && t.leaf_value(t["l"], 0) == 4
+        && t.leaf_value(t["r"], 0) == 2
+        && t.leaf_value(t["l"], 1) == 8
+        && t.leaf_value(t["r"], 1) == 6
+        && t.num_leaves() == 2
+        && t.tree_size(t.root()) == 3
+        && t.tree_size(t["l"]) == 1
+        && t.tree_size(t["r"]) == 1
+        && t.num_nodes() == 3
+        ;
+
+    std::cout << "test_tree_multi " << result << std::endl;
+    return result;
+}
+
 int test_generic_tree1() {
-    GTree<GLtSplit<bool>, char> t;
+    GTree<GLtSplit<bool>, char> t(1);
     t.split(t.root(), {1, true});
-    t.leaf_value(t["l"]) = 'a';
-    t.leaf_value(t["r"]) = 'b';
+    t.leaf_value(t["l"], 0) = 'a';
+    t.leaf_value(t["r"], 0) = 'b';
 
     int result = true
         && t.get_split(t[""]) == GLtSplit(1, true)
-        && t.leaf_value(t["l"]) == 'a'
-        && t.leaf_value(t["r"]) == 'b'
+        && t.leaf_value(t["l"], 0) == 'a'
+        && t.leaf_value(t["r"], 0) == 'b'
         ;
 
     std::cout << "test_generic_tree1 " << result << std::endl;
@@ -68,7 +95,7 @@ int test_generic_tree1() {
 }
 
 int test_get_splits1() {
-    Tree t;
+    Tree t(1);
     t.split(t.root(), {1, 2.0});
     t.split(t["l"], {2, 4.0});
     t.split(t["r"], {2, 8.0});
@@ -87,7 +114,7 @@ int test_get_splits1() {
 }
 
 int test_get_splits2() {
-    TreeFp t;
+    TreeFp t(1);
     t.split(t.root(), {1, 2});
     t.split(t["l"], {2, 4});
     t.split(t["r"], {2, 8});
@@ -106,7 +133,7 @@ int test_get_splits2() {
 }
 
 int test_compute_box1() {
-    Tree t;
+    Tree t(1);
     t.split(t.root(), {1, 8.0});
     t.split(t["l"], {1, 2.0});
     t.split(t["lr"], {1, 4.0});
@@ -131,14 +158,18 @@ int test_compute_box1() {
 }
 
 int test_eval1() {
-    GTree<LtSplit, int> t;
+    GTree<LtSplit, int> t(2);
     t.split(t.root(), {0, 1.5});
     t.split(t["l"], {1, 1.5});
     t.split(t["ll"], {2, 1.5});
-    t.leaf_value(t["lll"]) = 1;
-    t.leaf_value(t["llr"]) = 2;
-    t.leaf_value(t["lr"]) = 3;
-    t.leaf_value(t["r"]) = 4;
+    t.leaf_value(t["lll"], 0) = 1;
+    t.leaf_value(t["llr"], 0) = 2;
+    t.leaf_value(t["lr"], 0) = 3;
+    t.leaf_value(t["r"], 0) = 4;
+    t.leaf_value(t["lll"], 1) = -1;
+    t.leaf_value(t["llr"], 1) = -2;
+    t.leaf_value(t["lr"], 1) = -3;
+    t.leaf_value(t["r"], 1) = -4;
 
     std::vector<FloatT> buf = {1, 1, 1,  // 1
                                2, 1, 1,  // 4
@@ -158,11 +189,10 @@ int test_eval1() {
 
     std::vector<FloatT> expected {1, 4, 4, 4, 3, 2, 3, 4};
 
-    for (size_t i = 0; i < 8; ++i)
-    {
-        FloatT v = t.eval(d.row(i));
-        //std::cout << "value=" << v << ", expected = " << expected.at(i) << std::endl;
-        result = result && (v == expected.at(i));
+    for (size_t i = 0; i < 8; ++i) {
+        NodeId leaf = t.eval_node(d.row(i));
+        result = result && (t.leaf_value(leaf, 0) == expected.at(i));
+        result = result && (t.leaf_value(leaf, 1) == -expected.at(i));
     }
 
     std::cout << "test_eval1 " << result << std::endl;
@@ -170,36 +200,37 @@ int test_eval1() {
 }
 
 int test_find_minmax() {
-    GTree<LtSplit, int> t;
+    GTree<LtSplit, int> t(1);
     t.split(t.root(), {0, 1.5});
     t.split(t["l"], {1, 1.5});
     t.split(t["ll"], {2, 1.5});
-    t.leaf_value(t["lll"]) = 1;
-    t.leaf_value(t["llr"]) = 2;
-    t.leaf_value(t["lr"]) = 3;
-    t.leaf_value(t["r"]) = 4;
+    t.leaf_value(t["lll"], 0) = 1;
+    t.leaf_value(t["llr"], 0) = 2;
+    t.leaf_value(t["lr"], 0) = 3;
+    t.leaf_value(t["r"], 0) = 4;
 
-    auto&& [min, max] = t.find_minmax_leaf_value();
+    auto minmax1 = t.find_minmax_leaf_value();
 
     bool result = true
-        && min == 1
-        && max == 4;
+        && minmax1[0].first == 1
+        && minmax1[0].second == 4;
 
-    auto&& [min2, max2] = t.find_minmax_leaf_value(t["l"]);
+    decltype(minmax1) minmax2 {{0, 0}};
+    t.find_minmax_leaf_value(t["l"], minmax2);
 
     result = result
-        && min2 == 1
-        && max2 == 2;
+        && minmax2[0].first == 1
+        && minmax2[0].second == 2;
 
     std::cout << "test_find_minmax " << result << std::endl;
     return result;
 }
 
 int test_prune1() {
-    TreeFp t;
+    TreeFp t(1);
     t.split(t[""], {1, 5});
-    t.leaf_value(t["l"]) = 4;
-    t.leaf_value(t["r"]) = 2;
+    t.leaf_value(t["l"], 0) = 4;
+    t.leaf_value(t["r"], 0) = 2;
 
     BoxFp::BufT buf {{1, {2,4}}}; // left only
     TreeFp tleft = t.prune(BoxRefFp(buf));
@@ -211,12 +242,12 @@ int test_prune1() {
     bool result = true
         && tleft.is_root(tleft.root())
         && tright.is_root(tright.root())
-        && tleft.leaf_value(tleft.root()) == 4
-        && tright.leaf_value(tright.root()) == 2
+        && tleft.leaf_value(tleft.root(), 0) == 4
+        && tright.leaf_value(tright.root(), 0) == 2
         && tboth.num_nodes() == 3
         && tboth.get_split(tboth.root()) == LtSplitFp{1, 5}
-        && tboth.leaf_value(tboth["l"]) == 4
-        && tboth.leaf_value(tboth["r"]) == 2
+        && tboth.leaf_value(tboth["l"], 0) == 4
+        && tboth.leaf_value(tboth["r"], 0) == 2
         ;
 
     std::cout << "test_prune1 " << result << std::endl;
@@ -224,16 +255,16 @@ int test_prune1() {
 }
 
 int test_prune2() {
-    TreeFp t;
+    TreeFp t(1);
     t.split(t[""], {1, 5});
     t.split(t["l"], {1, 4});
     t.split(t["ll"], {1, 3});
     t.split(t["lll"], {1, 2});
-    t.leaf_value(t["r"]) = 5;
-    t.leaf_value(t["lr"]) = 4;
-    t.leaf_value(t["llr"]) = 3;
-    t.leaf_value(t["lllr"]) = 2;
-    t.leaf_value(t["llll"]) = 1;
+    t.leaf_value(t["r"], 0) = 5;
+    t.leaf_value(t["lr"], 0) = 4;
+    t.leaf_value(t["llr"], 0) = 3;
+    t.leaf_value(t["lllr"], 0) = 2;
+    t.leaf_value(t["llll"], 0) = 1;
 
 
     std::cout << t << std::endl;
@@ -241,12 +272,22 @@ int test_prune2() {
     bool result = true;
 
     std::vector<FpT> d {0, 1};
-    d[1] = 1; result &= t.eval(data<FpT>(d)) == 1.0;
-    d[1] = 2; result &= t.eval(data<FpT>(d)) == 2.0;
-    d[1] = 3; result &= t.eval(data<FpT>(d)) == 3.0;
-    d[1] = 4; result &= t.eval(data<FpT>(d)) == 4.0;
-    d[1] = 5; result &= t.eval(data<FpT>(d)) == 5.0;
-    d[1] = 6; result &= t.eval(data<FpT>(d)) == 5.0;
+    d[1] = 1; result &= t.eval_node(data<FpT>(d)) == t["llll"];
+    d[1] = 2; result &= t.eval_node(data<FpT>(d)) == t["lllr"];
+    d[1] = 3; result &= t.eval_node(data<FpT>(d)) == t["llr"];
+    d[1] = 4; result &= t.eval_node(data<FpT>(d)) == t["lr"];
+    d[1] = 5; result &= t.eval_node(data<FpT>(d)) == t["r"];
+    d[1] = 6; result &= t.eval_node(data<FpT>(d)) == t["r"];
+
+    std::vector<FloatT> r { 0.0 };
+    data<FloatT> dr(r);
+
+    d[1] = 1; r[0] = 0; t.eval(data<FpT>(d), dr); result &= r[0] == 1.0;
+    d[1] = 2; r[0] = 0; t.eval(data<FpT>(d), dr); result &= r[0] == 2.0;
+    d[1] = 3; r[0] = 0; t.eval(data<FpT>(d), dr); result &= r[0] == 3.0;
+    d[1] = 4; r[0] = 0; t.eval(data<FpT>(d), dr); result &= r[0] == 4.0;
+    d[1] = 5; r[0] = 0; t.eval(data<FpT>(d), dr); result &= r[0] == 5.0;
+    d[1] = 6; r[0] = 0; t.eval(data<FpT>(d), dr); result &= r[0] == 5.0;
 
     BoxFp::BufT buf {{1, {2,4}}}; // left only
     TreeFp tp = t.prune(BoxRefFp(buf));
@@ -254,8 +295,8 @@ int test_prune2() {
     result = result
         && tp.num_nodes() == 3
         && tp.get_split(tp.root()) == LtSplitFp(1, 3)
-        && tp.leaf_value(tp["l"]) == 2.0
-        && tp.leaf_value(tp["r"]) == 3.0
+        && tp.leaf_value(tp["l"], 0) == 2.0
+        && tp.leaf_value(tp["r"], 0) == 3.0
         ;
 
     std::cout << "test_prune2 " << result << std::endl;
@@ -263,16 +304,16 @@ int test_prune2() {
 }
 
 int test_negate_leaf_values() {
-    TreeFp t;
+    TreeFp t(1);
     t.split(t[""], {1, 5});
-    t.leaf_value(t["l"]) = 4;
-    t.leaf_value(t["r"]) = 2;
+    t.leaf_value(t["l"], 0) = 4;
+    t.leaf_value(t["r"], 0) = 2;
 
     TreeFp tneg = t.negate_leaf_values();
 
     int result = true
-        && tneg.leaf_value(tneg["l"]) == -4
-        && tneg.leaf_value(tneg["r"]) == -2
+        && tneg.leaf_value(tneg["l"], 0) == -4
+        && tneg.leaf_value(tneg["r"], 0) == -2
         ;
 
     std::cout << "test_negate_leaf_values " << result << std::endl;
@@ -283,6 +324,7 @@ int main_tree() {
     int result = 1
         && test_tree1()
         && test_tree2()
+        && test_tree_multi()
         && test_generic_tree1()
         && test_get_splits1()
         && test_get_splits2()

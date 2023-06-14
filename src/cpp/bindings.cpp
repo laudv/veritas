@@ -180,23 +180,41 @@ PYBIND11_MODULE(veritas_core, m) {
         .def("parent", [](const TreeRef& r, NodeId n) { return r.get().parent(n); })
         .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get().tree_size(n); })
         .def("depth", [](const TreeRef& r, NodeId n) { return r.get().depth(n); })
-        .def("get_leaf_value", [](const TreeRef& r, NodeId n) { return r.get().leaf_value(n); })
+        .def("get_leaf_value", [](const TreeRef& r, NodeId n, int i) {
+                return r.get().leaf_value(n, i);
+        })
+        .def("get_leaf_values", [](const TreeRef& r, NodeId n) {
+                py::array_t<FloatT> arr(r.get().num_leaf_values());
+                for (int i = 0; i < r.get().num_leaf_values(); ++i)
+                    arr.mutable_at(i) = r.get().leaf_value(n, i);
+                return arr;
+        })
+        .def("set_leaf_value", [](TreeRef& r, NodeId n, int i, FloatT v) {
+                r.get().leaf_value(n, i) = v;
+        })
         .def("get_split", [](const TreeRef& r, NodeId n) { return r.get().get_split(n); })
-        .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) { r.get().leaf_value(n) = v; })
-        .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n)
-                { return r.get().find_minmax_leaf_value(n); })
+        .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n) {
+                std::vector<std::pair<FloatT, FloatT>> buf(r.get().num_leaf_values());
+                r.get().find_minmax_leaf_value(n, buf);
+                return buf;
+        })
         .def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get().split(n, {fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get().split(n, bool_ltsplit(fid)); })
         .def("eval", [](const TreeRef& r, py::handle arr, NodeId nid) {
             data d = get_data(arr);
+            int nlv = r.get().num_leaf_values();
 
-            auto result = py::array_t<FloatT>(d.num_rows);
-            py::buffer_info out = result.request();
-            FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
+            py::array_t<FloatT, py::array::c_style | py::array::forcecast>
+                result(d.num_rows * nlv);
+            result = result.reshape({(long)d.num_rows, (long)nlv});
 
-            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = r.get().eval(nid, d.row(i));
+            data rdata = get_data(result);
+
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) {
+                data rrow = rdata.row(i);
+                r.get().eval(nid, d.row(i), rrow);
+            }
 
             return result;
         })
@@ -226,16 +244,21 @@ PYBIND11_MODULE(veritas_core, m) {
         .def("prune", [](const TreeRef& r, const py::object& pybox) {
             Box::BufT buf = tobox(pybox);
             Box box{buf};
-            AddTree at;
+            AddTree at(r.get().num_leaf_values());
             at.add_tree(r.get().prune(BoxRef{box}));
             return at;
         })
         ; // TreeRef
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
-        .def(py::init<>())
+        .def(py::init<int>())
         //.def(py::init<const AddTree&, size_t, size_t>())
-        .def_readwrite("base_score", &AddTree::base_score)
+        .def("get_base_score", [](const AddTree& at, int idx) {
+                return at.base_score(idx);
+        })
+        .def("set_base_score", [](AddTree& at, int idx, FloatT value) {
+                at.base_score(idx) = value;
+        })
         .def("copy", [](const AddTree& at) { return AddTree(at); })
         .def("__getitem__", [](const std::shared_ptr<AddTree>& at, size_t i) {
                 if (i < at->size())
@@ -274,13 +297,18 @@ PYBIND11_MODULE(veritas_core, m) {
         })
         .def("eval", [](const AddTree& at, py::handle arr) {
             data d = get_data(arr);
+            int nlv = at.num_leaf_values();
 
-            auto result = py::array_t<FloatT>(d.num_rows);
-            py::buffer_info out = result.request();
-            FloatT *out_ptr = static_cast<FloatT *>(out.ptr);
+            py::array_t<FloatT, py::array::c_style | py::array::forcecast>
+                result(d.num_rows * nlv);
+            result = result.reshape({(long)d.num_rows, (long)nlv});
 
-            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i)
-                out_ptr[i] = at.eval(d.row(i));
+            data rdata = get_data(result);
+
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) {
+                data rrow = rdata.row(i);
+                at.eval(d.row(i), rrow);
+            }
 
             return result;
         })
@@ -305,10 +333,8 @@ PYBIND11_MODULE(veritas_core, m) {
                 return s.str();
             },
             [](const std::string& json) { // __setstate__
-                AddTree at;
                 std::stringstream s(json);
                 return addtree_from_json<AddTree>(s);
-                return at;
             }))
         ; // AddTree
 
