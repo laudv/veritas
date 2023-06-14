@@ -32,15 +32,15 @@ def plot_img_solutions(imghat, solutions):
 
 class TestSearch(unittest.TestCase):
     def test_single_tree(self):
-        at = AddTree()
+        at = AddTree(1)
         t = at.add_tree();
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
         t.split(t.right(t.root()), 0, 3)
-        t.set_leaf_value( t.left( t.left(t.root())), 1.0)
-        t.set_leaf_value(t.right( t.left(t.root())), 2.0)
-        t.set_leaf_value( t.left(t.right(t.root())), 4.0)
-        t.set_leaf_value(t.right(t.right(t.root())), 8.0)
+        t.set_leaf_value( t.left( t.left(t.root())), 0, 1.0)
+        t.set_leaf_value(t.right( t.left(t.root())), 0, 2.0)
+        t.set_leaf_value( t.left(t.right(t.root())), 0, 4.0)
+        t.set_leaf_value(t.right(t.right(t.root())), 0, 8.0)
         print(at[0])
 
         search = Search.max_output(at)
@@ -99,7 +99,7 @@ class TestSearch(unittest.TestCase):
         X = X.astype(np.float32)
 
         at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy-new.json"))
-        at.base_score -= np.median(y)
+        at.set_base_score(0, at.get_base_score(0) - np.median(y))
         #at = at.prune([Domain(0, 30), Domain(0, 30)])
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
@@ -169,7 +169,7 @@ class TestSearch(unittest.TestCase):
         X = X.astype(np.float32)
 
         at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy-new.json"))
-        at.base_score -= ymed
+        at.set_base_score(0, at.get_base_score(0) - ymed)
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
 
@@ -188,8 +188,8 @@ class TestSearch(unittest.TestCase):
             kan = KantchelianAttack(at, True, example)
             kan.optimize()
             print(kan.solution())
-        except:
-            print("Gurobi error!")
+        except Exception as e:
+            print("Gurobi error!", e)
 
    # def test_img6(self):
    #     img = np.load(os.path.join(BPATH, "data/img.npy"))

@@ -1,7 +1,7 @@
 /**
  * \file fp_search.hpp
  *
- * Finite precision search.
+ * Fixed precision search.
  * Avoid typical floating point issues by reasoning over integers instead of
  * floats.
  *

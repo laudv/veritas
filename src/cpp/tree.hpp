@@ -19,6 +19,7 @@
 
 #include <stdexcept>
 #include <type_traits>
+#include <utility>
 #include <vector>
 #include <unordered_map>
 #include <variant>
@@ -32,10 +33,9 @@ class GTree; // generic tree
 
 namespace inner {
 
-template <typename ValueT>
 struct NodeLeaf {
-    ValueT leaf_value;
-    NodeLeaf() : leaf_value{} {}
+    int leaf_value_offset;
+    NodeLeaf(int offset) : leaf_value_offset{offset} {}
 };
 
 template <typename SplitT>
@@ -46,9 +46,9 @@ struct NodeInternal {
     NodeInternal(NodeId l, SplitT s) : left{l}, split{s} {}
 };
 
-template <typename SplitT, typename ValueT>
+template <typename SplitT>
 struct Node {
-    using LeafT = NodeLeaf<ValueT>;
+    using LeafT = NodeLeaf;
     using InternalT = NodeInternal<SplitT>;
 
     NodeId id;
@@ -59,17 +59,17 @@ struct Node {
     //inline Node() : id(-1), parent(-1), tree_size(-1) {}
 
     /** new leaf node */
-    inline Node(NodeId id, NodeId parent)
-        : id(id), parent(parent), tree_size(1), inner{} {}
+    inline Node(NodeId id, NodeId parent, int offset)
+        : id(id)
+        , parent(parent)
+        , tree_size(1)
+        , inner{std::in_place_type<NodeLeaf>, offset}
+    {}
 
     inline bool is_leaf() const { return tree_size == 1; }
 
-    inline const ValueT& leaf_value() const {
-        return std::get<LeafT>(inner).leaf_value;
-    }
-
-    inline ValueT& leaf_value() {
-        return std::get<LeafT>(inner).leaf_value;
+    inline int leaf_value_offset() const {
+        return std::get<LeafT>(inner).leaf_value_offset;
     }
 
     inline NodeId left() const {
@@ -104,31 +104,43 @@ struct Node {
 /**
  * A binary decision tree with less-than splits.
  */
-template <typename SplitT, typename ValueT>
+template <typename SplitT, typename LeafValueT>
 class GTree {
 public:
-    using SelfT = GTree<SplitT, ValueT>;
+    using SelfT = GTree<SplitT, LeafValueT>;
     using SplitType = SplitT;
     using SplitValueT = typename SplitT::ValueT;
     using IntervalType = typename SplitT::IntervalT;
-    using ValueType = ValueT;
+    using LeafValueType = LeafValueT;
     using BoxT = GBox<SplitValueT>;
     using BoxRefT = GBoxRef<SplitValueT>;
     using SplitMapT =
         std::unordered_map<FeatId, std::vector<typename SplitT::ValueT>>;
+    using LeafValueIterT = typename std::vector<LeafValueT>::iterator;
+    using LeafValueConstIterT = typename std::vector<LeafValueT>::const_iterator;
 
 private:
-    using NodeT = inner::Node<SplitT, ValueT>;
+    using NodeT = inner::Node<SplitT>;
     std::vector<NodeT> nodes_;
+    std::vector<LeafValueT> leaf_values_;
+    int nleaf_values_;
     
     NodeT& node(NodeId id) { return nodes_[id]; }
     const NodeT& node(NodeId id) const { return nodes_[id]; }
 
 public:
-    inline GTree() { clear(); }
+    inline GTree(int nleaf_values)
+        : nodes_{}
+        , leaf_values_{}
+        , nleaf_values_{nleaf_values} { clear(); }
 
     /** Reset this tree. */
-    inline void clear() { nodes_.clear(); nodes_.push_back({0, {}}); }
+    inline void clear() {
+        nodes_.clear();
+        for (int i = 0; i < nleaf_values_; ++i)
+            leaf_values_.emplace_back();
+        nodes_.emplace_back(0, 0, 0);
+    }
 
     inline NodeId root() const { return 0; }
 
@@ -190,6 +202,7 @@ public:
 
 
     inline int tree_size(NodeId id) const { return node(id).tree_size; }
+    inline int num_leaf_values() const { return nleaf_values_; }
 
     inline int depth(NodeId id) const {
         int depth = 0;
@@ -205,26 +218,53 @@ public:
         return node(id).split();
     }
 
-    inline const ValueType& leaf_value(NodeId id) const {
+    inline const LeafValueType& leaf_value(NodeId id, int index) const {
         if (is_internal(id)) throw std::runtime_error("leaf_value of internal");
-        return node(id).leaf_value();
+        if (index < 0 || index >= nleaf_values_) throw std::runtime_error("invalid index");
+        int offset = node(id).leaf_value_offset();
+        return leaf_values_[offset + index];
     }
 
-    inline ValueType& leaf_value(NodeId id) {
+    inline LeafValueType& leaf_value(NodeId id, int index) {
         if (is_internal(id)) throw std::runtime_error("leaf_value of internal");
-        return node(id).leaf_value();
+        if (index < 0 || index >= nleaf_values_) throw std::runtime_error("invalid index");
+        int offset = node(id).leaf_value_offset();
+        return leaf_values_[offset + index];
+    }
+
+    inline LeafValueConstIterT leaf_values_begin(NodeId id) const {
+        if (is_internal(id)) throw std::runtime_error("leaf_values of internal");
+        int offset = node(id).leaf_value_offset();
+        return leaf_values_.cbegin() + offset;
+    }
+
+    inline LeafValueIterT leaf_values_begin(NodeId id) {
+        if (is_internal(id)) throw std::runtime_error("leaf_values of internal");
+        int offset = node(id).leaf_value_offset();
+        return leaf_values_.begin() + offset;
+    }
+
+    inline LeafValueConstIterT leaf_values_end(NodeId id) const {
+        return leaf_values_begin(id) + nleaf_values_;
+    }
+
+    inline LeafValueIterT leaf_values_end(NodeId id) {
+        return leaf_values_begin(id) + nleaf_values_;
     }
 
     inline void split(NodeId id, SplitType split) {
         if (is_internal(id)) throw std::runtime_error("split internal");
+        int left_offset = node(id).leaf_value_offset();
+
+        // push new values for new right leaf node
+        int right_offset = static_cast<int>(leaf_values_.size());
+        for (int i = 0; i < nleaf_values_; ++i)
+            leaf_values_.emplace_back();
 
         NodeId left_id = static_cast<NodeId>(nodes_.size());
 
-        NodeT left(left_id, id);
-        NodeT right(left_id + 1, id);
-
-        nodes_.push_back(left);
-        nodes_.push_back(right);
+        nodes_.emplace_back(left_id,   id, left_offset);
+        nodes_.emplace_back(left_id+1, id, right_offset);
 
         {
             NodeT& n = node(id);
@@ -302,8 +342,10 @@ public:
                 << "Leaf("
                 << "id=" << id
                 << ", sz=" << tree_size(id)
-                << ", value=" << leaf_value(id)
-                << ')' << std::endl;
+                << ", value=[";
+            for (int i = 0; i < nleaf_values_; ++i)
+                strm << (i==0 ? "" : ", ") << leaf_value(id, i);
+            strm << "])" << std::endl;
         } else {
             strm << (depth==0 ? "" : "├─ ")
                 << "Node("
@@ -326,18 +368,26 @@ public:
     SelfT prune(const BoxRefT& box) const;
 
     /** See NodeRef::find_minmax_leaf_value */
-    std::tuple<ValueT, ValueT> find_minmax_leaf_value(NodeId id) const {
+    inline void find_minmax_leaf_value(
+        NodeId id, std::vector<std::pair<LeafValueT, LeafValueT>> &buf) const {
         if (is_internal(id)) {
-            auto&& [rmin, rmax] = find_minmax_leaf_value(right(id));
-            auto&& [lmin, lmax] = find_minmax_leaf_value(left(id));
-            return { std::min(lmin, rmin), std::max(lmax, rmax) };
+            find_minmax_leaf_value(right(id), buf);
+            find_minmax_leaf_value(left(id), buf);
         } else {
-            return { leaf_value(id), leaf_value(id) };
+            for (int c = 0; c < num_leaf_values(); ++c) {
+                LeafValueT v = leaf_value(id, c);
+                LeafValueT m = std::min(buf[c].first, v);
+                LeafValueT M = std::max(buf[c].second, v);
+                buf[c] = {m, M};
+            }
         }
     }
 
-    inline std::tuple<ValueT, ValueT> find_minmax_leaf_value() const {
-        return find_minmax_leaf_value(root());
+    inline std::vector<std::pair<LeafValueT, LeafValueT>>
+    find_minmax_leaf_value() const {
+        std::vector<std::pair<LeafValueT, LeafValueT>> buf(num_leaf_values());
+        find_minmax_leaf_value(root(), buf);
+        return buf;
     }
 
     /** Limit depth and replace leaf values with max leaf value in subtree. */
@@ -362,11 +412,14 @@ public:
     }
 
     /** Evaluate this tree on an instance. */
-    const ValueType& eval(const data<SplitValueT>& row) const {
-        return eval(root(), row);
+    void eval(const data<SplitValueT>& row, data<LeafValueT>& result) const {
+        return eval(root(), row, result);
     }
-    const ValueType& eval(NodeId id, const data<SplitValueT>& row) const {
-        return leaf_value(eval_node(id, row));
+    void eval(NodeId id, const data<SplitValueT> &row,
+              data<LeafValueT> &result) const {
+        NodeId leaf = eval_node(id, row);
+        for (int i = 0; i < num_leaf_values(); ++i)
+            result[i] += leaf_value(leaf, i); // (!) addition!
     }
 
     /**
@@ -383,13 +436,17 @@ public:
                                        : eval_node(right(id), row);
     }
 
-    bool subtree_equals(NodeId i, const SelfT& other, NodeId j) const {
-        if (is_internal(i) && other.is_internal(j))
-            return get_split(i) == other.get_split(j)
-                && subtree_equals(left(i), other, other.left(j))
-                && subtree_equals(right(i), other, other.right(j));
-        else if (is_leaf(i) && other.is_leaf(j))
-            return leaf_value(i) == other.leaf_value(j);
+    bool subtree_equals(NodeId n, const SelfT& other, NodeId m) const {
+        if (is_internal(n) && other.is_internal(m)) {
+            return get_split(n) == other.get_split(m)
+                && subtree_equals(left(n), other, other.left(m))
+                && subtree_equals(right(n), other, other.right(m));
+        } else if (is_leaf(n) && other.is_leaf(m)) {
+            bool all_equal = true;
+            for (int i = 0; i < nleaf_values_; ++i)
+                all_equal &= (leaf_value(n, i) == other.leaf_value(m, i));
+            return all_equal;
+        }
         return false;
     }
 
@@ -400,8 +457,8 @@ public:
     bool operator!=(const SelfT &other) const { return !(*this == other); }
 }; // GTree
 
-template <typename SplitT, typename ValueT>
-std::ostream& operator<<(std::ostream& strm, const GTree<SplitT, ValueT>& t) {
+template <typename SplitT, typename LeafValueT>
+std::ostream& operator<<(std::ostream& strm, const GTree<SplitT, LeafValueT>& t) {
     t.print_node(strm, t.root(), 0);
     return strm;
 }

@@ -70,10 +70,12 @@ struct JsonStream {
         key.clear();
         char c;
         while (next_char(c)) {
+            std::cout << "next_char "  << c << std::endl;
             switch (c) {
             case ':':
             case '}':
-            case '[': break;
+            case '[':
+                break;
             case '{':
             case ',': // validate key
                 return read_quoted_string(key);
@@ -234,13 +236,17 @@ struct EncDec<LtSplitFp> {
 } // namespace json_detail
 
 template <typename SplitT, typename ValueT>
-static void tree_to_json(std::ostream &s, const GTree<SplitT, ValueT> &t,
+static void tree_to_json(std::ostream& s, const GTree<SplitT, ValueT>& t,
                          NodeId id, int depth = 0) {
     std::string indent(2*depth, ' ');
     if (t.is_leaf(id)) {
-        s << "{\"leaf_value\": ";
-        json_detail::EncDec<ValueT>().encode(s, t.leaf_value(id));
-        s << '}';
+        s << "{\"leaf_value\": [";
+        for (int i = 0; i < t.num_leaf_values(); ++i) {
+            json_detail::EncDec<ValueT>().encode(s, t.leaf_value(id, i));
+            if (i > 0)
+                s << ",";
+        }
+        s << "]}";
     } else {
         s << '{' << '\n' << indent << "\"split\": ";
         json_detail::EncDec<SplitT>().encode(s, t.get_split(id));
@@ -253,13 +259,15 @@ static void tree_to_json(std::ostream &s, const GTree<SplitT, ValueT> &t,
 }
 
 template <typename SplitT, typename ValueT>
-void tree_to_json(std::ostream& s, const GTree<SplitT, ValueT>& t) {
+void tree_to_json0(std::ostream& s, const GTree<SplitT, ValueT>& t) {
     // meta data about SplitT and ValueT
     s << '{';
     s << "\"split_type\": "
       << '"' << json_detail::EncDec<SplitT>().name() << '"'
       << ", \"value_type\": "
       << '"' << json_detail::EncDec<ValueT>().name() << '"'
+      << ", \"num_leaf_values\": "
+      << t.num_leaf_values()
       << ",\n  \"structure\": ";
 
     tree_to_json(s, t, t.root(), 2);
@@ -267,9 +275,9 @@ void tree_to_json(std::ostream& s, const GTree<SplitT, ValueT>& t) {
     s << "\n}";
 }
 
-template void tree_to_json(std::ostream& s, const Tree& t);
-template void tree_to_json(std::ostream& s, const TreeFp& t);
-template void tree_to_json(std::ostream& s, const GTree<LtSplit, std::string>& t);
+//template void tree_to_json(std::ostream& s, const Tree& t);
+//template void tree_to_json(std::ostream& s, const TreeFp& t);
+//template void tree_to_json(std::ostream& s, const GTree<LtSplit, std::string>& t);
 
 template <typename TreeT>
 static void tree_from_json(json_detail::JsonStream& s, TreeT& tree, NodeId id) {
@@ -279,7 +287,8 @@ static void tree_from_json(json_detail::JsonStream& s, TreeT& tree, NodeId id) {
         s.throw_msg();
     }
     if (s.key == "leaf_value") {
-        s.expect_encdec_value(tree.leaf_value(id), "leaf_value");
+        for (int i = 0; i < tree.num_leaf_values(); ++i)
+            s.expect_encdec_value(tree.leaf_value(id, i), "leaf_value");
     } else if (s.key == "split") {
         typename TreeT::SplitType split;
         s.expect_encdec_value(split, "split");
@@ -297,9 +306,7 @@ static void tree_from_json(json_detail::JsonStream& s, TreeT& tree, NodeId id) {
 template <typename TreeT>
 static TreeT tree_from_json(json_detail::JsonStream& s) {
     using SplitT = typename TreeT::SplitType;
-    using ValueT = typename TreeT::ValueType;
-
-    TreeT tree;
+    using ValueT = typename TreeT::LeafValueType;
 
     std::string buf;
     s.expect_key("split_type");
@@ -313,6 +320,12 @@ static TreeT tree_from_json(json_detail::JsonStream& s) {
     if (buf != json_detail::EncDec<ValueT>().name())
         throw std::runtime_error("invalid split type");
 
+    int num_leaf_values = 0;
+    s.expect_key("num_leaf_values");
+    s.expect_encdec_value(num_leaf_values, "num_leaf_values");
+
+    TreeT tree(num_leaf_values);
+
     buf.clear();
     s.expect_key("structure");
     s.read_value([&tree](json_detail::JsonStream &s) {
@@ -323,19 +336,23 @@ static TreeT tree_from_json(json_detail::JsonStream& s) {
     return tree;
 }
 template <typename TreeT>
-TreeT tree_from_json(std::istream& std_s) {
+TreeT tree_from_json0(std::istream& std_s) {
     json_detail::JsonStream s(std_s);
     return tree_from_json<TreeT>(s);
 }
 
-template Tree tree_from_json(std::istream& s);
-template TreeFp tree_from_json(std::istream& s);
-template GTree<LtSplit, std::string> tree_from_json(std::istream& s);
+//template Tree tree_from_json(std::istream& s);
+//template TreeFp tree_from_json(std::istream& s);
+//template GTree<LtSplit, std::string> tree_from_json(std::istream& s);
 
 template <typename TreeT>
-void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& at) {
-    s << "{\"base_score\": ";
-    json_detail::EncDec<typename TreeT::ValueType>().encode(s, at.base_score);
+void addtree_to_json0(std::ostream& s, const GAddTree<TreeT>& at) {
+    s << "{\"base_scores\": [";
+    for (int i = 0; i < at.num_leaf_values(); ++i) {
+        json_detail::EncDec<typename TreeT::LeafValueType>().encode(s, at.base_score(i));
+        if (i > 0)
+            s << ",";
+    }
     s << ", \"num_trees\": ";
     json_detail::EncDec<size_t>().encode(s, at.size());
     s << ", \"trees\": [\n";
@@ -347,17 +364,24 @@ void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& at) {
     s << "\n]}";
 }
 
-template void addtree_to_json(std::ostream &s, const AddTree &t);
-template void addtree_to_json(std::ostream &s, const AddTreeFp &t);
+//template void addtree_to_json(std::ostream &s, const AddTree &t);
+//template void addtree_to_json(std::ostream &s, const AddTreeFp &t);
 
 template <typename AddTreeT>
-AddTreeT addtree_from_json(std::istream &std_s) {
+AddTreeT addtree_from_json0(std::istream &std_s) {
     using TreeT = typename AddTreeT::TreeType;
     json_detail::JsonStream s(std_s);
-    AddTreeT at;
 
-    s.expect_key("base_score");
-    s.expect_encdec_value(at.base_score, "base_score");
+    int num_leaf_values = -1;
+    s.expect_key("num_leaf_values");
+    s.expect_encdec_value(num_leaf_values, "num_leaf_values");
+
+    AddTreeT at(num_leaf_values);
+
+    s.expect_key("base_scores");
+    for (int i = 0; i < num_leaf_values; ++i)
+        s.expect_encdec_value(at.base_score(i), "base_score");
+
     s.expect_key("num_trees");
     size_t num_trees;
     s.expect_encdec_value(num_trees, "num_trees");
@@ -370,8 +394,8 @@ AddTreeT addtree_from_json(std::istream &std_s) {
     return at;
 }
 
-template AddTree addtree_from_json(std::istream &s);
-template AddTreeFp addtree_from_json(std::istream &s);
+//template AddTree addtree_from_json(std::istream &s);
+//template AddTreeFp addtree_from_json(std::istream &s);
 
 
 
@@ -408,7 +432,7 @@ void tree_from_oldjson(std::istream& s, Tree& tree, NodeId id) {
                     s >> split_value;
                 else if (buf == "leaf_value") {
                     s >> leaf_value;
-                    tree.leaf_value(id) = leaf_value;
+                    tree.leaf_value(id, 0) = leaf_value;
                 }
                 else if (buf == "lt") { // left branch 
                     tree.split(id, {feat_id, split_value});
@@ -428,13 +452,12 @@ void tree_from_oldjson(std::istream& s, Tree& tree, NodeId id) {
     the_end: return;
 }
 
-AddTree addtree_from_oldjson(std::istream& s)
-{
-    AddTree at;
+AddTree addtree_from_oldjson(std::istream& s) {
+    AddTree at(1);
 
     std::string buf;
     char c;
-    Tree tree;
+    Tree tree(1);
 
     while (s.get(c)) {
         switch (c) {
@@ -451,7 +474,7 @@ AddTree addtree_from_oldjson(std::istream& s)
                 break;
             case ':':
                 if (buf == "base_score")
-                    s >> at.base_score;
+                    s >> at.base_score(0);
                 else if (buf == "trees")
                     goto loop2;
                 else

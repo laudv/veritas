@@ -61,11 +61,19 @@ struct data {
     { return row * stride_row + col * stride_col; }
 
     /** Access element in data matrix without bounds checking. */
-    inline T get_elem(size_t row, size_t col) const
+    inline const T& get_elem(size_t row, size_t col) const
+    { return ptr[index(row, col)]; }
+
+    /** Access element in data matrix without bounds checking. */
+    inline T& get_elem(size_t row, size_t col)
     { return ptr[index(row, col)]; }
 
     /** Access elements of first row. */
-    inline T operator[](size_t col) const
+    inline const T& operator[](size_t col) const
+    { return get_elem(0, col); }
+
+    /** Access elements of first row. */
+    inline T& operator[](size_t col)
     { return get_elem(0, col); }
 
     /** Select a row from the data. */

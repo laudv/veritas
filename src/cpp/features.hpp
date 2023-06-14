@@ -116,10 +116,9 @@ namespace veritas {
         void use_same_id_for(FeatId index1, FeatId index2) { uf_union(index1, index2); }
 
         /** Replace the feature ids used in the given at by the replacements in this FeatMap. */
-        AddTree transform(const AddTree& at, int instance=0) const
-        {
+        AddTree transform(const AddTree& at, int instance=0) const {
             instance = clean_instance(instance);
-            AddTree new_at;
+            AddTree new_at(at.num_leaf_values());
             for (const Tree& t : at)
             {
                 Tree& new_t = new_at.add_tree();
@@ -149,13 +148,11 @@ namespace veritas {
             using iterator_category = std::forward_iterator_tag;
         };
 
-        iterator begin(int instance = 0) const
-        {
+        iterator begin(int instance = 0) const {
             return {static_cast<FeatId>(clean_instance(instance) * num_features())};
         }
 
-        iterator end(int instance = 1) const
-        {
+        iterator end(int instance = 1) const {
             return {static_cast<FeatId>((1+clean_instance(instance)) * num_features())};
         }
 
@@ -166,18 +163,15 @@ namespace veritas {
             iterator end() const { return {end_}; }
         };
 
-        instance_iter_helper iter_instance(int instance) const
-        {
+        instance_iter_helper iter_instance(int instance) const {
             return { begin(instance).index, end(instance).index };
         }
 
     private:
 
         // https://en.wikipedia.org/wiki/Disjoint-set_data_structure
-        FeatId uf_find(FeatId index) const
-        {
-            while (feat_ids_[index] != index)
-            {
+        FeatId uf_find(FeatId index) const {
+            while (feat_ids_[index] != index) {
                 feat_ids_[index] = feat_ids_[feat_ids_[index]];
                 index = feat_ids_[index];
             }
@@ -198,10 +192,8 @@ namespace veritas {
 
         int clean_instance(int instance) const { return std::min(1, std::max(0, instance)); }
 
-        void init()
-        {
-            for (const std::string& name : names_)
-            {
+        void init() {
+            for (const std::string& name : names_) {
                 index_map_.insert({name, feat_ids_.size()});
                 feat_ids_.push_back(feat_ids_.size());
             }
@@ -229,13 +221,13 @@ namespace veritas {
                 transform(tn, tn.right(n), tm, tm.right(m), instance);
                 transform(tn, tn.left(n), tm, tm.left(m), instance);
             } else {
-                tm.leaf_value(m) = tn.leaf_value(n);
+                for (int i = 0; i < tn.num_leaf_values(); ++i)
+                    tm.leaf_value(m, i) = tn.leaf_value(n, i);
             }
         }
     }; // class FeatMap
 
-    inline std::ostream& operator<<(std::ostream& s, const FeatMap& fm)
-    {
+    inline std::ostream& operator<<(std::ostream& s, const FeatMap& fm) {
         s << "FeatMap {" << std::endl;
         for (auto index : fm)
             s << "    [" << index << "] `" << fm.get_name(index)

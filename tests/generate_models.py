@@ -32,7 +32,7 @@ def generate_img():
             learning_rate=1.0,
             n_estimators=3)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
 
@@ -47,7 +47,7 @@ def generate_img():
     fig.colorbar(im1, ax=ax[1])
     plt.show()
 
-    #at.write("tests/models/xgb-img-very-easy.json")
+    at.write("tests/models/xgb-img-very-easy-new.json")
     #with open("tests/models/xgb-img-very-easy-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
 
@@ -59,7 +59,7 @@ def generate_img():
             learning_rate=0.5,
             n_estimators=10)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     mae = mean_absolute_error(model.predict(X), at.eval(X))
@@ -73,7 +73,7 @@ def generate_img():
     fig.colorbar(im1, ax=ax[1])
     plt.show()
 
-    #at.write("tests/models/xgb-img-easy.json")
+    at.write("tests/models/xgb-img-easy-new.json")
     #with open("tests/models/xgb-img-easy-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
 
@@ -85,7 +85,7 @@ def generate_img():
             learning_rate=0.4,
             n_estimators=50)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     mae = mean_absolute_error(model.predict(X), at.eval(X))
@@ -101,7 +101,7 @@ def generate_img():
     fig.colorbar(im1, ax=ax[1])
     plt.show()
 
-    #at.write("tests/models/xgb-img-hard.json")
+    at.write("tests/models/xgb-img-hard-new.json")
     #with open("tests/models/xgb-img-hard-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
 
@@ -125,7 +125,7 @@ def generate_allstate():
     dtrain = xgb.DMatrix(X, y, missing=None)
     model = xgb.train(params, dtrain, num_boost_round=num_trees,
                       evals=[(dtrain, "train")])
-    at = addtree_from_xgb_model(model)
+    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     mae = sum((model.predict(dtrain) - at.eval(X))**2)/len(X)
     print(f"allstate: mae model difference {mae}")
     at.write("tests/models/xgb-allstate.json", compress=False)

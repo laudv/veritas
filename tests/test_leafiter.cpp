@@ -7,7 +7,7 @@
 using namespace veritas;
 
 int test_leafiter1() {
-    TreeFp t;
+    TreeFp t(1);
     t.split(t[""], {0, 2});
     t.split(t["l"], {0, 1});
     t.split(t["r"], {0, 5});

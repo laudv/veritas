@@ -14,6 +14,7 @@ set(SOURCES
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/addtree.cpp"
     "${SOURCE_DIR}/json_io.cpp"
+    "${SOURCE_DIR}/json_io_nlohmann.cpp"
     "${SOURCE_DIR}/fp_search.cpp"
     )
 
@@ -39,14 +40,30 @@ if (${FORCE_COLORED_OUTPUT})
     endif ()
 endif ()
 
+# Veritas static library
+add_library(${PROJECT_NAME} STATIC ${SOURCES})
+
 # GProf
 #cmake -DCMAKE_CXX_FLAGS=-pg -DCMAKE_EXE_LINKER_FLAGS=-pg -DCMAKE_SHARED_LINKER_FLAGS=-pg <SOURCE_DIR>
 
+# nlohmann JSON
+# https://github.com/nlohmann/json/tree/master#embedded
 
-#option(USE_SHARED_LIB "Use a shared libveritas.so lib" ON)
-#if (USE_SHARED_LIB)
-    add_library(${PROJECT_NAME} STATIC ${SOURCES})
-#endif()
+# Typically you don't care so much for a third party library's tests to be
+# run from your own project's code.
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+
+# If you only include this third party in PRIVATE source files, you do not
+# need to install it when your main project gets installed.
+set(JSON_Install OFF CACHE INTERNAL "")
+
+# Don't use include(nlohmann_json/CMakeLists.txt) since that carries with it
+# unintended consequences that will break the build.  It's generally
+# discouraged (although not necessarily well documented as such) to use
+# include(...) for pulling in other CMake projects anyways.
+add_subdirectory(lib/nlohmann_json)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json)
 
 # multi-threading
 #find_package(Threads REQUIRED)

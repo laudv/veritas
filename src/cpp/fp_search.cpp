@@ -163,7 +163,7 @@ struct OutputHeuristic {
 
     void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
                        State &state) {
-        state.gscore = at.base_score;
+        state.gscore = at.base_score(0);
         state.hscore = 0.0;
         state.next_tree = -1;
         FloatT best_of_best =
@@ -179,7 +179,7 @@ struct OutputHeuristic {
             for (NodeId i = leaf_id; i != -1; i = leafiter.next()) {
                 ++num_leaves;
                 leaf_id = i; // store the last valid leaf_id (avoid -1)
-                best = std::max(t.leaf_value(leaf_id), best, open_isworse);
+                best = std::max(t.leaf_value(leaf_id, 0), best, open_isworse);
             }
             if (leaf_id == -1)
                 throw std::runtime_error("leaf_id == -1?");
@@ -225,7 +225,7 @@ struct BasicOutputHeuristic
 
     void update_gscore(const AddTreeFp& at, OutputState& state,
                        size_t tree_index, NodeId leaf_id) {
-        state.gscore += at[tree_index].leaf_value(leaf_id);
+        state.gscore += at[tree_index].leaf_value(leaf_id, 0);
         state.fscore += 1; // deeper solution first
     };
 
@@ -239,7 +239,7 @@ struct BasicOutputHeuristic
 struct CountingOutputGScore {
     void operator()(const AddTreeFp& at, OutputState& state,
                     size_t tree_index, NodeId leaf_id) {
-        state.gscore += at[tree_index].leaf_value(leaf_id);
+        state.gscore += at[tree_index].leaf_value(leaf_id, 0);
         // TODO: Accumulate the count for this tree_id, leaf_id!
         // state.fscore += counts[tree_index][leaf_id];
     }
@@ -262,7 +262,7 @@ struct CountingOutputHeuristic
 
     void update_gscore(const AddTreeFp& at, OutputState& state,
                        size_t tree_index, NodeId leaf_id) {
-        state.gscore += at[tree_index].leaf_value(leaf_id);
+        state.gscore += at[tree_index].leaf_value(leaf_id, 0);
         state.fscore += get_count_for(tree_index, leaf_id);
     };
 
@@ -753,7 +753,7 @@ Search::Search(Settings s, const AddTree& at, const FlatBox& prune_box)
     : settings{s}
     , stats{}
     , at_{at.neutralize_negative_leaf_values()}
-    , atfp_{}
+    , atfp_{at.num_leaf_values()}
     , fpmap_{}
     , start_time_{time_clock::now()}
     , max_memory_{size_t(4)*1024*1024*1024}

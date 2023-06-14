@@ -23,8 +23,6 @@ import gurobipy as gu
 import numpy as np
 from veritas import AddTree, Interval
 
-DUMMY_AT = AddTree()
-
 class NodeInfo:
     def __init__(self, var, leafs_in_subtree):
         self.leafs_in_subtree = leafs_in_subtree
@@ -235,9 +233,9 @@ class KantchelianBase:
             node_infos = node_info_per_tree[tree_index]
             leafs = node_infos[tree.root()].leafs_in_subtree
             vars += [node_infos[n].var for n in leafs]
-            leaf_values += [tree.get_leaf_value(n) for n in leafs]
+            leaf_values += [tree.get_leaf_value(n, 0) for n in leafs]
 
-        return (gu.LinExpr(leaf_values, vars) + at.base_score)
+        return (gu.LinExpr(leaf_values, vars) + at.get_base_score(0))
 
     def _add_robustness_objective(self, example): # uses self.model, split_values, pvars, adds self.bvar
         self.bvar = self.model.addVar(name="b")
@@ -320,13 +318,13 @@ class KantchelianBase:
         return {attr: intervals[attr] for attr in sorted(intervals)}
 
     def _extract_ensemble_output(self, at, node_info_per_tree):
-        ensemble_output = at.base_score
+        ensemble_output = at.get_base_score(0)
         for tree_index in range(len(at)):
             tree = at[tree_index]
             node_infos = node_info_per_tree[tree_index]
             leafs = node_infos[tree.root()].leafs_in_subtree
             lvars = [node_infos[n].var for n in leafs]
-            tree_output = sum(0.0 if lvar.x < 0.5 else tree.get_leaf_value(n)
+            tree_output = sum(0.0 if lvar.x < 0.5 else tree.get_leaf_value(n, 0)
                     for lvar, n in zip(lvars, leafs))
             ensemble_output += tree_output
         return ensemble_output
@@ -382,8 +380,9 @@ class KantchelianAttack(KantchelianBase):
 class KantchelianTargetedAttack(KantchelianBase):
 
     def __init__(self, source_at, target_at, example, **kwargs):
-        self.source_at = source_at if source_at is not None else DUMMY_AT
-        self.target_at = target_at if target_at is not None else DUMMY_AT
+        dummy_at = AddTree(source_at.num_leaf_values())
+        self.source_at = source_at if source_at is not None else dummy_at
+        self.target_at = target_at if target_at is not None else dummy_at
         self.example = example
 
         super().__init__(self._combine_split_values(), **kwargs)
