@@ -8,6 +8,7 @@ import timeit, time, os, contextlib
 import numpy as np
 
 from . import AddTree, Search, get_closest_example, Interval
+from . import Config, HeuristicType
 
 try:
     from .kantchelian import KantchelianOutputOpt
@@ -163,17 +164,18 @@ class VeritasRobustnessSearch(RobustnessSearch):
             raise RuntimeError("source_at and target_at None")
 
     def get_search(self, delta):
-        box = [Interval(x-delta, x+delta) for x in self.example]
-        s = Search.max_output(self.at, box)
-        #s.set_example(self.example)
-        s.settings.stop_when_optimal = True
-        s.settings.ignore_state_when_worse_than = 0.0
-        s.settings.stop_when_num_solutions_exceeds =\
+        config = Config(HeuristicType.MAX_OUTPUT)
+        config.stop_when_optimal = True
+        config.ignore_state_when_worse_than = 0.0
+        config.stop_when_num_solutions_exceeds =\
                 self.stop_when_num_solutions_exceeds
-        s.settings.max_focal_size = 10000
-        s.settings.focal_eps = 0.5
+        config.max_focal_size = 10000
+        config.focal_eps = 0.5
 
+        box = [Interval(x-delta, x+delta) for x in self.example]
+        s = config.get_search(self.at, box)
         s.set_max_memory(self.mem_capacity)
+
         return s
 
     def get_max_output_difference(self, delta, max_time):

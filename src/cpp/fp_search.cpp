@@ -11,7 +11,11 @@
 #include "block_store.hpp"
 #include "box.hpp"
 #include "leafiter.hpp"
+#include "tree.hpp"
+#include <algorithm>
 #include <cmath> // isinf
+#include <memory>
+#include <stdexcept>
 #include <type_traits>
 
 namespace veritas {
@@ -163,15 +167,15 @@ struct OutputHeuristic {
 
     void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
                        State &state) {
-        state.gscore = at.base_score(0);
-        state.hscore = 0.0;
-        state.next_tree = -1;
-        FloatT best_of_best =
-            OrdLimit<FloatT, OpenIsWorseT>::worst(open_isworse);
+
+        using OrdLim = OrdLimit<FloatT, OpenIsWorseT>;
+        FloatT best_of_best = OrdLim::worst(open_isworse);
+
+        static_cast<Sub *>(this)->initialize_state(at, state);
 
         leafiter.setup_flatbox(state.box, prune_box);
         for (size_t tree_index = 0; tree_index < at.size(); ++tree_index) {
-            FloatT best = OrdLimit<FloatT, OpenIsWorseT>::worst(open_isworse);;
+            FloatT best = OrdLim::worst(open_isworse);
             const auto& t = at[tree_index];
             leafiter.setup_tree(t);
             int num_leaves = 0;
@@ -179,7 +183,9 @@ struct OutputHeuristic {
             for (NodeId i = leaf_id; i != -1; i = leafiter.next()) {
                 ++num_leaves;
                 leaf_id = i; // store the last valid leaf_id (avoid -1)
-                best = std::max(t.leaf_value(leaf_id, 0), best, open_isworse);
+                FloatT the_value =
+                    static_cast<Sub *>(this)->get_value_for_leaf(t, leaf_id);
+                best = std::max(the_value, best, open_isworse);
             }
             if (leaf_id == -1)
                 throw std::runtime_error("leaf_id == -1?");
@@ -197,16 +203,32 @@ struct OutputHeuristic {
     }
 
     /** Sub needs to implement this: */
+    FloatT get_value_for_leaf(const TreeFp& /*t*/, NodeId /*leaf_id*/) {
+        throw std::runtime_error("override in Sub!");
+    }
+
+    /** Sub needs to implement this: */
+    void initialize_gscore(const AddTreeFp & /*at*/,
+                               OutputState & /*state*/, size_t /*tree_index*/,
+                               NodeId /*leaf_id*/) {
+        throw std::runtime_error("override in Sub!");
+    };
+
+    /** Sub needs to implement this: */
     void update_gscore(const AddTreeFp& /*at*/, OutputState& /*state*/,
                        size_t /*tree_index*/, NodeId /*leaf_id*/) {
-        throw std::runtime_error("call the override in Sub!");
+        throw std::runtime_error("override in Sub!");
     };
+
+    void update_hscore(const AddTreeFp& /*at*/ ) {
+        throw std::runtime_error("override in Sub!");
+    }
 
     /** Sub needs to implement this: */
     void notify_new_solution(const AddTreeFp& /*at*/,
                              const FlatBoxFp& /*prune_box*/,
                              const State& /*state*/) {
-        throw std::runtime_error("call the override in Sub!");
+        throw std::runtime_error("override in Sub!");
     }
 };
 
@@ -222,6 +244,16 @@ struct BasicOutputHeuristic
     using State = typename BaseT::State;
 
     BasicOutputHeuristic() : BaseT() {}
+
+    FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
+        return t.leaf_value(leaf_id, 0);
+    }
+
+    void initialize_state(const AddTreeFp& at, OutputState& state) {
+        state.gscore = at.base_score(0);
+        state.hscore = 0.0;
+        state.next_tree = -1;
+    }
 
     void update_gscore(const AddTreeFp& at, OutputState& state,
                        size_t tree_index, NodeId leaf_id) {
@@ -259,6 +291,16 @@ struct CountingOutputHeuristic
     std::vector<std::vector<int>> counts;
 
     CountingOutputHeuristic() : BaseT(), counts{} {}
+
+    FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
+        return t.leaf_value(leaf_id, 0);
+    }
+
+    void initialize_state(const AddTreeFp& at, OutputState& state) {
+        state.gscore = at.base_score(0);
+        state.hscore = 0.0;
+        state.next_tree = -1;
+    }
 
     void update_gscore(const AddTreeFp& at, OutputState& state,
                        size_t tree_index, NodeId leaf_id) {
@@ -302,10 +344,90 @@ struct CountingOutputHeuristic
     }
 };
 
+template <typename OpenIsWorse, typename FocalIsWorse, typename DiffIsWorse>
+struct MultiOutputDiffHeuristic
+    : public OutputHeuristic<OpenIsWorse, FocalIsWorse,
+                             MultiOutputDiffHeuristic<OpenIsWorse, FocalIsWorse, DiffIsWorse>> {
+
+    using OpenIsWorseT = OpenIsWorse;
+    using FocalIsWorseT = FocalIsWorse;
+    using DiffIsWorseT = DiffIsWorse;
+    using SelfT = MultiOutputDiffHeuristic<OpenIsWorse, FocalIsWorse, DiffIsWorse>;
+    using BaseT = OutputHeuristic<OpenIsWorse, FocalIsWorse, SelfT>;
+    using State = typename BaseT::State;
+
+    const int num_leaf_values;
+    std::vector<FloatT> per_class;
+    DiffIsWorseT diff_isworse;
+
+    MultiOutputDiffHeuristic(int num_leaf_values)
+        : BaseT()
+        , num_leaf_values(num_leaf_values)
+        , per_class(num_leaf_values)
+        , diff_isworse() {}
+
+    FloatT best_per_class() {
+        //FloatT sub = OrdLimit<FloatT, DiffIsWorseT>::worst(diff_isworse);
+        //for (int i = 0; i < num_leaf_values; ++i)
+        //    if (i != c)
+        //        sub = std::max(per_class[i], sub, diff_isworse);
+        FloatT max = *std::max_element(per_class.begin() + 1,
+                                       per_class.end(), diff_isworse);
+        return max;
+    }
+
+    FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
+        FloatT r = OrdLimit<FloatT, DiffIsWorseT>::worst(diff_isworse);
+        for (int i = 1; i < num_leaf_values; ++i) {
+            FloatT v = t.leaf_value(leaf_id, i);
+            r = std::max(r, v, diff_isworse);
+        }
+        return t.leaf_value(leaf_id, 0)-r;
+    }
+
+    void initialize_state(const AddTreeFp& at, OutputState& state) {
+        //FloatT sub = OrdLimit<FloatT, DiffIsWorseT>::worst(diff_isworse);
+        //for (int i = 0; i < at.num_leaf_values(); ++i)
+        //    if (i != c)
+        //        sub = std::max(at.base_score(i), sub, diff_isworse);
+
+        //state.gscore = at.base_score(c) - sub;
+        //state.hscore = 0.0;
+        //state.next_tree = -1;
+
+        for (int i = 0; i < num_leaf_values; ++i)
+            per_class[i] = at.base_score(i);
+
+        state.gscore = per_class[0] - best_per_class();
+        state.hscore = 0.0;
+        state.next_tree = -1;
+    }
+
+    void update_gscore(const AddTreeFp& at, OutputState& state,
+                       size_t tree_index, NodeId leaf_id) {
+        const auto& tree = at[tree_index];
+
+        for (int i = 0; i < num_leaf_values; ++i)
+            per_class[i] += tree.leaf_value(leaf_id, i);
+
+        state.gscore = per_class[0] - best_per_class();
+        state.fscore += 1; // deeper solution first
+    };
+
+    void notify_new_solution(const AddTreeFp& /*at*/,
+                             const FlatBoxFp& /*prune_box*/,
+                             const State& /*state*/) {
+        // nothing to do here
+    }
+};
+
 using MaxBasicOutputHeuristic = BasicOutputHeuristic<LessIsWorse, LessIsWorse>;
 using MinBasicOutputHeuristic = BasicOutputHeuristic<GreaterIsWorse, LessIsWorse>;
 using MaxCountingOutputHeuristic = CountingOutputHeuristic<LessIsWorse, LessIsWorse>;
 using MinCountingOutputHeuristic = CountingOutputHeuristic<GreaterIsWorse, LessIsWorse>;
+using MaxMaxMultiOutputDiffHeuristic = MultiOutputDiffHeuristic<LessIsWorse, LessIsWorse, LessIsWorse>;
+using MinMaxMultiOutputDiffHeuristic = MultiOutputDiffHeuristic<GreaterIsWorse, LessIsWorse, LessIsWorse>;
+using MaxMinMultiOutputDiffHeuristic = MultiOutputDiffHeuristic<LessIsWorse, LessIsWorse, GreaterIsWorse>;
 
 template <typename State>
 struct SolutionImpl {
@@ -331,19 +453,15 @@ private:
 public:
     std::shared_ptr<Heuristic> heuristic;
 
-    SearchImpl(const AddTree& at, const FlatBox& prune_box,
-            std::shared_ptr<Heuristic> h)
-        : Search(Settings(h->open_isworse), at, prune_box)
+    SearchImpl(const Config& config, std::shared_ptr<Heuristic> h,
+            const AddTree& at, const FlatBox& prune_box)
+        : Search(config, at, prune_box)
         , open_{}
         , focal_{}
         , solutions_{}
         , leafiter_{}
         , boxbuf_{}
         , heuristic{std::move(h)} { init_(); }
-
-    template <typename H = Heuristic>
-    SearchImpl(const AddTree& at, const FlatBox& prune_box)
-        : SearchImpl(at, prune_box, std::make_shared<Heuristic>()) {}
 
   public: // virtual Search methods
 
@@ -463,27 +581,38 @@ private:
         if (open_.empty())
             return StopReason::NO_MORE_OPEN;
 
+        std::cout << "STEP" << stats.num_steps << "\n";
+
         ++stats.num_steps;
 
         State state = pop_from_focal_();
 
         if (is_solution_(state)) {
-            //std::cout << "SOLUTION FOUND "
-            //    << "open_score=" << state.open_score()
-            //    << ", focal_score=" << state.focal_score() << '\n';
-            push_solution_(std::move(state));
+            std::cout << "SOLUTION FOUND "
+                << "open_score=" << state.open_score()
+                << ", focal_score=" << state.focal_score() << '\n';
+            size_t sol = push_solution_(std::move(state));
+            const auto& solsol = solutions_[sol];
+            std::cout << "               "
+                << "open_score=" << solsol.state.open_score()
+                << ", focal_score=" << solsol.state.focal_score()
+                << " ids";
+            for (NodeId k : get_solution_nodes(sol))
+                std::cout << " " << k;
+            std::cout << '\n';
+
         } else {
             expand_(state);
         }
 
-        if (settings.stop_when_optimal && is_optimal()) {
+        if (config.stop_when_optimal && is_optimal()) {
             return StopReason::OPTIMAL;
         }
-        if (num_solutions() >= settings.stop_when_num_solutions_exceeds) {
+        if (num_solutions() >= config.stop_when_num_solutions_exceeds) {
             return StopReason::NUM_SOLUTIONS_EXCEEDED;
         }
         if (num_solutions() > 0 && heuristic->open_isworse(
-                settings.stop_when_atleast_bound_better_than,
+                config.stop_when_atleast_bound_better_than,
                 solutions_[0].state.open_score())) {
             return StopReason::ATLEAST_BOUND_BETTER_THAN;
         }
@@ -500,7 +629,7 @@ private:
                 return reason;
 
             if (num_sols_at_start +
-                    settings.stop_when_num_new_solutions_exceeds
+                    config.stop_when_num_new_solutions_exceeds
                     <= num_solutions()) {
                 return StopReason::NUM_NEW_SOLUTIONS_EXCEEDED;
             }
@@ -548,7 +677,7 @@ private:
             std::cout << "Warning: new_state invalid\n";
         } else if (heuristic->open_isworse(
                        new_state.open_score(),
-                       settings.ignore_state_when_worse_than)) {
+                       config.ignore_state_when_worse_than)) {
             ++stats.num_states_ignored;
         } else {
             push_to_open_(std::move(new_state));
@@ -568,9 +697,9 @@ private:
     // PAMI-4, no. 4, pp. 392-399, July 1982, doi:
     // 10.1109/TPAMI.1982.4767270.
     State pop_from_focal_() {
-        if (settings.focal_eps == 1.0)
+        if (config.focal_eps == 1.0)
             return pop_from_open_();
-        if (settings.max_focal_size <= 1)
+        if (config.max_focal_size <= 1)
             return pop_from_open_();
 
         auto focal_cmp = [this](size_t i, size_t j) -> bool {
@@ -586,7 +715,7 @@ private:
 
         FloatT oscore = open_.front().open_score();
         FloatT orelax = heuristic->open_isworse.relax_open_score(
-            oscore, settings.focal_eps);
+            oscore, config.focal_eps);
         size_t i_best = 0;
 
         focal_.clear();
@@ -595,6 +724,20 @@ private:
             size_t i = pop_from_heap_(focal_, focal_cmp);
             const State& state = open_[i];
 
+            std::cout << "pop_from_focal_ " << i << ", " << state.open_score()
+                      << ", " << state.focal_score() << ", " << state.box << ',';
+            LeafIter<TreeFp> liter;
+            for (const TreeFp& tree : atfp_) {
+                liter.clear();
+                liter.setup(tree, state.box, prune_box_);
+                NodeId leaf_id = liter.next();
+                if (liter.next() != -1)
+                    std::cout << " ?";
+                else
+                    std::cout << " " << leaf_id;
+            }
+            std::cout <<'\n';
+
             // keep the old index if equal, earlier ones will have better
             // open_scores
             if (heuristic->focal_isworse(open_[i_best].focal_score(),
@@ -602,7 +745,7 @@ private:
                 i_best = i;
             }
 
-            if (focal_.size() >= settings.max_focal_size)
+            if (focal_.size() >= config.max_focal_size)
                 break;
 
             for (size_t child : {2*i+1, 2*i+2}) {
@@ -619,23 +762,21 @@ private:
 
         //sum_focal_size_ += focal_size;
 
-        //std::cout << "BEST CHOICE " << i_best << ", focal_score "
-        //    << open_[i_best].focal_score()
-        //    << ", f=" << open_[i_best].open_score()
-        //    << " (vs " << open_.front().open_score() << ")" << std::endl;
+        std::cout << "BEST CHOICE " << i_best << ", focal_score "
+            << open_[i_best].focal_score()
+            << ", f=" << open_[i_best].open_score()
+            << " (vs " << open_.front().open_score() << ")" << std::endl;
         return pop_index_heap_(open_, i_best, heuristic->open_isworse);
     }
 
     template <typename T, typename CmpT>
-    void push_to_heap_(std::vector<T>& heap, T&& s, const CmpT& cmp)
-    {
+    void push_to_heap_(std::vector<T>& heap, T&& s, const CmpT& cmp) {
         heap.push_back(std::move(s));
         std::push_heap(heap.begin(), heap.end(), cmp);
     }
 
     template <typename T, typename CmpT>
-    T pop_from_heap_(std::vector<T>& heap, const CmpT& cmp)
-    {
+    T pop_from_heap_(std::vector<T>& heap, const CmpT& cmp) {
         std::pop_heap(heap.begin(), heap.end(), cmp);
         T s = heap.back();
         heap.pop_back();
@@ -655,15 +796,15 @@ private:
         T s = heap.back();
         heap.pop_back();
 
-        //std::cout << "BEFORE\n";
-        //print_heap_(heap, 0);
-
         // heapify up
         for (size_t i = index; i != 0;) {
             size_t parent = (i-1)/2;
-            if (cmp(heap[i], heap[parent])) // parent larger than i
+            if (!cmp(heap[parent], heap[i])) // parent lteq than i
                 break; // heap prop satisfied
-            //std::cout << "heapify up " << i << " <-> " << parent << std::endl;
+            std::cout << "\033[91m" << "heapify up " << i << " <-> " << parent
+                      << ", " << heap[i].open_score()
+                      << ", " << heap[parent].open_score()
+                      << "\033[0m" << std::endl;
             std::swap(heap[i], heap[parent]);
             i = parent;
         }
@@ -676,33 +817,28 @@ private:
             bool has_left = left < heap.size();
             bool has_right = right < heap.size();
 
-            if ((!has_left || cmp(heap[left], heap[i]))
-                    && (!has_right || cmp(heap[right], heap[i])))
+            if ((!has_left || !cmp(heap[i], heap[left]))
+                    && (!has_right || !cmp(heap[i], heap[right])))
                 break;
 
             size_t larger = left;
-            if (has_right && cmp(heap[left], heap[right]))
+            if (has_right && !cmp(heap[right], heap[left]))
                 larger = right;
 
-            //std::cout << "heapfy down " << i << " <-> " << larger;
-            //std::cout << " fscores " << heuristic.open_score(heap[i])
-            //    << ", " << heuristic.open_score(heap[larger])
-            //    << " (" << heuristic.open_score(heap[larger==left ? right : left]) << ")" << std::endl;
+            std::cout << "\033[92m" << "heapfy down " << i << " <-> " << larger;
+            std::cout << " fscores " << heap[i].open_score()
+                << ", " << heap[larger].open_score()
+                << " (" << heap[larger==left ? right : left].open_score() << ")"
+                  << "\033[0m" << std::endl;
 
             std::swap(heap[larger], heap[i]);
             i = larger;
         }
+        
+        // TODO REMOVE
+        if (!std::is_heap(heap.begin(), heap.end(), cmp))
+            throw std::runtime_error("whoops not a heap");
 
-        //std::cout << "AFTER\n";
-        //print_heap_(heap, 0);
-
-        //if (debug && !std::is_heap(heap.begin(), heap.end(), cmp)) {
-        //    print_heap_(heap);
-        //    auto until = std::is_heap_until(heap.begin(), heap.end(), cmp);
-        //    std::cout << "heap until " << (until-heap.begin()) << ", "
-        //        << heuristic.open_score(*until) << std::endl;
-        //    throw std::runtime_error("whoops not a heap");
-        //}
         return s;
     }
 
@@ -716,14 +852,21 @@ private:
         const State& sol_state = solutions_.back().state;
         heuristic->notify_new_solution(atfp_, prune_box_, sol_state);
 
+        //std::sort(solutions_.begin(), solutions_.end(),
+        //        [this](const auto& s0, const auto& s1) {
+        //            return heuristic->open_isworse(s0.state, s1.state);
+        //        });
+
         // sort solutions
         size_t i = solutions_.size()-1;
         for (; i > 0; --i) {
             auto& sol1 = solutions_[i-1]; // should have better score
             auto& sol2 = solutions_[i];
-            if (heuristic->open_isworse(sol1.state, sol2.state))
+            if (heuristic->open_isworse(sol1.state, sol2.state)) {
                 std::swap(sol1, sol2);
-            else return i;
+            } else {
+                return i;
+            }
         }
         return 0;
     }
@@ -735,22 +878,94 @@ private:
 
 
 
-// Constructor methods
-std::shared_ptr<Search>
-Search::max_output(const AddTree& at, const FlatBox& prune_box) {
-    return std::shared_ptr<Search>(
-        new SearchImpl<MaxBasicOutputHeuristic>(at, prune_box));
+template <typename H>
+static void config_set_defaults(Config& c) {
+    using OpenIsWorse = typename H::OpenIsWorseT;
+    using OrdLim = OrdLimit<FloatT, OpenIsWorse>;
+
+    OpenIsWorse cmp;
+    c.ignore_state_when_worse_than = OrdLim::worst(cmp);
+    c.stop_when_atleast_bound_better_than = OrdLim::best(cmp);
+}
+
+Config::Config(HeuristicType h)
+    : heuristic(h)
+    , ignore_state_when_worse_than(0.0)
+    , stop_when_atleast_bound_better_than(0.0) {
+
+    switch (heuristic) {
+    case HeuristicType::MAX_OUTPUT:
+        config_set_defaults<MaxBasicOutputHeuristic>(*this);
+        break;
+    case HeuristicType::MIN_OUTPUT:
+        config_set_defaults<MinBasicOutputHeuristic>(*this);
+        break;
+    case HeuristicType::MAX_COUNTING_OUTPUT:
+        config_set_defaults<MaxCountingOutputHeuristic>(*this);
+        break;
+    case HeuristicType::MIN_COUNTING_OUTPUT:
+        config_set_defaults<MinCountingOutputHeuristic>(*this);
+        break;
+    case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF:
+        config_set_defaults<MaxMaxMultiOutputDiffHeuristic>(*this);
+        break;
+    case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF:
+        config_set_defaults<MaxMinMultiOutputDiffHeuristic>(*this);
+        break;
+    case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF:
+        config_set_defaults<MinMaxMultiOutputDiffHeuristic>(*this);
+        break;
+    default:
+        throw std::runtime_error("invalid HeuristicType in config (init)");
+    }
 }
 
 std::shared_ptr<Search>
-Search::min_output(const AddTree& at, const FlatBox& prune_box) {
-    return std::shared_ptr<Search>(
-        new SearchImpl<MinBasicOutputHeuristic>(at, prune_box));
+Config::get_search(const AddTree& at, const FlatBox& prune_box) const {
+    switch (heuristic) {
+    case HeuristicType::MAX_OUTPUT: {
+        auto h = std::make_shared<MaxBasicOutputHeuristic>();
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+                *this, std::move(h), at, prune_box);
+    }
+    case HeuristicType::MIN_OUTPUT: {
+        auto h = std::make_shared<MinBasicOutputHeuristic>();
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+                *this, std::move(h), at, prune_box);
+    }
+    case HeuristicType::MAX_COUNTING_OUTPUT: {
+        auto h = std::make_shared<MaxCountingOutputHeuristic>();
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+            *this, std::move(h), at, prune_box);
+    }
+    case HeuristicType::MIN_COUNTING_OUTPUT: {
+        auto h = std::make_shared<MinCountingOutputHeuristic>();
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+            *this, std::move(h), at, prune_box);
+    }
+    case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF: {
+        auto h = std::make_shared<MaxMaxMultiOutputDiffHeuristic>(at.num_leaf_values());
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+            *this, std::move(h), at, prune_box);
+    }
+    case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF: {
+        auto h = std::make_shared<MaxMinMultiOutputDiffHeuristic>(at.num_leaf_values());
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+            *this, std::move(h), at, prune_box);
+    }
+    case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF: {
+        auto h = std::make_shared<MinMaxMultiOutputDiffHeuristic>(at.num_leaf_values());
+        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
+            *this, std::move(h), at, prune_box);
+    }
+    default:
+        throw std::runtime_error("invalid HeuristicType in config (get_search)");
+    }
 }
 
 // Search constructor
-Search::Search(Settings s, const AddTree& at, const FlatBox& prune_box)
-    : settings{s}
+Search::Search(const Config& config, const AddTree& at, const FlatBox& prune_box)
+    : config{config}
     , stats{}
     , at_{at.neutralize_negative_leaf_values()}
     , atfp_{at.num_leaf_values()}

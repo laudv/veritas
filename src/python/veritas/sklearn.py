@@ -13,10 +13,10 @@ import sklearn.tree as sktree
 
 class RfAddTree(AddTree):
     def predict(self, X):
-        return (self.eval(X) - self.base_score) / len(self)
+        return self.eval(X)
 
     def predict_proba(self, X):
-        return (self.eval(X) - self.base_score) / len(self)
+        return self.eval(X)
 
 # https://scikit-learn.org/stable/auto_examples/tree/plot_unveil_tree_structure.html
 
@@ -40,8 +40,9 @@ def addtree_from_sklearn_tree(at, tree, extract_value_fun):
             stack.append((tree.children_right[n], t.right(m)))
             stack.append((tree.children_left[n], t.left(m)))
         else:
-            leaf_value = extract_value_fun(tree.value[n])
-            t.set_leaf_value(m, leaf_value)
+            for i in range(at.num_leaf_values()):
+                leaf_value = extract_value_fun(tree.value[n], i)
+                t.set_leaf_value(m, i, leaf_value)
 
 ## Extract a Veritas AddTree from a scikit learn ensemble model (e.g. random
 # forest)
@@ -49,28 +50,27 @@ def addtree_from_sklearn_tree(at, tree, extract_value_fun):
 # For binary classification: leaf values are converted to class ratio (first
 # class count / total leaf count) divided by the number of trees.
 # As far as I can tell, this corresponds with sklearn's predict_proba
-def addtree_from_sklearn_ensemble(ensemble, extract_value_fun=None):
+def addtree_from_sklearn_ensemble(ensemble):
     num_trees = len(ensemble.estimators_)
-    if extract_value_fun is None:
-        if "Regressor" in type(ensemble).__name__:
-            print("SKLEARN: regressor")
-            extract_value_fun = lambda v: v[0]
-            base_score = 0.0
-        elif "Classifier" in type(ensemble).__name__:
-            print("SKLEARN: binary classifier")
-            extract_value_fun = lambda v: (v[0][1]/sum(v[0])) # class ratio
-            base_score = -num_trees / 2.0
-        else:
-            raise RuntimeError("cannot determine extract_value_fun for:",
-                    type(ensemble).__name__)
+    num_leaf_values = ensemble.n_classes_
+
+    if "Regressor" in type(ensemble).__name__:
+        print("SKLEARN: regressor")
+        def extract_value_fun(v, i):
+            #print("skl leaf regr", v)
+            return v[0]/num_trees
+    elif "Classifier" in type(ensemble).__name__:
+        print(f"SKLEARN: classifier with {num_leaf_values} classes")
+        def extract_value_fun(v, i):
+            #print("skl leaf clf", v[0], sum(v[0]), v[0][i])
+            return v[0][i]/sum(v[0])/num_trees
     else:
-        base_score = -num_trees / 2.0
+        raise RuntimeError("cannot determine extract_value_fun for:",
+                type(ensemble).__name__)
 
-
-    at = RfAddTree()
+    at = RfAddTree(num_leaf_values)
     for tree in ensemble.estimators_:
         addtree_from_sklearn_tree(at, tree.tree_, extract_value_fun)
-    at.base_score = base_score
     return at
     
 ## Extract `num_classes` Veritas AddTrees from a multi-class scikit learn

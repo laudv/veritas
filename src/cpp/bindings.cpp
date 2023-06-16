@@ -172,6 +172,7 @@ PYBIND11_MODULE(veritas_core, m) {
         .def("root", [](const TreeRef& r) { return r.get().root(); })
         .def("num_leaves", [](const TreeRef& r) { return r.get().num_leaves(); })
         .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
+        .def("num_leaf_values", [](const TreeRef& r) { return r.get().num_leaf_values(); })
         .def("is_root", [](const TreeRef& r, NodeId n) { return r.get().is_root(n); })
         .def("is_leaf", [](const TreeRef& r, NodeId n) { return r.get().is_leaf(n); })
         .def("is_internal", [](const TreeRef& r, NodeId n) { return r.get().is_internal(n); })
@@ -254,26 +255,37 @@ PYBIND11_MODULE(veritas_core, m) {
         .def(py::init<int>())
         //.def(py::init<const AddTree&, size_t, size_t>())
         .def("get_base_score", [](const AddTree& at, int idx) {
-                return at.base_score(idx);
+            return at.base_score(idx);
         })
         .def("set_base_score", [](AddTree& at, int idx, FloatT value) {
-                at.base_score(idx) = value;
+            at.base_score(idx) = value;
         })
         .def("copy", [](const AddTree& at) { return AddTree(at); })
         .def("__getitem__", [](const std::shared_ptr<AddTree>& at, size_t i) {
-                if (i < at->size())
-                    return TreeRef{at, i};
-                throw py::value_error("out of bounds access into AddTree");
-            })
+            if (i < at->size())
+                return TreeRef{at, i};
+            throw py::value_error("out of bounds access into AddTree");
+        })
         .def("__len__", &AddTree::size)
         .def("num_nodes", &AddTree::num_nodes)
         .def("num_leafs", &AddTree::num_leafs)
+        .def("num_leaf_values", &AddTree::num_leaf_values)
         .def("get_splits", &AddTree::get_splits)
         .def("add_tree", [](const std::shared_ptr<AddTree>& at) {
-                at->add_tree(); return TreeRef{at, at->size()-1}; })
+            at->add_tree(); return TreeRef{at, at->size()-1}; })
         .def("add_tree", [](const std::shared_ptr<AddTree>& at, const TreeRef& tref) {
-                at->add_tree(tref.get()); // copy
-                return TreeRef{at, at->size()-1}; })
+            at->add_tree(tref.get()); // copy
+            return TreeRef{at, at->size()-1}; })
+        .def("add_trees", [](AddTree& at, const AddTree& other, std::optional<int> c) {
+            if (c.has_value()) {
+                at.add_trees(other, c.value());
+            } else {
+                at.add_trees(other);
+            }
+        }, py::arg("other"), py::arg("c") = py::none())
+        .def("make_multiclass", &AddTree::make_multiclass)
+        .def("make_singleclass", &AddTree::make_singleclass)
+        .def("swap_class", &AddTree::swap_class)
         .def("prune", [](AddTree& at, const py::object& pybox) {
             Box::BufT buf = tobox(pybox);
             Box box{buf};
@@ -390,6 +402,17 @@ PYBIND11_MODULE(veritas_core, m) {
         .value("OUT_OF_TIME", StopReason::OUT_OF_TIME)
         .value("OUT_OF_MEMORY", StopReason::OUT_OF_MEMORY)
         ; // StopReason
+
+    py::enum_<HeuristicType>(m, "HeuristicType")
+        .value("MAX_OUTPUT",          HeuristicType::MAX_OUTPUT)
+        .value("MIN_OUTPUT",          HeuristicType::MIN_OUTPUT)
+        .value("MAX_COUNTING_OUTPUT", HeuristicType::MAX_COUNTING_OUTPUT)
+        .value("MIN_COUNTING_OUTPUT", HeuristicType::MIN_COUNTING_OUTPUT)
+
+        .value("MULTI_MAX_MAX_OUTPUT_DIFF", HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF)
+        .value("MULTI_MAX_MIN_OUTPUT_DIFF", HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF)
+        .value("MULTI_MIN_MAX_OUTPUT_DIFF", HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF)
+        ; // HeuristicType
     
     py::class_<Bounds>(m, "Bounds")
         .def_readonly("atleast", &Bounds::atleast)
@@ -402,32 +425,28 @@ PYBIND11_MODULE(veritas_core, m) {
         .def_readonly("num_states_ignored", &Statistics::num_states_ignored)
         ; // Statistics
 
-    py::class_<Settings>(m, "Settings")
-        .def_readwrite("focal_eps", &Settings::focal_eps)
-        .def_readwrite("max_focal_size", &Settings::max_focal_size)
+    py::class_<Config>(m, "Config")
+        .def(py::init<HeuristicType>())
+        .def_readwrite("focal_eps", &Config::focal_eps)
+        .def_readwrite("max_focal_size", &Config::max_focal_size)
         .def_readwrite("stop_when_num_solutions_exceeds",
-                &Settings::stop_when_num_solutions_exceeds)
+                       &Config::stop_when_num_solutions_exceeds)
         .def_readwrite("stop_when_num_new_solutions_exceeds",
-                &Settings::stop_when_num_new_solutions_exceeds)
-        .def_readwrite("stop_when_optimal",
-                &Settings::stop_when_optimal)
+                       &Config::stop_when_num_new_solutions_exceeds)
+        .def_readwrite("stop_when_optimal", &Config::stop_when_optimal)
         .def_readwrite("ignore_state_when_worse_than",
-                &Settings::ignore_state_when_worse_than)
+                       &Config::ignore_state_when_worse_than)
         .def_readwrite("stop_when_atleast_bound_better_than",
-                &Settings::stop_when_atleast_bound_better_than)
-        ; // Settings
+                       &Config::stop_when_atleast_bound_better_than)
+        .def("get_search", [](const Config &conf, const AddTree &at,
+                              const py::object &pybox) {
+            auto buf = tobox(pybox);
+            auto fbox = BoxRef(buf).to_flatbox();
+            return conf.get_search(at, fbox);
+        }, py::arg("at"), py::arg("prune_box") = py::list())
+        ; // Config
 
     py::class_<Search, std::shared_ptr<Search>>(m, "Search")
-        .def_static("max_output", [](const AddTree& at, const py::object& pybox) {
-            auto buf = tobox(pybox);
-            auto fbox = BoxRef(buf).to_flatbox();
-            return Search::max_output(at, fbox);
-        }, py::arg("at"), py::arg("prune_box") = py::list())
-        .def_static("min_output", [](const AddTree& at, const py::object& pybox) {
-            auto buf = tobox(pybox);
-            auto fbox = BoxRef(buf).to_flatbox();
-            return Search::min_output(at, fbox);
-        }, py::arg("at"), py::arg("prune_box") = py::list())
         .def("step", &Search::step)
         .def("steps", &Search::steps)
         .def("step_for", &Search::step_for)
@@ -447,7 +466,7 @@ PYBIND11_MODULE(veritas_core, m) {
 //            return s.get_at_output_for_box(b);
 //        })
         .def_readonly("stats", &Search::stats)
-        .def_readwrite("settings", &Search::settings)
+        .def_readonly("config", &Search::config)
         ; // Search
 
     py::class_<Solution>(m, "Solution")

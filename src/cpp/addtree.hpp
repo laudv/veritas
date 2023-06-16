@@ -71,6 +71,21 @@ public:
         trees_.push_back(t);
     }
 
+    /** Add copies of the trees in `other` to this ensemble. */
+    void add_trees(const GAddTree<TreeT>& other);
+
+    /** Add multi-class copies of the trees in `other` to this ensemble. */
+    void add_trees(const GAddTree<TreeT>& other, int c);
+
+    /** Turn this ensemble in a multi-class ensemble. See `GTree::make_multiclass`. */
+    GAddTree<TreeT> make_multiclass(int c, int num_leaf_values) const;
+
+    /** Turn this ensemble in a single-class ensemble. See `GTree::make_singleclass`. */
+    GAddTree<TreeT> make_singleclass(int c) const;
+
+    /** See GTree::swap_class */
+    void swap_class(int c);
+
     /** Get mutable reference to tree `i` */
     inline TreeT& operator[](size_t i) { return trees_.at(i); }
     /** Get const reference to tree `i` */
@@ -127,7 +142,7 @@ public:
 
     /** Evaluate the ensemble. This is the sum of the evaluations of the
      * trees. See TreeT::eval. */
-    void eval(const data<SplitValueT>& row, data<LeafValueType>& result) const {
+    inline void eval(const data<SplitValueT>& row, data<LeafValueType>& result) const {
         for (int i = 0; i < num_leaf_values(); ++i)
             result[i] = base_scores_[i];
         for (size_t m = 0; m < size(); ++m)
