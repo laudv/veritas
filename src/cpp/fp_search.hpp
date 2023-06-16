@@ -28,7 +28,26 @@
 
 namespace veritas {
 
-struct Settings {
+enum class HeuristicType {
+    MAX_OUTPUT,
+    MIN_OUTPUT,
+    MAX_COUNTING_OUTPUT,
+    MIN_COUNTING_OUTPUT,
+
+    MULTI_MAX_MAX_OUTPUT_DIFF,
+    MULTI_MAX_MIN_OUTPUT_DIFF,
+    MULTI_MIN_MAX_OUTPUT_DIFF,
+};
+
+class Search; // forward decl for Config
+
+struct Config {
+
+    /**
+     * Type of heuristic for the upcoming Search
+     */
+    HeuristicType heuristic;
+
 
     /**
      * Discount factor of state score h in order to qualify for the focal
@@ -74,21 +93,15 @@ struct Settings {
      */
     FloatT stop_when_atleast_bound_better_than;
 
+    /** Constructor */
+    Config(HeuristicType h);
+
     /**
-     * Constructor taking a comparator for the open state list.
-     * We need this for `ignore_state_when_worse_than` and
-     * `stop_when_atleast_bound_better_than` because what is _worse_ or _better_
-     * is defined by whether we are minimizing or maximizing.
-     *
-     * No need to call this manually, access `Search::settings` instead.
+     * Get a Search instance from this configuration using the configured
+     * heuristic.
      */
-    template <typename OpenIsWorse>
-    inline Settings(const OpenIsWorse& cmp)
-        : ignore_state_when_worse_than(
-                OrdLimit<FloatT, OpenIsWorse>::worst(cmp))
-        , stop_when_atleast_bound_better_than(
-                OrdLimit<FloatT, OpenIsWorse>::best(cmp))
-    {}
+    std::shared_ptr<Search> get_search(const AddTree& at,
+                                       const FlatBox& prune_box) const;
 };
 
 struct Statistics {
@@ -155,7 +168,7 @@ using time_point = std::chrono::time_point<time_clock>;
 
 class Search {
 public:
-    Settings settings;
+    const Config config;
     Statistics stats;
 
 protected:
@@ -168,14 +181,7 @@ protected:
     BlockStore<IntervalPairFp> store_;
     FlatBoxFp prune_box_;
 
-    Search(Settings s, const AddTree& at, const FlatBox& prune_box);
-
-public: // Constructor methods
-
-    static std::shared_ptr<Search> max_output(const AddTree& at,
-            const FlatBox& prune_box = {});
-    static std::shared_ptr<Search> min_output(const AddTree& at,
-            const FlatBox& prune_box = {});
+    Search(const Config& config, const AddTree& at, const FlatBox& prune_box);
 
 public:
     virtual ~Search() { /* required, otherwise pybind11 memory leak */ }

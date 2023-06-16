@@ -7,8 +7,65 @@
 */
 
 #include "addtree.hpp"
+#include <stdexcept>
 
 namespace veritas {
+
+template <typename TreeT>
+void
+GAddTree<TreeT>::add_trees(const GAddTree<TreeT>& other) {
+    if (other.num_leaf_values() != num_leaf_values())
+        throw std::runtime_error("incompatible num_leaf_values");
+    for (int i = 0; i < num_leaf_values(); ++i)
+        base_score(i) += other.base_score(i);
+    for (const TreeT& t : other)
+        add_tree(t);
+}
+
+template <typename TreeT>
+void
+GAddTree<TreeT>::add_trees(const GAddTree<TreeT>& other, int c) {
+    if (other.num_leaf_values() != 1)
+        throw std::runtime_error("AddTree::add_trees: make_multiclass on multiclass");
+    for (const TreeT& t : other)
+        add_tree(t.make_multiclass(c, num_leaf_values()));
+    base_score(c) = other.base_score(0);
+}
+
+template <typename TreeT>
+GAddTree<TreeT>
+GAddTree<TreeT>::make_multiclass(int c, int num_leaf_values) const {
+    if (this->num_leaf_values() != 1)
+        throw std::runtime_error("AddTree::make_multiclass on multiclass");
+    GAddTree<TreeT> new_at(num_leaf_values);
+    for (const TreeT& t : *this)
+        new_at.add_tree(t.make_multiclass(c, num_leaf_values));
+    new_at.base_score(c) = base_score(0);
+    return new_at;
+}
+
+template <typename TreeT>
+GAddTree<TreeT>
+GAddTree<TreeT>::make_singleclass(int c) const {
+    if (this->num_leaf_values() == 1)
+        throw std::runtime_error("AddTree::make_singleclass: already singleclass");
+    if (this->num_leaf_values() <= c)
+        throw std::runtime_error("AddTree::make_singleclass: num_leaf_values <= c");
+    GAddTree<TreeT> new_at(1);
+    for (const TreeT& t : *this)
+        new_at.add_tree(t.make_singleclass(c));
+    new_at.base_score(0) = base_score(c);
+    return new_at;
+}
+
+template <typename TreeT>
+void
+GAddTree<TreeT>::swap_class(int c) {
+    for (auto& t : *this) {
+        t.swap_class(c);
+    }
+}
+
 
 
 template <typename TreeT>

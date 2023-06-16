@@ -320,6 +320,43 @@ int test_negate_leaf_values() {
     return result;
 }
 
+int test_make_multiclass() {
+    TreeFp t(1);
+    t.split(t[""], {1, 5});
+    t.leaf_value(t["l"], 0) = 4;
+    t.leaf_value(t["r"], 0) = 2;
+
+    int c = 3;
+    TreeFp tm = t.make_multiclass(c, 10);
+
+    int result = true
+        && tm.leaf_value(tm["l"], c) == 4
+        && tm.leaf_value(tm["r"], c) == 2;
+        ;
+
+    for (int cc = 0; cc < 10; ++cc) {
+        if (cc == c) continue;
+        result &= tm.leaf_value(tm["l"], cc) == 0;
+        result &= tm.leaf_value(tm["r"], cc) == 0;
+    }
+
+    // swap_class
+    tm.swap_class(c);
+
+    result &= true
+        && tm.leaf_value(tm["l"], 0) == 4
+        && tm.leaf_value(tm["r"], 0) == 2;
+        ;
+
+    for (int cc = 1; cc < 10; ++cc) {
+        result &= tm.leaf_value(tm["l"], cc) == 0;
+        result &= tm.leaf_value(tm["r"], cc) == 0;
+    }
+
+    std::cout << "test_make_multiclass " << result << std::endl;
+    return result;
+}
+
 int main_tree() {
     int result = 1
         && test_tree1()
@@ -333,6 +370,7 @@ int main_tree() {
         && test_prune1()
         && test_prune2()
         && test_negate_leaf_values()
+        && test_make_multiclass()
         ;
     return !result;
 }

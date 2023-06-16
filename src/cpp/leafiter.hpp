@@ -79,6 +79,11 @@ public:
         tree_ = nullptr;
         return -1;
     }
+
+    void clear() {
+        stack_.clear();
+        tree_ = nullptr;
+    }
 }; // class LeafIter
 
 } // namespace veritas

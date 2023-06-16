@@ -436,6 +436,60 @@ public:
                                        : eval_node(right(id), row);
     }
 
+    /**
+     * Only if this tree has `num_leaf_values() == 1`, move the leaf values to
+     * position `c` in a vector of leaf values of size `num_leaf_values`.
+     */
+    SelfT make_multiclass(int c, int num_leaf_values) const {
+        if (this->num_leaf_values() != 1)
+            throw std::runtime_error("make_multiclass on multiclass tree");
+        if (c >= num_leaf_values)
+            throw std::runtime_error("c >= num_leaf_values");
+        SelfT new_tree(num_leaf_values);
+        make_multiclass(c, new_tree, root(), new_tree.root());
+        return new_tree;
+    }
+
+    /**
+     * Only if this tree has `num_leaf_values() == 1`, move the leaf values to
+     * position `c` in a zero vector of leaf values of size `num_leaf_values`.
+     */
+    void make_multiclass(int c, SelfT& new_tree, NodeId n, NodeId m) const {
+        if (is_internal(n)) {
+            new_tree.split(m, get_split(n));
+            make_multiclass(c, new_tree, left(n), new_tree.left(m));
+            make_multiclass(c, new_tree, right(n), new_tree.right(m));
+        } else {
+            new_tree.leaf_value(m, c) = leaf_value(n, 0);
+        }
+    }
+
+    /** Swap class 0 and class c */
+    void swap_class(int c) {
+        for (NodeId n : get_leaf_ids())
+            std::swap(leaf_value(n, 0), leaf_value(n, c));
+    }
+
+    SelfT make_singleclass(int c) const {
+        if (num_leaf_values() == 0)
+            throw std::runtime_error("already singleclass");
+        if (c >= num_leaf_values())
+            throw std::runtime_error("c >= num_leaf_values");
+        SelfT new_tree(1);
+        make_singleclass(c, new_tree, root(), new_tree.root());
+        return new_tree;
+    }
+
+    void make_singleclass(int c, SelfT& new_tree, NodeId n, NodeId m) const {
+        if (is_internal(n)) {
+            new_tree.split(m, get_split(n));
+            make_singleclass(c, new_tree, left(n), new_tree.left(m));
+            make_singleclass(c, new_tree, right(n), new_tree.right(m));
+        } else {
+            new_tree.leaf_value(m, 0) = leaf_value(n, c);
+        }
+    }
+
     bool subtree_equals(NodeId n, const SelfT& other, NodeId m) const {
         if (is_internal(n) && other.is_internal(m)) {
             return get_split(n) == other.get_split(m)
