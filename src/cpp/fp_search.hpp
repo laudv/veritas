@@ -102,6 +102,13 @@ struct Config {
      */
     std::shared_ptr<Search> get_search(const AddTree& at,
                                        const FlatBox& prune_box) const;
+
+    /**
+     * Reuse the heuristic of the given Search. Use this with the counting
+     * heuristics to keep the counts between runs.
+     */
+    std::shared_ptr<Search> reuse_heuristic(const Search& search,
+                                            const FlatBox& prune_box) const;
 };
 
 struct Statistics {
@@ -206,6 +213,8 @@ public:
     void set_max_memory(size_t bytes);
     size_t get_max_memory() const;
     size_t get_used_memory() const;
+
+    const AddTree& get_addtree() const;
 
 }; // abstract class Search
 

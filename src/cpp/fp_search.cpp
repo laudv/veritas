@@ -289,6 +289,7 @@ struct CountingOutputHeuristic
     using State = typename BaseT::State;
 
     std::vector<std::vector<int>> counts;
+    int num_solutions = 0;
 
     CountingOutputHeuristic() : BaseT(), counts{} {}
 
@@ -312,9 +313,15 @@ struct CountingOutputHeuristic
         if (tree_index >= counts.size())
             return 1;
         const std::vector<int>& counts_for_tree = counts[tree_index];
-        if (counts_for_tree.size() >= static_cast<size_t>(leaf_id))
+        if (counts_for_tree.size() <= static_cast<size_t>(leaf_id))
             return 1;
-        return 1 + counts_for_tree[leaf_id];
+
+        //FloatT value = 1 + counts_for_tree[leaf_id];
+        //FloatT value = 1 + 0.1 * counts_for_tree[leaf_id];
+        FloatT value = 1.0 + static_cast<FloatT>(counts_for_tree[leaf_id]) /
+                             static_cast<FloatT>(num_solutions);
+
+        return value;
     }
 
     void incr_count_for(size_t tree_index, NodeId leaf_id) {
@@ -322,7 +329,7 @@ struct CountingOutputHeuristic
             counts.resize(tree_index+1);
         std::vector<int>& counts_for_tree = counts[tree_index];
         size_t leaf_id_size_t = static_cast<size_t>(leaf_id);
-        if (counts_for_tree.size() >= leaf_id_size_t)
+        if (counts_for_tree.size() <= leaf_id_size_t)
             counts_for_tree.resize(leaf_id_size_t+1);
         ++counts_for_tree[leaf_id];
     }
@@ -341,6 +348,7 @@ struct CountingOutputHeuristic
                 throw std::runtime_error("not a unique leaf");
             incr_count_for(tree_index, leaf_id);
         }
+        ++num_solutions;
     }
 };
 
@@ -933,6 +941,30 @@ Config::get_search(const AddTree& at, const FlatBox& prune_box) const {
     }
 }
 
+std::shared_ptr<Search>
+Config::reuse_heuristic(const Search& search, const FlatBox& prune_box) const {
+    if (search.config.heuristic != heuristic)
+        throw std::runtime_error("incompatible heuristic setting");
+    if (heuristic != HeuristicType::MAX_COUNTING_OUTPUT &&
+        heuristic != HeuristicType::MIN_COUNTING_OUTPUT) {
+    }
+
+    switch (heuristic) {
+    case HeuristicType::MAX_COUNTING_OUTPUT: {
+        const auto& s = dynamic_cast<const SearchImpl<MaxCountingOutputHeuristic>&>(search);
+        return std::make_shared<SearchImpl<MaxCountingOutputHeuristic>>(
+            *this, s.heuristic, s.get_addtree(), prune_box);
+    }
+    case HeuristicType::MIN_COUNTING_OUTPUT: {
+        const auto& s = dynamic_cast<const SearchImpl<MinCountingOutputHeuristic>&>(search);
+        return std::make_shared<SearchImpl<MinCountingOutputHeuristic>>(
+            *this, s.heuristic, s.get_addtree(), prune_box);
+    }
+    default:
+        throw std::runtime_error("reuse_heuristic only available on counting heuristics");
+    }
+}
+
 // Search constructor
 Search::Search(const Config& config, const AddTree& at, const FlatBox& prune_box)
     : config{config}
@@ -971,6 +1003,11 @@ size_t Search::get_max_memory() const { return max_memory_; }
 
 size_t Search::get_used_memory() const {
     return store_.get_used_mem_size();
+}
+
+const AddTree&
+Search::get_addtree() const {
+    return at_;
 }
 
 std::ostream& operator<<(std::ostream& s, const Bounds& bounds) {

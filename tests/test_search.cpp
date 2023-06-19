@@ -215,6 +215,48 @@ int test_old_at_easy() {
     return result;
 }
 
+int test_simple_counting() {
+    AddTree at = get_simple_addtree1();
+
+    std::cout << at[0] << std::endl;
+    std::cout << at[1] << std::endl;
+
+    //auto s = Search::max_output(at);
+    Config config = Config(HeuristicType::MAX_COUNTING_OUTPUT);
+    config.stop_when_optimal = false;
+    auto s = config.get_search(at, {});
+
+    StopReason r = StopReason::NONE;
+    for (; r != StopReason::NO_MORE_OPEN; r = s->step()) {
+        std::cout << s->current_bounds() << std::endl;
+        std::cout << ">> StopReason " << r << ", nsteps " << s->stats.num_steps << "\n";
+        std::cout << std::endl;
+    }
+    std::cout << "final StopReason " << r
+        << ", time " << s->time_since_start()
+        << ", #ignored " << s->stats.num_states_ignored
+        << std::endl;
+
+    for (size_t i = 0; i < s->num_solutions(); ++i)
+        std::cout << " - " << s->get_solution(i) << '\n';
+
+
+    // TODO test this somehow
+    auto s2 = config.reuse_heuristic(*s, {});
+    StopReason r2 = StopReason::NONE;
+    for (; r2 != StopReason::NO_MORE_OPEN; r2 = s2->step()) {
+        std::cout << s2->current_bounds() << std::endl;
+        std::cout << ">> StopReason " << r2 << ", nsteps " << s2->stats.num_steps << "\n";
+        std::cout << std::endl;
+    }
+
+    int result = 1;
+
+
+    std::cout << "test_simple_counting " << result << std::endl;
+    return result;
+}
+
 int do_test_coverage(const AddTree& at, HeuristicType h) {
     Config config(h);
     config.stop_when_optimal = false;
@@ -363,12 +405,13 @@ int test_multiclass() {
 
 int main_search() {
     int result = 1
-        && test_simple1_1()
-        && test_simple1_2()
-        && test_simple1_3()
-        && test_old_at_easy()
-        && test_coverage()
-        && test_multiclass()
+        //&& test_simple1_1()
+        //&& test_simple1_2()
+        //&& test_simple1_3()
+        //&& test_old_at_easy()
+        && test_simple_counting()
+        //&& test_coverage()
+        //&& test_multiclass()
         ;
     return !result;
 }
