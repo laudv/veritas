@@ -215,21 +215,16 @@ int test_old_at_easy() {
     return result;
 }
 
-int test_coverage() {
-    std::cout << "\n\n===========================\n\n";
-    AddTree at_mult = read_addtree("xgb-img-multiclass.json");
-    AddTree at = at_mult.make_singleclass(1);
-    //AddTree at = read_addtree("xgb-img-easy-new.json");
-
-    Config config(HeuristicType::MAX_OUTPUT);
+int do_test_coverage(const AddTree& at, HeuristicType h) {
+    Config config(h);
     config.stop_when_optimal = false;
-    config.focal_eps = 0.9;
+    config.focal_eps = 0.5;
     auto s = config.get_search(at, {});
 
     StopReason r = StopReason::NONE;
     for (; r != StopReason::NO_MORE_OPEN; r = s->steps(100)) {}
 
-    std::cout << "final StopReason " << r
+    std::cout << "  final StopReason " << r
         << ", time " << s->time_since_start()
         << ", #ignored " << s->stats.num_states_ignored
         << ", #steps " << s->stats.num_steps
@@ -248,13 +243,13 @@ int test_coverage() {
         for (const auto& ip : sol.box)
             box[ip.feat_id] = box[ip.feat_id].intersect(ip.interval);
 
-        std::cout << sol_index << " " << sol.output << ':';
-        for (const auto& i : box)
-            std::cout << " " << i;
-        std::cout << "|";
-        for (const auto& k : s->get_solution_nodes(sol_index))
-            std::cout << " " << k;
-        std::cout << "\n";
+        //std::cout << sol_index << " " << sol.output << ':';
+        //for (const auto& i : box)
+        //    std::cout << " " << i;
+        //std::cout << "|";
+        //for (const auto& k : s->get_solution_nodes(sol_index))
+        //    std::cout << " " << k;
+        //std::cout << "\n";
 
         int ilo = static_cast<int>(box[0].lo);
         int ihi = static_cast<int>(box[0].hi);
@@ -264,7 +259,7 @@ int test_coverage() {
         for (int i = ilo; i < ihi; ++i) {
             for (int j = jlo; j < jhi; ++j) {
                 if (coverage.get_elem(i, j) != 0) {
-                    std::cout << "VIOLATION\n";
+                    std::cout << "  VIOLATION\n";
                     goto done;
                 }
                 coverage.get_elem(i, j) += 1;
@@ -274,24 +269,49 @@ int test_coverage() {
 
 done:
 
-    std::cout << "----------------------------------------------------------------------------------------------------\n";
+    //std::cout << "---------------------------------------------------"
+    //          << "-------------------------------------------------\n";
     for (int i = 0; i < 100; ++i) {
         for (int j = 0; j < 100; ++j) {
-            if (coverage.get_elem(i, j) == 0)
-                std::cout << ' ';
-            else
-                std::cout << coverage.get_elem(i, j);
+            //if (coverage.get_elem(i, j) == 0)
+            //    std::cout << '.';
+            //else
+            //    std::cout << coverage.get_elem(i, j);
+
+            // Everything should be 1
             result &= coverage.get_elem(i, j) == 1;
         }
-        std::cout << "|\n";
+        //std::cout << "\n";
     }
-    std::cout << "----------------------------------------------------------------------------------------------------\n";
+    //std::cout << "---------------------------------------------------"
+    //          << "-------------------------------------------------\n\n";
 
-    
-    std::cout << "test_coverage " << result << std::endl;
-
+    std::cout << "  result: " << result << std::endl;
     return result;
 }
+
+int test_coverage() {
+    std::cout << "\n\n===========================\n\n";
+    int result = 1;
+
+    for (const char *datapath : {"xgb-img-multiclass.json", "rf-img-multiclass.json"}) {
+        AddTree at_mult = read_addtree(datapath);
+
+        for (int c = 0; c < 4; ++c) {
+            std::cout << "\n\n=== MAX_OUTPUT ============ " << datapath
+                      << " class " << c << "\n";
+            AddTree at = at_mult.make_singleclass(c);
+            result &= do_test_coverage(at, HeuristicType::MAX_OUTPUT);
+        }
+
+        std::cout << "\n=== MULTI_MAX_MAX ========= " << datapath << "\n";
+        result &= do_test_coverage(at_mult, HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF);
+    }
+
+    std::cout << "test_coverage " << result << std::endl;
+    return result;
+}
+
 
 int test_multiclass() {
     std::cout << "\n\n===========================\n\n";
@@ -305,7 +325,7 @@ int test_multiclass() {
     FlatBox prune_box { Interval(10, 30), Interval(10, 30) };
     auto s = c.get_search(at, prune_box);
 
-    int result = 0;
+    int result = 1;
 
     StopReason r = StopReason::NONE;
     for (; r != StopReason::NO_MORE_OPEN; r = s->steps(100)) {}
@@ -317,18 +337,25 @@ int test_multiclass() {
         << ", #sols " << s->num_solutions()
         << std::endl;
 
-    Solution sol = s->get_solution(0);
 
-    std::vector<FloatT> rdata { sol.box[0].interval.lo, sol.box[1].interval.lo };
-    data<FloatT> d{rdata};
     std::vector<FloatT> rout(4);
     data<FloatT> out(rout);
-    at.eval(d, out);
 
-    std::cout << sol;
-    for (auto x : rout)
-        std::cout << ", " << x;
-    std::cout << std::endl;
+    for (size_t i = 0; i < s->num_solutions(); ++i) {
+        Solution sol = s->get_solution(i);
+
+        std::vector<FloatT> rdata { sol.box[0].interval.lo, sol.box[1].interval.lo };
+        data<FloatT> d{rdata};
+        at.eval(d, out);
+
+        FloatT expected = out[0] - std::max({out[1], out[2], out[3]});
+
+        std::cout << "sol out=" << sol.output
+                  << ", exp=" << expected
+                  << ", diff=" << (sol.output-expected) << "\n";
+
+        result &= std::abs(sol.output-expected) < 1e-10;
+    }
 
     std::cout << "test_multiclass " << result << std::endl;
     return result;
@@ -336,12 +363,12 @@ int test_multiclass() {
 
 int main_search() {
     int result = 1
-        //&& test_simple1_1()
-        //&& test_simple1_2()
-        //&& test_simple1_3()
-        //&& test_old_at_easy()
+        && test_simple1_1()
+        && test_simple1_2()
+        && test_simple1_3()
+        && test_old_at_easy()
         && test_coverage()
-        //&& test_multiclass()
+        && test_multiclass()
         ;
     return !result;
 }

@@ -125,9 +125,9 @@ def generate_img_multiclass():
             num_class=4,
             nthread=4,
             tree_method="hist",
-            max_depth=3,
-            learning_rate=1.0,
-            n_estimators=1)
+            max_depth=6,
+            learning_rate=0.5,
+            n_estimators=20)
     model = regr.fit(X, yc)
     ats = addtrees_from_multiclass_xgb_model(model, 4, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
