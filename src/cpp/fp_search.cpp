@@ -565,11 +565,7 @@ private:
     void init_() {
         State initial_state;
         heuristic->update_scores(atfp_, prune_box_, initial_state);
-
-        if (initial_state.is_valid_state())
-            push_to_open_(std::move(initial_state));
-        else
-            std::cout << "Warning: initial_state invalid" << std::endl;
+        push_to_open_if_valid_(std::move(initial_state));
     }
 
     bool is_solution_(const State& state) {
@@ -581,25 +577,13 @@ private:
         if (open_.empty())
             return StopReason::NO_MORE_OPEN;
 
-        std::cout << "STEP" << stats.num_steps << "\n";
-
         ++stats.num_steps;
 
         State state = pop_from_focal_();
 
         if (is_solution_(state)) {
-            std::cout << "SOLUTION FOUND "
-                << "open_score=" << state.open_score()
-                << ", focal_score=" << state.focal_score() << '\n';
-            size_t sol = push_solution_(std::move(state));
-            const auto& solsol = solutions_[sol];
-            std::cout << "               "
-                << "open_score=" << solsol.state.open_score()
-                << ", focal_score=" << solsol.state.focal_score()
-                << " ids";
-            for (NodeId k : get_solution_nodes(sol))
-                std::cout << " " << k;
-            std::cout << '\n';
+            /*size_t sol =*/ push_solution_(std::move(state));
+            //const auto& solsol = solutions_[sol];
 
         } else {
             expand_(state);
@@ -673,15 +657,7 @@ private:
         new_state.box = BoxRefFp(ref.begin, ref.end);
         heuristic->update_scores(atfp_, prune_box_, new_state);
 
-        if (!new_state.is_valid_state()) {
-            std::cout << "Warning: new_state invalid\n";
-        } else if (heuristic->open_isworse(
-                       new_state.open_score(),
-                       config.ignore_state_when_worse_than)) {
-            ++stats.num_states_ignored;
-        } else {
-            push_to_open_(std::move(new_state));
-        }
+        push_to_open_if_valid_(std::move(new_state));
     }
 
     State pop_from_open_() {
@@ -691,6 +667,19 @@ private:
     void push_to_open_(State&& state) {
         push_to_heap_(open_, std::move(state), heuristic->open_isworse);
     }
+
+    void push_to_open_if_valid_(State&& state) {
+        if (!state.is_valid_state()) {
+            std::cout << "Warning: new_state invalid\n";
+        } else if (heuristic->open_isworse(
+                   state.open_score(),
+                   config.ignore_state_when_worse_than)) {
+            ++stats.num_states_ignored;
+        } else {
+            push_to_open_(std::move(state));
+        }
+    }
+
 
     // J. Pearl and J. H. Kim, "Studies in Semi-Admissible Heuristics," in
     // IEEE Transactions on Pattern Analysis and Machine Intelligence, vol.
@@ -724,20 +713,6 @@ private:
             size_t i = pop_from_heap_(focal_, focal_cmp);
             const State& state = open_[i];
 
-            std::cout << "pop_from_focal_ " << i << ", " << state.open_score()
-                      << ", " << state.focal_score() << ", " << state.box << ',';
-            LeafIter<TreeFp> liter;
-            for (const TreeFp& tree : atfp_) {
-                liter.clear();
-                liter.setup(tree, state.box, prune_box_);
-                NodeId leaf_id = liter.next();
-                if (liter.next() != -1)
-                    std::cout << " ?";
-                else
-                    std::cout << " " << leaf_id;
-            }
-            std::cout <<'\n';
-
             // keep the old index if equal, earlier ones will have better
             // open_scores
             if (heuristic->focal_isworse(open_[i_best].focal_score(),
@@ -762,10 +737,10 @@ private:
 
         //sum_focal_size_ += focal_size;
 
-        std::cout << "BEST CHOICE " << i_best << ", focal_score "
-            << open_[i_best].focal_score()
-            << ", f=" << open_[i_best].open_score()
-            << " (vs " << open_.front().open_score() << ")" << std::endl;
+        //std::cout << "BEST CHOICE " << i_best << ", focal_score "
+        //    << open_[i_best].focal_score()
+        //    << ", f=" << open_[i_best].open_score()
+        //    << " (vs " << open_.front().open_score() << ")" << std::endl;
         return pop_index_heap_(open_, i_best, heuristic->open_isworse);
     }
 
@@ -801,10 +776,10 @@ private:
             size_t parent = (i-1)/2;
             if (!cmp(heap[parent], heap[i])) // parent lteq than i
                 break; // heap prop satisfied
-            std::cout << "\033[91m" << "heapify up " << i << " <-> " << parent
-                      << ", " << heap[i].open_score()
-                      << ", " << heap[parent].open_score()
-                      << "\033[0m" << std::endl;
+            //std::cout << "\033[91m" << "heapify up " << i << " <-> " << parent
+            //          << ", " << heap[i].open_score()
+            //          << ", " << heap[parent].open_score()
+            //          << "\033[0m" << std::endl;
             std::swap(heap[i], heap[parent]);
             i = parent;
         }
@@ -825,20 +800,15 @@ private:
             if (has_right && !cmp(heap[right], heap[left]))
                 larger = right;
 
-            std::cout << "\033[92m" << "heapfy down " << i << " <-> " << larger;
-            std::cout << " fscores " << heap[i].open_score()
-                << ", " << heap[larger].open_score()
-                << " (" << heap[larger==left ? right : left].open_score() << ")"
-                  << "\033[0m" << std::endl;
-
+            //std::cout << "\033[92m" << "heapfy down " << i << " <-> " << larger;
+            //std::cout << " fscores " << heap[i].open_score()
+            //    << ", " << heap[larger].open_score()
+            //    << " (" << heap[larger==left ? right : left].open_score() << ")"
+            //      << "\033[0m" << std::endl;
             std::swap(heap[larger], heap[i]);
             i = larger;
         }
         
-        // TODO REMOVE
-        if (!std::is_heap(heap.begin(), heap.end(), cmp))
-            throw std::runtime_error("whoops not a heap");
-
         return s;
     }
 
