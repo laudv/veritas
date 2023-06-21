@@ -385,10 +385,10 @@ struct MultiOutputDiffHeuristic
     }
 
     FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
-        FloatT r = OrdLimit<FloatT, DiffIsWorseT>::worst(diff_isworse);
+        FloatT r = OrdLimit<FloatT, DiffIsWorseT>::best(diff_isworse);
         for (int i = 1; i < num_leaf_values; ++i) {
             FloatT v = t.leaf_value(leaf_id, i);
-            r = std::max(r, v, diff_isworse);
+            r = std::min(r, v, diff_isworse);
         }
         return t.leaf_value(leaf_id, 0)-r;
     }

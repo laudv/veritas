@@ -403,15 +403,51 @@ int test_multiclass() {
     return result;
 }
 
+int test_heuristic_consistency() {
+    std::cout << "\n\n===========================\n\n";
+    AddTree at = read_addtree("xgb-img-multiclass.json");
+    at.swap_class(2);
+
+    Config c(HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF);
+    c.stop_when_optimal = false;
+    //c.ignore_state_when_worse_than = 0.0;
+    c.stop_when_num_solutions_exceeds = 1;
+    c.focal_eps = 1.0;
+
+    auto s = c.get_search(at, {});
+
+    int result = 1;
+
+    FloatT prev_top_of_open = s->current_bounds().top_of_open;
+    StopReason r = StopReason::NONE;
+    for (; r != StopReason::NO_MORE_OPEN; r = s->step()) {
+        Bounds bounds = s->current_bounds();
+        bool violation = (prev_top_of_open - bounds.top_of_open) < -1e-14;
+        if (violation) {
+            std::cout << "VIOLATION " << prev_top_of_open
+                << " < " << bounds.top_of_open
+                << " -> " << (prev_top_of_open-bounds.top_of_open)
+                << "\n";
+        }
+
+        result &= !violation;
+        prev_top_of_open = bounds.top_of_open;
+    }
+
+    std::cout << "test_heuristic_consistency " << result << std::endl;
+    return result;
+}
+
 int main_search() {
     int result = 1
-        //&& test_simple1_1()
-        //&& test_simple1_2()
-        //&& test_simple1_3()
-        //&& test_old_at_easy()
+        && test_simple1_1()
+        && test_simple1_2()
+        && test_simple1_3()
+        && test_old_at_easy()
         && test_simple_counting()
-        //&& test_coverage()
-        //&& test_multiclass()
+        && test_coverage()
+        && test_multiclass()
+        && test_heuristic_consistency()
         ;
     return !result;
 }
