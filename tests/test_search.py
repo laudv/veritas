@@ -162,7 +162,7 @@ class TestSearch(unittest.TestCase):
         plot_img_solutions(imghat, solutions[:3])
         plot_img_solutions(imghat, solutions[-3:])
 
-    def _do_img_multiclass(self, at):
+    def _do_img_multiclass(self, at, heuristic, class_opt):
         img = np.load(os.path.join(BPATH, "data/img.npy"))
         X = np.array([[x, y] for x in np.linspace(0, 100, 251)[:-1]
                              for y in np.linspace(0, 100, 251)[:-1]])
@@ -174,7 +174,7 @@ class TestSearch(unittest.TestCase):
             at.swap_class(cls);
             yhat = at.eval(X)
 
-            config = Config(HeuristicType.MULTI_MAX_MAX_OUTPUT_DIFF)
+            config = Config(heuristic)
             config.stop_when_optimal = False
             #config.ignore_state_when_worse_than = 0.0
             search = config.get_search(at)#, [Interval(10, 30), Interval(10, 30)])
@@ -191,7 +191,7 @@ class TestSearch(unittest.TestCase):
             print(f", #sols {search.num_solutions()}")
 
             solutions = [search.get_solution(i) for i in range(search.num_solutions())]
-            output_exp = yhat[:, 0] - np.max(yhat[:, 1:], axis=1)
+            output_exp = yhat[:, 0] - class_opt(yhat[:, 1:], axis=1)
             output_exp_sorted = np.unique(output_exp)
             solution_outputs = np.unique([sol.output for sol in solutions])
 
@@ -205,7 +205,7 @@ class TestSearch(unittest.TestCase):
                         int(box[1].lo*10):int(box[1].hi*10)] += 1
                 ex = get_closest_example(box, np.zeros(2))
                 pred = at.eval(ex)[0]
-                expected = pred[0] - np.max(pred[1:])
+                expected = pred[0] - class_opt(pred[1:])
                 self.assertAlmostEqual(sol.output, expected)
 
             self.assertTrue(np.all(covered == 1.0))
@@ -218,14 +218,29 @@ class TestSearch(unittest.TestCase):
             #at.swap_class(cls); # back to normal
 
     def test_img_multiclass(self):
-        print("XGB")
+        print("XGB MAX_MAX")
         at = AddTree.read(os.path.join(BPATH, "models/xgb-img-multiclass.json"))
-        self._do_img_multiclass(at)
+        self._do_img_multiclass(at, HeuristicType.MULTI_MAX_MAX_OUTPUT_DIFF, np.max)
 
-        print("RF")
+        print("RF MAX_MAX")
         at = AddTree.read(os.path.join(BPATH, "models/rf-img-multiclass.json"))
-        self._do_img_multiclass(at)
+        self._do_img_multiclass(at, HeuristicType.MULTI_MAX_MAX_OUTPUT_DIFF, np.max)
 
+        print("XGB MAX_MIN")
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-multiclass.json"))
+        self._do_img_multiclass(at, HeuristicType.MULTI_MAX_MIN_OUTPUT_DIFF, np.min)
+
+        print("RF MAX_MIN")
+        at = AddTree.read(os.path.join(BPATH, "models/rf-img-multiclass.json"))
+        self._do_img_multiclass(at, HeuristicType.MULTI_MAX_MIN_OUTPUT_DIFF, np.min)
+
+        print("XGB MIN_MAX")
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-multiclass.json"))
+        self._do_img_multiclass(at, HeuristicType.MULTI_MIN_MAX_OUTPUT_DIFF, np.max)
+
+        print("RF MIN_MAX")
+        at = AddTree.read(os.path.join(BPATH, "models/rf-img-multiclass.json"))
+        self._do_img_multiclass(at, HeuristicType.MULTI_MIN_MAX_OUTPUT_DIFF, np.max)
 
     def test_img5(self):
         img = np.load(os.path.join(BPATH, "data/img.npy"))
