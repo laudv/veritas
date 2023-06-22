@@ -332,32 +332,30 @@ done:
     return result;
 }
 
-int test_coverage() {
+int test_coverage(const char *filename) {
     std::cout << "\n\n===========================\n\n";
     int result = 1;
 
-    for (const char *datapath : {"xgb-img-multiclass.json", "rf-img-multiclass.json"}) {
-        AddTree at_mult = read_addtree(datapath);
+    AddTree at_mult = read_addtree(filename);
 
-        for (int c = 0; c < 4; ++c) {
-            std::cout << "\n\n=== MAX_OUTPUT ============ " << datapath
-                      << " class " << c << "\n";
-            AddTree at = at_mult.make_singleclass(c);
-            result &= do_test_coverage(at, HeuristicType::MAX_OUTPUT);
-        }
-
-        std::cout << "\n=== MULTI_MAX_MAX ========= " << datapath << "\n";
-        result &= do_test_coverage(at_mult, HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF);
+    for (int c = 0; c < 4; ++c) {
+        std::cout << "\n=== MAX_OUTPUT ============ " << filename
+                  << " class " << c << "\n";
+        AddTree at = at_mult.make_singleclass(c);
+        result &= do_test_coverage(at, HeuristicType::MAX_OUTPUT);
     }
+
+    std::cout << "\n=== MULTI_MAX_MAX ========= " << filename << "\n";
+    result &= do_test_coverage(at_mult, HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF);
 
     std::cout << "test_coverage " << result << std::endl;
     return result;
 }
 
 
-int test_multiclass() {
+int test_multiclass(const char *filename) {
     std::cout << "\n\n===========================\n\n";
-    AddTree at = read_addtree("rf-img-multiclass.json");
+    AddTree at = read_addtree(filename);
     at.swap_class(3);
 
     Config c(HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF);
@@ -399,13 +397,14 @@ int test_multiclass() {
         result &= std::abs(sol.output-expected) < 1e-10;
     }
 
-    std::cout << "test_multiclass " << result << std::endl;
+    std::cout << "test_multiclass " << result
+        << filename << " " << result << std::endl;
     return result;
 }
 
-int test_heuristic_consistency() {
+int test_heuristic_consistency(const char *filename) {
     std::cout << "\n\n===========================\n\n";
-    AddTree at = read_addtree("xgb-img-multiclass.json");
+    AddTree at = read_addtree(filename);
     at.swap_class(2);
 
     Config c(HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF);
@@ -434,7 +433,8 @@ int test_heuristic_consistency() {
         prev_top_of_open = bounds.top_of_open;
     }
 
-    std::cout << "test_heuristic_consistency " << result << std::endl;
+    std::cout << "test_heuristic_consistency "
+        << filename << " " << result << std::endl;
     return result;
 }
 
@@ -445,9 +445,12 @@ int main_search() {
         && test_simple1_3()
         && test_old_at_easy()
         && test_simple_counting()
-        && test_coverage()
-        && test_multiclass()
-        && test_heuristic_consistency()
+        && test_coverage("xgb-img-multiclass.json")
+        && test_coverage("rf-img-multiclass.json")
+        && test_multiclass("xgb-img-multiclass.json")
+        && test_multiclass("rf-img-multiclass.json")
+        && test_heuristic_consistency("xgb-img-multiclass.json")
+        && test_heuristic_consistency("rf-img-multiclass.json")
         ;
     return !result;
 }

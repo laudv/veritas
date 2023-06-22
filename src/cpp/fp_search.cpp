@@ -183,9 +183,7 @@ struct OutputHeuristic {
             for (NodeId i = leaf_id; i != -1; i = leafiter.next()) {
                 ++num_leaves;
                 leaf_id = i; // store the last valid leaf_id (avoid -1)
-                FloatT the_value =
-                    static_cast<Sub *>(this)->get_value_for_leaf(t, leaf_id);
-                best = std::max(the_value, best, open_isworse);
+                best = std::max(t.leaf_value(leaf_id, 0), best, open_isworse);
             }
             if (leaf_id == -1)
                 throw std::runtime_error("leaf_id == -1?");
@@ -200,11 +198,6 @@ struct OutputHeuristic {
                         at, state, tree_index, leaf_id);
             }
         }
-    }
-
-    /** Sub needs to implement this: */
-    FloatT get_value_for_leaf(const TreeFp& /*t*/, NodeId /*leaf_id*/) {
-        throw std::runtime_error("override in Sub!");
     }
 
     /** Sub needs to implement this: */
@@ -244,10 +237,6 @@ struct BasicOutputHeuristic
     using State = typename BaseT::State;
 
     BasicOutputHeuristic() : BaseT() {}
-
-    FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
-        return t.leaf_value(leaf_id, 0);
-    }
 
     void initialize_state(const AddTreeFp& at, OutputState& state) {
         state.gscore = at.base_score(0);
@@ -292,10 +281,6 @@ struct CountingOutputHeuristic
     int num_solutions = 0;
 
     CountingOutputHeuristic() : BaseT(), counts{} {}
-
-    FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
-        return t.leaf_value(leaf_id, 0);
-    }
 
     void initialize_state(const AddTreeFp& at, OutputState& state) {
         state.gscore = at.base_score(0);
@@ -352,75 +337,155 @@ struct CountingOutputHeuristic
     }
 };
 
-template <typename OpenIsWorse, typename FocalIsWorse, typename DiffIsWorse>
-struct MultiOutputDiffHeuristic
-    : public OutputHeuristic<OpenIsWorse, FocalIsWorse,
-                             MultiOutputDiffHeuristic<OpenIsWorse, FocalIsWorse, DiffIsWorse>> {
+template <typename OpenIsWorse, typename FocalIsWorse, typename ClassIsWorse>
+struct MultiOutputHeuristic {
+    using State = OutputState;
 
     using OpenIsWorseT = OpenIsWorse;
     using FocalIsWorseT = FocalIsWorse;
-    using DiffIsWorseT = DiffIsWorse;
-    using SelfT = MultiOutputDiffHeuristic<OpenIsWorse, FocalIsWorse, DiffIsWorse>;
-    using BaseT = OutputHeuristic<OpenIsWorse, FocalIsWorse, SelfT>;
-    using State = typename BaseT::State;
+    using ClassIsWorseT = ClassIsWorse;
+    using SelfT = MultiOutputHeuristic<OpenIsWorse, FocalIsWorse, ClassIsWorse>;
 
     const int num_leaf_values;
-    std::vector<FloatT> per_class;
-    DiffIsWorseT diff_isworse;
 
-    MultiOutputDiffHeuristic(int num_leaf_values)
-        : BaseT()
-        , num_leaf_values(num_leaf_values)
-        , per_class(num_leaf_values)
-        , diff_isworse() {}
+    std::vector<FloatT> buf;
+    FloatT *gc;
+    FloatT *hc;
+    FloatT *worst;
 
-    FloatT best_per_class() {
-        //FloatT sub = OrdLimit<FloatT, DiffIsWorseT>::worst(diff_isworse);
-        //for (int i = 0; i < num_leaf_values; ++i)
-        //    if (i != c)
-        //        sub = std::max(per_class[i], sub, diff_isworse);
-        FloatT max = *std::max_element(per_class.begin() + 1,
-                                       per_class.end(), diff_isworse);
-        return max;
+    OutputStateOpenIsWorse<OpenIsWorseT> open_isworse;
+    FocalIsWorseT focal_isworse;
+    ClassIsWorseT class_isworse;
+
+    LeafIter<TreeFp> leafiter;
+
+    MultiOutputHeuristic(int num_leaf_values)
+        : num_leaf_values(num_leaf_values)
+        , buf(num_leaf_values*3)
+        , open_isworse()
+        , focal_isworse()
+        , class_isworse()
+        , leafiter()
+    {
+        gc =    &buf[0 * num_leaf_values];
+        hc =    &buf[1 * num_leaf_values];
+        worst = &buf[2 * num_leaf_values];
     }
 
-    FloatT get_value_for_leaf(const TreeFp& t, NodeId leaf_id) {
-        FloatT r = OrdLimit<FloatT, DiffIsWorseT>::best(diff_isworse);
-        for (int i = 1; i < num_leaf_values; ++i) {
-            FloatT v = t.leaf_value(leaf_id, i);
-            r = std::min(r, v, diff_isworse);
+    void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
+                       State &state) {
+        using OrdLimOpen = OrdLimit<FloatT, OpenIsWorse>;
+        using OrdLimClass = OrdLimit<FloatT, ClassIsWorse>;
+
+        this->initialize_state(at, state);
+
+        leafiter.setup_flatbox(state.box, prune_box);
+        FloatT best_of_best = OrdLimOpen::worst(open_isworse);
+        //for (int c = 1; c < num_leaf_values; ++c) {
+        //    for (size_t tree_index = 0; tree_index < at.size(); ++tree_index) {
+        //        FloatT best = OrdLim::worst(open_isworse);
+        //        const auto& t = at[tree_index];
+        //        leafiter.setup_tree(t);
+        //        int num_leaves = 0;
+        //        NodeId leaf_id = leafiter.next();
+        //        for (NodeId i = leaf_id; i != -1; i = leafiter.next()) {
+        //            ++num_leaves;
+        //            leaf_id = i; // store the last valid leaf_id (avoid -1)
+        //            FloatT diff = t.leaf_value(leaf_id, 0)
+        //                        - t.leaf_value(leaf_id, c);
+        //            best = std::max(diff, best, open_isworse);
+        //        }
+        //        if (leaf_id == -1)
+        //            throw std::runtime_error("leaf_id == -1?");
+        //        if (num_leaves > 1) { // multiple leaves reachable still
+        //            // keep track of best hscore (over all accessible leaves)
+        //            h_per_class[c] += best;
+        //            if (open_isworse(best_of_best, best)) {
+        //                best_of_best = best;
+        //                state.next_tree = static_cast<int>(tree_index);
+        //            }
+        //        } else {
+        //            FloatT diff = t.leaf_value(leaf_id, 0)
+        //                        - t.leaf_value(leaf_id, c);
+        //            g_per_class[c] += diff;
+        //            state.fscore += 1; // deeper solution first
+        //        }
+        //    }
+        //}
+        
+
+        FloatT g0 = at.base_score(0);
+        FloatT h0 = 0.0;
+
+        for (size_t tree_index = 0; tree_index < at.size(); ++tree_index) {
+            FloatT best0 = OrdLimOpen::worst(open_isworse);
+            std::fill(worst, worst + num_leaf_values,
+                      OrdLimClass::best(class_isworse));
+
+            const TreeFp& tree = at[tree_index];
+            leafiter.setup_tree(tree);
+
+            int num_leaves_accessible = 0;
+            NodeId leaf_id = leafiter.next();
+            for (NodeId i = leaf_id; i != -1; i = leafiter.next()) {
+                ++num_leaves_accessible;
+                leaf_id = i; // store the last valid leaf_id (avoid -1)
+                best0 = std::max(tree.leaf_value(leaf_id, 0), best0, open_isworse);
+
+                for (int c = 1; c < num_leaf_values; ++c) {
+                    worst[c] = std::min(tree.leaf_value(leaf_id, c), worst[c],
+                                        class_isworse);
+                }
+            }
+
+            if (num_leaves_accessible > 1) { // tree contributes to hscore
+                h0 += best0;
+                for (int c = 1; c < num_leaf_values; ++c) {
+                    hc[c] += worst[c];
+                    if (open_isworse(best_of_best, g0 - worst[c])) {
+                        best_of_best = g0 - worst[c];
+                        state.next_tree = static_cast<int>(tree_index);
+                    }
+                }
+            } else { // tree contributes to gscore (unique leaf)
+                g0 += tree.leaf_value(leaf_id, 0);
+                for (int c = 1; c < num_leaf_values; ++c)
+                    gc[c] += tree.leaf_value(leaf_id, c);
+                state.fscore += 1;
+            }
+
         }
-        return t.leaf_value(leaf_id, 0)-r;
+
+        int best_c = 1;
+        FloatT best_class_score = gc[1] + hc[1];
+        for (int c = 2; c < num_leaf_values; ++c) {
+            FloatT class_score = gc[c] + hc[c];
+            if (class_isworse(best_class_score, class_score)) {
+                best_class_score = class_score;
+                best_c = c;
+            }
+        }
+        state.gscore = g0 - gc[best_c];
+        state.hscore = h0 - hc[best_c];
     }
+
+    //FloatT best_per_class(const std::vector<FloatT>& per_class) const {
+    //    // Skip class 0
+    //    FloatT max = *std::max_element(per_class.begin() + 1,
+    //                                   per_class.end(), class_isworse);
+    //    return max;
+    //}
 
     void initialize_state(const AddTreeFp& at, OutputState& state) {
-        //FloatT sub = OrdLimit<FloatT, DiffIsWorseT>::worst(diff_isworse);
-        //for (int i = 0; i < at.num_leaf_values(); ++i)
-        //    if (i != c)
-        //        sub = std::max(at.base_score(i), sub, diff_isworse);
-
-        //state.gscore = at.base_score(c) - sub;
-        //state.hscore = 0.0;
-        //state.next_tree = -1;
-
-        for (int i = 0; i < num_leaf_values; ++i)
-            per_class[i] = at.base_score(i);
-
-        state.gscore = per_class[0] - best_per_class();
+        for (int i = 0; i < num_leaf_values; ++i) {
+            gc[i] = at.base_score(i);
+            hc[i] = 0.0;
+            worst[i] = OrdLimit<FloatT, ClassIsWorse>::best(class_isworse);
+        }
+        state.gscore = 0.0;
         state.hscore = 0.0;
         state.next_tree = -1;
     }
-
-    void update_gscore(const AddTreeFp& at, OutputState& state,
-                       size_t tree_index, NodeId leaf_id) {
-        const auto& tree = at[tree_index];
-
-        for (int i = 0; i < num_leaf_values; ++i)
-            per_class[i] += tree.leaf_value(leaf_id, i);
-
-        state.gscore = per_class[0] - best_per_class();
-        state.fscore += 1; // deeper solution first
-    };
 
     void notify_new_solution(const AddTreeFp& /*at*/,
                              const FlatBoxFp& /*prune_box*/,
@@ -433,9 +498,9 @@ using MaxBasicOutputHeuristic = BasicOutputHeuristic<LessIsWorse, LessIsWorse>;
 using MinBasicOutputHeuristic = BasicOutputHeuristic<GreaterIsWorse, LessIsWorse>;
 using MaxCountingOutputHeuristic = CountingOutputHeuristic<LessIsWorse, LessIsWorse>;
 using MinCountingOutputHeuristic = CountingOutputHeuristic<GreaterIsWorse, LessIsWorse>;
-using MaxMaxMultiOutputDiffHeuristic = MultiOutputDiffHeuristic<LessIsWorse, LessIsWorse, LessIsWorse>;
-using MinMaxMultiOutputDiffHeuristic = MultiOutputDiffHeuristic<GreaterIsWorse, LessIsWorse, LessIsWorse>;
-using MaxMinMultiOutputDiffHeuristic = MultiOutputDiffHeuristic<LessIsWorse, LessIsWorse, GreaterIsWorse>;
+using MaxMaxMultiOutputHeuristic = MultiOutputHeuristic<LessIsWorse, LessIsWorse, LessIsWorse>;
+using MinMaxMultiOutputHeuristic = MultiOutputHeuristic<GreaterIsWorse, LessIsWorse, LessIsWorse>;
+using MaxMinMultiOutputHeuristic = MultiOutputHeuristic<LessIsWorse, LessIsWorse, GreaterIsWorse>;
 
 template <typename State>
 struct SolutionImpl {
@@ -885,13 +950,13 @@ Config::Config(HeuristicType h)
         config_set_defaults<MinCountingOutputHeuristic>(*this);
         break;
     case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF:
-        config_set_defaults<MaxMaxMultiOutputDiffHeuristic>(*this);
+        config_set_defaults<MaxMaxMultiOutputHeuristic>(*this);
         break;
     case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF:
-        config_set_defaults<MaxMinMultiOutputDiffHeuristic>(*this);
+        config_set_defaults<MaxMinMultiOutputHeuristic>(*this);
         break;
     case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF:
-        config_set_defaults<MinMaxMultiOutputDiffHeuristic>(*this);
+        config_set_defaults<MinMaxMultiOutputHeuristic>(*this);
         break;
     default:
         throw std::runtime_error("invalid HeuristicType in config (init)");
@@ -922,17 +987,17 @@ Config::get_search(const AddTree& at, const FlatBox& prune_box) const {
             *this, std::move(h), at, prune_box);
     }
     case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF: {
-        auto h = std::make_shared<MaxMaxMultiOutputDiffHeuristic>(at.num_leaf_values());
+        auto h = std::make_shared<MaxMaxMultiOutputHeuristic>(at.num_leaf_values());
         return std::make_shared<SearchImpl<decltype(h)::element_type>>(
             *this, std::move(h), at, prune_box);
     }
     case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF: {
-        auto h = std::make_shared<MaxMinMultiOutputDiffHeuristic>(at.num_leaf_values());
+        auto h = std::make_shared<MaxMinMultiOutputHeuristic>(at.num_leaf_values());
         return std::make_shared<SearchImpl<decltype(h)::element_type>>(
             *this, std::move(h), at, prune_box);
     }
     case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF: {
-        auto h = std::make_shared<MinMaxMultiOutputDiffHeuristic>(at.num_leaf_values());
+        auto h = std::make_shared<MinMaxMultiOutputHeuristic>(at.num_leaf_values());
         return std::make_shared<SearchImpl<decltype(h)::element_type>>(
             *this, std::move(h), at, prune_box);
     }
