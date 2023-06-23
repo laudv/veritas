@@ -14,7 +14,7 @@ from veritas import Solution
 # Take `example = np.zeros(num_attributes)` if you just want an example.
 #
 # \param featmap Mapping of feature ids, see FeatMap
-def get_closest_example(solution_or_box, example, featmap=None):
+def get_closest_example(solution_or_box, example, eps, featmap=None):
     num_attributes = len(example)
 
     if featmap is None:
@@ -45,7 +45,7 @@ def get_closest_example(solution_or_box, example, featmap=None):
             dist_lo = abs(dom.lo - x)
             dist_hi = abs(x - dom.hi)
             if dist_lo > dist_hi:
-                closest[feat_id] = dom.hi
+                closest[feat_id] = dom.hi - eps
             else:
                 closest[feat_id] = dom.lo
 
