@@ -1,4 +1,5 @@
-import json, os
+import json
+import os
 import matplotlib.pyplot as plt
 import scipy.io
 import imageio
@@ -18,6 +19,7 @@ from veritas import *
 
 import timeit
 
+
 def generate_img():
     img = imageio.imread("tests/data/img.png")
     X = np.array([[x, y] for x in range(100) for y in range(100)])
@@ -26,12 +28,12 @@ def generate_img():
     X = X.astype(float)
 
     regr = xgb.XGBRegressor(
-            objective="reg:squarederror",
-            nthread=4,
-            tree_method="hist",
-            max_depth=3,
-            learning_rate=1.0,
-            n_estimators=3)
+        objective="reg:squarederror",
+        nthread=4,
+        tree_method="hist",
+        max_depth=3,
+        learning_rate=1.0,
+        n_estimators=3)
     model = regr.fit(X, y)
     at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
@@ -44,21 +46,21 @@ def generate_img():
     fig, ax = plt.subplots(1, 2)
     im0 = ax[0].imshow(img)
     fig.colorbar(im0, ax=ax[0])
-    im1 = ax[1].imshow(yhat.reshape((100,100)))
+    im1 = ax[1].imshow(yhat.reshape((100, 100)))
     fig.colorbar(im1, ax=ax[1])
     plt.show()
 
     at.write("tests/models/xgb-img-very-easy-new.json")
-    #with open("tests/models/xgb-img-very-easy-values.json", "w") as f:
+    # with open("tests/models/xgb-img-very-easy-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
 
     regr = xgb.XGBRegressor(
-            objective="reg:squarederror",
-            nthread=4,
-            tree_method="hist",
-            max_depth=6,
-            learning_rate=0.5,
-            n_estimators=10)
+        objective="reg:squarederror",
+        nthread=4,
+        tree_method="hist",
+        max_depth=6,
+        learning_rate=0.5,
+        n_estimators=10)
     model = regr.fit(X, y)
     at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
@@ -70,21 +72,21 @@ def generate_img():
     fig, ax = plt.subplots(1, 2)
     im0 = ax[0].imshow(img)
     fig.colorbar(im0, ax=ax[0])
-    im1 = ax[1].imshow(yhat.reshape((100,100)))
+    im1 = ax[1].imshow(yhat.reshape((100, 100)))
     fig.colorbar(im1, ax=ax[1])
     plt.show()
 
     at.write("tests/models/xgb-img-easy-new.json")
-    #with open("tests/models/xgb-img-easy-values.json", "w") as f:
+    # with open("tests/models/xgb-img-easy-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
 
     regr = xgb.XGBRegressor(
-            objective="reg:squarederror",
-            nthread=4,
-            tree_method="hist",
-            max_depth=6,
-            learning_rate=0.4,
-            n_estimators=50)
+        objective="reg:squarederror",
+        nthread=4,
+        tree_method="hist",
+        max_depth=6,
+        learning_rate=0.4,
+        n_estimators=50)
     model = regr.fit(X, y)
     at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
@@ -93,43 +95,38 @@ def generate_img():
     print(f"hard img: rmse train {np.sqrt(sqerr)/len(X)}")
     print(f"hard img: mae model difference {mae}")
 
-    #print(model.predict(X[10:20]) - at.predict(X[10:20]))
+    # print(model.predict(X[10:20]) - at.predict(X[10:20]))
 
     fig, ax = plt.subplots(1, 2)
     im0 = ax[0].imshow(img)
     fig.colorbar(im0, ax=ax[0])
-    im1 = ax[1].imshow(yhat.reshape((100,100)))
+    im1 = ax[1].imshow(yhat.reshape((100, 100)))
     fig.colorbar(im1, ax=ax[1])
     plt.show()
 
     at.write("tests/models/xgb-img-hard-new.json")
-    #with open("tests/models/xgb-img-hard-values.json", "w") as f:
+    # with open("tests/models/xgb-img-hard-values.json", "w") as f:
     #    json.dump(list(map(float, yhat)), f)
-
-
-
-
-
-
 
 
 def generate_img_multiclass():
     img = imageio.imread("tests/data/img.png")
     X = np.array([[x, y] for x in range(100) for y in range(100)])
     y = np.array([img[x, y] for x, y in X])
-    yc = np.digitize(y, np.quantile(y, [0.25, 0.5, 0.75])) # multiclass
+    yc = np.digitize(y, np.quantile(y, [0.25, 0.5, 0.75]))  # multiclass
     X = X.astype(float)
 
     regr = xgb.XGBRegressor(
-            objective="multi:softmax",
-            num_class=4,
-            nthread=4,
-            tree_method="hist",
-            max_depth=6,
-            learning_rate=0.5,
-            n_estimators=20)
+        objective="multi:softmax",
+        num_class=4,
+        nthread=4,
+        tree_method="hist",
+        max_depth=6,
+        learning_rate=0.5,
+        n_estimators=20)
     model = regr.fit(X, yc)
-    ats = addtrees_from_multiclass_xgb_model(model, 4, feat2id_map=lambda f: int(f[1:]))
+    ats = addtrees_from_multiclass_xgb_model(
+        model, 4, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
     yhatm = model.predict(X, output_margin=True)
     yhatm_at = np.zeros_like(yhatm)
@@ -141,21 +138,21 @@ def generate_img_multiclass():
     mae = mean_absolute_error(yhatm.ravel(), yhatm_at.ravel())
     print(f"mult: mae model difference {mae}")
 
-    #print(model.predict(X[10:20]) - at.predict(X[10:20]))
+    # print(model.predict(X[10:20]) - at.predict(X[10:20]))
 
     fig, ax = plt.subplots(1, 3)
     ax[0].set_title("actual")
     ax[0].imshow(yc.reshape((100, 100)))
     ax[1].set_title("predicted")
-    ax[1].imshow(yhat.reshape((100,100)))
+    ax[1].imshow(yhat.reshape((100, 100)))
     ax[2].set_title("errors")
-    ax[2].imshow((yc!=yhat).reshape((100,100)))
+    ax[2].imshow((yc != yhat).reshape((100, 100)))
     fig.suptitle("XGB")
 
     fig, ax = plt.subplots(1, 5)
     for k in range(4):
         ax[k].set_title(f"prob class {k}")
-        ax[k].imshow(yhatm[:,k].reshape((100,100)))
+        ax[k].imshow(yhatm[:, k].reshape((100, 100)))
     ax[4].imshow(yc.reshape((100, 100)))
     ax[4].set_title("actual")
     fig.suptitle("XGB")
@@ -193,15 +190,15 @@ def generate_img_multiclass():
     ax[0].set_title("actual")
     ax[0].imshow(yc.reshape((100, 100)))
     ax[1].set_title("predicted")
-    ax[1].imshow(yhat.reshape((100,100)))
+    ax[1].imshow(yhat.reshape((100, 100)))
     ax[2].set_title("errors")
-    ax[2].imshow((yc!=yhat).reshape((100,100)))
+    ax[2].imshow((yc != yhat).reshape((100, 100)))
 
     fig, ax = plt.subplots(1, 5)
     fig.suptitle("RF")
     for k in range(4):
         ax[k].set_title(f"prob class {k}")
-        ax[k].imshow(yhatm[:,k].reshape((100,100)))
+        ax[k].imshow(yhatm[:, k].reshape((100, 100)))
     ax[4].imshow(yc.reshape((100, 100)))
     ax[4].set_title("actual")
 
@@ -211,7 +208,8 @@ def generate_img_multiclass():
 
 
 def generate_allstate():
-    allstate_data_path = os.path.join(os.environ["VERITAS_DATA_DIR"], "allstate.h5")
+    allstate_data_path = os.path.join(
+        os.environ["VERITAS_DATA_DIR"], "allstate.h5")
     data = pd.read_hdf(allstate_data_path)
     X = data.drop(columns=["loss"]).to_numpy()
     y = data.loss.to_numpy()
@@ -235,7 +233,7 @@ def generate_allstate():
     print(f"allstate: mae model difference {mae}")
     at.write("tests/models/xgb-allstate.json", compress=False)
 
-#def generate_california_housing():
+# def generate_california_housing():
 #    calhouse = fetch_california_housing()
 #
 #    #print(calhouse["DESCR"])
@@ -282,7 +280,7 @@ def generate_allstate():
 #    print("edge case diff: ", model.predict(Xt) - at.predict(Xt))
 #
 #    at.write("tests/models/xgb-calhouse-easy.json")
-#    
+#
 #
 #    # Intermediate
 #    regr = xgb.XGBRegressor(
@@ -321,38 +319,42 @@ def generate_allstate():
 #
 #    at.write("tests/models/xgb-calhouse-hard.json")
 #
-#def generate_covertype():
-#    covtype = fetch_covtype()
+
+
+# def generate_covertype():
+#     covtype = fetch_covtype()
+
+#     X = np.array(covtype["data"], dtype=float)
+#     y = np.array(covtype["target"]) == 2
+
+#     # Very Easy
+#     clf = xgb.XGBClassifier(
+#         objective="reg:logistic",
+#         nthread=4,
+#         tree_method="hist",
+#         max_depth=4,
+#         learning_rate=0.5,
+#         n_estimators=10)
+#     model = clf.fit(X, y)
+#     at = addtree_from_xgb_model(model)
+#     at.base_score = 0.0
+#     err = sum(y != model.predict(X)) / len(y)
+#     mae = mean_absolute_error(model.predict(
+#         X[:1000], output_margin=True), at.predict(X[:1000]))
+#     print(f"easy covtype: error rate {err}")
+#     print(f"easy covtype: mae model difference {mae}")
+
+#     # edge case test
+#     split = at[0].get_split(0)
+#     Xt = np.array([X[12]])
+#     Xt[0][split.feat_id] = split.split_value
+#     print("edge case diff: ", model.predict(
+#         Xt, output_margin=True) - at.predict(Xt))
+
+#     at.write("tests/models/xgb-covtype-easy.json")
 #
-#    X = np.array(covtype["data"], dtype=float)
-#    y = np.array(covtype["target"]) == 2
 #
-#    # Very Easy
-#    clf = xgb.XGBClassifier(
-#            objective="reg:logistic",
-#            nthread=4,
-#            tree_method="hist",
-#            max_depth=4,
-#            learning_rate=0.5,
-#            n_estimators=10)
-#    model = clf.fit(X, y)
-#    at = addtree_from_xgb_model(model)
-#    at.base_score = 0.0
-#    err = sum(y != model.predict(X)) / len(y)
-#    mae = mean_absolute_error(model.predict(X[:1000], output_margin=True), at.predict(X[:1000]))
-#    print(f"easy covtype: error rate {err}")
-#    print(f"easy covtype: mae model difference {mae}")
-#
-#    # edge case test
-#    split = at[0].get_split(0)
-#    Xt = np.array([X[12]])
-#    Xt[0][split.feat_id] = split.split_value
-#    print("edge case diff: ", model.predict(Xt, output_margin=True) - at.predict(Xt))
-#
-#    at.write("tests/models/xgb-covtype-easy.json")
-#
-#
-#def generate_mnist():
+# def generate_mnist():
 #    if not os.path.exists("tests/data/mnist.mat"):
 #        print("loading MNIST with fetch_openml")
 #        mnist = fetch_openml("mnist_784")
@@ -432,7 +434,7 @@ def generate_allstate():
 #            dd[str(k)] = list(v)
 #        json.dump(dd, f)
 #
-#def generate_bin_mnist():
+# def generate_bin_mnist():
 #    print("loading MNIST MAT file")
 #    mat = scipy.io.loadmat("tests/data/mnist.mat") # much faster
 #    X = mat["X"] > 50.0
@@ -461,10 +463,10 @@ def generate_allstate():
 
 
 if __name__ == "__main__":
-    #generate_img()
+    # generate_img()
     generate_img_multiclass()
-    #generate_allstate()
-    #generate_california_housing()
-    #generate_covertype()
-    #generate_mnist()
-    #generate_bin_mnist()
+    # generate_allstate()
+    # generate_california_housing()
+    # generate_covertype()
+    # generate_mnist()
+    # generate_bin_mnist()
