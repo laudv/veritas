@@ -7,6 +7,7 @@ set(VERITAS_CORE, "${PROJECT_NAME}_core")
 
 set(SOURCE_DIR_PY "src/python")
 set(SOURCE_DIR "src/cpp")
+set(BINDINGS_DIR "src/bindings")
 
 # Tell cmake that headers are also in source_dir
 include_directories(${SOURCE_DIR})
@@ -81,7 +82,15 @@ option(BUILD_PYTHON_BINDINGS "Build C++ to Python bindings" ON)
 if (BUILD_PYTHON_BINDINGS)
     #find_package(pybind11 REQUIRED)
     add_subdirectory(lib/pybind11)
-    pybind11_add_module("${PROJECT_NAME}_core" MODULE "${SOURCE_DIR}/bindings.cpp")
+    pybind11_add_module("${PROJECT_NAME}_core" MODULE
+        "${BINDINGS_DIR}/utility.cpp"
+        "${BINDINGS_DIR}/interval.cpp"
+        "${BINDINGS_DIR}/box.cpp"
+        "${BINDINGS_DIR}/tree.cpp"
+        "${BINDINGS_DIR}/addtree.cpp"
+        "${BINDINGS_DIR}/featmap.cpp"
+        "${BINDINGS_DIR}/search.cpp"
+        "${BINDINGS_DIR}/bindings.cpp")
     target_link_libraries("${PROJECT_NAME}_core" PRIVATE ${PROJECT_NAME})
     install(TARGETS "${PROJECT_NAME}_core" DESTINATION "${SOURCE_DIR_PY}/${PROJECT_NAME}")
 endif (BUILD_PYTHON_BINDINGS)
