@@ -2,10 +2,13 @@ import json
 import numpy as np
 
 from xgboost.sklearn import XGBModel
-from xgboost.core import Booster
+from xgboost.core import Booster as xgbbooster
 
 import sklearn.tree as sktree
 from sklearn.ensemble import _forest
+
+from lightgbm import LGBMModel
+from lightgbm import Booster as lgbmbooster
 
 from . import AddTree
 
@@ -18,37 +21,41 @@ class ConAddTree(AddTree):
         return 1/(1+np.exp(-self.eval(X)))
 
 
+# TODO: Clean if LGBM works
 def get_addtree(model):
-    # Check model type
+    module_name = getattr(model, '__module__', None)
 
     # XGB
-    if isinstance(model, XGBModel):
-        # Multiclass
-        if "num_class" in model.get_params():
-            nclasses = model.get_params()["num_class"]
-            return [addtree_xgb(model, multiclass=(clazz, nclasses), base_score=0.5) for clazz in range(nclasses)]
-        else:
-            # Regression or binary class
-            return addtree_xgb(model)
-    # Sklearn RandomForest
-    elif str(getattr(model, '__module__', None)) == "sklearn.ensemble._forest":
-        # Multiclass
-        if isinstance(model, _forest.RandomForestClassifier) and model.n_classes_ > 1:
-            pass
-        else:
-            # Regression or binary
-            return addtree_sklearn_ensemble(model)
+    if "xgboost" in str(module_name):
+        if isinstance(model, XGBModel):
+            base_score = model.base_score if model.base_score is not None else 0.0
+            if "num_class" in model.get_params():
+                nclasses = model.get_params()["num_class"]
+                base_score = model.base_score if model.base_score is not None else 0.5
+                return [addtree_xgb(model.get_booster(), multiclass=(clazz, nclasses), base_score=base_score) for clazz in range(nclasses)]
+            model = model.get_booster()
+        return addtree_xgb(model)
+
+    # Sklearn RandomForest / InsulationForest in the Future?
+    elif "sklearn.ensemble._forest" in str(module_name):
+        return addtree_sklearn_ensemble(model)
+
     # LGBM
-    elif 1 == 1:
-        pass
+    elif "lightgbm" in str(module_name):
+        if isinstance(model, LGBMModel):
+            model = model.booster_
+        assert isinstance(
+            model, lgbmbooster), f"not xgb.Booster but {type(model)}"
+        if model.dump_model()["num_class"] > 2:
+            print("hier")  # implement multiclass
+
+        return addtree_lgbm(model)
 
     return -1
 
 
 def addtree_xgb(model, multiclass=(0, 1), base_score=0.0):
-    base_score = model.base_score if model.base_score is not None else base_score
-    model = model.get_booster()
-    assert isinstance(model, Booster), f"not xgb.Booster but {type(model)}"
+    assert isinstance(model, xgbbooster), f"not xgb.Booster but {type(model)}"
 
     dump = model.get_dump("", dump_format="json")
     at = ConAddTree(1)
@@ -57,7 +64,7 @@ def addtree_xgb(model, multiclass=(0, 1), base_score=0.0):
     offset, num_classes = multiclass
 
     for i in range(offset, len(dump), num_classes):
-        _parse_tree(at, dump[i])
+        _parse_tree_xgb(at, dump[i])
 
     return at
 
@@ -65,14 +72,15 @@ def addtree_xgb(model, multiclass=(0, 1), base_score=0.0):
 def feat2id_map(f): return int(f[1:])
 
 
-def _parse_tree(at, tree_dump):
+def _parse_tree_xgb(at, tree_dump):
     tree = at.add_tree()
     stack = [(tree.root(), json.loads(tree_dump))]
 
     while len(stack) > 0:
         node, node_json = stack.pop()
         if "leaf" not in node_json:
-            children = {child["nodeid"]                        : child for child in node_json["children"]}
+            children = {child["nodeid"]
+                : child for child in node_json["children"]}
 
             feat_id = feat2id_map(node_json["split"])
             if "split_condition" in node_json:
@@ -120,7 +128,7 @@ def addtree_sklearn_tree(at, tree, extract_value_fun):
 
 def addtree_sklearn_ensemble(ensemble):
     num_trees = len(ensemble.estimators_)
-    num_leaf_values = ensemble.n_classes_
+    num_leaf_values = 1
 
     if "Regressor" in type(ensemble).__name__:
         print("SKLEARN: regressor")
@@ -129,6 +137,7 @@ def addtree_sklearn_ensemble(ensemble):
             # print("skl leaf regr", v)
             return v[0]/num_trees
     elif "Classifier" in type(ensemble).__name__:
+        num_leaf_values = ensemble.n_classes_
         print(f"SKLEARN: classifier with {num_leaf_values} classes")
 
         def extract_value_fun(v, i):
@@ -144,12 +153,45 @@ def addtree_sklearn_ensemble(ensemble):
     return at
 
 
-def addtree_sklearn_ensemble_mlticlass(ensemble):
-    addtrees = []
-    num_trees = len(ensemble.estimators_)
-    num_classes = ensemble.n_classes_
-    for i in range(num_classes):
-        def extract_value_fun(v): return (v[0][i]/sum(v[0]))/num_trees
-        at = addtree_sklearn_ensemble(ensemble, extract_value_fun)
-        addtrees.append(at)
-    return addtrees
+def _parse_tree_lgbm(at, tree_json):
+    tree = at.add_tree()
+    stack = [(tree.root(), tree_json)]
+
+    while len(stack) > 0:
+        node, node_json = stack.pop()
+        try:
+            if "split_feature" in node_json:
+                feat_id = node_json["split_feature"]
+                if not node_json["default_left"]:
+                    print("warning: default_left != True not supported")
+                if node_json["decision_type"] == "<=":
+                    split_value = np.float32(node_json["threshold"])
+                    split_value = np.nextafter(
+                        split_value, -np.inf, dtype=np.float32)
+                    tree.split(node, feat_id, split_value)
+                    left = node_json["left_child"]
+                    right = node_json["right_child"]
+                else:
+                    raise RuntimeError(
+                        f"not supported decision_type {node_json['decision_type']}")
+
+                stack.append((tree.right(node), right))
+                stack.append((tree.left(node), left))
+
+            else:
+                leaf_value = node_json["leaf_value"]
+                tree.set_leaf_value(node, 0, leaf_value)
+        except KeyError as e:
+            print("error", node_json.keys())
+            raise e
+
+
+def addtree_lgbm(model, multiclass=(0, 1)):
+    dump = model.dump_model()
+    at = ConAddTree(1)
+
+    trees = dump["tree_info"]
+    for tree in trees:
+        _parse_tree_lgbm(at, tree["tree_structure"])
+
+    return at

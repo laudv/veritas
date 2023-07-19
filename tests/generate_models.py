@@ -116,7 +116,7 @@ def generate_img_multiclass():
     yc = np.digitize(y, np.quantile(y, [0.25, 0.5, 0.75]))  # multiclass
     X = X.astype(float)
 
-    regr = xgb.XGBRegressor(
+    clf = xgb.XGBClassifier(
         objective="multi:softmax",
         num_class=4,
         nthread=4,
@@ -124,7 +124,7 @@ def generate_img_multiclass():
         max_depth=6,
         learning_rate=0.5,
         n_estimators=20)
-    model = regr.fit(X, yc)
+    model = clf.fit(X, yc)
     ats = addtrees_from_multiclass_xgb_model(
         model, 4, feat2id_map=lambda f: int(f[1:]))
     yhat = model.predict(X)
@@ -463,8 +463,8 @@ def generate_allstate():
 
 
 if __name__ == "__main__":
-    # generate_img()
-    generate_img_multiclass()
+    generate_img()
+    # generate_img_multiclass()
     # generate_allstate()
     # generate_california_housing()
     # generate_covertype()
