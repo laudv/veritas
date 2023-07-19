@@ -213,7 +213,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
             how_many = min(s.num_solutions(), self.keep_at_most_generated_examples)
             for i in range(how_many):
                 sol = s.get_solution(i)
-                closest = get_closest_example(sol, self.example)
+                closest = get_closest_example(sol, self.example, 1e-5)
                 #sol_nodes = np.array(s.get_solution_nodes(i))
                 #eval_nodes = np.array([t.eval_node(closest)[0] for t in self.at])
                 #assert all(sol_nodes == eval_nodes)
