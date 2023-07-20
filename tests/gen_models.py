@@ -403,9 +403,8 @@ def tests_binary_classification():
         learning_rate=1,
         n_estimators=3)
     model = clf.fit(X, y)
-
     at = get_addtree(model)
-    at.base_score = 0.0
+
     err = sum(y != model.predict(X)) / len(y)
     mae = mean_absolute_error(model.predict(
         X, output_margin=True), at.predict(X))
@@ -417,21 +416,20 @@ def tests_binary_classification():
 
     ############# SkLearn #############
     print("SkLearn - Binary Classification:")
-    clf = RandomForestRegressor(
+    clf = RandomForestClassifier(
         max_depth=6,
         random_state=0,
-        n_estimators=50)
+        n_estimators=50,)
     model = clf.fit(X, y)
-
     at = get_addtree(model)
-    at.base_score = 0.0
+
     err = sum(y != model.predict(X)) / len(y)
-    mae = mean_absolute_error(model.predict(
+    mae = mean_absolute_error(model.predict_proba(
         X), at.predict(X))
     print(f"easy bc: error rate {err}")
     print(f"easy bc: mae model difference {mae}")
 
-    at.write("tests/models/xgb-bc-easy.json")
+    at.write("tests/models/sklearn-bc-easy.json")
     print()
 
     ############# LGBM #############
@@ -449,7 +447,7 @@ def tests_binary_classification():
 
     err = sum(y != model.predict(X)) / len(y)
     mae = mean_absolute_error(model.predict(
-        X), at.predict(X))
+        X, raw_score=True), at.predict(X))
 
     print(f"easy bc: error rate {err}")
     print(f"easy bc: mae model difference {mae}")
