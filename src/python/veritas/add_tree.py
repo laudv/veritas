@@ -36,12 +36,14 @@ def get_addtree(model):
         base_score = float(param_dump['learner_model_param']["base_score"])
         model_type = param_dump["objective"]["name"]
         if "multi" in model_type:
-            print("MULTI")
             num_class = int(param_dump['learner_model_param']["num_class"])
-            print(num_class)
             return [addtree_xgb(model, base_score, multiclass=(clazz, num_class)) for clazz in range(num_class)]
         elif "logistic" in model_type:
-            base_score = math.log(base_score / (1 - base_score))
+            base_score = 0.0
+            # Base_score is set to 0.5 but produces an offset of 0.5
+            # Base_margin is porbably used but unable to retrieve from xgboost
+            # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin
+
         return addtree_xgb(model, base_score)
 
     # Sklearn RandomForest / InsulationForest in the Future?
@@ -56,7 +58,6 @@ def get_addtree(model):
             model, lgbmbooster), f"not xgb.Booster but {type(model)}"
         num_class = model.dump_model()["num_class"]
         if num_class > 2:
-            print("LGBM multiclass")
             return [addtree_lgbm(model, multiclass=(clazz, num_class)) for clazz in range(num_class)]
 
         return addtree_lgbm(model)
@@ -100,7 +101,7 @@ def _parse_tree_xgb(at, tree_dump):
     while len(stack) > 0:
         node, node_json = stack.pop()
         if "leaf" not in node_json:
-            children = {child["nodeid"]                        : child for child in node_json["children"]}
+            children = {child["nodeid"]: child for child in node_json["children"]}
 
             feat_id = xgb_feat2id_map(node_json["split"])
 
