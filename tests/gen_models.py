@@ -187,14 +187,23 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
 
         ############# XGB #############
         print("XGB - Binary Classification:")
+        # Orginal model with a BUG
+        # clf = xgb.XGBClassifier(
+        #     objective="binary:logistic",
+        #     nthread=4,
+        #     tree_method="hist",
+        #     max_depth=4,
+        #     learning_rate=1,
+        #     n_estimators=3)
         clf = xgb.XGBClassifier(
             objective="binary:logistic",
             nthread=4,
             tree_method="hist",
             max_depth=4,
             learning_rate=1,
-            n_estimators=3)
+            n_estimators=1)
         model = clf.fit(X, y)
+
         at = get_addtree(model)
 
         mae, acc = test_model(model, at, (X, y))

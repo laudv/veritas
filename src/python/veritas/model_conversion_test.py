@@ -1,5 +1,6 @@
 import json
 import numpy as np
+import math
 
 from xgboost.sklearn import XGBModel
 from xgboost.core import Booster as xgbbooster
@@ -61,13 +62,15 @@ def mae_regression(model, at, data):
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     rmse = np.sqrt(sqerr)/len(X)
+    yhat_at = at.predict(X)
 
-    return mean_absolute_error(yhat, at.predict(X)), rmse
+    return mean_absolute_error(yhat, yhat_at), rmse
 
 
 def mae_classification(model, ats, data, model_type, multiclass=False):
     X, y = data
     yhat = model.predict(X)
+
     if model_type == "sklearn":
         yhatm = model.predict_proba(X)
     elif model_type == "xgb":
@@ -90,4 +93,33 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
         yhatm = yhatm.ravel()
         yhatm_at = yhatm_at.ravel()
 
+    # TODO: Fix for multiclass XGB/LGBM
+    # find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
+
     return mean_absolute_error(yhatm, yhatm_at), acc
+
+
+def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
+    for example in range(len(yhatm)):
+        y = yhatm[example]
+        y_mod = yhatm_at[example]
+
+        if abs(y-y_mod) if multiclass else any(diff > 1e-6 for diff in abs(y-y_mod)):
+            print("[Warning] Found potential floating error during conversion!")
+            print(f"[Warning] Example: {example}")
+
+            for tree in ats:
+                leaf_node = tree.eval_node(X[example], tree.root())
+                find_floating_splits(
+                    tree, leaf_node, X[example])
+
+
+def find_floating_splits(tree, node, example):
+    while not tree.is_root(node):
+        node = tree.parent(node)
+        split = tree.get_split(node)
+        if math.isclose(example[split.feat_id], split.split_value, abs_tol=1e-8):
+            print(
+                f"[Warning] Feature {split.feat_id}: {example[split.feat_id]}    Split value: {split.split_value}")
+            return
+    return
