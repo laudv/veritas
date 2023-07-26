@@ -8,65 +8,70 @@
 namespace py = pybind11;
 using namespace veritas;
 
-
-void init_addtree(py::module &m) {
+void init_addtree(py::module &m)
+{
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
         .def(py::init<int>())
+        .def(py::init<int, AddTreeType>())
         //.def(py::init<const AddTree&, size_t, size_t>())
-        .def("get_base_score", [](const AddTree& at, int idx) {
-            return at.base_score(idx);
-        })
-        .def("set_base_score", [](AddTree& at, int idx, FloatT value) {
-            at.base_score(idx) = value;
-        })
-        .def("copy", [](const AddTree& at) { return AddTree(at); })
-        .def("__getitem__", [](const std::shared_ptr<AddTree>& at, size_t i) {
+        .def("get_base_score", [](const AddTree &at, int idx)
+             { return at.base_score(idx); })
+        .def("set_base_score", [](AddTree &at, int idx, FloatT value)
+             { at.base_score(idx) = value; })
+        .def("copy", [](const AddTree &at)
+             { return AddTree(at); })
+        .def("__getitem__", [](const std::shared_ptr<AddTree> &at, size_t i)
+             {
             if (i < at->size())
                 return TreeRef{at, i};
-            throw py::value_error("out of bounds access into AddTree");
-        })
+            throw py::value_error("out of bounds access into AddTree"); })
         .def("__len__", &AddTree::size)
         .def("num_nodes", &AddTree::num_nodes)
         .def("num_leafs", &AddTree::num_leafs)
         .def("num_leaf_values", &AddTree::num_leaf_values)
         .def("get_splits", &AddTree::get_splits)
-        .def("add_tree", [](const std::shared_ptr<AddTree>& at) {
+        .def("add_tree", [](const std::shared_ptr<AddTree> &at)
+             {
             at->add_tree(); return TreeRef{at, at->size()-1}; })
-        .def("add_tree", [](const std::shared_ptr<AddTree>& at, const TreeRef& tref) {
+        .def("add_tree", [](const std::shared_ptr<AddTree> &at, const TreeRef &tref)
+             {
             at->add_tree(tref.get()); // copy
             return TreeRef{at, at->size()-1}; })
-        .def("add_trees", [](AddTree& at, const AddTree& other, std::optional<int> c) {
+        .def(
+            "add_trees", [](AddTree &at, const AddTree &other, std::optional<int> c)
+            {
             if (c.has_value()) {
                 at.add_trees(other, c.value());
             } else {
                 at.add_trees(other);
-            }
-        }, py::arg("other"), py::arg("c") = py::none())
+            } },
+            py::arg("other"), py::arg("c") = py::none())
         .def("make_multiclass", &AddTree::make_multiclass)
         .def("make_singleclass", &AddTree::make_singleclass)
         .def("swap_class", &AddTree::swap_class)
-        .def("prune", [](AddTree& at, const py::object& pybox) {
+        .def("prune", [](AddTree &at, const py::object &pybox)
+             {
             Box::BufT buf = tobox(pybox);
             Box box{buf};
-            return at.prune(BoxRef{box});
-        })
+            return at.prune(BoxRef{box}); })
         .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
         .def("negate_leaf_values", &AddTree::negate_leaf_values)
         .def("concat_negated", &AddTree::concat_negated)
-        .def("to_json", [](const AddTree& at) {
+        .def("to_json", [](const AddTree &at)
+             {
             std::stringstream ss;
             addtree_to_json(ss, at);
-            return ss.str();
-        })
-        .def_static("from_json", [](const std::string& json) {
+            return ss.str(); })
+        .def_static("from_json", [](const std::string &json)
+                    {
             std::stringstream s(json);
-            return addtree_from_json<AddTree>(s);
-        })
-        .def_static("from_oldjson", [](const std::string& json) {
+            return addtree_from_json<AddTree>(s); })
+        .def_static("from_oldjson", [](const std::string &json)
+                    {
             std::stringstream s(json);
-            return addtree_from_oldjson(s);
-        })
-        .def("eval", [](const AddTree& at, py::handle arr) {
+            return addtree_from_oldjson(s); })
+        .def("eval", [](const AddTree &at, py::handle arr)
+             {
             data d = get_data(arr);
             int nlv = at.num_leaf_values();
 
@@ -81,9 +86,9 @@ void init_addtree(py::module &m) {
                 at.eval(d.row(i), rrow);
             }
 
-            return result;
-        })
-        .def("compute_box", [](const AddTree& at, const std::vector<NodeId>& leaf_ids) {
+            return result; })
+        .def("compute_box", [](const AddTree &at, const std::vector<NodeId> &leaf_ids)
+             {
             if (at.size() != leaf_ids.size())
                 throw std::runtime_error("one leaf_id per tree in AddTree");
 
@@ -94,18 +99,26 @@ void init_addtree(py::module &m) {
             py::dict d;
             for (auto&& [feat_id, dom] : box)
                 d[py::int_(feat_id)] = dom;
-            return d;
-        })
-        .def("__str__", [](const AddTree& at) { return tostr(at); })
+            return d; })
+        .def("__str__", [](const AddTree &at)
+             { return tostr(at); })
         .def(py::pickle(
-            [](const AddTree& at) { // __getstate__
+            [](const AddTree &at) { // __getstate__
                 std::stringstream s;
                 addtree_to_json(s, at);
                 return s.str();
             },
-            [](const std::string& json) { // __setstate__
+            [](const std::string &json) { // __setstate__
                 std::stringstream s(json);
                 return addtree_from_json<AddTree>(s);
-            }))
-        ; // AddTree
+            })); // AddTree
+
+    py::enum_<AddTreeType>(m, "AddTreeType")
+        .value("RAW", AddTreeType::RAW)
+        .value("RF_REGR", AddTreeType::RF_REGR)
+        .value("RF_CLF", AddTreeType::RF_CLF)
+        .value("RF_MULTI", AddTreeType::RF_MULTI)
+        .value("GB_REGR", AddTreeType::GB_REGR)
+        .value("GB_CLF", AddTreeType::GB_CLF)
+        .value("GB_MULTI", AddTreeType::GB_MULTI); // AddTreeType
 }

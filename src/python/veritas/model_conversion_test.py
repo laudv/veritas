@@ -79,13 +79,11 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
         yhatm = model.predict_proba(X, raw_score=True)
 
     acc = np.mean(yhat == y)
-    if model_type == "xgb" or "lgbm":
-        if multiclass:
-            yhatm_at = np.zeros_like(yhatm)
-            for k, at in enumerate(ats):
-                yhatm_at[:, k] = at.predict(X).ravel()
-        else:
-            yhatm_at = ats.predict(X)
+
+    if multiclass and (model_type == "xgb" or "lgbm"):
+        yhatm_at = np.zeros_like(yhatm)
+        for k, at in enumerate(ats):
+            yhatm_at[:, k] = at.predict(X).ravel()
     else:
         yhatm_at = ats.predict(X)
 
