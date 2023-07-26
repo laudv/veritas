@@ -203,7 +203,7 @@ class TestSearch(unittest.TestCase):
                 box[1] = box.get(1, Interval(0, 100)).intersect(Interval(0, 100))
                 covered[int(box[0].lo*10):int(box[0].hi*10),
                         int(box[1].lo*10):int(box[1].hi*10)] += 1
-                ex = get_closest_example(box, np.zeros(2))
+                ex = get_closest_example(box, np.zeros(2), 1e-5)
                 pred = at.eval(ex)[0]
                 expected = pred[0] - class_opt(pred[1:])
                 self.assertAlmostEqual(sol.output, expected)
@@ -215,7 +215,8 @@ class TestSearch(unittest.TestCase):
             #plot_img_solutions(yc.reshape((100, 100)), solutions[:3])
             #plot_img_solutions(yhat[:, 0].reshape((100, 100)), solutions[:3])
             #plot_img_solutions(output_exp.reshape((250, 250)), solutions[:10])
-            #at.swap_class(cls); # back to normal
+
+            at.swap_class(cls); # back to normal
 
     def test_img_multiclass(self):
         print("XGB MAX_MAX")
