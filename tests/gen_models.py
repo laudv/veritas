@@ -1,8 +1,9 @@
 import unittest
 import imageio
 import numpy as np
+
 from veritas.add_tree import get_addtree
-from veritas.model_conversion_test import test_model
+from veritas.model_conversion_test import test_model_conversion
 import xgboost as xgb
 import lightgbm as lgbm
 
@@ -42,11 +43,14 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(
+            model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/xgb-img-very-easy-new.json")
 
@@ -60,11 +64,14 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(
+            model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/xgb-img-easy-new.json")
 
@@ -78,11 +85,14 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(
+            model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/xgb-img-hard-new.json")
         print()
@@ -99,11 +109,13 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = clf.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/sklearn-img-hard-new.json")
         print()
@@ -124,11 +136,13 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/lgbm-img-very-easy-new.json")
 
@@ -143,11 +157,13 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/lgbm-img-easy-new.json")
         # with open("tests/models/xgb-img-easy-values.json", "w") as f:
@@ -164,11 +180,13 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model(model, at, (X, y))
+        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
+        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/lgbm-img-hard-new.json")
         print()
@@ -206,12 +224,13 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
 
         at = get_addtree(model)
 
-        mae, acc = test_model(model, at, (X, y))
+        mae, model_acc = test_model_conversion(model, at, (X, y))
 
-        print(f"easy bc: accuracy {acc}")
+        print(f"easy bc: accuracy {model_acc}")
         print(f"easy bc: mae model difference {mae}")
 
-        self.assertAlmostEqual(mae, 0.0, delta=1e-2)  # NOT GOOD ENOUGH !
+        # NOT GOOD ENOUGH ! Show floating error
+        self.assertAlmostEqual(mae, 0.0, delta=1e-2)
 
         at.write("tests/models/xgb-bc-easy.json")
         print()
@@ -228,7 +247,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         model = clf.fit(X, y)
         at = get_addtree(model)
 
-        mae, acc = test_model(model, at, (X, y))
+        mae, acc = test_model_conversion(model, at, (X, y))
 
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
         print(f"easy bc: accuracy {acc}")
@@ -253,11 +272,12 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         model = clf.fit(X, y)
         at = get_addtree(model)
 
-        mae, acc = test_model(model, at, (X, y))
+        mae, acc = test_model_conversion(model, at, (X, y))
 
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
         print(f"easy bc: accuracy {acc}")
         print(f"easy bc: mae model difference {mae}")
+
         at.write("tests/models/lgbm-bc-easy.json")
         print()
 
@@ -286,7 +306,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
-        mae, acc = test_model(model, ats, (X, y))
+        mae, acc = test_model_conversion(model, ats, (X, y))
 
         print(f"multi: acc train {acc*100:.1f}%")
         print(f"multi: mae model difference {mae}")
@@ -302,7 +322,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
-        mae, acc = test_model(model, ats, (X, y))
+        mae, acc = test_model_conversion(model, ats, (X, y))
 
         print(f"mult: acc train RF {acc*100:.1f}%")
         print(f"mult: mae train RF {mae:.2f}")
@@ -324,14 +344,14 @@ class Test_AddTree_MultiClass(unittest.TestCase):
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
-        mae, acc = test_model(model, ats, (X, y))
+        mae, acc = test_model_conversion(model, ats, (X, y))
 
         print(f"multi: acc train {acc*100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()
 
 
-# TODO: test for using boosters
+# TODO: test for using boosters with DMatrix
 if __name__ == "__main__":
     # xgb = unittest.TestSuite()
     # xgb.addTest(Test_AddTree_Regression('test_xgb_regression'))

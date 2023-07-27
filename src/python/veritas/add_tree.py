@@ -11,18 +11,9 @@ from sklearn.ensemble import _forest
 from lightgbm import LGBMModel
 from lightgbm import Booster as lgbmbooster
 
-from . import AddTree
+from . import AddTree, AddTreeType
 
 
-class GbAddTree(AddTree):
-    def predict(self, X):
-        return self.eval(X)
-
-    def predict_proba(self, X):
-        return 1/(1+np.exp(-self.eval(X)))
-
-
-# TODO: pull tests in veritas
 def get_addtree(model):
     module_name = getattr(model, '__module__', None)
 
@@ -37,14 +28,14 @@ def get_addtree(model):
         model_type = param_dump["objective"]["name"]
         if "multi" in model_type:
             num_class = int(param_dump['learner_model_param']["num_class"])
-            return [addtree_xgb(model, base_score, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+            return [addtree_xgb(model, base_score, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
         elif "logistic" in model_type:
             base_score = 0.0
             # Base_score is set to 0.5 but produces an offset of 0.5
             # Base_margin is porbably used but unable to retrieve from xgboost
             # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin
-
-        return addtree_xgb(model, base_score)
+            return addtree_xgb(model, base_score, type_=AddTreeType.GB_CLF)
+        return addtree_xgb(model, base_score, type_=AddTreeType.GB_REGR)
 
     # Sklearn RandomForest / InsulationForest in the Future?
     elif "sklearn.ensemble._forest" in str(module_name):
@@ -56,19 +47,23 @@ def get_addtree(model):
             model = model.booster_
         assert isinstance(
             model, lgbmbooster), f"not xgb.Booster but {type(model)}"
-        num_class = model.dump_model()["num_class"]
+        dump = model.dump_model()
+        num_class = dump["num_class"]
+        type_ = dump["objective"]
         if num_class > 2:
-            return [addtree_lgbm(model, multiclass=(clazz, num_class)) for clazz in range(num_class)]
-
-        return addtree_lgbm(model)
+            return [addtree_lgbm(model, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+        if "binary" in type_:
+            return addtree_lgbm(model, type_=AddTreeType.GB_CLF)
+        else:
+            return addtree_lgbm(model, type_=AddTreeType.GB_REGR)
 
     return -1
 
 
-def addtree_xgb(model, base_score, multiclass=(0, 1)):
+def addtree_xgb(model, base_score, type_=AddTreeType.RAW, multiclass=(0, 1)):
     dump = model.get_dump("", dump_format="json")
 
-    at = GbAddTree(1)
+    at = AddTree(1, type_)
     offset, num_classes = multiclass
     at.set_base_score(0, base_score)
 
@@ -78,9 +73,9 @@ def addtree_xgb(model, base_score, multiclass=(0, 1)):
     return at
 
 
-def addtree_lgbm(model, multiclass=(0, 1)):
+def addtree_lgbm(model, type_=AddTreeType.RAW, multiclass=(0, 1)):
     dump = model.dump_model()
-    at = GbAddTree(1)
+    at = AddTree(1, type_)
 
     offset, num_classes = multiclass
 
@@ -155,22 +150,25 @@ def addtree_sklearn_ensemble(ensemble):
 
     if "Regressor" in type(ensemble).__name__:
         print("SKLEARN: regressor")
+        type_ = AddTreeType.RF_REGR
 
         def extract_value_fun(v, i):
             # print("skl leaf regr", v)
-            return v[0]/num_trees
+            return v[0]
     elif "Classifier" in type(ensemble).__name__:
-        num_leaf_values = ensemble.n_classes_
+        num_leaf_values = ensemble.n_classes_  # TODO: Change to 1 if num_class < 2
+        type_ = AddTreeType.RF_CLF
         print(f"SKLEARN: classifier with {num_leaf_values} classes")
 
         def extract_value_fun(v, i):
             # print("skl leaf clf", v[0], sum(v[0]), v[0][i])
+            # TODO: Remove mean --> binding/addtree.py predict()/predict_proba()
             return v[0][i]/sum(v[0])/num_trees
     else:
         raise RuntimeError("cannot determine extract_value_fun for:",
                            type(ensemble).__name__)
 
-    at = GbAddTree(num_leaf_values)
+    at = AddTree(num_leaf_values, type_)
     for tree in ensemble.estimators_:
         addtree_sklearn_tree(at, tree.tree_, extract_value_fun)
     return at
