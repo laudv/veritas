@@ -19,15 +19,21 @@
 
 namespace veritas
 {
-    enum AddTreeType
+    enum class AddTreeType
     {
-        RAW = 0,         // 0b0000
-        RF_REGR = 1,     // 0b0001
-        RF_CLF = 2,      // 0b0010
-        RF_MULTI = 4,    // 0b0100
-        GB_REGR = 1 | 8, // 0b1001
-        GB_CLF = 2 | 8,  // 0b1010
-        GB_MULTI = 3 | 8 // 0b1100
+        RAW = 0,                        // 0b000000
+        REGR = 1 << 0,                  // 0b000001
+        CLF = 1 << 1,                   // 0b000010
+        MULTI = 1 << 2,                 // 0b000100
+        RF = 1 << 3,                    // 0b001000
+        GB = 1 << 4,                    // 0b010000
+
+        RF_REGR = RF | REGR,
+        RF_CLF = RF | CLF,
+        RF_MULTI = RF | MULTI,
+        GB_REGR = GB | REGR,
+        GB_CLF = GB | CLF,
+        GB_MULTI = GB | MULTI
     };
 
     /** Additive ensemble of Trees. A sum of Trees. */

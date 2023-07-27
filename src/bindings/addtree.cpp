@@ -5,6 +5,9 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
+#include <cmath>
+
+
 namespace py = pybind11;
 using namespace veritas;
 
@@ -70,6 +73,79 @@ void init_addtree(py::module &m)
                     {
             std::stringstream s(json);
             return addtree_from_oldjson(s); })
+        .def("predict",[](const AddTree &at, py::handle arr)
+        {
+            // TODO: NOT DONE --> RF_CLF & MULTI 
+            data d = get_data(arr);
+            int nlv = at.num_leaf_values();
+
+            py::array_t<FloatT, py::array::c_style | py::array::forcecast>
+                result(d.num_rows * nlv);
+            result = result.reshape({ (long)d.num_rows, (long)nlv });
+
+            data rdata = get_data(result);
+
+            AddTreeType type_ = at.get_type();
+            using flags = std::underlying_type_t<AddTreeType>;
+            flags type_flags = static_cast<flags>(type_);
+
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) 
+            {
+                data rrow = rdata.row(i);
+                at.eval(d.row(i), rrow);
+                
+                if(type_flags & static_cast<flags>(AddTreeType::RF))
+                {
+                    rrow[0] = rrow[0]/at.size(); // Mean
+                    if (type_flags & static_cast<flags>(AddTreeType::CLF))
+                    {
+                        rrow[0] = (1 / (1 + exp(-rrow[0]))) > 0.5 ? 0 : 1; 
+                    }
+
+                }else if(type_ == AddTreeType::GB_CLF)
+                {
+                    rrow[0] = (1 / (1 + exp(-rrow[0]))) > 0.5 ? 1 : 0; // Sigmoid: alternative: erf(sqrt(pi)*x/2) or tanh(x)?
+                } else if(type_ == AddTreeType::GB_MULTI)
+                {
+                    rrow[0] = rrow[0]; // TODO: Softmax
+                }
+            }
+            return result;
+        })
+        .def("predict_proba", [](const AddTree& at, py::handle arr)
+        {
+            data d = get_data(arr);
+            int nlv = at.num_leaf_values();
+
+            py::array_t<FloatT, py::array::c_style | py::array::forcecast>
+                result(d.num_rows * nlv);
+            result = result.reshape({ (long)d.num_rows, (long)nlv });
+
+            data rdata = get_data(result);
+
+            AddTreeType type_ = at.get_type();
+            using flags = std::underlying_type_t<AddTreeType>;
+            flags type_flags = static_cast<flags>(type_);
+
+            for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) 
+            {
+                data rrow = rdata.row(i);
+                at.eval(d.row(i), rrow);
+                if(type_flags & static_cast<flags>(AddTreeType::REGR))
+                {
+                    throw std::runtime_error("Cannot predict probability of regression problem");
+
+                }else if(type_ == AddTreeType::CLF)
+                {
+                    rrow[0] = 1 / (1 + exp(-rrow[0])); // Sigmoid: alternative: erf(sqrt(pi)*x/2) or tanh(x)?
+                } else if(type_ == AddTreeType::GB_MULTI)
+                {
+                    rrow[0] = rrow[0]; // TODO: Softmax
+                }
+
+            }
+        }
+        )
         .def("eval", [](const AddTree &at, py::handle arr)
              {
             data d = get_data(arr);

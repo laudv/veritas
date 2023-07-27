@@ -178,7 +178,6 @@ namespace veritas {
 
         at_json["type"] = at.get_type();
         at_json["base_scores"] = json::array();
-        std::cout << at_json << std::endl;
         for (int i = 0; i < at.num_leaf_values(); ++i)
             at_json["base_scores"].push_back(at.base_score(i));
 
