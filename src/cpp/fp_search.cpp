@@ -165,7 +165,7 @@ struct OutputHeuristic {
     OutputHeuristic()
         : open_isworse{}, focal_isworse{}, leafiter{} {}
 
-    void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
+    bool update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
                        State &state) {
 
         using OrdLim = OrdLimit<FloatT, OpenIsWorseT>;
@@ -198,6 +198,7 @@ struct OutputHeuristic {
                         at, state, tree_index, leaf_id);
             }
         }
+        return true; // true = success
     }
 
     /** Sub needs to implement this: */
@@ -347,6 +348,7 @@ struct MultiOutputHeuristic {
     using SelfT = MultiOutputHeuristic<OpenIsWorse, FocalIsWorse, ClassIsWorse>;
 
     const int num_leaf_values;
+    FloatT fail_when_class0_worse_than;
 
     std::vector<FloatT> buf;
     FloatT *gc;
@@ -359,8 +361,10 @@ struct MultiOutputHeuristic {
 
     LeafIter<TreeFp> leafiter;
 
-    MultiOutputHeuristic(int num_leaf_values)
+    MultiOutputHeuristic(const Config& conf, int num_leaf_values)
         : num_leaf_values(num_leaf_values)
+        , fail_when_class0_worse_than(
+                conf.multi_ignore_state_when_class0_worse_than)
         , buf(num_leaf_values*3)
         , open_isworse()
         , focal_isworse()
@@ -372,7 +376,7 @@ struct MultiOutputHeuristic {
         worst = &buf[2 * num_leaf_values];
     }
 
-    void update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
+    bool update_scores(const AddTreeFp& at, const FlatBoxFp& prune_box,
                        State &state) {
         using OrdLimOpen = OrdLimit<FloatT, OpenIsWorse>;
         using OrdLimClass = OrdLimit<FloatT, ClassIsWorse>;
@@ -467,6 +471,10 @@ struct MultiOutputHeuristic {
         }
         state.gscore = g0 - gc[best_c];
         state.hscore = h0 - hc[best_c];
+
+        // Make this update_scores fail if the heuristic estimate of the output
+        // for the first class is not good enough.
+        return !open_isworse(g0 + h0, fail_when_class0_worse_than);
     }
 
     //FloatT best_per_class(const std::vector<FloatT>& per_class) const {
@@ -637,8 +645,9 @@ private:
 
     void init_() {
         State initial_state;
-        heuristic->update_scores(atfp_, prune_box_, initial_state);
-        push_to_open_if_valid_(std::move(initial_state));
+        bool success = heuristic->update_scores(atfp_, prune_box_,
+                                               initial_state);
+        push_to_open_if_valid_(std::move(initial_state), success);
     }
 
     bool is_solution_(const State& state) {
@@ -728,9 +737,9 @@ private:
 
         State new_state;
         new_state.box = BoxRefFp(ref.begin, ref.end);
-        heuristic->update_scores(atfp_, prune_box_, new_state);
+        bool success = heuristic->update_scores(atfp_, prune_box_, new_state);
 
-        push_to_open_if_valid_(std::move(new_state));
+        push_to_open_if_valid_(std::move(new_state), success);
     }
 
     State pop_from_open_() {
@@ -741,9 +750,11 @@ private:
         push_to_heap_(open_, std::move(state), heuristic->open_isworse);
     }
 
-    void push_to_open_if_valid_(State&& state) {
+    void push_to_open_if_valid_(State&& state, bool update_score_success) {
         if (!state.is_valid_state()) {
-            std::cout << "Warning: new_state invalid\n";
+            std::cout << "Warning: new state invalid\n";
+        } else if (!update_score_success) {
+            ++stats.num_update_scores_fails;
         } else if (heuristic->open_isworse(
                    state.open_score(),
                    config.ignore_state_when_worse_than)) {
@@ -929,12 +940,14 @@ static void config_set_defaults(Config& c) {
     OpenIsWorse cmp;
     c.ignore_state_when_worse_than = OrdLim::worst(cmp);
     c.stop_when_atleast_bound_better_than = OrdLim::best(cmp);
+    c.multi_ignore_state_when_class0_worse_than = OrdLim::worst(cmp);
 }
 
 Config::Config(HeuristicType h)
     : heuristic(h)
     , ignore_state_when_worse_than(0.0)
-    , stop_when_atleast_bound_better_than(0.0) {
+    , stop_when_atleast_bound_better_than(0.0)
+    , multi_ignore_state_when_class0_worse_than(0.0) {
 
     switch (heuristic) {
     case HeuristicType::MAX_OUTPUT:
@@ -987,17 +1000,20 @@ Config::get_search(const AddTree& at, const FlatBox& prune_box) const {
             *this, std::move(h), at, prune_box);
     }
     case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF: {
-        auto h = std::make_shared<MaxMaxMultiOutputHeuristic>(at.num_leaf_values());
+        auto h = std::make_shared<MaxMaxMultiOutputHeuristic>(
+            *this, at.num_leaf_values());
         return std::make_shared<SearchImpl<decltype(h)::element_type>>(
             *this, std::move(h), at, prune_box);
     }
     case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF: {
-        auto h = std::make_shared<MaxMinMultiOutputHeuristic>(at.num_leaf_values());
+        auto h = std::make_shared<MaxMinMultiOutputHeuristic>(
+            *this, at.num_leaf_values());
         return std::make_shared<SearchImpl<decltype(h)::element_type>>(
             *this, std::move(h), at, prune_box);
     }
     case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF: {
-        auto h = std::make_shared<MinMaxMultiOutputHeuristic>(at.num_leaf_values());
+        auto h = std::make_shared<MinMaxMultiOutputHeuristic>(
+            *this, at.num_leaf_values());
         return std::make_shared<SearchImpl<decltype(h)::element_type>>(
             *this, std::move(h), at, prune_box);
     }

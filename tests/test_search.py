@@ -243,6 +243,69 @@ class TestSearch(unittest.TestCase):
         at = AddTree.read(os.path.join(BPATH, "models/rf-img-multiclass.json"))
         self._do_img_multiclass(at, HeuristicType.MULTI_MIN_MAX_OUTPUT_DIFF, np.max)
 
+    def test_img_multiclass_invalidate(self):
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-multiclass.json"))
+        img = np.load(os.path.join(BPATH, "data/img.npy"))
+        X = np.array([[x, y] for x in np.linspace(0, 100, 251)[:-1]
+                             for y in np.linspace(0, 100, 251)[:-1]])
+        y = np.array([img[int(x), int(y)] for x, y in X])
+        yc = np.digitize(y, np.quantile(y, [0.25, 0.5, 0.75]))
+        X = X.astype(np.float64)
+
+        config = Config(HeuristicType.MULTI_MAX_MAX_OUTPUT_DIFF)
+        config.stop_when_optimal = False
+        config.multi_ignore_state_when_class0_worse_than = 6.0
+        search = config.get_search(at)
+
+        done = StopReason.NONE
+        while done != StopReason.NO_MORE_OPEN:
+            done = search.steps(100)
+        self.assertTrue(done == StopReason.NO_MORE_OPEN)
+
+        print(f"class=0, {done}", end="")
+        print(f", time {search.time_since_start():.3f}", end="")
+        print(f", #ignored {search.stats.num_states_ignored}", end="")
+        print(f", #update_score_fails {search.stats.num_update_scores_fails}", end="")
+        print(f", #steps {search.stats.num_steps}", end="")
+        print(f", #sols {search.num_solutions()}")
+
+        for i in range(search.num_solutions()):
+            sol = search.get_solution(i)
+            ex = get_closest_example(sol.box(), np.zeros(2), 1e-5)
+            pred = at.eval(ex)[0]
+            expected = pred[0] - np.max(pred[1:])
+            self.assertAlmostEqual(sol.output, expected)
+            self.assertTrue(pred[0] >=
+                            config.multi_ignore_state_when_class0_worse_than)
+
+        # Same search, but output for class0 unconstrained
+        # The number of solutions with prob(class0) > {value} must be equal
+        config2 = Config(HeuristicType.MULTI_MAX_MAX_OUTPUT_DIFF)
+        config2.stop_when_optimal = False
+        search2 = config2.get_search(at)
+
+        done = StopReason.NONE
+        while done != StopReason.NO_MORE_OPEN:
+            done = search2.steps(100)
+        self.assertTrue(done == StopReason.NO_MORE_OPEN)
+
+        count = 0
+        for i in range(search2.num_solutions()):
+            sol = search2.get_solution(i)
+            ex = get_closest_example(sol.box(), np.zeros(2), 1e-5)
+            pred = at.eval(ex)[0]
+            expected = pred[0] - np.max(pred[1:])
+            self.assertAlmostEqual(sol.output, expected)
+
+            if pred[0] >= config.multi_ignore_state_when_class0_worse_than:
+                count += 1
+
+        self.assertEqual(count, search.num_solutions())
+
+
+
+
+
     def test_img5(self):
         img = np.load(os.path.join(BPATH, "data/img.npy"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
