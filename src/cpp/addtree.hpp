@@ -80,8 +80,11 @@ public:
     /** Turn this ensemble in a multi-class ensemble. See `GTree::make_multiclass`. */
     GAddTree<TreeT> make_multiclass(int c, int num_leaf_values) const;
 
-    /** Turn this ensemble in a single-class ensemble. See `GTree::make_singleclass`. */
+    /** Turn this multiclass ensemble in a binary ensemble. See `GTree::make_singleclass`. */
     GAddTree<TreeT> make_singleclass(int c) const;
+
+    /** Turn this multiclass ensemble in a binary ensemble. See `GTree::contrast_classes`. */
+    GAddTree<TreeT> contrast_classes(int pos_c, int neg_c) const;
 
     /** See GTree::swap_class */
     void swap_class(int c);

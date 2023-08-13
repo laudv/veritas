@@ -59,6 +59,22 @@ GAddTree<TreeT>::make_singleclass(int c) const {
 }
 
 template <typename TreeT>
+GAddTree<TreeT>
+GAddTree<TreeT>::contrast_classes(int pos_c, int neg_c) const {
+    if (this->num_leaf_values() == 1)
+        throw std::runtime_error("AddTree::make_singleclass: already singleclass");
+    if (this->num_leaf_values() <= pos_c)
+        throw std::runtime_error("AddTree::make_singleclass: num_leaf_values <= pos_c");
+    if (this->num_leaf_values() <= neg_c)
+        throw std::runtime_error("AddTree::make_singleclass: num_leaf_values <= neg_c");
+    GAddTree<TreeT> new_at(1);
+    for (const TreeT& t : *this)
+        new_at.add_tree(t.contrast_classes(pos_c, neg_c));
+    new_at.base_score(0) = base_score(pos_c) - base_score(neg_c);
+    return new_at;
+}
+
+template <typename TreeT>
 void
 GAddTree<TreeT>::swap_class(int c) {
     for (auto& t : *this) {

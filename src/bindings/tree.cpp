@@ -1,5 +1,7 @@
 #include "bindings.h"
 #include "tree.hpp"
+#include <pybind11/pytypes.h>
+#include <stdexcept>
 
 namespace py = pybind11;
 using namespace veritas;
@@ -19,22 +21,30 @@ void init_tree(py::module &m) {
         .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get().tree_size(n); })
         .def("depth", [](const TreeRef& r, NodeId n) { return r.get().depth(n); })
         .def("get_leaf_value", [](const TreeRef& r, NodeId n, int i) {
-                return r.get().leaf_value(n, i);
+            return r.get().leaf_value(n, i);
         })
         .def("get_leaf_values", [](const TreeRef& r, NodeId n) {
-                py::array_t<FloatT> arr(r.get().num_leaf_values());
-                for (int i = 0; i < r.get().num_leaf_values(); ++i)
-                    arr.mutable_at(i) = r.get().leaf_value(n, i);
-                return arr;
+            py::array_t<FloatT> arr(r.get().num_leaf_values());
+            for (int i = 0; i < r.get().num_leaf_values(); ++i)
+                arr.mutable_at(i) = r.get().leaf_value(n, i);
+            return arr;
         })
         .def("set_leaf_value", [](TreeRef& r, NodeId n, int i, FloatT v) {
-                r.get().leaf_value(n, i) = v;
+            r.get().leaf_value(n, i) = v;
+        })
+        .def("set_leaf_values", [](TreeRef& r, NodeId n, py::handle values) {
+            data vs = get_data(values);
+            Tree& t = r.get();
+            if (vs.num_rows * vs.num_cols != static_cast<size_t>(t.num_leaf_values()))
+                throw std::invalid_argument("wrong number of leaf values");
+            for (int i = 0; i < t.num_leaf_values(); ++i)
+                t.leaf_value(n, i) = vs[i];
         })
         .def("get_split", [](const TreeRef& r, NodeId n) { return r.get().get_split(n); })
         .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n) {
-                std::vector<std::pair<FloatT, FloatT>> buf(r.get().num_leaf_values());
-                r.get().find_minmax_leaf_value(n, buf);
-                return buf;
+            std::vector<std::pair<FloatT, FloatT>> buf(r.get().num_leaf_values());
+            r.get().find_minmax_leaf_value(n, buf);
+            return buf;
         })
         .def("get_leaf_ids", [](const TreeRef& r) { return r.get().get_leaf_ids(); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get().split(n, {fid, sv}); })
@@ -85,6 +95,10 @@ void init_tree(py::module &m) {
             AddTree at(r.get().num_leaf_values());
             at.add_tree(r.get().prune(BoxRef{box}));
             return at;
+        })
+        .def("__getitem__", [](const TreeRef& r, const py::str& str) {
+            std::string s = str;
+            return r.get()[s.c_str()];
         })
         ; // TreeRef
 }
