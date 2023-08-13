@@ -385,39 +385,6 @@ struct MultiOutputHeuristic {
 
         leafiter.setup_flatbox(state.box, prune_box);
         FloatT best_of_best = OrdLimOpen::worst(open_isworse);
-        //for (int c = 1; c < num_leaf_values; ++c) {
-        //    for (size_t tree_index = 0; tree_index < at.size(); ++tree_index) {
-        //        FloatT best = OrdLim::worst(open_isworse);
-        //        const auto& t = at[tree_index];
-        //        leafiter.setup_tree(t);
-        //        int num_leaves = 0;
-        //        NodeId leaf_id = leafiter.next();
-        //        for (NodeId i = leaf_id; i != -1; i = leafiter.next()) {
-        //            ++num_leaves;
-        //            leaf_id = i; // store the last valid leaf_id (avoid -1)
-        //            FloatT diff = t.leaf_value(leaf_id, 0)
-        //                        - t.leaf_value(leaf_id, c);
-        //            best = std::max(diff, best, open_isworse);
-        //        }
-        //        if (leaf_id == -1)
-        //            throw std::runtime_error("leaf_id == -1?");
-        //        if (num_leaves > 1) { // multiple leaves reachable still
-        //            // keep track of best hscore (over all accessible leaves)
-        //            h_per_class[c] += best;
-        //            if (open_isworse(best_of_best, best)) {
-        //                best_of_best = best;
-        //                state.next_tree = static_cast<int>(tree_index);
-        //            }
-        //        } else {
-        //            FloatT diff = t.leaf_value(leaf_id, 0)
-        //                        - t.leaf_value(leaf_id, c);
-        //            g_per_class[c] += diff;
-        //            state.fscore += 1; // deeper solution first
-        //        }
-        //    }
-        //}
-        
-
         FloatT g0 = at.base_score(0);
         FloatT h0 = 0.0;
 
@@ -472,9 +439,11 @@ struct MultiOutputHeuristic {
         state.gscore = g0 - gc[best_c];
         state.hscore = h0 - hc[best_c];
 
+        bool g0_good_enough = open_isworse(g0 + h0, fail_when_class0_worse_than);
+
         // Make this update_scores fail if the heuristic estimate of the output
         // for the first class is not good enough.
-        return !open_isworse(g0 + h0, fail_when_class0_worse_than);
+        return !g0_good_enough;
     }
 
     //FloatT best_per_class(const std::vector<FloatT>& per_class) const {

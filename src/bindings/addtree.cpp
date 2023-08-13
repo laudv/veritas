@@ -44,6 +44,7 @@ void init_addtree(py::module &m) {
         }, py::arg("other"), py::arg("c") = py::none())
         .def("make_multiclass", &AddTree::make_multiclass)
         .def("make_singleclass", &AddTree::make_singleclass)
+        .def("contrast_classes", &AddTree::contrast_classes)
         .def("swap_class", &AddTree::swap_class)
         .def("prune", [](AddTree& at, const py::object& pybox) {
             Box::BufT buf = tobox(pybox);
