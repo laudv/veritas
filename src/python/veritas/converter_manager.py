@@ -15,8 +15,7 @@ class ConverterManager:
     def get_addtree(self,model):
         for converter in self._converters:
             try:
-                mo = converter.get_addtree(model)
-                return mo
+                return converter.get_addtree(model)
             except Exception:
                 pass
 

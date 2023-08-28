@@ -82,13 +82,10 @@ def mae_regression(model, at, data, model_type):
 def mae_classification(model, ats, data, model_type, multiclass=False):
     X, y = data
     yhat = model.predict(X)
-    # yhatm_at_pred = ats.predict(X)
-    # yhatm_at_pred = yhatm_at_pred.ravel()
     acc = np.mean(yhat == y)
 
     if model_type == "sklearn":
         yhatm = model.predict_proba(X)
-        # yhatm = [prob[1] for prob in yhatm]
     elif model_type == "xgb":
         yhatm = model.predict(X, output_margin=True)
     elif model_type == "lgbm":
@@ -106,7 +103,7 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
         yhatm_at = yhatm_at.ravel()
 
     # TODO: Fix for multiclass XGB/LGBM
-    # find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
+    find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
 
     return mean_absolute_error(yhatm, yhatm_at), acc
 
@@ -119,6 +116,10 @@ def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
         if abs(y-y_mod) if multiclass else any(diff > 1e-6 for diff in abs(y-y_mod)):
             print("[Warning] Found potential floating error after conversion!")
             print(f"[Warning] Example: {example}")
+           
+
+            if multiclass:
+                ats = [tree for addtree in ats for tree in addtree]
 
             for tree in ats:
                 leaf_node = tree.eval_node(X[example], tree.root())
