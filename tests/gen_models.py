@@ -2,7 +2,7 @@ import unittest
 import imageio
 import numpy as np
 
-from veritas.add_tree import get_addtree
+# from veritas.add_tree import get_addtree
 from veritas.model_conversion_test import test_model_conversion
 import xgboost as xgb
 import lightgbm as lgbm
