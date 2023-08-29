@@ -78,7 +78,6 @@ def mae_regression(model, at, data, model_type):
     return mean_absolute_error(yhat, yhat_at_pred), rmse, mean_absolute_error(yhat_raw, yhat_at_raw)
 
 
-# TODO Include ats.predict(x) and ats.predict_proba(x)
 def mae_classification(model, ats, data, model_type, multiclass=False):
     X, y = data
     yhat = model.predict(X)
@@ -102,26 +101,29 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
         yhatm = yhatm.ravel()
         yhatm_at = yhatm_at.ravel()
 
-    # TODO: Fix for multiclass XGB/LGBM
     find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
 
     return mean_absolute_error(yhatm, yhatm_at), acc
 
 
 def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
-    for example in range(len(yhatm)):
+
+    if multiclass:
+        at = ats[0].make_multiclass(0, len(ats))
+        for k in range(1, len(ats)):
+            at.add_trees(ats[k], k)
+    else: 
+        at = ats
+    
+    for example in range(len(X)):
         y = yhatm[example]
         y_mod = yhatm_at[example]
 
-        if abs(y-y_mod) if multiclass else any(diff > 1e-6 for diff in abs(y-y_mod)):
+        if abs(y-y_mod) if multiclass else any(diff > 1e-6 and diff != 0 for diff in abs(y-y_mod)):
             print("[Warning] Found potential floating error after conversion!")
             print(f"[Warning] Example: {example}")
            
-
-            if multiclass:
-                ats = [tree for addtree in ats for tree in addtree]
-
-            for tree in ats:
+            for tree in at:
                 leaf_node = tree.eval_node(X[example], tree.root())
                 find_floating_splits(
                     tree, leaf_node, X[example])
