@@ -53,14 +53,13 @@ def addtree_sklearn_ensemble(ensemble):
             # print("skl leaf regr", v)
             return v[0]
     elif "Classifier" in type(ensemble).__name__:
-        num_leaf_values = ensemble.n_classes_  # TODO: Change to 1 if num_class < 3
-        type_ = AddTreeType.RF_CLF
+        num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_  > 2 else 1 
+        type_ = AddTreeType.RF_MULTI if num_leaf_values > 2 else AddTreeType.RF_CLF
         print(f"SKLEARN: classifier with {num_leaf_values} classes")
 
         def extract_value_fun(v, i):
             # print("skl leaf clf", v[0], sum(v[0]), v[0][i])
-            # TODO: Remove mean --> binding/addtree.py predict()/predict_proba()
-            return v[0][i]/sum(v[0])/num_trees
+            return v[0][i]/sum(v[0])
     else:
         raise RuntimeError("cannot determine extract_value_fun for:",
                            type(ensemble).__name__)

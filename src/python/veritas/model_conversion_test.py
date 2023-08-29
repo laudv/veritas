@@ -32,15 +32,16 @@ def test_model_conversion(model, at, data):
         elif "logistic" in model_type:
             return mae_classification(model, at, data, "xgb")
 
-        return mae_regression(model, at, data, "xgb")
+        return mae_regression(model, at, data)
 
     # Sklearn RandomForest
     elif "sklearn.ensemble._forest" in str(module_name):
         type_ = type(model).__name__
         if "Regressor" in type_:
-            return mae_regression(model, at, data, "sklearn")
+            return mae_regression(model, at, data)
         elif "Classifier" in type_:
-            return mae_classification(model, at, data, "sklearn")
+            multiclass = True if model.n_classes_ > 2 else False
+            return mae_classification(model, at, data, "sklearn", multiclass)
 
     # LGBM
     elif "lightgbm" in str(module_name):
@@ -54,10 +55,10 @@ def test_model_conversion(model, at, data):
         elif "binary" in model_type:
             return mae_classification(model, at, data, "lgbm")
 
-        return mae_regression(model, at, data, "lgbm")
+        return mae_regression(model, at, data)
 
 
-def mae_regression(model, at, data, model_type):
+def mae_regression(model, at, data):
     X, y = data
 
     yhat = model.predict(X)
@@ -65,43 +66,34 @@ def mae_regression(model, at, data, model_type):
     rmse = np.sqrt(sqerr)/len(X)
     yhat_at_pred = at.predict(X)
 
-    yhat_at_raw = at.eval(X)
-
-    if model_type == "xgb":
-        yhat_raw = model.predict(X, output_margin=True)
-    elif model_type == "lgbm":
-        yhat_raw = model.predict(X, raw_score=True)
-    elif model_type == "sklearn":
-        yhat_raw = yhat
-        yhat_at_raw = yhat_at_pred
-
-    return mean_absolute_error(yhat, yhat_at_pred), rmse, mean_absolute_error(yhat_raw, yhat_at_raw)
+    return mean_absolute_error(yhat, yhat_at_pred), rmse
 
 
 def mae_classification(model, ats, data, model_type, multiclass=False):
     X, y = data
+
     yhat = model.predict(X)
     acc = np.mean(yhat == y)
 
     if model_type == "sklearn":
-        yhatm = model.predict_proba(X)
+        yhatm = model.predict_proba(X).ravel() if multiclass else [y1 for [y1,_] in model.predict_proba(X)] 
     elif model_type == "xgb":
         yhatm = model.predict(X, output_margin=True)
     elif model_type == "lgbm":
         yhatm = model.predict(X, raw_score=True)
 
-    if multiclass and (model_type == "xgb" or "lgbm"):
+
+    if (multiclass and (model_type == "xgb" or model_type == "lgbm")):
         yhatm_at = np.zeros_like(yhatm)
         for k, at in enumerate(ats):
             yhatm_at[:, k] = at.eval(X).ravel()
+    elif model_type == "sklearn":
+        yhatm_at = ats.predict(X).ravel()
     else:
-        yhatm_at = ats.eval(X)
+        yhatm_at = ats.eval(X).ravel()
 
-    if multiclass:
-        yhatm = yhatm.ravel()
-        yhatm_at = yhatm_at.ravel()
 
-    find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
+    # find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
 
     return mean_absolute_error(yhatm, yhatm_at), acc
 

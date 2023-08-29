@@ -37,7 +37,7 @@ GAddTree<TreeT>
 GAddTree<TreeT>::make_multiclass(int c, int num_leaf_values) const {
     if (this->num_leaf_values() != 1)
         throw std::runtime_error("AddTree::make_multiclass on multiclass");
-    GAddTree<TreeT> new_at(num_leaf_values);
+    GAddTree<TreeT> new_at(num_leaf_values, this->type_);
     for (const TreeT& t : *this)
         new_at.add_tree(t.make_multiclass(c, num_leaf_values));
     new_at.base_score(c) = base_score(0);

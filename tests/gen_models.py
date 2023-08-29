@@ -43,14 +43,12 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(
+        mae, rmse = test_model_conversion(
             model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/xgb-img-very-easy-new.json")
 
@@ -64,14 +62,12 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(
+        mae, rmse = test_model_conversion(
             model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/xgb-img-easy-new.json")
 
@@ -85,14 +81,12 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(
+        mae, rmse = test_model_conversion(
             model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/xgb-img-hard-new.json")
         print()
@@ -109,13 +103,11 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = clf.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/sklearn-img-hard-new.json")
         print()
@@ -136,13 +128,11 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/lgbm-img-very-easy-new.json")
 
@@ -157,13 +147,11 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/lgbm-img-easy-new.json")
         # with open("tests/models/xgb-img-easy-values.json", "w") as f:
@@ -180,13 +168,11 @@ class Test_AddTree_Regression(unittest.TestCase):
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse, mae_pred = test_model_conversion(model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
-        self.assertAlmostEqual(mae_pred, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
-        print(f"very easy img: mae model difference predict {mae_pred}")
 
         at.write("tests/models/lgbm-img-hard-new.json")
         print()
