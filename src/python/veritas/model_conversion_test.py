@@ -83,14 +83,11 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
         yhatm = model.predict(X, raw_score=True)
 
 
-    if (multiclass and (model_type == "xgb" or model_type == "lgbm")):
-        yhatm_at = np.zeros_like(yhatm)
-        for k, at in enumerate(ats):
-            yhatm_at[:, k] = at.eval(X).ravel()
-    elif model_type == "sklearn":
+    if model_type == "sklearn":
         yhatm_at = ats.predict(X)
     else:
-        yhatm_at = ats.eval(X).ravel()
+        yhatm_at = ats.eval(X).ravel() if not multiclass else ats.eval(X)
+
 
     mae = mean_absolute_error(yhatm, yhatm_at)
 

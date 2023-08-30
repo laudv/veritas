@@ -25,7 +25,7 @@ class XGB_AddTreeConverter(AddTreeConverter):
         model_type = param_dump["objective"]["name"]
         if "multi" in model_type:
             num_class = int(param_dump['learner_model_param']["num_class"])
-            return [addtree_xgb(model, base_score, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+            return multi_addtree_xgb(model,num_class,base_score)
         elif "logistic" in model_type:
             base_score = 0.0
             # Base_score is set to 0.5 but produces an offset of 0.5
@@ -33,6 +33,14 @@ class XGB_AddTreeConverter(AddTreeConverter):
             # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin
             return addtree_xgb(model, base_score, type_=AddTreeType.GB_CLF)
         return addtree_xgb(model, base_score, type_=AddTreeType.GB_REGR)
+
+
+def multi_addtree_xgb(model, num_class, base_score):
+    ats = [addtree_xgb(model, base_score, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+    at = ats[0].make_multiclass(0, num_class)
+    for k in range(1, num_class):
+        at.add_trees(ats[k], k)
+    return at
 
 
 def addtree_xgb(model, base_score, type_=AddTreeType.RAW, multiclass=(0, 1)):

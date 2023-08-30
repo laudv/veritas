@@ -288,12 +288,13 @@ class Test_AddTree_MultiClass(unittest.TestCase):
             tree_method="hist",
             max_depth=6,
             learning_rate=0.5,
-            n_estimators=20)
+            n_estimators=10)
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
+        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
         print(f"multi: acc train {acc*100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()
@@ -333,6 +334,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
+        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
         print(f"multi: acc train {acc*100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()

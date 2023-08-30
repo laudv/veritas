@@ -23,11 +23,19 @@ class LGB_AddTreeConverter(AddTreeConverter):
         num_class = dump["num_class"]
         type_ = dump["objective"]
         if num_class > 2:
-            return [addtree_lgbm(model, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+            return multi_addtree_lgbm(model,num_class)
         if "binary" in type_:
             return addtree_lgbm(model, type_=AddTreeType.GB_CLF)
         else:
             return addtree_lgbm(model, type_=AddTreeType.GB_REGR)
+
+
+def multi_addtree_lgbm(model,num_class):
+    ats = [addtree_lgbm(model, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+    at = ats[0].make_multiclass(0, num_class)
+    for k in range(1, num_class):
+        at.add_trees(ats[k], k)
+    return at
 
 
 def addtree_lgbm(model, type_=AddTreeType.RAW, multiclass=(0, 1)):
