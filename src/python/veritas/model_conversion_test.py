@@ -102,9 +102,6 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
 
 def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
 
-    print(yhatm)
-    print(yhatm_at)
-
     if not isinstance(ats,AddTree):
         at = []
         for addtree in ats:
