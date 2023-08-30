@@ -76,7 +76,7 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
     acc = np.mean(yhat == y)
 
     if model_type == "sklearn":
-        yhatm = model.predict_proba(X).ravel() if multiclass else [y1 for [y1,_] in model.predict_proba(X)] 
+        yhatm = model.predict_proba(X) if multiclass else [y1 for [y1,_] in model.predict_proba(X)] 
     elif model_type == "xgb":
         yhatm = model.predict(X, output_margin=True)
     elif model_type == "lgbm":
@@ -88,33 +88,40 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
         for k, at in enumerate(ats):
             yhatm_at[:, k] = at.eval(X).ravel()
     elif model_type == "sklearn":
-        yhatm_at = ats.predict(X).ravel()
+        yhatm_at = ats.predict(X)
     else:
         yhatm_at = ats.eval(X).ravel()
 
+    mae = mean_absolute_error(yhatm, yhatm_at)
 
-    # find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
+    if mae > 1e-4:
+        find_floating_errors(ats, yhatm, yhatm_at, X, multiclass)
 
-    return mean_absolute_error(yhatm, yhatm_at), acc
+    return mae, acc
 
 
 def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
 
-    if multiclass:
-        at = ats[0].make_multiclass(0, len(ats))
-        for k in range(1, len(ats)):
-            at.add_trees(ats[k], k)
-    else: 
+    print(yhatm)
+    print(yhatm_at)
+
+    if not isinstance(ats,AddTree):
+        at = []
+        for addtree in ats:
+            for tree in addtree:
+                at.append(tree)
+    else:
         at = ats
-    
+
     for example in range(len(X)):
         y = yhatm[example]
         y_mod = yhatm_at[example]
 
-        if abs(y-y_mod) if multiclass else any(diff > 1e-6 and diff != 0 for diff in abs(y-y_mod)):
+        diff = (abs(y-y_mod) > 1e-6) if not multiclass else any(diff > 1e-6 for diff in abs(y-y_mod))
+        if diff:
             print("[Warning] Found potential floating error after conversion!")
             print(f"[Warning] Example: {example}")
-           
+
             for tree in at:
                 leaf_node = tree.eval_node(X[example], tree.root())
                 find_floating_splits(

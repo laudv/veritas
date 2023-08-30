@@ -310,8 +310,9 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
-        print(f"mult: acc train RF {acc*100:.1f}%")
-        print(f"mult: mae train RF {mae:.2f}")
+        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        print(f"multi: acc train RF {acc*100:.1f}%")
+        print(f"multi: mae mae model difference {mae}")
         print()
 
     def test_lgbm_multiclass(self):

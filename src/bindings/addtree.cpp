@@ -95,7 +95,7 @@ void init_addtree(py::module &m)
 
                 if(type_flags & static_cast<flags>(AddTreeType::RF)) 
                 {
-                    rrow[0] = rrow[0]/at.size();
+                    for(int j = 0 ; j < nlv ; ++j) rrow[j] = rrow[j]/at.size();
                     continue;
                 }
                 if(type_flags & static_cast<flags>(AddTreeType::MULTI))
