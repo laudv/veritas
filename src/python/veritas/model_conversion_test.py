@@ -82,7 +82,6 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
     elif model_type == "lgbm":
         yhatm = model.predict(X, raw_score=True)
 
-
     if model_type == "sklearn":
         yhatm_at = ats.predict(X)
     else:
@@ -99,14 +98,6 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
 
 def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
 
-    if not isinstance(ats,AddTree):
-        at = []
-        for addtree in ats:
-            for tree in addtree:
-                at.append(tree)
-    else:
-        at = ats
-
     for example in range(len(X)):
         y = yhatm[example]
         y_mod = yhatm_at[example]
@@ -116,7 +107,7 @@ def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
             print("[Warning] Found potential floating error after conversion!")
             print(f"[Warning] Example: {example}")
 
-            for tree in at:
+            for tree in ats:
                 leaf_node = tree.eval_node(X[example], tree.root())
                 find_floating_splits(
                     tree, leaf_node, X[example])

@@ -235,7 +235,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, at, (X, y))
 
-        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae, 0.0, delta=1e-6)
         print(f"easy bc: accuracy {acc}")
         print(f"easy bc: mae model difference {mae}")
 
@@ -260,7 +260,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, at, (X, y))
 
-        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae, 0.0, delta=1e-6)
         print(f"easy bc: accuracy {acc}")
         print(f"easy bc: mae model difference {mae}")
 
@@ -294,7 +294,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
-        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae, 0.0, delta=1e-6)
         print(f"multi: acc train {acc*100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()
@@ -311,7 +311,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
-        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae, 0.0, delta=1e-6)
         print(f"multi: acc train RF {acc*100:.1f}%")
         print(f"multi: mae mae model difference {mae}")
         print()
@@ -334,7 +334,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
-        self.assertAlmostEqual(mae, 0.0, delta=1e-4)
+        self.assertAlmostEqual(mae, 0.0, delta=1e-6)
         print(f"multi: acc train {acc*100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()
