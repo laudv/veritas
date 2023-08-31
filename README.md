@@ -78,7 +78,7 @@ from veritas import *
 # Manually create a two-tree ensemble
 #
 #       F0 < 2                     F0 < 3
-#       /    \                     /    \         
+#       /    \                     /    \
 #   F0 < 1   F0 < 3     +     F1 < 5     F1 < 0
 #   /   \     /   \           /   \       /    \
 #  3     4   5     6         30   40     50     F2
@@ -167,8 +167,6 @@ print(f"{addtree}\n")
 # Print all trees in the ensemble
 for tree in addtree:
     print(tree)
-
-print(addtree.predict(X[50]))
 ```
 
 The output is an AddTree consisting of 3 trees, as was defined in the XGBClassifier.
@@ -214,10 +212,58 @@ Node(id=0, split=[F0 < 1.03205], sz=9, left=1, right=2)
 │  │  └─ Leaf(id=6, sz=1, value=[-0.664472])
 └─ Leaf(id=2, sz=1, value=[0.600694])
 
-[[0.08597874]]
 ```
 
-Converting representations of other learners should be easy. TODO
+Converting representations of other learners or your own models should be easy and can be done by implementing the class `AddTreeConverter`.
+In the following example `MyAddTreeConverter` implements the `get_addtree` method from `AddTreeConverter` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of `MyAddTreeConverter` to the convertermanager, the same method `get_addtree` that was used in the previous example can be used for the new model representation aswell as the previously mentioned ones.
+
+```python
+#         F1             F1
+#       /    \    +    /    \
+#      10    20       12    13
+
+myModel = [[10,20,0],[12,13,1]] # [left leaf, Right leaf, Boolean feature]
+
+class MyAddTreeConverter(AddTreeConverter):
+    def get_addtree(self,model):
+        # Implement AddTreeConverter using your own model
+        addtree = AddTree(1)
+
+        for tree in model:
+            t = addtree.add_tree()
+            t.split(t.root(),1)
+            t.set_leaf_value(t.left(t.root()),tree[0])
+            t.set_leaf_value(t.right(t.root()),tree[1])
+
+        return addtree
+
+
+# Add converter instance to the converter_manager
+add_addtree_converter(MyAddTreeConverter())
+
+# Use get_addtree() on your own models
+addtree = get_addtree(myModel)
+
+print(f"{addtree}\n")
+
+print(addtree[0])
+print(addtree[1])
+```
+
+This has the exspected output:
+
+```
+AddTree with 2 trees and base_scores [0]
+
+Node(id=0, split=[F1 < 0.5], sz=3, left=1, right=2)
+├─ Leaf(id=1, sz=1, value=[10])
+└─ Leaf(id=2, sz=1, value=[20])
+
+Node(id=0, split=[F1 < 0.5], sz=3, left=1, right=2)
+├─ Leaf(id=1, sz=1, value=[12])
+└─ Leaf(id=2, sz=1, value=[13])
+
+```
 
 ### Finding the Global Maximum of the Ensemble
 
@@ -326,6 +372,7 @@ print(at_contrast[3])
 ```
 
 Output:
+
 ```
 feat_id used for feature3 for instances: 2 5
 
@@ -363,6 +410,7 @@ The renaming of the feature IDs is fascilitated by the `FeatMap` object.
 ```python
 print(feat_map)
 ```
+
 ```
 FeatMap {
     [0] `feature1` -> 0 (instance 0)
@@ -401,6 +449,7 @@ if s.num_solutions() > 0:
 ```
 
 Output:
+
 ```
 Maximum difference between instance0 and instance1
 - current best solution: 10.0 -> optimal solution
@@ -459,6 +508,7 @@ print("output for example", example, "is", at.eval(example)[0])
 ```
 
 Output:
+
 ```
 output for example [2, 4, 2] is [-9.]
 ```
@@ -480,6 +530,7 @@ print("adversarial examples:", rob.generated_examples,
 ```
 
 Output:
+
 ```
 [0 0.0s]:   SAT for delta 5.00000 -> 0.50000 [0.00000, 1.00000] (!) ex.w/ delta 1.0000
 [1 0.0s]: UNSAT for delta 0.50000 -> 0.75000 [0.50000, 1.00000]
@@ -506,6 +557,7 @@ print("Kantchelian adversarial example", adv_example, "with output", adv_output)
 ```
 
 Output:
+
 ```
 Kantchelian adversarial example [3.0, 4, 2] with output 42.0
 ```

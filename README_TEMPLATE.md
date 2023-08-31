@@ -87,7 +87,14 @@ The output is an AddTree consisting of 3 trees, as was defined in the XGBClassif
 
 !output PART get_addtree_example!
 
-Converting representations of other learners should be easy. TODO
+Converting representations of other learners or your own models should be easy and can be done by implementing the class `AddTreeConverter`.
+In the following example `MyAddTreeConverter` implements the `get_addtree` method from `AddTreeConverter` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of `MyAddTreeConverter` to the convertermanager, the same method `get_addtree` that was used in the previous example can be used for the new model representation aswell as the previously methoned ones.
+
+!code PART AddTreeConverter!
+
+This has the exspected output:
+
+!output PART AddTreeConverter!
 
 ### Finding the Global Maximum of the Ensemble
 

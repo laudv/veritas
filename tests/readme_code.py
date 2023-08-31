@@ -71,6 +71,41 @@ for tree in addtree:
 
 
 print("---------------\n")
+### <PART AddTreeConverter>
+#         F1             F1        
+#       /    \    +    /    \              
+#      10    20       12    13
+
+myModel = [[10,20,0],[12,13,1]] # [left leaf, Right leaf, Boolean Feature]
+
+class MyAddTreeConverter(AddTreeConverter):
+    def get_addtree(self,model):
+        # Implement AddTreeConverter using your own model
+        addtree = AddTree(1)
+        
+        for tree in model:
+            t = addtree.add_tree()
+            t.split(t.root(),1)
+            t.set_leaf_value(t.left(t.root()),tree[0])
+            t.set_leaf_value(t.right(t.root()),tree[1])
+
+        return addtree
+
+
+# Add converter instance to the converter_manager 
+add_addtree_converter(MyAddTreeConverter())
+
+# Use get_addtree() on your own models
+addtree = get_addtree(myModel)
+
+print(f"{addtree}\n")
+
+print(addtree[0])
+print(addtree[1])
+### </PART>
+
+
+print("---------------\n")
 ### <PART max_output>
 # What is the maximum of the ensemble?
 config = Config(HeuristicType.MAX_OUTPUT)
