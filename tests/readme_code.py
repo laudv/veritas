@@ -11,7 +11,8 @@ from veritas import *
 #  3     4   5     6         30   40     50     F2
 #                                             /    \
 #                                            70    80
-at = AddTree()
+
+at = AddTree(1)  # Empty ensemble with int his case 1 value in the leafs
 t = at.add_tree();
 t.split(t.root(), 0, 2)   # split(node_id, feature_id, split_value)
 t.split( t.left(t.root()), 0, 1)
@@ -42,9 +43,39 @@ print("Eval:", at.eval(np.array([[0, 0, 0], [15, -3, 9]])))
 
 
 print("---------------\n")
+### <PART get_addtree_example>
+from sklearn.datasets import make_moons
+import xgboost as xgb
+
+(X,Y) = make_moons(100)
+
+clf = xgb.XGBClassifier(
+    objective="binary:logistic",
+    nthread=4,
+    tree_method="hist",
+    max_depth=4,
+    learning_rate=0.6,
+    n_estimators=3)
+
+trained_model = clf.fit(X, Y)
+
+# Convert the XGBoost model to a Veritas tree ensemble
+addtree = get_addtree(trained_model)
+
+print(f"{addtree}\n")
+
+# Print all trees in the ensemble
+for tree in addtree:
+    print(tree)
+### </PART>
+
+
+print("---------------\n")
 ### <PART max_output>
 # What is the maximum of the ensemble?
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at,{})
+
 s.steps(100)
 
 print("Global maximum")
@@ -56,8 +87,7 @@ if s.num_solutions() > 0:
     sol_nodes = s.get_solution_nodes(0)
     print("  which lead to leaf nodes", sol_nodes,
           "with leaf values",
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes)])
-
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes)])
 ### </PART>
 
 
@@ -65,7 +95,10 @@ print("---------------\n")
 ### <PART min_output_constrained>
 # If feature0 is between 3 and 5, what is the minimum possible output?
 prune_box = [(0, Interval(3, 5))]  # (feat_id, domain) list, sorted by feat_id
-s = Search.min_output(at, prune_box)
+
+config = Config(HeuristicType.MIN_OUTPUT)
+s = config.get_search(at,prune_box)
+
 s.steps(100)
 
 print("Minimum with feature0 in [3, 5]")
@@ -77,7 +110,7 @@ if s.num_solutions() > 0:
     sol_nodes = s.get_solution_nodes(0)
     print("  which lead to leaf nodes", sol_nodes,
           "with leaf values",
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes)])
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes)])
 ### </PART>
 
 print("---------------\n")
@@ -106,10 +139,13 @@ print(at_contrast[3])
 print(feat_map)
 ### </PART>
 
-print("\n---------------\n")
 
+print("\n---------------\n")
 ### <PART two_instances>
-s = Search.max_output(at_contrast)
+config = Config(HeuristicType.MAX_OUTPUT)
+
+s = config.get_search(at_contrast)
+
 s.step_for(10.0, 10)
 
 print("Maximum difference between instance0 and instance1")
@@ -121,23 +157,23 @@ if s.num_solutions() > 0:
     sol_nodes = s.get_solution_nodes(0)
     print("  which lead to leaf nodes", sol_nodes,
           "with leaf values",
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes[0:2])],
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes[2:4])])
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes[0:2])],
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes[2:4])])
 ### </PART>
 
 
-
 print("\n---------------\n")
-
 ### <PART robustness0>
 # Checking robustness
 # We change the `base_score` of the ensemble so that we can have negative
 # outputs, which is necessary for robustness checking (we want classes to
 # flip!)
-at.base_score = -44
+at.set_base_score(0,-44)
 
 # Generate all possible output configurations for this `at`
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at)
+
 done = s.steps(100)
 while not done:
     done = s.steps(100)
@@ -166,6 +202,7 @@ print("adversarial examples:", rob.generated_examples,
 # We can verify this result using the MILP approach (Kantchelian et al.'16):
 ### <part robustness1_kan>
 from veritas.kantchelian import KantchelianAttack
+
 kan = KantchelianAttack(at, target_output=True, example=example, silent=True)
 kan.optimize()
 adv_example, adv_output = kan.solution()[:2]
@@ -176,11 +213,10 @@ print("Kantchelian adversarial example", adv_example, "with output", adv_output)
 
 
 print("\n---------------\n")
-
 ### <part onehot0>
 # Constraints: one-hot (feature0 and feature1 cannot be true at the same time)
 # That is, the model below can only output 0: -100 + 100 and 100 - 100
-at = AddTree()
+at = AddTree(1)
 t = at.add_tree();
 t.split(t.root(), 0)   # Boolean split(node_id, feature_id, split_value)
 t.set_leaf_value( t.left(t.root()), -100)
@@ -196,7 +232,9 @@ print(at[1])
 
 # Without one-hot constraint: solution is incorrect feat0 == true && feat1 ==
 # true leading to output of 200.
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at)
+
 s.steps(100)
 print("\nWithout one-hot constraint")
 print("{:<3} {:<10} {}".format("i", "output", "box"))
@@ -209,7 +247,8 @@ for i in range(s.num_solutions()):
 ### <part onehot1>
 
 # With constraint:
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at)
 #s.add_onehot_constraint([0, 1]) # TODO add again
 s.steps(100)
 print("\nWith one-hot constraint")
