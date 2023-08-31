@@ -95,7 +95,7 @@ def mae_classification(model, ats, data, model_type, multiclass=False):
 
     return mae, acc
 
-
+# TODO: Make accesable from outside veritas and user-friendly 
 def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
 
     for example in range(len(X)):
