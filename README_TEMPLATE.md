@@ -92,7 +92,7 @@ In the following example `MyAddTreeConverter` implements the `get_addtree` metho
 
 !code PART AddTreeConverter!
 
-This has the exspected output:
+This has the expected output:
 
 !output PART AddTreeConverter!
 

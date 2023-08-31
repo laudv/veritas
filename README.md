@@ -78,7 +78,7 @@ from veritas import *
 # Manually create a two-tree ensemble
 #
 #       F0 < 2                     F0 < 3
-#       /    \                     /    \
+#       /    \                     /    \         
 #   F0 < 1   F0 < 3     +     F1 < 5     F1 < 0
 #   /   \     /   \           /   \       /    \
 #  3     4   5     6         30   40     50     F2
@@ -215,20 +215,21 @@ Node(id=0, split=[F0 < 1.03205], sz=9, left=1, right=2)
 ```
 
 Converting representations of other learners or your own models should be easy and can be done by implementing the class `AddTreeConverter`.
-In the following example `MyAddTreeConverter` implements the `get_addtree` method from `AddTreeConverter` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of `MyAddTreeConverter` to the convertermanager, the same method `get_addtree` that was used in the previous example can be used for the new model representation aswell as the previously mentioned ones.
+In the following example `MyAddTreeConverter` implements the `get_addtree` method from `AddTreeConverter` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of `MyAddTreeConverter` to the convertermanager, the same method `get_addtree` that was used in the previous example can be used for the new model representation aswell as the previously methoned ones.
 
 ```python
-#         F1             F1
-#       /    \    +    /    \
+#
+#         F1             F1        
+#       /    \    +    /    \              
 #      10    20       12    13
 
-myModel = [[10,20,0],[12,13,1]] # [left leaf, Right leaf, Boolean feature]
+myModel = [[10,20,0],[12,13,1]] # [left leaf, Right leaf, Boolean Feature]
 
 class MyAddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):
         # Implement AddTreeConverter using your own model
         addtree = AddTree(1)
-
+        
         for tree in model:
             t = addtree.add_tree()
             t.split(t.root(),1)
@@ -238,7 +239,7 @@ class MyAddTreeConverter(AddTreeConverter):
         return addtree
 
 
-# Add converter instance to the converter_manager
+# Add converter instance to the converter_manager 
 add_addtree_converter(MyAddTreeConverter())
 
 # Use get_addtree() on your own models
@@ -250,7 +251,7 @@ print(addtree[0])
 print(addtree[1])
 ```
 
-This has the exspected output:
+This has the expected output:
 
 ```
 AddTree with 2 trees and base_scores [0]
@@ -372,7 +373,6 @@ print(at_contrast[3])
 ```
 
 Output:
-
 ```
 feat_id used for feature3 for instances: 2 5
 
@@ -410,7 +410,6 @@ The renaming of the feature IDs is fascilitated by the `FeatMap` object.
 ```python
 print(feat_map)
 ```
-
 ```
 FeatMap {
     [0] `feature1` -> 0 (instance 0)
@@ -449,7 +448,6 @@ if s.num_solutions() > 0:
 ```
 
 Output:
-
 ```
 Maximum difference between instance0 and instance1
 - current best solution: 10.0 -> optimal solution
@@ -508,7 +506,6 @@ print("output for example", example, "is", at.eval(example)[0])
 ```
 
 Output:
-
 ```
 output for example [2, 4, 2] is [-9.]
 ```
@@ -530,7 +527,6 @@ print("adversarial examples:", rob.generated_examples,
 ```
 
 Output:
-
 ```
 [0 0.0s]:   SAT for delta 5.00000 -> 0.50000 [0.00000, 1.00000] (!) ex.w/ delta 1.0000
 [1 0.0s]: UNSAT for delta 0.50000 -> 0.75000 [0.50000, 1.00000]
@@ -557,7 +553,6 @@ print("Kantchelian adversarial example", adv_example, "with output", adv_output)
 ```
 
 Output:
-
 ```
 Kantchelian adversarial example [3.0, 4, 2] with output 42.0
 ```
