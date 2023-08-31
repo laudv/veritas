@@ -30,6 +30,10 @@ void init_tree(py::module &m) {
         .def("set_leaf_value", [](TreeRef& r, NodeId n, int i, FloatT v) {
                 r.get().leaf_value(n, i) = v;
         })
+        .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) {
+                if(r.get().num_leaf_values() == 1) r.get().leaf_value(n, 0) = v;
+                else throw std::runtime_error("Specify leaf value index for tree with multiple leaf values");
+        })
         .def("get_split", [](const TreeRef& r, NodeId n) { return r.get().get_split(n); })
         .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n) {
                 std::vector<std::pair<FloatT, FloatT>> buf(r.get().num_leaf_values());
