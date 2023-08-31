@@ -218,12 +218,13 @@ Converting representations of other learners or your own models should be easy a
 In the following example `MyAddTreeConverter` implements the `get_addtree` method from `AddTreeConverter` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of `MyAddTreeConverter` to the convertermanager, the same method `get_addtree` that was used in the previous example can be used for the new model representation aswell as the previously methoned ones.
 
 ```python
+# Trivial Tree representation
 #
-#         F1             F1        
+#         F0             F0        
 #       /    \    +    /    \              
 #      10    20       12    13
 
-myModel = [[10,20,0],[12,13,1]] # [left leaf, Right leaf, Boolean Feature]
+myModel = [[10,20,0],[12,13,0]] # [left leaf, Right leaf, Boolean Feature]
 
 class MyAddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):

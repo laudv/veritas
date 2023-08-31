@@ -72,12 +72,13 @@ for tree in addtree:
 
 print("---------------\n")
 ### <PART AddTreeConverter>
+# Trivial Tree representation
 #
-#         F1             F1        
+#         F0             F0        
 #       /    \    +    /    \              
 #      10    20       12    13
 
-myModel = [[10,20,0],[12,13,1]] # [left leaf, Right leaf, Boolean Feature]
+myModel = [[10,20,0],[12,13,0]] # [left leaf, Right leaf, Boolean Feature]
 
 class MyAddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):
