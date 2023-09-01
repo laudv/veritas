@@ -1,8 +1,8 @@
 from . import AddTreeConverter
 
-from .extensions.lgb import LGB_AddTreeConverter
-from .extensions.xgb import XGB_AddTreeConverter
-from .extensions.sklearn import Sk_AddTreeConverter
+from .lgb import LGB_AddTreeConverter
+from .xgb import XGB_AddTreeConverter
+from .sklearn import Sk_AddTreeConverter
 
 class ConverterManager:
     def __init__(self):
@@ -19,13 +19,31 @@ class ConverterManager:
             except Exception:
                 pass
 
+
 _conv_manager = ConverterManager()
 
 def add_addtree_converter(converter):
+    """
+    Adds an instance of AddTreeConverter to the `converter_manager`. The `get_addtree` function will now also use the added converter.
+
+    :param converter: Instance of AddTreeConverter
+    """
     _conv_manager.add_converter(converter)
 
 def get_addtree(model):
+    """
+    Returns a veritas Addtree equivalent to the given model. 
+
+    This works seamlessly on every model where there is an implementation for the class `AddTreeConverter`. 
+    Currently XGBoost, LightGBM and scikit-learn are supported. For an example see: ######
+    You can always implement your own model using the `AddTreeConverter` interface.
+
+    :param model: model that needs to be converted to a Veritas tree ensemble
+
+    :return: AddTree
+    """
     return _conv_manager.get_addtree(model)
+
 
 add_addtree_converter(XGB_AddTreeConverter())
 add_addtree_converter(LGB_AddTreeConverter())

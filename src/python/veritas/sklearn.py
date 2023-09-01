@@ -7,7 +7,7 @@
 # Author: Laurens Devos
 import numpy as np
 
-from .. import AddTree, AddTreeType, AddTreeConverter
+from . import AddTree, AddTreeType, AddTreeConverter
 import sklearn.tree as sktree
 from sklearn.ensemble import _forest
 

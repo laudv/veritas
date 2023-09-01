@@ -31,7 +31,7 @@ For more information, refer to the paper:
    usage/installation
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 10
    :caption: Getting Started:
 
    api/python/index

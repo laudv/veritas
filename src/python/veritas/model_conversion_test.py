@@ -13,8 +13,6 @@ from lightgbm import Booster as lgbmbooster
 
 from sklearn.metrics import mean_absolute_error
 
-from . import AddTree
-
 
 def test_model_conversion(model, at, data):
     module_name = getattr(model, '__module__', None)

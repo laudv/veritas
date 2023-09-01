@@ -12,7 +12,7 @@ import numpy as np
 from xgboost.sklearn import XGBModel
 from xgboost.core import Booster as xgbbooster
 
-from .. import AddTree, AddTreeType, AddTreeConverter
+from . import AddTree, AddTreeType, AddTreeConverter
 
 class XGB_AddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):

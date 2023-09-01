@@ -6,7 +6,7 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-from .. import AddTree, AddTreeType, AddTreeConverter
+from . import AddTree, AddTreeType, AddTreeConverter
 from lightgbm import LGBMModel
 from lightgbm import Booster as lgbmbooster
 
