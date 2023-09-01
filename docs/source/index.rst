@@ -25,7 +25,7 @@ For more information, refer to the paper:
    <http://proceedings.mlr.press/v139/devos21a.html>_
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :caption: Usage:
 
    usage/installation
@@ -33,6 +33,9 @@ For more information, refer to the paper:
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started:
+
+   api/python/index
+   api/cpp/index
 
 
 Indices and tables
