@@ -12,9 +12,8 @@
 #
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../'))
-print(os.path.abspath('../../'))
-
+sys.path.insert(0, os.path.abspath('../../../'))
+# print(os.path.abspath('../../../'))
 
 # -- Project information -----------------------------------------------------
 
@@ -28,8 +27,8 @@ author = 'Laurens Devos'
 # Add any Sphinx extension module names here, as strings. They can be
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
-extensions = ['sphinx.ext.autodoc', 'autoapi.extension']
-autoapi_dirs = ['../../src']
+extensions = ['sphinx.ext.autodoc', 'autoapi.extension', 'breathe']
+autoapi_dirs = ['../../../src']
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -38,6 +37,7 @@ source_suffix = '.rst'
 
 pygments_style = 'sphinx'
 
+add_module_names = False
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -56,3 +56,10 @@ html_theme = "sphinx_rtd_theme"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+# Doxygen 
+import subprocess
+subprocess.call('cd ../../doxygen ; doxygen', shell=True)
+
+breathe_projects = { "veritas": "../../doxygen/build/xml/" }
+breathe_default_project = "veritas"

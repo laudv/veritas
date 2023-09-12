@@ -8,14 +8,14 @@ class AddTreeConverter:
     For an example see: ######
     
     """
-    def get_addtree(self,model):
+    def get_addtree(self, model):
         """ Needs implementation of the user
          
         :param model: model
         """
         raise NotImplementedError
     
-    def test_conversion(self,model):
+    def test_conversion(self, model):
         """
         :meta private:
         """

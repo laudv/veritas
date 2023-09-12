@@ -36,7 +36,7 @@ namespace veritas
         GB_MULTI = GB | MULTI
     };
 
-    /** Additive ensemble of Trees. A sum of Trees. */
+    /** @brief Additive ensemble of Trees. A sum of Trees. */
     template <typename TreeT>
     class GAddTree
     { // generic AddTree
@@ -58,6 +58,11 @@ namespace veritas
         AddTreeType type_;
 
     public:
+        /**
+         * @brief Create  a new AddTree
+         * @param nleaf_values_ The number of leaf values in a single leaf
+         * @param type_ Type of AddTree 
+        */
         inline GAddTree(int nleaf_values_, AddTreeType type_ = AddTreeType::RAW)
             : trees_(), base_scores_(nleaf_values_, {}), type_(type_)
         {
