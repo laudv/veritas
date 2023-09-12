@@ -19,6 +19,11 @@
 
 namespace veritas
 {
+    /*! 
+    * @brief  Type of AddTree
+    * When a GAddTree instance is created an no type is specified, the GAddTree will have the `AddTreeType::RAW`
+    * Currently AddTreeType is only used in the pybind predict() function
+    */
     enum class AddTreeType
     {
         RAW = 0,                        // 0b000000
@@ -28,16 +33,16 @@ namespace veritas
         RF = 1 << 3,                    // 0b001000
         GB = 1 << 4,                    // 0b010000
 
-        RF_REGR = RF | REGR,
-        RF_CLF = RF | CLF,
-        RF_MULTI = RF | MULTI,
-        GB_REGR = GB | REGR,
-        GB_CLF = GB | CLF,
-        GB_MULTI = GB | MULTI
+        RF_REGR = RF | REGR,    ///< Randomforest regressor
+        RF_CLF = RF | CLF,      ///< Randomforest classifier
+        RF_MULTI = RF | MULTI,  ///< Randomforest multiclass classifier
+        GB_REGR = GB | REGR,    ///< Gradient boosted regressor
+        GB_CLF = GB | CLF,      ///< Gradient boosted classifier
+        GB_MULTI = GB | MULTI   ///< Gradient boosted multiclass classifier regressor
     };
 
-    /** @brief Additive ensemble of Trees. A sum of Trees. */
     template <typename TreeT>
+    /** @brief Additive ensemble of Trees, a sum of Trees. */
     class GAddTree
     { // generic AddTree
     public:
@@ -59,12 +64,14 @@ namespace veritas
 
     public:
         /**
-         * @brief Create  a new AddTree
-         * @param nleaf_values_ The number of leaf values in a single leaf
-         * @param type_ Type of AddTree 
+         * @brief Create a new AddTree instance
+         * @param nleaf_values The number of values in a single leaf
+         * @param type_ Type of AddTree @see veritas::AddTreeType
+         * 
+         *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::RAW`
         */
-        inline GAddTree(int nleaf_values_, AddTreeType type_ = AddTreeType::RAW)
-            : trees_(), base_scores_(nleaf_values_, {}), type_(type_)
+        inline GAddTree(int nleaf_values, AddTreeType type = AddTreeType::RAW)
+            : trees_(), base_scores_(nleaf_values, {}), type_(type)
         {
         }
 
@@ -104,7 +111,7 @@ namespace veritas
         /** Add multi-class copies of the trees in `other` to this ensemble. */
         void add_trees(const GAddTree<TreeT>& other, int c);
 
-        /** Turn this ensemble in a multi-class ensemble. See `GTree::make_multiclass`. */
+        /** Turn this ensemble in a multi-class ensemble. @see `GTree::make_multiclass`. */
         GAddTree<TreeT> make_multiclass(int c, int num_leaf_values) const;
 
         /** Turn this ensemble in a single-class ensemble. See `GTree::make_singleclass`. */

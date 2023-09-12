@@ -2,7 +2,7 @@ Python
 ======
 
 .. toctree::
-   :maxdepth: 10
+   :maxdepth: 2
    :caption: Python:
 
    python

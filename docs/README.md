@@ -1,11 +1,11 @@
 ## Prerequisites
 
 ```sh
-apt-get install python3-sphinx
-pip install sphinx-autoapi
-pip install sphinx_rtd_theme
-pip install breathe
-apt-get install doxygen
+$ sudo apt-get install python3-sphinx
+$ pip install sphinx-autoapi
+$ pip install sphinx_rtd_theme
+$ pip install breathe
+$ sudo apt-get install doxygen
 ```
 
 ## Files
@@ -46,3 +46,4 @@ Documentation flow and input should be modified in `docs/sphinx/source`.
 - [autoapi](https://sphinx-autoapi.readthedocs.io/en/latest/index.html)
 - [Documenting C++ Code with Sphinx](https://medium.com/@aytackahveci93/documenting-c-code-with-sphinx-d6315b338615)
 - [C/C++ Documentation Using Sphinx](https://leimao.github.io/blog/CPP-Documentation-Using-Sphinx/)
+- [Generating documentation using Sphinx](https://pybind11.readthedocs.io/en/stable/advanced/misc.html?highlight=sphinx#generating-documentation-using-sphinx)
