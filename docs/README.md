@@ -27,12 +27,21 @@ veritas
 |   |   |   └── ...
 |   |   ├── conf.py
 |   |   └── index.rst
+|   ├── generate_python_examples.py
 |   ├── make.bat
 |   └── Makefile
 ```
 
 _HTML_ output is saved in `docs/build/html`.
 Documentation flow and input should be modified in `docs/sphinx/source`.
+
+## Generate Python examples .rst
+
+Same principle and code as `generate_readme.py` but for rst. Run `generate_python_examples.py` before makefile when the template or code is updated.
+
+- Template: `python_examples_template.rst`
+- Code: `python_examples.py`
+- Output (used in index): `python_examples.rst`
 
 ## Build HTML
 
