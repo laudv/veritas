@@ -10,7 +10,6 @@
 
 import numpy as np
 from . import AddTree, Interval
-from .sklearn import RfAddTree
 
 import groot.model
 
@@ -59,7 +58,7 @@ def addtree_from_groot_ensemble(model, extract_value_fun=None):
         else:
             raise RuntimeError(f"{type(model).__name__} not supported")
 
-    at = RfAddTree()
+    at = AddTree(1)
     for i, gtree in enumerate(model.estimators_):
         _addtree_from_groot_tree(at, gtree, extract_value_fun)
         #print(at[len(at)-1])
