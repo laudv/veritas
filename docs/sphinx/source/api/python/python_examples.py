@@ -228,6 +228,7 @@ print("output for example", example, "is", at.eval(example)[0])
 
 ### <PART robustness1>
 from veritas import VeritasRobustnessSearch
+
 rob = VeritasRobustnessSearch(None, at, example, start_delta=5.0)
 delta, delta_lo, delta_up = rob.search()
 

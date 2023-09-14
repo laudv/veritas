@@ -7,7 +7,10 @@ namespace py = pybind11;
 using namespace veritas;
 
 void init_interval(py::module& m) {
-    py::class_<Interval>(m, "Interval")
+    py::class_<Interval>(m, "Interval", R"pbdoc(
+        Interval class
+
+        )pbdoc")
         .def(py::init<>())
         .def(py::init<FloatT, FloatT>())
         .def_static("from_lo", &Interval::from_lo)
@@ -36,7 +39,10 @@ void init_interval(py::module& m) {
     m.attr("TRUE_DOMAIN") = TRUE_DOMAIN;
     m.attr("FALSE_DOMAIN") = FALSE_DOMAIN;
 
-    py::class_<LtSplit>(m, "LtSplit")
+    py::class_<LtSplit>(m, "LtSplit", R"pbdoc(
+        LtSplit class
+
+        )pbdoc")
         .def(py::init<FeatId, FloatT>())
         .def_readonly("feat_id", &LtSplit::feat_id)
         .def_readonly("split_value", &LtSplit::split_value)

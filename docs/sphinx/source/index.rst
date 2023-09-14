@@ -17,12 +17,10 @@ This makes it easy to use with many tree/ensemble learners. A translation functi
 
 For more information, refer to the paper:
 
-:: 
-
    Versatile Verification of Tree Ensembles.
    Laurens Devos, Wannes Meert, and Jesse Davis.
    ICML 2021
-   <http://proceedings.mlr.press/v139/devos21a.html>_
+   http://proceedings.mlr.press/v139/devos21a.html
 
 .. toctree::
    :maxdepth: 2

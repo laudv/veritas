@@ -27,6 +27,7 @@ def add_addtree_converter(converter):
     Adds an instance of AddTreeConverter to the `converter_manager`. The `get_addtree` function will now also use the added converter.
 
     :param converter: Instance of AddTreeConverter
+    :type converter: AddTreeConverter
     """
     _conv_manager.add_converter(converter)
 
@@ -40,7 +41,7 @@ def get_addtree(model):
 
     :param model: model that needs to be converted to a Veritas tree ensemble
 
-    :return: AddTree
+    :rtype: AddTree
     """
     return _conv_manager.get_addtree(model)
 

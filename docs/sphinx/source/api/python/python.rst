@@ -1,6 +1,12 @@
 Python API
 ----------
 
+Pybind API
+^^^^^^^^^^^
+
+.. automodule:: src.python.veritas.veritas_core
+
+    
 Model Conversion 
 ^^^^^^^^^^^^^^^^
 
@@ -9,4 +15,5 @@ Model Conversion
 
 .. automodule:: src.python.veritas.converter_manager
     :members:
+
     

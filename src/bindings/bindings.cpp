@@ -20,7 +20,6 @@ using namespace veritas;
 
 
 PYBIND11_MODULE(veritas_core, m) {
-    m.doc() = "Veritas: verification of tree ensembles";
 
     // redirect C++ output to Pythons stdout
     // https://github.com/pybind/pybind11/issues/1005
@@ -30,6 +29,36 @@ PYBIND11_MODULE(veritas_core, m) {
             new py::scoped_ostream_redirect(
                 std::cout, py::module::import("sys").attr("stdout")),
             [](void *sor) { delete static_cast<py::scoped_ostream_redirect *>(sor); });
+
+    m.doc() = R"pbdoc(
+        Basic
+        ~~~~~
+        .. autosummary::
+            :toctree: pybind_tree_classes
+            :template: template.rst
+
+            Tree
+            AddTree
+            AddTreeType
+            Interval
+            IntervalPair
+            FeatMap
+
+        Search
+        ~~~~~~
+        .. autosummary::
+            :toctree: pybind_tree_search
+            :template: template.rst
+
+            Search
+            Config
+            StopReason
+            HeuristicType
+            Bounds
+            Statistics
+            Solution
+            
+    )pbdoc";
 
     init_interval(m);
     init_box(m);

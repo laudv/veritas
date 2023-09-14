@@ -13,12 +13,18 @@ using namespace veritas;
 
 void init_addtree(py::module &m)
 {
-    py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree")
+    py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree", R"pbdoc(
+            AddTree Class
+
+            :param num_leaf_values: Number of values in single leaf 
+            :param AddTreeType: Optional AdTreeType
+            :type AddTreeType: AddTreeType or None
+        )pbdoc")
         .def(py::init<int>())
         .def(py::init<int, AddTreeType>())
         //.def(py::init<const AddTree&, size_t, size_t>())
         .def("get_base_score", [](const AddTree &at, int idx)
-             { return at.base_score(idx); })
+             { return at.base_score(idx); }, "This is ac omment about base_scores")
         .def("set_base_score", [](AddTree &at, int idx, FloatT value)
              { at.base_score(idx) = value; })
         .def("copy", [](const AddTree &at)
@@ -114,7 +120,12 @@ void init_addtree(py::module &m)
                 } 
             }
             return result;
-        }
+        }, R"pbdoc(
+            Predict example(s)
+
+            :param example(s): Number of values in single leaf 
+            :type example(s): NumpyArray or int or float
+        )pbdoc"
         )
         .def("eval", [](const AddTree &at, py::handle arr)
              {

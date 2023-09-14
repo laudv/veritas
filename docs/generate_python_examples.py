@@ -41,6 +41,8 @@ def __parse_insertion_parts(f, parts):
             __check_in_parts(parts, part, i, TEMPLATE_FILE)
             print(f"{i:04}: inserting code", part)
             print(".. code-block:: py", file=output)
+            print("\t:caption: Python", file=output)
+            print("\t:linenos:",file=output)
             print("", file=output)
             for line in parts[part].split('\n'):
                 output.write('\t' + line + '\n')
@@ -49,6 +51,7 @@ def __parse_insertion_parts(f, parts):
             __check_in_parts(parts, part, i, TEMPLATE_FILE)
             print(f"{i:04}: inserting output", part)
             print(".. code-block:: sh", file=output)
+            print("\t:caption: Output", file=output)
             print("", file=output)
             exec_out = __execute_part(parts[part], globals)
             line0, line1 = m1.group(3, 4)

@@ -8,7 +8,9 @@ namespace py = pybind11;
 using namespace veritas;
 
 void init_featmap(py::module &m) {
-    py::class_<FeatMap>(m, "FeatMap")
+    py::class_<FeatMap>(m, "FeatMap", R"pbdoc(
+            FeatMap Class
+        )pbdoc")
         .def(py::init<FeatId>())
         .def(py::init<const std::vector<std::string>&>())
         .def("num_features", &FeatMap::num_features)

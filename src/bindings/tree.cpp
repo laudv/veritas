@@ -5,7 +5,10 @@ namespace py = pybind11;
 using namespace veritas;
 
 void init_tree(py::module &m) {
-    py::class_<TreeRef>(m, "Tree")
+    py::class_<TreeRef>(m, "Tree", R"pbdoc(
+        Tree class
+
+        )pbdoc")
         .def("root", [](const TreeRef& r) { return r.get().root(); })
         .def("num_leaves", [](const TreeRef& r) { return r.get().num_leaves(); })
         .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
