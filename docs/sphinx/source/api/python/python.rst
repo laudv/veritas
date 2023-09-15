@@ -1,14 +1,6 @@
 Python API
 ----------
 
-Some More
-^^^^^^^^^
-
-.. .. autosummary::
-..     :toctree: some_more
-
-..     src.python.addtree_converter
-
 Pybind API
 ^^^^^^^^^^^
 
