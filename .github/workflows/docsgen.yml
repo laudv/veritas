@@ -30,6 +30,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install numpy
           pip install gurobipy
+          pip install -U scikit-learn
 
       - name: Install veritas
         run: |

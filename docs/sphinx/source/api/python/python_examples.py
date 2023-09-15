@@ -45,21 +45,18 @@ print("Eval:", at.eval(np.array([[0, 0, 0], [15, -3, 9]])))
 print("---------------\n")
 ### <PART get_addtree_example>
 from sklearn.datasets import make_moons
-import xgboost as xgb
+from sklearn.ensemble import RandomForestClassifier
 
 (X,Y) = make_moons(100)
 
-clf = xgb.XGBClassifier(
-    objective="binary:logistic",
-    nthread=4,
-    tree_method="hist",
-    max_depth=4,
-    learning_rate=0.6,
-    n_estimators=3)
+clf = RandomForestClassifier(
+        max_depth=4,
+        random_state=0,
+        n_estimators=3)
 
 trained_model = clf.fit(X, Y)
 
-# Convert the XGBoost model to a Veritas tree ensemble
+# Convert the RandomForestClassifier model to a Veritas tree ensemble
 addtree = get_addtree(trained_model)
 
 print(f"{addtree}\n")
