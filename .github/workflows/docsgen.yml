@@ -47,11 +47,11 @@ jobs:
         uses: mattnotmitt/doxygen-action@v1.1.0
         with:
           # Path to Doxyfile
-          doxyfile-path: "./Docs/doxygen/Doxyfile" # default is ./Doxyfile
+          doxyfile-path: "./docs/doxygen/Doxyfile" # default is ./Doxyfile
           # Working directory
           working-directory: "." # default is .
 
-      - name: Generate all docs without pybinds
+      - name: Generate all docs
         run: cd docs && make html
 
       - name: Deploy pages
