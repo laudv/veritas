@@ -11,7 +11,7 @@ Here's an example of a manually constructed tree ensemble.
 
 !code PART example_at!
 
-This outputs the following. Note that the Boolean split on feature 2 is replaced with a less than split splitting on value 0.5 (`veritas.BOOL_SPLIT_VALUE`). You can use the pre-defined domains for `TRUE` and `FALSE`: `veritas.TRUE_DOMAIN` and `veritas.FALSE_DOMAIN`.
+This outputs the following. Note that the Boolean split on feature 2 is replaced with a less than split splitting on value 0.5 (``veritas.BOOL_SPLIT_VALUE``). You can use the pre-defined domains for `TRUE` and `FALSE`: ``veritas.TRUE_DOMAIN`` and ``veritas.FALSE_DOMAIN``.
 
 !output PART example_at!
 
