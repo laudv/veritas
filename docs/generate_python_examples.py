@@ -1,9 +1,11 @@
 import os, re, io
 from contextlib import redirect_stdout
 
-CODE_FILE = "sphinx/source/api/python/python_examples.py"
-TEMPLATE_FILE = "sphinx/source/api/python/python_examples_template.rst"
-TARGET_FILE = "sphinx/source/api/python/python_examples.rst"
+script_dir = os.path.dirname(__file__)
+
+CODE_FILE =  os.path.join(script_dir, "sphinx/source/api/python/python_examples.py")
+TEMPLATE_FILE = os.path.join(script_dir, "sphinx/source/api/python/python_examples_template.rst")
+TARGET_FILE = os.path.join(script_dir, "sphinx/source/api/python/python_examples.rst")
 
 def __parse_code_parts(f):
     parts = {}
