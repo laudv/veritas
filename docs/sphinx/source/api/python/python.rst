@@ -6,8 +6,6 @@ Pybind API
 
 .. automodule:: src.python.veritas.veritas_core
 
-
-
 Model Conversion 
 ^^^^^^^^^^^^^^^^
 
