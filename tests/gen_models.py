@@ -4,7 +4,7 @@ import numpy as np
 
 # from veritas.add_tree import get_addtree
 from veritas.model_conversion_test import test_model_conversion
-import xgboost as xgb
+import xgboost
 import lightgbm as lgbm
 
 from sklearn.datasets import load_digits
@@ -22,18 +22,18 @@ class Test_AddTree_Regression(unittest.TestCase):
     @classmethod
     def setUpClass(self):
         ############# Load Regression Data #############
-        img = imageio.imread("tests/data/img.png")
+        img = imageio.imread("data/img.png")
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
         X = X.astype(float)
         self.regr_data = (X, y)
 
-    def test_xgb_regression(self):
+    def test_xgboost_regression(self):
         X, y = self.regr_data
 
         ############# XGB #############
         print("XGB - Regression:")
-        regr = xgb.XGBRegressor(
+        regr = xgboost.XGBRegressor(
             objective="reg:squarederror",
             nthread=4,
             tree_method="hist",
@@ -50,9 +50,9 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/xgb-img-very-easy-new.json")
+        at.write("models/xgboost-img-very-easy-new.json")
 
-        regr = xgb.XGBRegressor(
+        regr = xgboost.XGBRegressor(
             objective="reg:squarederror",
             nthread=4,
             tree_method="hist",
@@ -69,9 +69,9 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/xgb-img-easy-new.json")
+        at.write("models/xgboost-img-easy-new.json")
 
-        regr = xgb.XGBRegressor(
+        regr = xgboost.XGBRegressor(
             objective="reg:squarederror",
             nthread=4,
             tree_method="hist",
@@ -88,7 +88,7 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/xgb-img-hard-new.json")
+        at.write("models/xgboost-img-hard-new.json")
         print()
 
     def test_sklearn_regression(self):
@@ -109,7 +109,7 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/sklearn-img-hard-new.json")
+        at.write("models/sklearn-img-hard-new.json")
         print()
 
     def test_lgbm_regression(self):
@@ -134,7 +134,7 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/lgbm-img-very-easy-new.json")
+        at.write("models/lgbm-img-very-easy-new.json")
 
         regr = lgbm.LGBMRegressor(
             objective="regression",
@@ -153,8 +153,8 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/lgbm-img-easy-new.json")
-        # with open("tests/models/xgb-img-easy-values.json", "w") as f:
+        at.write("models/lgbm-img-easy-new.json")
+        # with open("models/xgboost-img-easy-values.json", "w") as f:
         #    json.dump(list(map(float, yhat)), f)
 
         regr = lgbm.LGBMRegressor(
@@ -174,7 +174,7 @@ class Test_AddTree_Regression(unittest.TestCase):
         print(f"very easy img: rmse train {rmse}")
         print(f"very easy img: mae model difference {mae}")
 
-        at.write("tests/models/lgbm-img-hard-new.json")
+        at.write("models/lgbm-img-hard-new.json")
         print()
 
 
@@ -192,14 +192,14 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         ############# XGB #############
         print("XGB - Binary Classification:")
         # Orginal model with a BUG
-        # clf = xgb.XGBClassifier(
+        # clf = xgboost.XGBClassifier(
         #     objective="binary:logistic",
         #     nthread=4,
         #     tree_method="hist",
         #     max_depth=4,
         #     learning_rate=1,
         #     n_estimators=3)
-        clf = xgb.XGBClassifier(
+        clf = xgboost.XGBClassifier(
             objective="binary:logistic",
             nthread=4,
             tree_method="hist",
@@ -218,7 +218,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         # NOT GOOD ENOUGH ! Show floating error
         self.assertAlmostEqual(mae, 0.0, delta=1e-2)
 
-        at.write("tests/models/xgb-bc-easy.json")
+        at.write("models/xgboost-bc-easy.json")
         print()
 
     def test_sklearn_binary_class(self):
@@ -239,7 +239,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         print(f"easy bc: accuracy {acc}")
         print(f"easy bc: mae model difference {mae}")
 
-        at.write("tests/models/sklearn-bc-easy.json")
+        at.write("models/sklearn-bc-easy.json")
         print()
 
     def test_lgbm_binary_class(self):
@@ -264,7 +264,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         print(f"easy bc: accuracy {acc}")
         print(f"easy bc: mae model difference {mae}")
 
-        at.write("tests/models/lgbm-bc-easy.json")
+        at.write("models/lgbm-bc-easy.json")
         print()
 
 
@@ -281,7 +281,7 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         ############# XGB #############
         print("XGB - Multiclass:")
-        clf = xgb.XGBClassifier(
+        clf = xgboost.XGBClassifier(
             objective="multi:softmax",
             num_class=10,
             nthread=4,
@@ -342,10 +342,10 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
 # TODO: test for using boosters with DMatrix
 if __name__ == "__main__":
-    # xgb = unittest.TestSuite()
-    # xgb.addTest(Test_AddTree_Regression('test_xgb_regression'))
-    # xgb.addTest(Test_AddTree_BinaryClassification('test_xgb_binary_class'))
-    # xgb.addTest(Test_AddTree_MultiClass('test_xgb_multiclass'))
+    # xgboost = unittest.TestSuite()
+    # xgboost.addTest(Test_AddTree_Regression('test_xgb_regression'))
+    # xgboost.addTest(Test_AddTree_BinaryClassification('test_xgb_binary_class'))
+    # xgboost.addTest(Test_AddTree_MultiClass('test_xgb_multiclass'))
 
     # sklearn = unittest.TestSuite()
     # sklearn.addTest(Test_AddTree_Regression('test_sklearn_regression'))

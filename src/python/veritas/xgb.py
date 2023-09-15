@@ -9,17 +9,23 @@
 import json
 import numpy as np
 
-from xgboost.sklearn import XGBModel
-from xgboost.core import Booster as xgbbooster
+# from xgboost.sklearn import XGBModel
+# from xgboost.core import Booster as xgbbooster
 
 from . import AddTree, AddTreeType, AddTreeConverter
 
 class XGB_AddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):
-        if isinstance(model, XGBModel):
+        try:
             model = model.get_booster()
-        assert isinstance(
-            model, xgbbooster), f"not xgb.Booster but {type(model)}"
+        except:
+            pass
+        
+        # if isinstance(model, XGBModel):
+        #     model = model.get_booster()
+        # assert isinstance(
+        #     model, xgbbooster), f"not xgb.Booster but {type(model)}"
+
         param_dump = json.loads(model.save_config())['learner']
         base_score = float(param_dump['learner_model_param']["base_score"])
         model_type = param_dump["objective"]["name"]

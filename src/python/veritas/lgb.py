@@ -7,18 +7,25 @@
 # Author: Laurens Devos
 
 from . import AddTree, AddTreeType, AddTreeConverter
-from lightgbm import LGBMModel
-from lightgbm import Booster as lgbmbooster
+
+# from lightgbm import LGBMModel
+# from lightgbm import Booster as lgbmbooster
 
 import numpy as np
 
 
 class LGB_AddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):
-        if isinstance(model, LGBMModel):
+        try:
             model = model.booster_
-        assert isinstance(
-            model, lgbmbooster), f"not xgb.Booster but {type(model)}"
+        except:
+            pass
+        
+        # if isinstance(model, LGBMModel):
+        #     model = model.booster_
+        # assert isinstance(
+        #     model, lgbmbooster), f"not xgb.Booster but {type(model)}"
+
         dump = model.dump_model()
         num_class = dump["num_class"]
         type_ = dump["objective"]
