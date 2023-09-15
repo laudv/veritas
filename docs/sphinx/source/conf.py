@@ -59,8 +59,8 @@ html_theme = "sphinx_rtd_theme"
 # html_static_path = ['_static']
 
 # Doxygen 
-# import subprocess
-# subprocess.call('cd ../../doxygen ; doxygen', shell=True)
+import subprocess
+subprocess.call('cd ../../doxygen ; doxygen', shell=True)
 
 breathe_projects = { "veritas": "../../doxygen/build/xml/" }
 breathe_default_project = "veritas"

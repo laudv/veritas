@@ -34,7 +34,12 @@ jobs:
       - name: Install veritas
         run: |
           git submodule init && git submodule update
-          pip install .
+          pip install --editable . 
+          mkdir manual_build
+          cd manual_build
+          cmake ..
+          make -j4
+          ln -sfr veritas_core.cpython-*.so ../src/python/veritas/
 
       - name: Install Docs dependencies
         run: |
@@ -43,13 +48,8 @@ jobs:
       - name: Generate python_examples
         run: python docs/generate_python_examples.py
 
-      - name: Doxygen Action
-        uses: mattnotmitt/doxygen-action@v1.1.0
-        with:
-          # Path to Doxyfile
-          doxyfile-path: "./docs/doxygen/Doxyfile" # default is ./Doxyfile
-          # Working directory
-          working-directory: "." # default is .
+      - name: Doxygen Install
+        run: apk add doxygen
 
       - name: Generate all docs
         run: cd docs && make html
