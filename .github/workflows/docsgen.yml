@@ -60,4 +60,4 @@ jobs:
         with:
           publish_branch: gh-pages-sphinx
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./docs/build/
+          publish_dir: ./docs/build/html
