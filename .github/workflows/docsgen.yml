@@ -31,6 +31,11 @@ jobs:
           pip install numpy
           pip install gurobipy
 
+      - name: Install veritas
+        run: |
+          git submodule init && git submodule update
+          pip install .
+
       - name: Generate python_examples
         run: python docs/generate_python_examples.py
 
