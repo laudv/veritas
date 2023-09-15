@@ -49,7 +49,7 @@ jobs:
         run: python docs/generate_python_examples.py
 
       - name: Doxygen Install
-        run: apk add doxygen
+        run: sudo apt-get install doxygen -y
 
       - name: Generate all docs
         run: cd docs && make html
