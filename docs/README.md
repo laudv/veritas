@@ -2,10 +2,9 @@
 
 ```sh
 $ sudo apt-get install python3-sphinx
-$ pip install sphinx-autoapi
 $ pip install sphinx_rtd_theme
-$ pip install breathe
 $ sudo apt-get install doxygen
+$ pip install breathe
 ```
 
 ## Files
