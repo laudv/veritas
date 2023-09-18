@@ -18,16 +18,16 @@ This outputs the following. Note that the Boolean split on feature 2 is replaced
 !output PART example_at!
 
 
-Model Conversion using XGBoost 
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Model Conversion of Sklearn-model
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 You can also convert an existing ensemble using the ``get_addtree`` function for XGBoost, LightGBM and scikit-learn.
 
-Here's an example of a model trained by XGBoost that has been converted to Veritas' own tree ensemble representation.
+Here's an example of a model trained by a RandomForestClassifier that has been converted to Veritas' own tree ensemble representation.
 
 !code PART get_addtree_example!
 
-The output is an AddTree consisting of 3 trees, as was defined in the XGBClassifier.
+The output is an AddTree consisting of 3 trees, as was defined in the RandomForestClassifier.
 
 !output PART get_addtree_example!
 

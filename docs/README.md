@@ -44,6 +44,12 @@ Same principle and code as `generate_readme.py` but for rst. Run `generate_pytho
 - Code: `python_examples.py`
 - Output (used in index): `python_examples.rst`
 
+`python_examples_template.rst` is excluded in `conf.py` to avoid reference collisions.
+
+## Veritas install
+
+Veritas needs to be installed using the development method.
+
 ## Build HTML
 
 - `cd veritas/docs`
