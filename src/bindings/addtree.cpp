@@ -24,7 +24,7 @@ void init_addtree(py::module &m)
         .def(py::init<int, AddTreeType>())
         //.def(py::init<const AddTree&, size_t, size_t>())
         .def("get_base_score", [](const AddTree &at, int idx)
-             { return at.base_score(idx); }, "This is ac omment about base_scores")
+             { return at.base_score(idx); }, "This is a comment about base_scores")
         .def("set_base_score", [](AddTree &at, int idx, FloatT value)
              { at.base_score(idx) = value; })
         .def("copy", [](const AddTree &at)
@@ -35,10 +35,10 @@ void init_addtree(py::module &m)
                 return TreeRef{at, i};
             throw py::value_error("out of bounds access into AddTree"); })
         .def("__len__", &AddTree::size)
-        .def("num_nodes", &AddTree::num_nodes)
-        .def("num_leafs", &AddTree::num_leafs)
-        .def("num_leaf_values", &AddTree::num_leaf_values)
-        .def("get_splits", &AddTree::get_splits)
+        .def("num_nodes", &AddTree::num_nodes, ":ref:`C++ API`")
+        .def("num_leafs", &AddTree::num_leafs, ":ref:`C++ API`")
+        .def("num_leaf_values", &AddTree::num_leaf_values, ":ref:`C++ API`")
+        .def("get_splits", &AddTree::get_splits, ":ref:`C++ API`")
         .def("add_tree", [](const std::shared_ptr<AddTree> &at)
              {
             at->add_tree(); return TreeRef{at, at->size()-1}; })
@@ -63,9 +63,9 @@ void init_addtree(py::module &m)
             Box::BufT buf = tobox(pybox);
             Box box{buf};
             return at.prune(BoxRef{box}); })
-        .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values)
-        .def("negate_leaf_values", &AddTree::negate_leaf_values)
-        .def("concat_negated", &AddTree::concat_negated)
+        .def("neutralize_negative_leaf_values", &AddTree::neutralize_negative_leaf_values, ":ref:`C++ API`")
+        .def("negate_leaf_values", &AddTree::negate_leaf_values, ":ref:`C++ API`")
+        .def("concat_negated", &AddTree::concat_negated, ":ref:`C++ API`")
         .def("to_json", [](const AddTree &at)
              {
             std::stringstream ss;
@@ -119,6 +119,7 @@ void init_addtree(py::module &m)
                     rrow[0] = 1 / (1 + exp(-rrow[0])); // Sigmoid: alternative: erf(sqrt(pi)*x/2) or tanh(x)?
                 } 
             }
+            // TODO: if RAW: throw error or eval()? predict_proba?
             return result;
         }, R"pbdoc(
             Predict example(s)

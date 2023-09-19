@@ -66,9 +66,10 @@ namespace veritas
         /**
          * @brief Create a new AddTree instance
          * @param nleaf_values The number of values in a single leaf
-         * @param type_ Type of AddTree @see veritas::AddTreeType
+         * @param type_ Type of AddTree 
          * 
          *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::RAW`
+         *  @see `veritas::AddTreeType`
         */
         inline GAddTree(int nleaf_values, AddTreeType type = AddTreeType::RAW)
             : trees_(), base_scores_(nleaf_values, {}), type_(type)
@@ -114,7 +115,7 @@ namespace veritas
         /** Turn this ensemble in a multi-class ensemble. @see `GTree::make_multiclass`. */
         GAddTree<TreeT> make_multiclass(int c, int num_leaf_values) const;
 
-        /** Turn this ensemble in a single-class ensemble. See `GTree::make_singleclass`. */
+        /** Turn this ensemble in a single-class ensemble. @see `GTree::make_singleclass`. */
         GAddTree<TreeT> make_singleclass(int c) const;
 
         /** See GTree::swap_class */
