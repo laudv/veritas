@@ -102,6 +102,8 @@ def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
 
         diff = (abs(y-y_mod) > 1e-6) if not multiclass else any(diff > 1e-6 for diff in abs(y-y_mod))
         if diff:
+            # Difference: print(abs(y-y_mod))
+            # If difference is always the same, there is a problem with the base_score
             # print("[Warning] Found potential floating error after conversion!")
             # print(f"[Warning] Example: {example}")
 

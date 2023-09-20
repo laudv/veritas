@@ -34,8 +34,8 @@ class XGB_AddTreeConverter(AddTreeConverter):
             return multi_addtree_xgb(model,num_class,base_score)
         elif "logistic" in model_type:
             print(f"base_score according to XGB: {base_score}")
-            print("base_score set to 0.0")
-            base_score = 0.0
+            print("base_score set to 0.0 if base_score was 0.5")
+            base_score = 0.0 if base_score == 0.5 else base_score
             # -------------- This is still not fixed it seems --------------
             # Base_score is set to 0.5 but produces an offset of 0.5
             # Base_margin is porbably used but unable to retrieve from xgboost

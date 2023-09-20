@@ -231,12 +231,12 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
 
         print(f"easy bc: accuracy {model_acc}")
         print(f"easy bc: mae model difference {mae}")
-
+        print()
+        
         # NOT GOOD ENOUGH ! Show floating error
         self.assertAlmostEqual(mae, 0.0, delta=1e-2)
 
         at.write("models/xgboost-bc-easy.json")
-        print()
 
     def test_sklearn_binary_class(self):
         X, y = self.bin_data
