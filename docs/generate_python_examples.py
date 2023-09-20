@@ -3,9 +3,7 @@ from contextlib import redirect_stdout
 
 script_dir = os.path.dirname(__file__)
 
-CODE_FILE =  os.path.join(script_dir, "sphinx/source/api/python/python_examples.py")
-TEMPLATE_FILE = os.path.join(script_dir, "sphinx/source/api/python/python_examples_template.rst")
-TARGET_FILE = os.path.join(script_dir, "sphinx/source/api/python/python_examples.rst")
+CODE_FILE = os.path.join(script_dir, "sphinx/source/usage/python_examples.py")
 
 def __parse_code_parts(f):
     parts = {}
@@ -83,10 +81,17 @@ if __name__ == "__main__":
     with open(CODE_FILE) as f:
         parts = __parse_code_parts(f)
     print()
-    with open(TEMPLATE_FILE) as f:
-        output = __parse_insertion_parts(f, parts)
-    print()
-    with open(TARGET_FILE, "w") as f:
-        f.write(output.getvalue())
+    
+    usage_dir = os.path.join(script_dir, "sphinx/source/usage")
 
-    print("readme written", TARGET_FILE)
+    for file in os.listdir(usage_dir):
+        if file.endswith("_template.rst"):
+            TEMPLATE_FILE = os.path.join(script_dir, "sphinx/source/usage/" + file)
+            file = file.replace("_template","")
+            TARGET_FILE = os.path.join(script_dir, "sphinx/source/usage/" + file)
+
+            with open(TEMPLATE_FILE) as f:
+                output = __parse_insertion_parts(f, parts)
+            print()
+            with open(TARGET_FILE, "w") as f:
+                f.write(output.getvalue())

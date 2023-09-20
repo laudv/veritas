@@ -2,7 +2,7 @@
    sphinx-quickstart on Thu Aug 31 16:05:30 2023.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
-
+======================================================
 Versatile Verification of Tree Ensembles with VERITAS
 ======================================================
 
@@ -24,16 +24,20 @@ For more information, refer to the paper:
 
 .. toctree::
    :maxdepth: 2
-   :caption: Usage:
+   :caption: Getting Started:
 
    usage/installation
+   usage/tree_ensembles
+   usage/queries
+   usage/custom_trees
 
 .. toctree::
    :maxdepth: 2
-   :caption: Getting Started:
+   :caption: API:
 
-   api/python/index
-   api/cpp/index
+   api/python/python
+   api/python/model_conversion
+   api/cpp/cpp
 
 
 Indices and tables

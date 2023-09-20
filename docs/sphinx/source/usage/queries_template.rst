@@ -1,52 +1,12 @@
-:orphan: 
+Queries
+=======
 
-Python Examples
----------------
+First, we will train a model on a small dataset and get the corresponding AddTree.
 
-Constructing an Additive Tree Ensemble or `AddTree`
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Veritas uses its own tree ensemble representation. You can manually build one to try Veritas out.
-
-Here's an example of a manually constructed tree ensemble.
-(To execute this code, see `tests/test_readme.py`.)
-
-!code PART example_at!
-
-This outputs the following. Note that the Boolean split on feature 2 is replaced with a less than split splitting on value 0.5 (``veritas.BOOL_SPLIT_VALUE``). You can use the pre-defined domains for `TRUE` and `FALSE`: ``veritas.TRUE_DOMAIN`` and ``veritas.FALSE_DOMAIN``.
-
-!output PART example_at!
-
-
-Model Conversion of Sklearn-model
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-You can also convert an existing ensemble using the ``get_addtree`` function for XGBoost, LightGBM and scikit-learn.
-
-Here's an example of a model trained by a RandomForestClassifier that has been converted to Veritas' own tree ensemble representation.
-
-!code PART get_addtree_example!
-
-The output is an AddTree consisting of 3 trees, as was defined in the RandomForestClassifier.
-
-!output PART get_addtree_example!
-
-
-Model Conversion implementation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-Converting representations of other learners or your own models should be easy and can be done by implementing the class ``AddTreeConverter``.
-In the following example ``MyAddTreeConverter`` implements the ``get_addtree`` method from ``AddTreeConverter`` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of ``MyAddTreeConverter`` to the convertermanager, the same method ``get_addtree`` that was used in the previous example can be used for the new model representation aswell as the previously methoned ones.
-
-!code PART AddTreeConverter!
-
-This has the expected output:
-
-!output PART AddTreeConverter!
-
+!output PART queries!
 
 Finding the Global Maximum of the Ensemble
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------------------------
 
 We can use Veritas to find the feature values for which the model's output is maximal as follows.
 
@@ -62,7 +22,7 @@ The ``sol.box()`` method returns the value intervals of the features for which t
 
 
 Constrained Minimization
-^^^^^^^^^^^^^^^^^^^^^^^^
+------------------------
 
 In this example, we constrain the first feature value to be between 3 and 5.
 Because this is a very simple constraint, we can simply prune the search space before we start the search.
@@ -79,7 +39,7 @@ The pruning simply removes all leaf nodes with boxes that do not overlap with ``
 
 
 Contrasting Two Instances
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 In this example, we want to know what the maximum difference between the outputs of two instances can be when only the third feature is different, and first and second feature values are the same.
 
@@ -125,7 +85,7 @@ Use ``Search::step_for(duration_in_seconds, num_steps)`` to let the search run f
 
 
 Checking Robustness
-^^^^^^^^^^^^^^^^^^^
+-------------------
 
 Before we check the robustness of a particular example, we'll first use Veritas to enumerate all possible output configurations of the additive tree ensemble. To do this, we simply run the search until ``Search::steps`` returns false, indicating that all search states have been visited.
 
@@ -162,7 +122,7 @@ MILP indeed finds the same solution.
 
 
 One-hot constraint
-^^^^^^^^^^^^^^^^^^
+------------------
 
 We can tell Veritas that some of the features are the results of a one-hot encoded categorical feature using ``Search::add_onehot_constraint``. This ensures that exactly one of the features is true at all times.
 

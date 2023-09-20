@@ -31,33 +31,7 @@ PYBIND11_MODULE(veritas_core, m) {
             [](void *sor) { delete static_cast<py::scoped_ostream_redirect *>(sor); });
 
     m.doc() = R"pbdoc(
-        Basic
-        ~~~~~
-        .. autosummary::
-            :toctree: pybind_tree_classes
-            :template: template.rst
 
-            Tree
-            AddTree
-            AddTreeType
-            Interval
-            IntervalPair
-            FeatMap
-
-        Search
-        ~~~~~~
-        .. autosummary::
-            :toctree: pybind_tree_search
-            :template: template.rst
-
-            Search
-            Config
-            StopReason
-            HeuristicType
-            Bounds
-            Statistics
-            Solution
-            
     )pbdoc";
 
     init_interval(m);

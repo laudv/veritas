@@ -1,8 +1,8 @@
 Installation
-------------
+============
 
 Dependencies
-~~~~~~~~~~~~
+------------
 
 * C++
 * cmake
@@ -11,7 +11,7 @@ Dependencies
 
 
 Installation
-~~~~~~~~~~~~
+------------
 
 - Clone this repository: ``git clone https://github.com/laudv/veritas.git``
 - Change directory: ``cd veritas``
@@ -25,7 +25,7 @@ To pull the latest updates from Github, simply ``git pull` the changes and reins
 
 
 Development
-~~~~~~~~~~~
+-----------
 
 This is most likely not the proper way to use ``skbuild``, but that's how I have been doing it.
 The editable install does not put the binary in the ``src/python`` folder, and it removes the build directory, so we use an editable ``pip`` install, and then manually invoke ``cmake`` to produce the shared ``veritas_core`` library.

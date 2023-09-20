@@ -36,7 +36,7 @@ def get_addtree(model):
     Returns a veritas Addtree equivalent to the given model. 
 
     This works seamlessly on every model where there is an implementation for the class `AddTreeConverter`. 
-    Currently XGBoost, LightGBM and scikit-learn are supported. For an example see :ref:`Model Conversion implementation`.
+    Currently XGBoost, LightGBM and scikit-learn are supported. For an example see :ref:`Trees Ensembles`.
     You can always implement your own model using the `AddTreeConverter` interface.
 
     :param model: model that needs to be converted to a Veritas tree ensemble
