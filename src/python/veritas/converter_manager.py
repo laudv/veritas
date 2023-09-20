@@ -21,7 +21,9 @@ class ConverterManager:
         raise ConversionException("No conversion possible. Implement a converter using `AddTreeConverter` and add it using `add_addtree_converter`.")
 
 class ConversionException(Exception):
-    """No conversion is possbible. Either install XGBoost, SkLearn, LightGBM or add your own converter."""
+    """No conversion is possbible. Either install XGBoost, SkLearn, LightGBM or add your own converter.
+        :meta private:
+    """
 
 _conv_manager = ConverterManager()
 

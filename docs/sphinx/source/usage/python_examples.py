@@ -183,6 +183,7 @@ t.set_leaf_value( t.left(t.right(t.right(t.root()))), 70)
 t.set_leaf_value(t.right(t.right(t.right(t.root()))), 80)
 
 # Print the trees (including the node-ids)
+print(f"{at}\n")
 print(at[0])
 print(at[1])
 ### </PART>

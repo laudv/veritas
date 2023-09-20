@@ -2,28 +2,7 @@
 
 # Versatile Verification of Tree Ensembles with VERITAS
 
-[View API documentation](https://laudv.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
-
-**Veritas** is a versatile verification tool for tree ensembles. You can use
-Veritas to generate _adversarial examples_, check _robustness_, find _dominant
-attributes_ or simply ask _domain specific questions_ about your model.
-
-Veritas uses its own tree representation and does not assume a specific model format (like XGBoost's JSON dump).
-This makes it easy to use with many tree/ensemble learners. A translation function is included for XGBoost ensembles.
-
-For more information, refer to the paper:
-
-> Versatile Verification of Tree Ensembles.
-> Laurens Devos, Wannes Meert, and Jesse Davis.
-> ICML 2021
-> http://proceedings.mlr.press/v139/devos21a.html
-
-## Dependencies
-
-- c++
-- cmake
-- pybind11 (included)
-- python3 (numpy, optionally gurobipy)
+[View API documentation](https://alexandersch12.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
 
 ## Installation
 
@@ -37,47 +16,9 @@ Veritas should work on Linux (GCC), Mac (LLVM), and Windows (MSVC). If you encou
 
 To pull the latest updates from Github, simply `git pull` the changes and reinstall using `pip`: `pip install --force-reinstall .`.
 
-## Development
+## Constructing an Additive Tree Ensemble or `AddTree`
 
-This is most likely not the proper way to use `skbuild`, but that's how I have been doing it.
-The editable install does not put the binary in the `src/python` folder, and it removes the build directory, so we use an editable `pip` install, and then manually invoke `cmake` to produce the shared `veritas_core` library.
-
-```
-git clone git@github.com:laudv/veritas.git veritas
-cd veritas
-git submodule init && git submodule update
-pip install --editable .
-
-# this forgets to place the shared library in src/python/veritas, likely due to
-# wrong configuration but hey, doing it manually is faster than figuring that
-# out...
-mkdir manual_build
-cd manual_build
-cmake ..
-make -j4
-
-# replace <...> with your shared library, name depends on platform
-ln -sfr <veritas_core.cpython-*.so> ../src/python/veritas/
-```
-
-Using this setup, you can change C++ code, rebuild, and then immediately restart Python.
-
-## Examples
-
-### Constructing an Additive Tree Ensemble or `AddTree`
-
-Veritas uses its own tree ensemble representation. You can manually build one to try Veritas out.
-
-Here's an example of a manually constructed tree ensemble.
-(To execute this code, see `tests/test_readme.py`.)
-
-!code PART example_at!
-
-This outputs the following. Note that the Boolean split on feature 2 is replaced with a less than split splitting on value 0.5 (`veritas.BOOL_SPLIT_VALUE`). You can use the pre-defined domains for `TRUE` and `FALSE`: `veritas.TRUE_DOMAIN` and `veritas.FALSE_DOMAIN`.
-
-!output PART example_at!
-
-You can also convert an existing ensemble using the `get_addtree` function for XGBoost, LightGBM and scikit-learn.
+You can convert an existing ensemble using the `get_addtree` function for XGBoost, LightGBM and scikit-learn.
 
 Here's an example of a model trained by XGBoost that has been converted to Veritas' own tree ensemble representation.
 
@@ -87,14 +28,11 @@ The output is an AddTree consisting of 3 trees, as was defined in the XGBClassif
 
 !output PART get_addtree_example!
 
-Converting representations of other learners or your own models should be easy and can be done by implementing the class `AddTreeConverter`.
-In the following example `MyAddTreeConverter` implements the `get_addtree` method from `AddTreeConverter` for a trivial tree representation. The trees consist of a boolean split in the root with only 2 leaves. After adding an instance of `MyAddTreeConverter` to the convertermanager, the same method `get_addtree` that was used in the previous example can be used for the new model representation aswell as the previously methoned ones.
+## Queries
 
-!code PART AddTreeConverter!
+Starting from this AddTree, we can perform several queries.
 
-This has the expected output:
-
-!output PART AddTreeConverter!
+!output PART example_at!
 
 ### Finding the Global Maximum of the Ensemble
 
@@ -231,3 +169,21 @@ When we inform Veritas that exactly one of the two features must be true:
 Output:
 
 !output PART onehot1!
+
+# Citate
+
+[View API documentation](https://alexandersch12.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
+
+**Veritas** is a versatile verification tool for tree ensembles. You can use
+Veritas to generate _adversarial examples_, check _robustness_, find _dominant
+attributes_ or simply ask _domain specific questions_ about your model.
+
+Veritas uses its own tree representation and does not assume a specific model format (like XGBoost's JSON dump).
+This makes it easy to use with many tree/ensemble learners. A translation function is included for XGBoost ensembles.
+
+For more information, refer to the paper:
+
+> Versatile Verification of Tree Ensembles.
+> Laurens Devos, Wannes Meert, and Jesse Davis.
+> ICML 2021
+> http://proceedings.mlr.press/v139/devos21a.html

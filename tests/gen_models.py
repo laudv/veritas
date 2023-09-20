@@ -11,6 +11,7 @@ from sklearn.datasets import load_digits
 from sklearn.datasets import load_breast_cancer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
+from sklearn.datasets import make_moons
 
 from veritas import *
 
@@ -187,18 +188,34 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         self.bin_data = (full_set.data, full_set.target)
 
     def test_xgb_binary_class(self):
-        X, y = self.bin_data
-
         ############# XGB #############
         print("XGB - Binary Classification:")
-        # Orginal model with a BUG
-        # clf = xgboost.XGBClassifier(
-        #     objective="binary:logistic",
-        #     nthread=4,
-        #     tree_method="hist",
-        #     max_depth=4,
-        #     learning_rate=1,
-        #     n_estimators=3)
+
+        print("Make moons") 
+        (X,Y) = make_moons(100)
+
+        clf = xgboost.XGBClassifier(
+            objective="binary:logistic",
+            nthread=4,
+            tree_method="hist",
+            max_depth=4,
+            learning_rate=1,
+            n_estimators=1)
+
+        trained_model = clf.fit(X, Y)
+
+        # Convert the XGBoost model to a Veritas tree ensemble
+        addtree = get_addtree(trained_model)
+
+        mae, model_acc = test_model_conversion(trained_model, addtree, (X, Y))
+
+        print(f"easy bc: accuracy {model_acc}")
+        print(f"easy bc: mae model difference {mae}")
+        print()
+
+        print("Dataset") 
+        X, y = self.bin_data
+
         clf = xgboost.XGBClassifier(
             objective="binary:logistic",
             nthread=4,

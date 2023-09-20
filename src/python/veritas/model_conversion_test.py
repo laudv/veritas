@@ -102,13 +102,12 @@ def find_floating_errors(ats, yhatm, yhatm_at, X, multiclass=False):
 
         diff = (abs(y-y_mod) > 1e-6) if not multiclass else any(diff > 1e-6 for diff in abs(y-y_mod))
         if diff:
-            print("[Warning] Found potential floating error after conversion!")
-            print(f"[Warning] Example: {example}")
+            # print("[Warning] Found potential floating error after conversion!")
+            # print(f"[Warning] Example: {example}")
 
             for tree in ats:
                 leaf_node = tree.eval_node(X[example], tree.root())
-                find_floating_splits(
-                    tree, leaf_node, X[example])
+                find_floating_splits(tree, leaf_node, X[example])
 
 
 def find_floating_splits(tree, node, example):
