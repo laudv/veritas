@@ -32,7 +32,7 @@ For more information, refer to the paper:
    usage/custom_trees
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
    :caption: API:
 
    api/python/python

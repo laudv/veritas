@@ -9,10 +9,6 @@ import numpy as np
 
 from . import AddTree, AddTreeType, AddTreeConverter
 
-# import sklearn.tree as sktree
-# from sklearn.ensemble import _forest
-
-
 class Sk_AddTreeConverter(AddTreeConverter):
     def get_addtree(self,model):
         return addtree_sklearn_ensemble(model)
@@ -20,12 +16,12 @@ class Sk_AddTreeConverter(AddTreeConverter):
 
 def addtree_sklearn_tree(at, tree, extract_value_fun):
     try:
+        import sklearn.tree as sktree
+        from sklearn.ensemble import _forest
+    except ModuleNotFoundError as e: pass
+
+    if isinstance(tree, sktree.DecisionTreeClassifier) or isinstance(tree, sktree.DecisionTreeRegressor):
         tree = tree.tree_
-    except:
-        pass
-    
-    # if isinstance(tree, sktree.DecisionTreeClassifier) or isinstance(tree, sktree.DecisionTreeRegressor):
-    #     tree = tree.tree_
 
     t = at.add_tree()
     stack = [(0, t.root())]

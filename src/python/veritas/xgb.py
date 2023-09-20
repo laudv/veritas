@@ -27,13 +27,15 @@ class XGB_AddTreeConverter(AddTreeConverter):
         #     model, xgbbooster), f"not xgb.Booster but {type(model)}"
 
         param_dump = json.loads(model.save_config())['learner']
+        print(param_dump)
         base_score = float(param_dump['learner_model_param']["base_score"])
         model_type = param_dump["objective"]["name"]
         if "multi" in model_type:
             num_class = int(param_dump['learner_model_param']["num_class"])
             return multi_addtree_xgb(model,num_class,base_score)
         elif "logistic" in model_type:
-            base_score = 0.0
+            base_score = 0.5
+            # -------------- This is still not fixed it seems --------------
             # Base_score is set to 0.5 but produces an offset of 0.5
             # Base_margin is porbably used but unable to retrieve from xgboost
             # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin

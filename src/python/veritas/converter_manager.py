@@ -16,9 +16,12 @@ class ConverterManager:
         for converter in self._converters:
             try:
                 return converter.get_addtree(model)
-            except Exception:
+            except:
                 pass
+        raise ConversionException("No conversion possible. Implement a converter using `AddTreeConverter` and add it using `add_addtree_converter`.")
 
+class ConversionException(Exception):
+    """No conversion is possbible. Either install XGBoost, SkLearn, LightGBM or add your own converter."""
 
 _conv_manager = ConverterManager()
 
