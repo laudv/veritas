@@ -1059,7 +1059,7 @@ Search::Search(const Config& config, const AddTree& at, const FlatBox& prune_box
 
 // Helper methods in abstract class Search
 double Search::time_since_start() const {
-    auto now = std::chrono::system_clock::now();
+    time_point now = time_clock::now();
     return std::chrono::duration_cast<std::chrono::microseconds>(
             now-start_time_).count() * 1e-6;
 }
