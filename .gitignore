@@ -1,5 +1,5 @@
 build
-manual_build
+manual_build*/
 _skbuild
 __pycache__
 .cache
