@@ -181,7 +181,7 @@ struct Solution {
 
 std::ostream& operator<<(std::ostream& s, const Solution& bounds);
 
-using time_clock = std::chrono::high_resolution_clock;
+using time_clock = std::chrono::system_clock;
 using time_point = std::chrono::time_point<time_clock>;
 
 class Search {
