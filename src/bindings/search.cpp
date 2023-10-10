@@ -38,6 +38,7 @@ void init_search(py::module &m) {
     py::class_<Statistics>(m, "Statistics")
         .def_readonly("num_steps", &Statistics::num_steps)
         .def_readonly("num_states_ignored", &Statistics::num_states_ignored)
+        .def_readonly("num_update_scores_fails", &Statistics::num_update_scores_fails)
         ; // Statistics
 
     py::class_<Config>(m, "Config")
@@ -53,6 +54,8 @@ void init_search(py::module &m) {
                        &Config::ignore_state_when_worse_than)
         .def_readwrite("stop_when_atleast_bound_better_than",
                        &Config::stop_when_atleast_bound_better_than)
+        .def_readwrite("multi_ignore_state_when_class0_worse_than",
+                       &Config::multi_ignore_state_when_class0_worse_than)
         .def("get_search", [](const Config &conf, const AddTree &at,
                               const py::object &pybox) {
             auto buf = tobox(pybox);

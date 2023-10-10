@@ -84,14 +84,24 @@ struct Config {
 
     /**
      * Ignore search states with bounds that are worse than this.
+     *
+     * Counted in `stats.num_states_ignored`
      */
     FloatT ignore_state_when_worse_than;
 
     /**
-     * Stop when Veritas found a solution with a score that is at least as good
+     * Stop when Veritas finds a solution with a score that is at least as good
      * as this.
      */
     FloatT stop_when_atleast_bound_better_than;
+
+    /**
+     * [Multiclass only] Ignore a search state when it has a score for the
+     * first action that is worse than the given score.
+     *
+     * Counted in `stats.num_update_scores_fails`
+     */
+    FloatT multi_ignore_state_when_class0_worse_than;
 
     /** Constructor */
     Config(HeuristicType h);
@@ -114,6 +124,7 @@ struct Config {
 struct Statistics {
     size_t num_steps = 0;
     size_t num_states_ignored = 0;
+    size_t num_update_scores_fails = 0;
 };
 
 enum class StopReason {
@@ -170,7 +181,7 @@ struct Solution {
 
 std::ostream& operator<<(std::ostream& s, const Solution& bounds);
 
-using time_clock = std::chrono::high_resolution_clock;
+using time_clock = std::chrono::system_clock;
 using time_point = std::chrono::time_point<time_clock>;
 
 class Search {

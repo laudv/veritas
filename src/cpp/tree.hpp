@@ -490,6 +490,28 @@ public:
         }
     }
 
+    SelfT contrast_classes(int pos_c, int neg_c) const {
+        if (num_leaf_values() == 0)
+            throw std::runtime_error("already singleclass");
+        if (pos_c >= num_leaf_values())
+            throw std::runtime_error("pos_c >= num_leaf_values");
+        if (neg_c >= num_leaf_values())
+            throw std::runtime_error("neg_c >= num_leaf_values");
+        SelfT new_tree(1);
+        contrast_classes(pos_c, neg_c, new_tree, root(), new_tree.root());
+        return new_tree;
+    }
+
+    void contrast_classes(int pos_c, int neg_c, SelfT& new_tree, NodeId n, NodeId m) const {
+        if (is_internal(n)) {
+            new_tree.split(m, get_split(n));
+            contrast_classes(pos_c, neg_c, new_tree, left(n), new_tree.left(m));
+            contrast_classes(pos_c, neg_c, new_tree, right(n), new_tree.right(m));
+        } else {
+            new_tree.leaf_value(m, 0) = leaf_value(n, pos_c) - leaf_value(n, neg_c);
+        }
+    }
+
     bool subtree_equals(NodeId n, const SelfT& other, NodeId m) const {
         if (is_internal(n) && other.is_internal(m)) {
             return get_split(n) == other.get_split(m)

@@ -159,10 +159,12 @@ public:
     using const_iterator = typename BoxT::const_iterator;
 
 private:
+    static constexpr typename BoxT::BufT EMPTY_BOX;
+
     const_iterator begin_, end_;
 
 public:
-    inline GBoxRef() : begin_{nullptr}, end_{nullptr} {}
+    inline GBoxRef() : begin_{EMPTY_BOX.begin()}, end_{EMPTY_BOX.end()} {}
     inline GBoxRef(const BoxT& b) : begin_{b.begin()}, end_{b.end()} {}
     inline GBoxRef(const_iterator b, const_iterator e) : begin_{b}, end_{e} {}
 
