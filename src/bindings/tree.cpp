@@ -7,7 +7,10 @@ namespace py = pybind11;
 using namespace veritas;
 
 void init_tree(py::module &m) {
-    py::class_<TreeRef>(m, "Tree")
+    py::class_<TreeRef>(m, "Tree", R"pbdoc(
+        Tree class
+
+        )pbdoc")
         .def("root", [](const TreeRef& r) { return r.get().root(); })
         .def("num_leaves", [](const TreeRef& r) { return r.get().num_leaves(); })
         .def("num_nodes", [](const TreeRef& r) { return r.get().num_nodes(); })
@@ -39,6 +42,10 @@ void init_tree(py::module &m) {
                 throw std::invalid_argument("wrong number of leaf values");
             for (int i = 0; i < t.num_leaf_values(); ++i)
                 t.leaf_value(n, i) = vs[i];
+        })
+        .def("set_leaf_value", [](TreeRef& r, NodeId n, FloatT v) {
+                if(r.get().num_leaf_values() == 1) r.get().leaf_value(n, 0) = v;
+                else throw std::runtime_error("Specify leaf value index for tree with multiple leaf values");
         })
         .def("get_split", [](const TreeRef& r, NodeId n) { return r.get().get_split(n); })
         .def("find_minmax_leaf_value", [](const TreeRef& r, NodeId n) {

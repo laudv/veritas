@@ -34,14 +34,16 @@ t.set_leaf_value( t.left(t.right(t.right(t.root()))), 70)
 t.set_leaf_value(t.right(t.right(t.right(t.root()))), 80)
 
 # Print the trees (including the node-ids)
-print(f"{at}\n")
 print(at[0])
 print(at[1])
+
+# Evaluate this ensemble
+print("Eval:", at.eval(np.array([[0, 0, 0], [15, -3, 9]])))
 ### </PART>
 
 
 print("---------------\n")
-### <PART get_addtree_example>
+### <PART get_addtree_example_RF>
 from veritas import *
 from sklearn.datasets import make_moons
 from sklearn.ensemble import RandomForestClassifier
@@ -65,6 +67,58 @@ for tree in addtree:
     print(tree)
 ### </PART>
 
+print("---------------\n")
+### <PART get_addtree_example_XGB>
+import xgboost as xgb
+
+(X,Y) = make_moons(100)
+
+clf = xgb.XGBClassifier(
+    objective="binary:logistic",
+    nthread=4,
+    tree_method="hist",
+    max_depth=4,
+    learning_rate=0.6,
+    n_estimators=3)
+
+trained_model = clf.fit(X, Y)
+
+# Convert the XGBoost model to a Veritas tree ensemble
+addtree = get_addtree(trained_model)
+
+print(f"{addtree}\n")
+
+# Print all trees in the ensemble
+for tree in addtree:
+    print(tree)
+### </PART>
+
+print("---------------\n")
+### <PART get_addtree_example_LGBM>
+import lightgbm as lgbm
+
+(X,Y) = make_moons(100)
+
+clf = lgbm.LGBMClassifier(
+    objective="binary",
+    num_leaves=15,
+    nthread=4,
+    max_depth=3,
+    learning_rate=0.9,
+    n_estimators=3,
+    verbose=-1)
+
+trained_model = clf.fit(X, Y)
+
+# Convert the LGBM model to a Veritas tree ensemble
+addtree = get_addtree(trained_model)
+
+print(f"{addtree}\n")
+
+# Print all trees in the ensemble
+for tree in addtree:
+    print(tree)
+### </PART>
 
 print("---------------\n")
 ### <PART AddTreeConverter>
@@ -103,9 +157,41 @@ print(addtree[1])
 ### </PART>
 
 
-print("---------------\n")
+### <PART queries>
+import numpy as np
+from veritas import *
+
+at = AddTree(1)  # Empty ensemble with int his case 1 value in the leafs
+t = at.add_tree();
+t.split(t.root(), 0, 2)   # split(node_id, feature_id, split_value)
+t.split( t.left(t.root()), 0, 1)
+t.split(t.right(t.root()), 0, 3)
+t.set_leaf_value( t.left( t.left(t.root())), 3)
+t.set_leaf_value(t.right( t.left(t.root())), 4)
+t.set_leaf_value( t.left(t.right(t.root())), 5)
+t.set_leaf_value(t.right(t.right(t.root())), 6)
+
+t = at.add_tree();
+t.split(t.root(), 0, 3)
+t.split( t.left(t.root()), 1, 5)
+t.split(t.right(t.root()), 1, 0)
+t.split(t.right(t.right(t.root())), 2) # Boolean split (ie < 1.0)
+t.set_leaf_value( t.left( t.left(t.root())), 30)
+t.set_leaf_value(t.right( t.left(t.root())), 40)
+t.set_leaf_value( t.left(t.right(t.root())), 50)
+t.set_leaf_value( t.left(t.right(t.right(t.root()))), 70)
+t.set_leaf_value(t.right(t.right(t.right(t.root()))), 80)
+
+# Print the trees (including the node-ids)
+print(f"{at}\n")
+print(at[0])
+print(at[1])
+### </PART>
+
+
 ### <PART max_output>
 # What is the maximum of the ensemble?
+from veritas import *
 config = Config(HeuristicType.MAX_OUTPUT)
 s = config.get_search(at,{})
 
@@ -224,29 +310,28 @@ print("output for example", example, "is", at.eval(example)[0])
 
 ### <PART robustness1>
 from veritas import VeritasRobustnessSearch
+
 rob = VeritasRobustnessSearch(None, at, example, start_delta=5.0)
 delta, delta_lo, delta_up = rob.search()
 
 print("adversarial examples:", rob.generated_examples,
         "with outputs", at.eval(np.array(rob.generated_examples)))
-### </part>
+### </PART>
 
 
 # We can verify this result using the MILP approach (Kantchelian et al.'16):
-### <part robustness1_kan>
+### <PART robustness1_kan>
 from veritas.kantchelian import KantchelianAttack
 
 kan = KantchelianAttack(at, target_output=True, example=example, silent=True)
 kan.optimize()
 adv_example, adv_output = kan.solution()[:2]
 print("Kantchelian adversarial example", adv_example, "with output", adv_output)
-### </part>
-
-
+### </PART>
 
 
 print("\n---------------\n")
-### <part onehot0>
+### <PART onehot0>
 # Constraints: one-hot (feature0 and feature1 cannot be true at the same time)
 # That is, the model below can only output 0: -100 + 100 and 100 - 100
 at = AddTree(1)
@@ -275,9 +360,9 @@ for i in range(s.num_solutions()):
     sol = s.get_solution(i)
     print(f"{i:<3} {sol.output:<10} {sol.box()}")
 #print("number of rejected states due to constraint:", s.num_rejected_states)
-### </part>
+### </PART>
 
-### <part onehot1>
+### <PART onehot1>
 
 # With constraint:
 config = Config(HeuristicType.MAX_OUTPUT)
@@ -290,4 +375,4 @@ for i in range(s.num_solutions()):
     sol = s.get_solution(i)
     print(f"{i:<3} {sol.output:<10} {sol.box()}")
 #print("number of rejected states due to constraint:", s.num_rejected_states)
-### </part>
+### </PART>

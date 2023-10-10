@@ -1,4 +1,4 @@
-## \file xgb.py
+# \file xgb.py
 #
 # This requires `xgboost` to be installed.
 #
@@ -9,66 +9,87 @@
 import json
 import numpy as np
 
-from xgboost.sklearn import XGBModel
-from xgboost.core import Booster
+# from xgboost.sklearn import XGBModel
+# from xgboost.core import Booster as xgbbooster
 
-from . import AddTree
+from . import AddTree, AddTreeType, AddTreeConverter
 
-class GbAddTree(AddTree):
-    def predict(self, X):
-        return self.eval(X)
-    def predict_proba(self, X):
-        return 1/(1+np.exp(-self.eval(X)))
+class XGB_AddTreeConverter(AddTreeConverter):
+    def get_addtree(self,model):
+        try:
+            model = model.get_booster()
+        except:
+            pass
+        
+        # if isinstance(model, XGBModel):
+        #     model = model.get_booster()
+        # assert isinstance(
+        #     model, xgbbooster), f"not xgb.Booster but {type(model)}"
 
-def addtrees_from_multiclass_xgb_model(model, nclasses, feat2id_map=int):
-    return [
-        addtree_from_xgb_model(model, feat2id_map,
-                               multiclass=(clazz, nclasses),
-                               base_score=0.5)
-        for clazz in range(nclasses)
-    ]
+        param_dump = json.loads(model.save_config())['learner']
+        base_score = float(param_dump['learner_model_param']["base_score"])
+        model_type = param_dump["objective"]["name"]
+        if "multi" in model_type:
+            num_class = int(param_dump['learner_model_param']["num_class"])
+            return multi_addtree_xgb(model,num_class,base_score)
+        elif "logistic" in model_type:
+            print(f"base_score according to XGB: {base_score}")
+            print("base_score set to 0.0 if base_score was 0.5")
+            base_score = 0.0 if base_score == 0.5 else base_score
+            # -------------- This is still not fixed it seems --------------
+            # Base_score is set to 0.5 but produces an offset of 0.5
+            # Base_margin is porbably used but unable to retrieve from xgboost
+            # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin
+            return addtree_xgb(model, base_score, type_=AddTreeType.GB_CLF)
+        return addtree_xgb(model, base_score, type_=AddTreeType.GB_REGR)
 
-def addtree_from_xgb_model(model, feat2id_map=int,
-        multiclass=(0, 1), base_score=0.0):
-    """
-    mulclass=(offset, num_classes): only loads tree offset, offset+num_classes,
-    offset+2*num_classes...
-    """
-    #base_score = 0.5 # regression...
-    if isinstance(model, XGBModel):
-        base_score = model.base_score if model.base_score is not None else base_score
-        model = model.get_booster()
-    assert isinstance(model, Booster), f"not xgb.Booster but {type(model)}"
 
+def multi_addtree_xgb(model, num_class, base_score):
+    ats = [addtree_xgb(model, base_score, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+    at = ats[0].make_multiclass(0, num_class)
+    for k in range(1, num_class):
+        at.add_trees(ats[k], k)
+    return at
+
+
+def addtree_xgb(model, base_score, type_=AddTreeType.RAW, multiclass=(0, 1)):
     dump = model.get_dump("", dump_format="json")
-    at = GbAddTree(1)
 
-    at.base_score = base_score
+    at = AddTree(1, type_)
     offset, num_classes = multiclass
+    at.set_base_score(0, base_score)
 
     for i in range(offset, len(dump), num_classes):
-        _parse_tree(at, dump[i], feat2id_map)
+        _parse_tree_xgb(at, dump[i])
 
     return at
-    
-def _parse_tree(at, tree_dump, feat2id_map):
+
+
+def xgb_feat2id_map(f): return int(f[1:])
+
+
+def _parse_tree_xgb(at, tree_dump):
     tree = at.add_tree()
     stack = [(tree.root(), json.loads(tree_dump))]
 
     while len(stack) > 0:
         node, node_json = stack.pop()
         if "leaf" not in node_json:
-            children = { child["nodeid"]: child for child in node_json["children"] }
+            children = {child["nodeid"]
+                : child for child in node_json["children"]}
 
-            feat_id = feat2id_map(node_json["split"])
+            feat_id = xgb_feat2id_map(node_json["split"])
+
             if "split_condition" in node_json:
                 split_value = float(node_json["split_condition"])
+
                 tree.split(node, feat_id, split_value)
                 left_id = node_json["yes"]
                 right_id = node_json["no"]
             else:
-                tree.split(node, feat_id) # binary split
-                left_id = node_json["no"] # (!) this is reversed -> LtSplit(_, 1.0) -> 0.0 goes left
+                tree.split(node, feat_id)  # binary split
+                # (!) this is reversed -> LtSplit(_, 1.0) -> 0.0 goes left
+                left_id = node_json["no"]
                 right_id = node_json["yes"]
 
             stack.append((tree.right(node), children[right_id]))
@@ -77,3 +98,5 @@ def _parse_tree(at, tree_dump, feat2id_map):
         else:
             leaf_value = node_json["leaf"]
             tree.set_leaf_value(node, 0, leaf_value)
+
+    return at

@@ -4,7 +4,7 @@
  * Copyright 2023 DTAI Research Group - KU Leuven.
  * License: Apache License 2.0
  * Author: Laurens Devos
-*/
+ */
 
 #ifndef VERITAS_ADDTREE_HPP
 #define VERITAS_ADDTREE_HPP
@@ -19,10 +19,33 @@
 
 namespace veritas {
 
+/*!
+ * @brief  Type of AddTree
+ * When a GAddTree instance is created an no type is specified, the GAddTree
+ * will have the `AddTreeType::RAW` Currently AddTreeType is only used in the
+ * pybind predict() function
+ */
+enum class AddTreeType {
+    RAW = 0,                        // 0b000000
+    REGR = 1 << 0,                  // 0b000001
+    CLF = 1 << 1,                   // 0b000010
+    MULTI = 1 << 2,                 // 0b000100
+    RF = 1 << 3,                    // 0b001000
+    GB = 1 << 4,                    // 0b010000
 
-/** Additive ensemble of Trees. A sum of Trees. */
+    RF_REGR = RF | REGR,    ///< Random forest regressor
+    RF_CLF = RF | CLF,      ///< Random forest classifier
+    RF_MULTI = RF | MULTI,  ///< Random forest multiclass classifier
+    GB_REGR = GB | REGR,    ///< Gradient boosted regressor
+    GB_CLF = GB | CLF,      ///< Gradient boosted classifier
+    GB_MULTI = GB | MULTI   ///< Gradient boosted multiclass classifier
+};
+
 template <typename TreeT>
-class GAddTree { // generic AddTree
+/**
+ * @brief Generic additive tree ensembles.
+ */
+class GAddTree {
 public:
     using TreeType = TreeT;
     using SplitType = typename TreeT::SplitType;
@@ -34,36 +57,46 @@ public:
     using TreeVecT = std::vector<TreeT>;
     using const_iterator = typename TreeVecT::const_iterator;
     using iterator = typename TreeVecT::iterator;
+
 private:
     TreeVecT trees_;
     std::vector<LeafValueType> base_scores_; /**< Constant value added to the output of the ensemble. */
+    AddTreeType type_;
 
 public:
-    inline GAddTree(int nleaf_values_)
-        : trees_()
-        , base_scores_(nleaf_values_, {})
-    {}
+    /**
+     * @brief Create a new AddTree instance
+     * @param nleaf_values The number of values in a single leaf
+     * @param type_ Type of AddTree 
+     * 
+     *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::RAW`
+     *  @see `veritas::AddTreeType`
+     */
+    inline GAddTree(int nleaf_values, AddTreeType type = AddTreeType::RAW)
+        : trees_(), base_scores_(nleaf_values, {}), type_(type) {}
 
     ///** Copy trees (begin, begin+num) from given `at`. */
-    //inline GAddTree(const GAddTree& at, size_t begin, size_t num)
-    //    : trees_()
-    //    , base_score(begin == 0 ? at.base_score : LeafValueType{}) {
-    //    if (begin < at.size() && (begin+num) <= at.size())
-    //        trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
-    //    else
-    //        throw std::runtime_error("out of bounds");
-    //}
+    // inline GAddTree(const GAddTree& at, size_t begin, size_t num)
+    //     : trees_()
+    //     , base_score(begin == 0 ? at.base_score : LeafValueType{}) {
+    //     if (begin < at.size() && (begin+num) <= at.size())
+    //         trees_ = std::vector(at.begin() + begin, at.begin() + begin + num);
+    //     else
+    //         throw std::runtime_error("out of bounds");
+    // }
 
     /** Add a new empty tree to the ensemble. */
     inline TreeT& add_tree() {
         return trees_.emplace_back(num_leaf_values());
     }
+
     /** Add a tree to the ensemble. */
     inline void add_tree(TreeT&& t) {
         if (t.num_leaf_values() != num_leaf_values())
             throw std::runtime_error("num_leaf_values does not match");
         trees_.push_back(std::move(t));
     }
+
     /** Add a tree to the ensemble. */
     inline void add_tree(const TreeT& t) {
         if (t.num_leaf_values() != num_leaf_values())
@@ -77,14 +110,17 @@ public:
     /** Add multi-class copies of the trees in `other` to this ensemble. */
     void add_trees(const GAddTree<TreeT>& other, int c);
 
-    /** Turn this ensemble in a multi-class ensemble. See `GTree::make_multiclass`. */
+    /** Turn this ensemble in a multi-class ensemble. @see `GTree::make_multiclass`. */
     GAddTree<TreeT> make_multiclass(int c, int num_leaf_values) const;
 
-    /** Turn this multiclass ensemble in a binary ensemble. See `GTree::make_singleclass`. */
+    /** Turn this ensemble in a single-class ensemble. @see `GTree::make_singleclass`. */
     GAddTree<TreeT> make_singleclass(int c) const;
 
-    /** Turn this multiclass ensemble in a binary ensemble. See `GTree::contrast_classes`. */
+    /** Turn this multiclass ensemble in a binary ensemble.
+     * @see `GTree::contrast_classes`. */
     GAddTree<TreeT> contrast_classes(int pos_c, int neg_c) const;
+
+
 
     /** See GTree::swap_class */
     void swap_class(int c);
@@ -120,6 +156,8 @@ public:
     size_t num_nodes() const;
     size_t num_leafs() const;
 
+    inline AddTreeType get_type() const { return type_; }
+
     /** Map feature -> [list of split values, sorted, unique]. */
     SplitMapT get_splits() const;
     /** Prune each tree in the ensemble. See TreeT::prune. */
@@ -133,10 +171,10 @@ public:
     GAddTree neutralize_negative_leaf_values() const;
     ///** Replace internal nodes at deeper depths by a leaf node with maximum
     // * leaf value in subtree */
-    //GAddTree limit_depth(int max_depth) const;
+    // GAddTree limit_depth(int max_depth) const;
     ///** Sort the trees in the ensemble by leaf-value variance. Largest
     // * variance first. */
-    //GAddTree sort_by_leaf_value_variance() const;
+    // GAddTree sort_by_leaf_value_variance() const;
 
     /** Concatenate the negated trees of `other` to this tree. */
     GAddTree concat_negated(const GAddTree& other) const;
@@ -154,21 +192,19 @@ public:
 
     /** Compute the intersection of the boxes of all leaf nodes. See
      * TreeT::compute_box */
-    void compute_box(typename TreeT::BoxT& box,
-            const std::vector<NodeId>& node_ids) const;
+    void compute_box(typename TreeT::BoxT& box, const std::vector<NodeId>& node_ids) const;
 
     bool operator==(const GAddTree& other) const {
         if (size() != other.size()) { return false; }
         if (base_scores_ != other.base_scores_) { return false; }
-        for (size_t i = 0; i < size(); ++i) {
-            if (trees_[i] != other.trees_[i]) {
-                return false;
-            }
+        for (size_t i = 0; i < size(); ++i)
+        {
+            if (trees_[i] != other.trees_[i]) { return false; }
         }
         return true;
     }
 
-    bool operator!=(const GAddTree &other) const { return !(*this == other); }
+    bool operator!=(const GAddTree& other) const { return !(*this == other); }
 
 }; // GAddTree
 
@@ -177,7 +213,6 @@ std::ostream& operator<<(std::ostream& strm, const GAddTree<TreeT>& at);
 
 using AddTree = GAddTree<Tree>;
 using AddTreeFp = GAddTree<TreeFp>;
-
 
 } // namespace veritas
 

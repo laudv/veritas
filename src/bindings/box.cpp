@@ -7,7 +7,10 @@ namespace py = pybind11;
 using namespace veritas;
 
 void init_box(py::module &m) {
-    py::class_<IntervalPair>(m, "IntervalPair")
+    py::class_<IntervalPair>(m, "IntervalPair", R"pbdoc(
+        IntervalPair Class
+
+        )pbdoc")
         .def_readonly("feat_id", &IntervalPair::feat_id)
         .def_readonly("interval", &IntervalPair::interval)
         ; // IntervalPair

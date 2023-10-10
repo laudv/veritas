@@ -29,27 +29,27 @@ struct TreeTypeName {};
 
 template <>
 struct TreeTypeName<FloatT> {
-    const char *name() const { return "FloatT"; }
+    const char* name() const { return "FloatT"; }
 };
 
 template <>
 struct TreeTypeName<FpT> {
-    const char *name() const { return "FpT"; }
+    const char* name() const { return "FpT"; }
 };
 
 template <>
 struct TreeTypeName<LtSplit> {
-    const char *name() const { return "LtSplit"; }
+    const char* name() const { return "LtSplit"; }
 };
 
 template <>
 struct TreeTypeName<LtSplitFp> {
-    const char *name() const { return "LtSplitFp"; }
+    const char* name() const { return "LtSplitFp"; }
 };
 
 template <>
 struct TreeTypeName<std::string> {
-    const char *name() const { return "std::string"; }
+    const char* name() const { return "std::string"; }
 };
 
 template <typename SplitT>
@@ -87,14 +87,14 @@ struct SplitEncDec<LtSplitFp> {
 } // namespace json_detail
 
 template <typename TreeT>
-json
-static tree_to_nlohmann_json(const TreeT& t, NodeId n) {
+static json tree_to_nlohmann_json(const TreeT& t, NodeId n) {
     json j;
     if (t.is_leaf(n)) {
         j["leaf_value"] = json::array();
         for (int i = 0; i < t.num_leaf_values(); ++i)
             j["leaf_value"].push_back(t.leaf_value(n, i));
-    } else {
+    }
+    else {
         json_detail::SplitEncDec<typename TreeT::SplitType>()
             .encode(j, t.get_split(n));
         j["left"] = tree_to_nlohmann_json(t, t.left(n));
@@ -110,7 +110,8 @@ static void tree_from_nlohmann_json(const json& j, TreeT& t, NodeId n) {
     if (j.contains("leaf_value")) {
         for (int i = 0; i < t.num_leaf_values(); ++i)
             t.leaf_value(n, i) = j["leaf_value"][i];
-    } else {
+    }
+    else {
         t.split(n, SplitEncDec().decode(j));
         tree_from_nlohmann_json(j["left"], t, t.left(n));
         tree_from_nlohmann_json(j["right"], t, t.right(n));
@@ -121,7 +122,7 @@ template <typename TreeT>
 static TreeT tree_from_nlohmann_json(const json& j) {
     using SplitTypeName = json_detail::TreeTypeName<typename TreeT::SplitType>;
     using ValueTypeName = json_detail::TreeTypeName<typename TreeT::LeafValueType>;
-    
+
     if (SplitTypeName().name() != j["split_type"])
         throw std::runtime_error("invalid split_type");
     if (ValueTypeName().name() != j["value_type"])
@@ -147,8 +148,7 @@ template TreeFp tree_from_json(std::istream& s);
 template GTree<LtSplit, std::string> tree_from_json(std::istream& s);
 
 template <typename TreeT>
-json
-static tree_to_nlohmann_json(const TreeT& t) {
+static json tree_to_nlohmann_json(const TreeT& t) {
     using SplitTypeName = json_detail::TreeTypeName<typename TreeT::SplitType>;
     using ValueTypeName = json_detail::TreeTypeName<typename TreeT::LeafValueType>;
 
@@ -174,6 +174,7 @@ template <typename TreeT>
 void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& at) {
     json at_json;
 
+    at_json["type"] = at.get_type();
     at_json["base_scores"] = json::array();
     for (int i = 0; i < at.num_leaf_values(); ++i)
         at_json["base_scores"].push_back(at.base_score(i));
@@ -187,8 +188,8 @@ void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& at) {
     s << at_json;
 }
 
-template void addtree_to_json(std::ostream &s, const AddTree &t);
-template void addtree_to_json(std::ostream &s, const AddTreeFp &t);
+template void addtree_to_json(std::ostream& s, const AddTree& t);
+template void addtree_to_json(std::ostream& s, const AddTreeFp& t);
 
 template <typename AddTreeT>
 AddTreeT addtree_from_json(std::istream& s) {
@@ -197,7 +198,9 @@ AddTreeT addtree_from_json(std::istream& s) {
     json at_json = json::parse(s);
     int num_leaf_values = static_cast<int>(at_json["base_scores"].size());
 
-    AddTreeT at(num_leaf_values);
+    AddTreeType type = at_json["type"];
+
+    AddTreeT at(num_leaf_values, type);
 
     for (int i = 0; i < at.num_leaf_values(); ++i)
         at.base_score(i) = at_json["base_scores"][i];
@@ -209,7 +212,7 @@ AddTreeT addtree_from_json(std::istream& s) {
     return at;
 }
 
-template AddTree addtree_from_json(std::istream &s);
-template AddTreeFp addtree_from_json(std::istream &s);
+template AddTree addtree_from_json(std::istream& s);
+template AddTreeFp addtree_from_json(std::istream& s);
 
 } // namespace veritas

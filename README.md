@@ -1,139 +1,122 @@
 [![PyPi Version](https://img.shields.io/pypi/v/dtai-veritas)](https://pypi.org/project/dtai-veritas/)
 
 # Versatile Verification of Tree Ensembles with VERITAS
-[View API documentation](https://laudv.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
 
-**Veritas** is a versatile verification tool for tree ensembles. You can use
-Veritas to generate *adversarial examples*, check *robustness*, find *dominant
-attributes* or simply ask *domain specific questions* about your model.
-
-Veritas uses its own tree representation and does not assume a specific model format (like XGBoost's JSON dump).
-This makes it easy to use with many tree/ensemble learners. A translation function is included for XGBoost ensembles.
-
-For more information, refer to the paper:
-
-> Versatile Verification of Tree Ensembles.
-> Laurens Devos, Wannes Meert, and Jesse Davis.
-> ICML 2021
-> http://proceedings.mlr.press/v139/devos21a.html
-
-## Dependencies
-
-* c++
-* cmake
-* pybind11 (included)
-* python3 (numpy, optionally gurobipy)
+[View API documentation](https://alexandersch12.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
 
 ## Installation
 
-* Clone this repository: `git clone https://github.com/laudv/veritas.git`
-* Change directory: `cd veritas`
-* Initialize the [pybind11](https://pybind11.readthedocs.io) submodule `git submodule init` and `git submodule update`
-* If you use environments: activate a (new) Python3 environment (e.g. using `venv`: `python3 -m venv venv_name && source venv_name/bin/activate`)
-* run `pip install .` in the root directory of Veritas
+- Clone this repository: `git clone https://github.com/laudv/veritas.git`
+- Change directory: `cd veritas`
+- Initialize the [pybind11](https://pybind11.readthedocs.io) submodule `git submodule init` and `git submodule update`
+- If you use environments: activate a (new) Python3 environment (e.g. using `venv`: `python3 -m venv venv_name && source venv_name/bin/activate`)
+- run `pip install .` in the root directory of Veritas
 
 Veritas should work on Linux (GCC), Mac (LLVM), and Windows (MSVC). If you encounter issues, feel free to contact me or open an issue.
 
 To pull the latest updates from Github, simply `git pull` the changes and reinstall using `pip`: `pip install --force-reinstall .`.
 
-## Development
+## Constructing an Additive Tree Ensemble or `AddTree`
 
-This is most likely not the proper way to use `skbuild`, but that's how I have been doing it.
-The editable install does not put the binary in the `src/python` folder, and it removes the build directory, so we use an editable `pip` install, and then manually invoke `cmake` to produce the shared `veritas_core` library.
+You can convert an existing ensemble using the `get_addtree` function for XGBoost, LightGBM and scikit-learn.
 
-```
-git clone git@github.com:laudv/veritas.git veritas
-cd veritas
-git submodule init && git submodule update
-pip install --editable .
-
-# this forgets to place the shared library in src/python/veritas, likely due to
-# wrong configuration but hey, doing it manually is faster than figuring that
-# out...
-mkdir manual_build
-cd manual_build
-cmake ..
-make -j4
-
-# replace <...> with your shared library, name depends on platform
-ln -sfr <veritas_core.cpython-*.so> ../src/python/veritas/
-```
-
-Using this setup, you can change C++ code, rebuild, and then immediately restart Python.
-
-## Examples
-
-### Constructing an Additive Tree Ensemble or `AddTree`
-
-Veritas uses its own tree ensemble representation. You can manually build one to try Veritas out, or you can convert an existing ensemble using the `addtree_from_xgb_model` and `addtrees_from_multiclass_xgb_model` functions for XGBoost and `addtree_from_sklearn_ensemble` and `addtrees_from_multiclass_sklearn_ensemble` for scikit-learn. Converting representations of other learners should be easy.
-
-Here's an example of a manually constructed tree ensemble.
-(To execute this code, see `tests/test_readme.py`.)
+Here's an example of a model trained by XGBoost that has been converted to Veritas' own tree ensemble representation.
 
 ```python
-import numpy as np
 from veritas import *
+from sklearn.datasets import make_moons
+from sklearn.ensemble import RandomForestClassifier
 
-# Manually create a two-tree ensemble
-#
-#       F0 < 2                     F0 < 3
-#       /    \                     /    \         
-#   F0 < 1   F0 < 3     +     F1 < 5     F1 < 0
-#   /   \     /   \           /   \       /    \
-#  3     4   5     6         30   40     50     F2
-#                                             /    \
-#                                            70    80
-at = AddTree()
-t = at.add_tree();
-t.split(t.root(), 0, 2)   # split(node_id, feature_id, split_value)
-t.split( t.left(t.root()), 0, 1)
-t.split(t.right(t.root()), 0, 3)
-t.set_leaf_value( t.left( t.left(t.root())), 3)
-t.set_leaf_value(t.right( t.left(t.root())), 4)
-t.set_leaf_value( t.left(t.right(t.root())), 5)
-t.set_leaf_value(t.right(t.right(t.root())), 6)
+(X,Y) = make_moons(100)
 
-t = at.add_tree();
-t.split(t.root(), 0, 3)
-t.split( t.left(t.root()), 1, 5)
-t.split(t.right(t.root()), 1, 0)
-t.split(t.right(t.right(t.root())), 2) # Boolean split (ie < 1.0)
-t.set_leaf_value( t.left( t.left(t.root())), 30)
-t.set_leaf_value(t.right( t.left(t.root())), 40)
-t.set_leaf_value( t.left(t.right(t.root())), 50)
-t.set_leaf_value( t.left(t.right(t.right(t.root()))), 70)
-t.set_leaf_value(t.right(t.right(t.right(t.root()))), 80)
+clf = RandomForestClassifier(
+        max_depth=4,
+        random_state=0,
+        n_estimators=3)
 
-# Print the trees (including the node-ids)
-print(at[0])
-print(at[1])
+trained_model = clf.fit(X, Y)
 
-# Evaluate this ensemble
-print("Eval:", at.eval(np.array([[0, 0, 0], [15, -3, 9]])))
+# Convert the RandomForestClassifier model to a Veritas tree ensemble
+addtree = get_addtree(trained_model)
+
+print(f"{addtree}\n")
+
+# Print all trees in the ensemble
+for tree in addtree:
+    print(tree)
 ```
 
-This outputs the following. Note that the Boolean split on feature 2 is replaced with a less than split splitting on value 0.5 (`veritas.BOOL_SPLIT_VALUE`). You can use the pre-defined domains for `TRUE` and `FALSE`: `veritas.TRUE_DOMAIN` and `veritas.FALSE_DOMAIN`.
+The output is an AddTree consisting of 3 trees, as was defined in the XGBClassifier.
 
 ```
+SKLEARN: classifier with 1 classes
+AddTree with 3 trees and base_scores [0]
+
+Node(id=0, split=[F0 < -0.0160258], sz=9, left=1, right=2)
+├─ Leaf(id=1, sz=1, value=[1])
+├─ Node(id=2, split=[F1 < 0.522767], sz=7, left=3, right=4)
+│  ├─ Node(id=3, split=[F0 < 0.839224], sz=5, left=5, right=6)
+│  │  ├─ Leaf(id=5, sz=1, value=[0])
+│  │  ├─ Node(id=6, split=[F1 < 0.373695], sz=3, left=7, right=8)
+│  │  │  ├─ Leaf(id=7, sz=1, value=[0])
+│  │  │  └─ Leaf(id=8, sz=1, value=[0.666667])
+│  └─ Leaf(id=4, sz=1, value=[1])
+
+Node(id=0, split=[F1 < 0.126305], sz=15, left=1, right=2)
+├─ Node(id=1, split=[F1 < -0.0227674], sz=7, left=3, right=4)
+│  ├─ Leaf(id=3, sz=1, value=[0])
+│  ├─ Node(id=4, split=[F1 < 0.00464122], sz=5, left=5, right=6)
+│  │  ├─ Leaf(id=5, sz=1, value=[1])
+│  │  ├─ Node(id=6, split=[F1 < 0.0366763], sz=3, left=7, right=8)
+│  │  │  ├─ Leaf(id=7, sz=1, value=[0])
+│  │  │  └─ Leaf(id=8, sz=1, value=[0.4])
+├─ Node(id=2, split=[F0 < 1.48667], sz=7, left=9, right=10)
+│  ├─ Node(id=9, split=[F1 < 0.522767], sz=5, left=11, right=12)
+│  │  ├─ Node(id=11, split=[F1 < 0.434907], sz=3, left=13, right=14)
+│  │  │  ├─ Leaf(id=13, sz=1, value=[0.823529])
+│  │  │  └─ Leaf(id=14, sz=1, value=[0.25])
+│  │  └─ Leaf(id=12, sz=1, value=[1])
+│  └─ Leaf(id=10, sz=1, value=[0])
+
+Node(id=0, split=[F1 < -0.0490553], sz=11, left=1, right=2)
+├─ Leaf(id=1, sz=1, value=[0])
+├─ Node(id=2, split=[F1 < 0.463324], sz=9, left=3, right=4)
+│  ├─ Node(id=3, split=[F1 < 0.156384], sz=7, left=5, right=6)
+│  │  ├─ Node(id=5, split=[F1 < 0.126305], sz=3, left=7, right=8)
+│  │  │  ├─ Leaf(id=7, sz=1, value=[0.8])
+│  │  │  └─ Leaf(id=8, sz=1, value=[1])
+│  │  ├─ Node(id=6, split=[F1 < 0.373695], sz=3, left=9, right=10)
+│  │  │  ├─ Leaf(id=9, sz=1, value=[0.294118])
+│  │  │  └─ Leaf(id=10, sz=1, value=[0.625])
+│  └─ Leaf(id=4, sz=1, value=[1])
+
+```
+
+## Queries
+
+Starting from this AddTree, we can perform several queries.
+
+```
+AddTree with 2 trees and base_scores [0]
+
 Node(id=0, split=[F0 < 2], sz=7, left=1, right=2)
 ├─ Node(id=1, split=[F0 < 1], sz=3, left=3, right=4)
-│  ├─ Leaf(id=3, sz=1, value=3)
-│  └─ Leaf(id=4, sz=1, value=4)
+│  ├─ Leaf(id=3, sz=1, value=[3])
+│  └─ Leaf(id=4, sz=1, value=[4])
 ├─ Node(id=2, split=[F0 < 3], sz=3, left=5, right=6)
-│  ├─ Leaf(id=5, sz=1, value=5)
-│  └─ Leaf(id=6, sz=1, value=6)
+│  ├─ Leaf(id=5, sz=1, value=[5])
+│  └─ Leaf(id=6, sz=1, value=[6])
 
 Node(id=0, split=[F0 < 3], sz=9, left=1, right=2)
 ├─ Node(id=1, split=[F1 < 5], sz=3, left=3, right=4)
-│  ├─ Leaf(id=3, sz=1, value=30)
-│  └─ Leaf(id=4, sz=1, value=40)
+│  ├─ Leaf(id=3, sz=1, value=[30])
+│  └─ Leaf(id=4, sz=1, value=[40])
 ├─ Node(id=2, split=[F1 < 0], sz=5, left=5, right=6)
-│  ├─ Leaf(id=5, sz=1, value=50)
+│  ├─ Leaf(id=5, sz=1, value=[50])
 │  ├─ Node(id=6, split=[F2 < 0.5], sz=3, left=7, right=8)
-│  │  ├─ Leaf(id=7, sz=1, value=70)
-│  │  └─ Leaf(id=8, sz=1, value=80)
+│  │  ├─ Leaf(id=7, sz=1, value=[70])
+│  │  └─ Leaf(id=8, sz=1, value=[80])
 
-Eval: [33. 56.]
 ```
 
 ### Finding the Global Maximum of the Ensemble
@@ -142,7 +125,9 @@ We can use Veritas to find the feature values for which the model's output is ma
 
 ```python
 # What is the maximum of the ensemble?
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at,{})
+
 s.steps(100)
 
 print("Global maximum")
@@ -154,8 +139,7 @@ if s.num_solutions() > 0:
     sol_nodes = s.get_solution_nodes(0)
     print("  which lead to leaf nodes", sol_nodes,
           "with leaf values",
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes)])
-
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes)])
 ```
 
 This outputs:
@@ -173,7 +157,6 @@ A best solution at index 0 is optimal when `s.is_optimal()` returns true. To kno
 
 The `sol.box()` method returns the value intervals of the features for which the output of the ensemble is unchanged. That is, for each possible assignment within the intervals, the trees always evaluate to the same leaf node (`s.get_solution_nodes`), and thus to the same output value. If a feature is missing from the box, it means that its value does not make a difference.
 
-
 ### Constrained Minimization
 
 In this example, we constrain the first feature value to be between 3 and 5.
@@ -184,7 +167,10 @@ Although the constraint is simple, it is very useful. The exact same pruning str
 ```python
 # If feature0 is between 3 and 5, what is the minimum possible output?
 prune_box = [(0, Interval(3, 5))]  # (feat_id, domain) list, sorted by feat_id
-s = Search.min_output(at, prune_box)
+
+config = Config(HeuristicType.MIN_OUTPUT)
+s = config.get_search(at,prune_box)
+
 s.steps(100)
 
 print("Minimum with feature0 in [3, 5]")
@@ -196,7 +182,7 @@ if s.num_solutions() > 0:
     sol_nodes = s.get_solution_nodes(0)
     print("  which lead to leaf nodes", sol_nodes,
           "with leaf values",
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes)])
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes)])
 ```
 
 The output is:
@@ -211,7 +197,6 @@ Minimum with feature0 in [3, 5]
 We minimize by maximizing the negated ensemble, i.e., the ensemble where all leaf values are negated.
 
 The pruning simply removes all leaf nodes with boxes that do not overlap with `prune_box` from the search.
-
 
 ### Contrasting Two Instances
 
@@ -246,27 +231,28 @@ feat_id used for feature3 for instances: 2 5
 
 Node(id=0, split=[F0 < 3], sz=9, left=1, right=2)
 ├─ Node(id=1, split=[F1 < 5], sz=3, left=3, right=4)
-│  ├─ Leaf(id=3, sz=1, value=30)
-│  └─ Leaf(id=4, sz=1, value=40)
+│  ├─ Leaf(id=3, sz=1, value=[30])
+│  └─ Leaf(id=4, sz=1, value=[40])
 ├─ Node(id=2, split=[F1 < 0], sz=5, left=5, right=6)
-│  ├─ Leaf(id=5, sz=1, value=50)
+│  ├─ Leaf(id=5, sz=1, value=[50])
 │  ├─ Node(id=6, split=[F2 < 0.5], sz=3, left=7, right=8)
-│  │  ├─ Leaf(id=7, sz=1, value=70)
-│  │  └─ Leaf(id=8, sz=1, value=80)
+│  │  ├─ Leaf(id=7, sz=1, value=[70])
+│  │  └─ Leaf(id=8, sz=1, value=[80])
 
 Node(id=0, split=[F0 < 3], sz=9, left=1, right=2)
 ├─ Node(id=1, split=[F1 < 5], sz=3, left=3, right=4)
-│  ├─ Leaf(id=3, sz=1, value=-30)
-│  └─ Leaf(id=4, sz=1, value=-40)
+│  ├─ Leaf(id=3, sz=1, value=[-30])
+│  └─ Leaf(id=4, sz=1, value=[-40])
 ├─ Node(id=2, split=[F1 < 0], sz=5, left=5, right=6)
-│  ├─ Leaf(id=5, sz=1, value=-50)
+│  ├─ Leaf(id=5, sz=1, value=[-50])
 │  ├─ Node(id=6, split=[F5 < 0.5], sz=3, left=7, right=8)
-│  │  ├─ Leaf(id=7, sz=1, value=-70)
-│  │  └─ Leaf(id=8, sz=1, value=-80)
+│  │  ├─ Leaf(id=7, sz=1, value=[-70])
+│  │  └─ Leaf(id=8, sz=1, value=[-80])
 
 ```
 
 There are two differences between tree 1 and tree 3:
+
 - the leaf values are negated (`concat_negated`)
 - internal node 6 uses feature ID 2 in tree 1 and feature ID 5 in tree 3
 
@@ -294,9 +280,11 @@ Use `FeatMap::transform` to apply the changes to an `AddTree`.
 
 We can find the maximum difference between the outputs of the first and the second instance as follows:
 
-
 ```python
-s = Search.max_output(at_contrast)
+config = Config(HeuristicType.MAX_OUTPUT)
+
+s = config.get_search(at_contrast)
+
 s.step_for(10.0, 10)
 
 print("Maximum difference between instance0 and instance1")
@@ -308,8 +296,8 @@ if s.num_solutions() > 0:
     sol_nodes = s.get_solution_nodes(0)
     print("  which lead to leaf nodes", sol_nodes,
           "with leaf values",
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes[0:2])],
-          [at[i].get_leaf_value(n) for i, n in enumerate(sol_nodes[2:4])])
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes[0:2])],
+          [at[i].get_leaf_value(n,0) for i, n in enumerate(sol_nodes[2:4])])
 ```
 
 Output:
@@ -323,13 +311,13 @@ Maximum difference between instance0 and instance1
 The maximum output difference in this case is 10. The only possible variation is between leaf nodes 7 or 8 in the second tree.
 
 Use `Search::step_for(duration_in_seconds, num_steps)` to let the search run for the given duration. Per `num_steps` steps, a snapshot is added to `Search::snapshots`. This can be used to track the following stats:
+
 - time (`time`)
 - number of steps executed so far (`num_steps`)
 - number of solutions so far (`num_solutions`)
 - number of search states expanded so far (`num_states`)
 - best epsilon value (`eps`)
 - the best bounds so far (`bounds`), a tuple containing lower bound, A\* upper bound, and ARA\* upper bound
-
 
 ### Checking Robustness
 
@@ -340,10 +328,12 @@ Before we check the robustness of a particular example, we'll first use Veritas 
 # We change the `base_score` of the ensemble so that we can have negative
 # outputs, which is necessary for robustness checking (we want classes to
 # flip!)
-at.base_score = -44
+at.set_base_score(0,-44)
 
 # Generate all possible output configurations for this `at`
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at)
+
 done = s.steps(100)
 while not done:
     done = s.steps(100)
@@ -370,10 +360,11 @@ print("output for example", example, "is", at.eval(example)[0])
 
 Output:
 ```
-output for example [2, 4, 2] is -9.0
+output for example [2, 4, 2] is [-9.]
 ```
 
 We now try to find the distance to the closest adversarial example for which the output of the model is positive. We use `VeritasRobustnessSearch` for this. The arguments are:
+
 - model to minimize or None
 - model to maximize or None (use both for targeted attacks)
 - the example
@@ -400,13 +391,14 @@ Output:
 [7 0.0s]: UNSAT for delta 0.99219 -> 0.99609 [0.99219, 1.00000]
 [8 0.0s]: UNSAT for delta 0.99609 -> 0.99805 [0.99609, 1.00000]
 [9 0.0s]: UNSAT for delta 0.99805 -> 0.99902 [0.99805, 1.00000]
-adversarial examples: [[3.0, 4, 2]] with outputs [42.]
+adversarial examples: [[3.0, 4, 2]] with outputs [[42.]]
 ```
 
 We can verify this result using the MILP approach (Kantchelian et al.'16):
 
 ```python
 from veritas.kantchelian import KantchelianAttack
+
 kan = KantchelianAttack(at, target_output=True, example=example, silent=True)
 kan.optimize()
 adv_example, adv_output = kan.solution()[:2]
@@ -420,7 +412,6 @@ Kantchelian adversarial example [3.0, 4, 2] with output 42.0
 
 MILP indeed finds the same solution.
 
-
 ### One-hot constraint
 
 We can tell Veritas that some of the features are the results of a one-hot encoded categorical feature using `Search::add_onehot_constraint`. This ensures that exactly one of the features is true at all times.
@@ -430,7 +421,7 @@ For this constructed example with only two one-hot encoded features, the total n
 ```python
 # Constraints: one-hot (feature0 and feature1 cannot be true at the same time)
 # That is, the model below can only output 0: -100 + 100 and 100 - 100
-at = AddTree()
+at = AddTree(1)
 t = at.add_tree();
 t.split(t.root(), 0)   # Boolean split(node_id, feature_id, split_value)
 t.set_leaf_value( t.left(t.root()), -100)
@@ -446,7 +437,9 @@ print(at[1])
 
 # Without one-hot constraint: solution is incorrect feat0 == true && feat1 ==
 # true leading to output of 200.
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at)
+
 s.steps(100)
 print("\nWithout one-hot constraint")
 print("{:<3} {:<10} {}".format("i", "output", "box"))
@@ -460,12 +453,12 @@ Output:
 
 ```
 Node(id=0, split=[F0 < 0.5], sz=3, left=1, right=2)
-├─ Leaf(id=1, sz=1, value=-100)
-└─ Leaf(id=2, sz=1, value=100)
+├─ Leaf(id=1, sz=1, value=[-100])
+└─ Leaf(id=2, sz=1, value=[100])
 
 Node(id=0, split=[F1 < 0.5], sz=3, left=1, right=2)
-├─ Leaf(id=1, sz=1, value=-100)
-└─ Leaf(id=2, sz=1, value=100)
+├─ Leaf(id=1, sz=1, value=[-100])
+└─ Leaf(id=2, sz=1, value=[100])
 
 
 Without one-hot constraint
@@ -478,7 +471,8 @@ When we inform Veritas that exactly one of the two features must be true:
 ```python
 
 # With constraint:
-s = Search.max_output(at)
+config = Config(HeuristicType.MAX_OUTPUT)
+s = config.get_search(at)
 #s.add_onehot_constraint([0, 1]) # TODO add again
 s.steps(100)
 print("\nWith one-hot constraint")
@@ -497,3 +491,21 @@ With one-hot constraint
 i   output     box
 0   200.0      {0: Interval(>=0.5), 1: Interval(>=0.5)}
 ```
+
+# Citate
+
+[View API documentation](https://alexandersch12.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
+
+**Veritas** is a versatile verification tool for tree ensembles. You can use
+Veritas to generate _adversarial examples_, check _robustness_, find _dominant
+attributes_ or simply ask _domain specific questions_ about your model.
+
+Veritas uses its own tree representation and does not assume a specific model format (like XGBoost's JSON dump).
+This makes it easy to use with many tree/ensemble learners. A translation function is included for XGBoost ensembles.
+
+For more information, refer to the paper:
+
+> Versatile Verification of Tree Ensembles.
+> Laurens Devos, Wannes Meert, and Jesse Davis.
+> ICML 2021
+> http://proceedings.mlr.press/v139/devos21a.html

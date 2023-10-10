@@ -155,11 +155,12 @@ template <typename T>
 class GBoxRef { // generic boxref
 public:
     using BoxT = GBox<T>;
+    using BufT = typename BoxT::BufT;
     using FlatBoxT = GFlatBox<T>;
     using const_iterator = typename BoxT::const_iterator;
 
 private:
-    static constexpr typename BoxT::BufT EMPTY_BOX;
+    static constexpr BufT EMPTY_BOX{};
 
     const_iterator begin_, end_;
 
