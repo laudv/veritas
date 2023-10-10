@@ -17,8 +17,7 @@
 #include <memory>
 #include <stdexcept>
 
-namespace veritas
-{
+namespace veritas {
 
 /*!
  * @brief  Type of AddTree
@@ -72,7 +71,7 @@ public:
      * 
      *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::RAW`
      *  @see `veritas::AddTreeType`
-    */
+     */
     inline GAddTree(int nleaf_values, AddTreeType type = AddTreeType::RAW)
         : trees_(), base_scores_(nleaf_values, {}), type_(type) {}
 
@@ -116,6 +115,12 @@ public:
 
     /** Turn this ensemble in a single-class ensemble. @see `GTree::make_singleclass`. */
     GAddTree<TreeT> make_singleclass(int c) const;
+
+    /** Turn this multiclass ensemble in a binary ensemble.
+     * @see `GTree::contrast_classes`. */
+    GAddTree<TreeT> contrast_classes(int pos_c, int neg_c) const;
+
+
 
     /** See GTree::swap_class */
     void swap_class(int c);
