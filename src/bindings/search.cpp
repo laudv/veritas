@@ -27,7 +27,9 @@ void init_search(py::module &m) {
         .value("MULTI_MIN_MAX_OUTPUT_DIFF", HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF)
         ; // HeuristicType
     
-    py::class_<Bounds>(m, "Bounds")
+    py::class_<Bounds>(m, "Bounds", R"pbdoc(
+            BoundsClass
+        )pbdoc")
         .def_readonly("atleast", &Bounds::atleast)
         .def_readonly("best", &Bounds::best)
         .def_readonly("top_of_open", &Bounds::top_of_open)

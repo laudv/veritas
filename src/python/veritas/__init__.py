@@ -8,29 +8,19 @@ import numpy as np
 from .veritas_core import *
 del veritas_core
 
-try: # fails when xgboost not installed
-    from .xgb import \
-        GbAddTree, \
-        addtree_from_xgb_model, \
-        addtrees_from_multiclass_xgb_model
-    del xgb
+try:
+    from .addtree_converter import \
+        AddTreeConverter
+    del addtree_converter
 except ModuleNotFoundError as e: pass
 
-try: # fails when xgboost not installed
-    from .lgb import \
-        addtree_from_lgb_model, \
-        addtrees_from_multiclass_lgb_model
-    del lgb
+try: # fails when not installed
+    from .converter_manager import \
+        add_addtree_converter, \
+        get_addtree
+    del converter_manager
 except ModuleNotFoundError as e: pass
 
-try: # fails when sklearn not installed
-    from .sklearn import \
-        RfAddTree, \
-        addtree_from_sklearn_tree, \
-        addtree_from_sklearn_ensemble, \
-        addtrees_from_multiclass_sklearn_ensemble
-    del sklearn
-except ModuleNotFoundError as e: pass
 
 try: # fails when groot not installed
     from .groot import \
