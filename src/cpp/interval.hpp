@@ -77,9 +77,9 @@ using Interval = GInterval<FloatT>;
 /** Split value used for boolean splits (assuming feature values in {0, 1}) */
 const FloatT BOOL_SPLIT_VALUE = 0.5;
 /** (-inf, 0.5) interval for FALSE */
-const Interval FALSE_DOMAIN{Limits<FloatT>::min, BOOL_SPLIT_VALUE};
+const Interval FALSE_INTERVAL{Limits<FloatT>::min, BOOL_SPLIT_VALUE};
 /** [0.5, inf) domain for TRUE */
-const Interval TRUE_DOMAIN{BOOL_SPLIT_VALUE, Limits<FloatT>::max};
+const Interval TRUE_INTERVAL{BOOL_SPLIT_VALUE, Limits<FloatT>::max};
 
 template <typename T>
 struct GLtSplit { // generic LtSplit

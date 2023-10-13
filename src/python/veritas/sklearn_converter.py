@@ -2,26 +2,27 @@
 #
 # This requires `scikit-learn` to be installed.
 #
-# Copyright 2022 DTAI Research Group - KU Leuven.
+# Copyright 2023 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
-# Author: Laurens Devos
+# Author: Laurens Devos, Alexander Schoeters
+
 import numpy as np
 
 from . import AddTree, AddTreeType, AddTreeConverter
+from . import InapplicableAddTreeConverter
 
-class Sk_AddTreeConverter(AddTreeConverter):
-    def get_addtree(self,model):
+class SklAddTreeConverter(AddTreeConverter):
+    def convert(self, model):
         return addtree_sklearn_ensemble(model)
 
-
 def addtree_sklearn_tree(at, tree, extract_value_fun):
-    try:
-        import sklearn.tree as sktree
-        from sklearn.ensemble import _forest
-    except ModuleNotFoundError as e: pass
-
-    if isinstance(tree, sktree.DecisionTreeClassifier) or isinstance(tree, sktree.DecisionTreeRegressor):
+    import sklearn.tree as sktree
+    if isinstance(tree, sktree.DecisionTreeClassifier) \
+            or isinstance(tree, sktree.DecisionTreeRegressor):
         tree = tree.tree_
+
+    if not isinstance(tree, sktree._tree.Tree):
+        raise InapplicableAddTreeConverter("not a sklearn Tree")
 
     t = at.add_tree()
     stack = [(0, t.root())]
@@ -44,29 +45,39 @@ def addtree_sklearn_tree(at, tree, extract_value_fun):
 
 
 def addtree_sklearn_ensemble(ensemble):
-    num_trees = len(ensemble.estimators_)
+    try:
+        from sklearn.ensemble import \
+                RandomForestClassifier, \
+                RandomForestRegressor
+    except ModuleNotFoundError:
+        raise InapplicableAddTreeConverter("not a sklearn model")
+
     num_leaf_values = 1
 
-    if "Regressor" in type(ensemble).__name__:
+    # TODO add sklearn boosted trees, extra trees, isolation forest, ...
+
+    if isinstance(ensemble, RandomForestRegressor):
         print("SKLEARN: regressor")
-        type_ = AddTreeType.RF_REGR
+        at_type = AddTreeType.RF_REGR
 
         def extract_value_fun(v, i):
             # print("skl leaf regr", v)
             return v[0]
-    elif "Classifier" in type(ensemble).__name__:
+
+    elif isinstance(ensemble, RandomForestClassifier):
         num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_  > 2 else 1 
-        type_ = AddTreeType.RF_MULTI if num_leaf_values > 2 else AddTreeType.RF_CLF
+        at_type = AddTreeType.RF_BINARY
+        if num_leaf_values > 2:
+            at_type = AddTreeType.RF_MULTI
         print(f"SKLEARN: classifier with {num_leaf_values} classes")
 
         def extract_value_fun(v, i):
             # print("skl leaf clf", v[0], sum(v[0]), v[0][i])
             return v[0][i]/sum(v[0])
     else:
-        raise RuntimeError("cannot determine extract_value_fun for:",
-                           type(ensemble).__name__)
+        raise InapplicableAddTreeConverter(f"not sklearn: {type(ensemble)}")
 
-    at = AddTree(num_leaf_values, type_)
+    at = AddTree(num_leaf_values, at_type)
     for tree in ensemble.estimators_:
         addtree_sklearn_tree(at, tree.tree_, extract_value_fun)
     return at

@@ -35,7 +35,7 @@ def generate_img():
         learning_rate=1.0,
         n_estimators=3)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
+    at = get_addtree(model)
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
 
@@ -62,7 +62,7 @@ def generate_img():
         learning_rate=0.5,
         n_estimators=10)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
+    at = get_addtree(model)
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     mae = mean_absolute_error(model.predict(X), at.eval(X))
@@ -88,7 +88,7 @@ def generate_img():
         learning_rate=0.4,
         n_estimators=50)
     model = regr.fit(X, y)
-    at = addtree_from_xgb_model(model, feat2id_map=lambda f: int(f[1:]))
+    at = get_addtree(model)
     yhat = model.predict(X)
     sqerr = sum((y - yhat)**2)
     mae = mean_absolute_error(model.predict(X), at.eval(X))
@@ -125,18 +125,20 @@ def generate_img_multiclass():
         learning_rate=0.5,
         n_estimators=20)
     model = clf.fit(X, yc)
-    ats = addtrees_from_multiclass_xgb_model(
-        model, 4, feat2id_map=lambda f: int(f[1:]))
+    at = get_addtree(model)
     yhat = model.predict(X)
+
+    yhatm = model.predict_proba(X)
+    yhatm_at = at.predict(X)
+    mae = mean_absolute_error(yhatm.ravel(), yhatm_at.ravel())
+    print(f"mult: mae model difference proba {mae}")
+
     yhatm = model.predict(X, output_margin=True)
-    yhatm_at = np.zeros_like(yhatm)
-    for k, at in enumerate(ats):
-        at.set_base_score(0, 0.5)
-        yhatm_at[:, k] = at.eval(X).ravel()
+    yhatm_at = at.eval(X)
     acc = np.mean(yhat == yc)
     print(f"mult: acc train {acc*100:.1f}%")
     mae = mean_absolute_error(yhatm.ravel(), yhatm_at.ravel())
-    print(f"mult: mae model difference {mae}")
+    print(f"mult: mae model difference raw {mae}")
 
     # print(model.predict(X[10:20]) - at.predict(X[10:20]))
 
@@ -157,10 +159,6 @@ def generate_img_multiclass():
     ax[4].set_title("actual")
     fig.suptitle("XGB")
 
-    at = ats[0].make_multiclass(0, 4)
-    for k in range(1, 4):
-        at.add_trees(ats[k], k)
-
     yhatm_at2 = at.eval(X)
     mae = mean_absolute_error(yhatm.ravel(), yhatm_at2.ravel())
     print(f"mult: multiclass mae model difference {mae}")
@@ -175,13 +173,14 @@ def generate_img_multiclass():
     clf.fit(X, yc)
     yhat = clf.predict(X)
     acc = np.mean(yhat == yc)
-    at = addtree_from_sklearn_ensemble(clf)
+    at = get_addtree(clf)
+    print("at", at)
     print("num_leaf_values", at.num_leaf_values())
 
     print(f"mult: acc train RF {acc*100:.1f}")
 
     yhatm = clf.predict_proba(X)
-    yhatm_at = at.eval(X)
+    yhatm_at = at.predict(X)
     mae = mean_absolute_error(yhatm.ravel(), yhatm_at.ravel())
     print(f"mult: mae train RF {mae:.2f}")
 
@@ -463,8 +462,8 @@ def generate_allstate():
 
 
 if __name__ == "__main__":
-    generate_img()
-    # generate_img_multiclass()
+    #generate_img()
+    generate_img_multiclass()
     # generate_allstate()
     # generate_california_housing()
     # generate_covertype()

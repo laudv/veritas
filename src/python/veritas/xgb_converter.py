@@ -2,37 +2,37 @@
 #
 # This requires `xgboost` to be installed.
 #
-# Copyright 2022 DTAI Research Group - KU Leuven.
+# Copyright 2023 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
-# Author: Laurens Devos
+# Author: Laurens Devos, Alexander Schoeters
 
 import json
-import numpy as np
-
-# from xgboost.sklearn import XGBModel
-# from xgboost.core import Booster as xgbbooster
 
 from . import AddTree, AddTreeType, AddTreeConverter
+from . import InapplicableAddTreeConverter
 
-class XGB_AddTreeConverter(AddTreeConverter):
-    def get_addtree(self,model):
+class XGBAddTreeConverter(AddTreeConverter):
+    def convert(self,model):
         try:
-            model = model.get_booster()
-        except:
-            pass
+            from xgboost import XGBModel
+            from xgboost.core import Booster as XGBBooster
+        except ModuleNotFoundError:
+            raise InapplicableAddTreeConverter("xgb not installed")
         
-        # if isinstance(model, XGBModel):
-        #     model = model.get_booster()
-        # assert isinstance(
-        #     model, xgbbooster), f"not xgb.Booster but {type(model)}"
+        if isinstance(model, XGBModel):
+            model = model.get_booster()
+
+        if not isinstance(model, XGBBooster):
+            raise InapplicableAddTreeConverter("not an xgb model")
 
         param_dump = json.loads(model.save_config())['learner']
         base_score = float(param_dump['learner_model_param']["base_score"])
-        model_type = param_dump["objective"]["name"]
-        if "multi" in model_type:
+        objective = param_dump["objective"]["name"]
+
+        if "multi" in objective:
             num_class = int(param_dump['learner_model_param']["num_class"])
-            return multi_addtree_xgb(model,num_class,base_score)
-        elif "logistic" in model_type:
+            return multi_addtree_xgb(model, num_class, base_score)
+        elif "logistic" in objective:
             print(f"base_score according to XGB: {base_score}")
             print("base_score set to 0.0 if base_score was 0.5")
             base_score = 0.0 if base_score == 0.5 else base_score
@@ -40,35 +40,38 @@ class XGB_AddTreeConverter(AddTreeConverter):
             # Base_score is set to 0.5 but produces an offset of 0.5
             # Base_margin is porbably used but unable to retrieve from xgboost
             # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin
-            return addtree_xgb(model, base_score, type_=AddTreeType.GB_CLF)
-        return addtree_xgb(model, base_score, type_=AddTreeType.GB_REGR)
+            return addtree_xgb(model, base_score, at_type=AddTreeType.GB_BINARY)
+        return addtree_xgb(model, base_score, at_type=AddTreeType.GB_REGR)
 
+    def test_conversion(self, model):
+        # TODO
+        raise NotImplementedError()
 
 def multi_addtree_xgb(model, num_class, base_score):
-    ats = [addtree_xgb(model, base_score, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+    ats = [addtree_xgb(model, base_score,
+                       at_type=AddTreeType.GB_MULTI,
+                       multiclass=(clazz, num_class))
+           for clazz in range(num_class)]
     at = ats[0].make_multiclass(0, num_class)
     for k in range(1, num_class):
         at.add_trees(ats[k], k)
     return at
 
-
-def addtree_xgb(model, base_score, type_=AddTreeType.RAW, multiclass=(0, 1)):
+def addtree_xgb(model, base_score, at_type, multiclass=(0, 1)):
     dump = model.get_dump("", dump_format="json")
 
-    at = AddTree(1, type_)
+    at = AddTree(1, at_type)
     offset, num_classes = multiclass
     at.set_base_score(0, base_score)
 
     for i in range(offset, len(dump), num_classes):
-        _parse_tree_xgb(at, dump[i])
+        parse_tree_xgb(at, dump[i])
 
     return at
 
-
 def xgb_feat2id_map(f): return int(f[1:])
 
-
-def _parse_tree_xgb(at, tree_dump):
+def parse_tree_xgb(at, tree_dump):
     tree = at.add_tree()
     stack = [(tree.root(), json.loads(tree_dump))]
 

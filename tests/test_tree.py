@@ -1,6 +1,11 @@
-import unittest, pickle, math
+import os
+import unittest
+import pickle
 import numpy as np
+
 from veritas import *
+
+BPATH = os.path.dirname(__file__)
 
 class TestTree(unittest.TestCase):
 
@@ -56,9 +61,9 @@ class TestTree(unittest.TestCase):
         self.assertEqual(t.get_split(t.right(t.root())), LtSplit(2, BOOL_SPLIT_VALUE))
 
         self.assertEqual(at.compute_box([5]), {0: Interval.from_lo(2.0),
-                                               2: FALSE_DOMAIN})
+                                               2: FALSE_INTERVAL})
         self.assertEqual(at.compute_box([6]), {0: Interval.from_lo(2.0),
-                                               2: TRUE_DOMAIN})
+                                               2: TRUE_INTERVAL})
 
         T, F = 1.0, 0.0
 
@@ -161,6 +166,55 @@ class TestTree(unittest.TestCase):
 
         att = pickle.loads(pickle.dumps(at))
         self.assertEqual(at.num_nodes(), att.num_nodes())
+
+    def test_predict_xgb(self):
+        at = AddTree.read(os.path.join(BPATH, "models/xgb-img-multiclass.json"))
+        X = np.array([[x, y] for x in range(100) for y in range(100)], dtype=FloatT)
+
+        self.assertTrue(at.get_type(), AddTreeType.GB_MULTI)
+
+        ypred = at.eval(X)
+
+        for c in range(at.num_leaf_values()):
+            at0 = at.make_singleclass(c)
+            self.assertTrue(at0.get_type() == AddTreeType.GB_BINARY)
+
+            ypred0 = 1.0 / (1.0 + np.exp(-ypred[:, c]))
+            ypred1 = at0.predict(X).ravel()
+            ypred2 = 1.0 / (1.0 + np.exp(-at0.eval(X).ravel()))
+
+            print(ypred0)
+            print(ypred1)
+            print(ypred2)
+
+            self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred1)), 0.0)
+            self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred2)), 0.0)
+
+    def test_predict_rf(self):
+        at = AddTree.read(os.path.join(BPATH, "models/rf-img-multiclass.json"))
+        X = np.array([[x, y] for x in range(100) for y in range(100)], dtype=FloatT)
+
+        self.assertTrue(at.get_type(), AddTreeType.RF_MULTI)
+
+        ypred = at.eval(X)
+
+        for c in range(at.num_leaf_values()):
+            at0 = at.make_singleclass(c)
+            self.assertTrue(at0.get_type() == AddTreeType.RF_BINARY)
+
+            ypred0 = ypred[:, c] / len(at)
+            ypred1 = at0.predict(X).ravel()
+            ypred2 = at0.eval(X).ravel() / len(at0)
+
+            print(ypred0)
+            print(ypred1)
+            print(ypred2)
+
+            self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred1)), 0.0)
+            self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred2)), 0.0)
+
+
+
 
 if __name__ == "__main__":
     unittest.main()

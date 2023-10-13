@@ -490,6 +490,16 @@ public:
         }
     }
 
+    bool is_all_zeros(int c) const { return is_all_zeros(c, root()); }
+    bool is_all_zeros(int c, NodeId n) const {
+        if (is_internal(n)) {
+            return is_all_zeros(c, left(n))
+                && is_all_zeros(c, right(n));
+        } else {
+            return leaf_value(n, c) == 0.0;
+        }
+    }
+
     SelfT contrast_classes(int pos_c, int neg_c) const {
         if (num_leaf_values() == 0)
             throw std::runtime_error("already singleclass");

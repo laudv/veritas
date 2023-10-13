@@ -14,6 +14,7 @@
 #include "box.hpp"
 #include "tree.hpp"
 
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 
@@ -25,21 +26,30 @@ namespace veritas {
  * will have the `AddTreeType::RAW` Currently AddTreeType is only used in the
  * pybind predict() function
  */
-enum class AddTreeType {
-    RAW = 0,                        // 0b000000
-    REGR = 1 << 0,                  // 0b000001
-    CLF = 1 << 1,                   // 0b000010
-    MULTI = 1 << 2,                 // 0b000100
-    RF = 1 << 3,                    // 0b001000
-    GB = 1 << 4,                    // 0b010000
+enum class AddTreeType : uint8_t {
+    RAW       = 0b00000000,
+    REGR      = 0b00000001,
+    BINARY    = 0b00000010,
+    MULTI     = 0b00000100,
+    RF        = 0b00001000,
+    GB        = 0b00010000,
 
-    RF_REGR = RF | REGR,    ///< Random forest regressor
-    RF_CLF = RF | CLF,      ///< Random forest classifier
-    RF_MULTI = RF | MULTI,  ///< Random forest multiclass classifier
-    GB_REGR = GB | REGR,    ///< Gradient boosted regressor
-    GB_CLF = GB | CLF,      ///< Gradient boosted classifier
-    GB_MULTI = GB | MULTI   ///< Gradient boosted multiclass classifier
+    RF_REGR   = RF | REGR,   ///< Random forest regressor
+    RF_BINARY = RF | BINARY, ///< Random forest classifier
+    RF_MULTI  = RF | MULTI,  ///< Random forest multiclass classifier
+    GB_REGR   = GB | REGR,   ///< Gradient boosted regressor
+    GB_BINARY = GB | BINARY, ///< Gradient boosted classifier
+    GB_MULTI  = GB | MULTI   ///< Gradient boosted multiclass classifier
 };
+
+const char *
+addtree_type_to_str(AddTreeType t);
+
+AddTreeType
+addtree_type_from_str(const std::string& t);
+
+std::ostream&
+operator<<(std::ostream& strm, AddTreeType t);
 
 template <typename TreeT>
 /**
@@ -61,19 +71,19 @@ public:
 private:
     TreeVecT trees_;
     std::vector<LeafValueType> base_scores_; /**< Constant value added to the output of the ensemble. */
-    AddTreeType type_;
+    AddTreeType at_type_;
 
 public:
     /**
      * @brief Create a new AddTree instance
      * @param nleaf_values The number of values in a single leaf
-     * @param type_ Type of AddTree 
+     * @param at_type Type of AddTree
      * 
      *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::RAW`
      *  @see `veritas::AddTreeType`
      */
-    inline GAddTree(int nleaf_values, AddTreeType type = AddTreeType::RAW)
-        : trees_(), base_scores_(nleaf_values, {}), type_(type) {}
+    inline GAddTree(int nleaf_values, AddTreeType at_type = AddTreeType::RAW)
+        : trees_(), base_scores_(nleaf_values, {}), at_type_(at_type) {}
 
     ///** Copy trees (begin, begin+num) from given `at`. */
     // inline GAddTree(const GAddTree& at, size_t begin, size_t num)
@@ -156,7 +166,7 @@ public:
     size_t num_nodes() const;
     size_t num_leafs() const;
 
-    inline AddTreeType get_type() const { return type_; }
+    inline AddTreeType get_type() const { return at_type_; }
 
     /** Map feature -> [list of split values, sorted, unique]. */
     SplitMapT get_splits() const;
@@ -189,6 +199,9 @@ public:
         for (size_t m = 0; m < size(); ++m)
             trees_[m].eval(row, result);
     }
+
+    std::enable_if_t<std::is_same_v<LeafValueType, FloatT>>
+    predict(const data<SplitValueT>& row, data<LeafValueType>& result) const;
 
     /** Compute the intersection of the boxes of all leaf nodes. See
      * TreeT::compute_box */
