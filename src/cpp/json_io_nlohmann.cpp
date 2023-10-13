@@ -6,6 +6,7 @@
  * Author: Laurens Devos
 */
 
+#include "addtree.hpp"
 #include "basics.hpp"
 #include "interval.hpp"
 #include "json_io.hpp"
@@ -29,27 +30,27 @@ struct TreeTypeName {};
 
 template <>
 struct TreeTypeName<FloatT> {
-    const char* name() const { return "FloatT"; }
+    const char *name() const { return "FloatT"; }
 };
 
 template <>
 struct TreeTypeName<FpT> {
-    const char* name() const { return "FpT"; }
+    const char *name() const { return "FpT"; }
 };
 
 template <>
 struct TreeTypeName<LtSplit> {
-    const char* name() const { return "LtSplit"; }
+    const char *name() const { return "LtSplit"; }
 };
 
 template <>
 struct TreeTypeName<LtSplitFp> {
-    const char* name() const { return "LtSplitFp"; }
+    const char *name() const { return "LtSplitFp"; }
 };
 
 template <>
 struct TreeTypeName<std::string> {
-    const char* name() const { return "std::string"; }
+    const char *name() const { return "std::string"; }
 };
 
 template <typename SplitT>
@@ -174,7 +175,7 @@ template <typename TreeT>
 void addtree_to_json(std::ostream& s, const GAddTree<TreeT>& at) {
     json at_json;
 
-    at_json["type"] = at.get_type();
+    at_json["at_type"] = addtree_type_to_str(at.get_type());
     at_json["base_scores"] = json::array();
     for (int i = 0; i < at.num_leaf_values(); ++i)
         at_json["base_scores"].push_back(at.base_score(i));
@@ -197,8 +198,7 @@ AddTreeT addtree_from_json(std::istream& s) {
 
     json at_json = json::parse(s);
     int num_leaf_values = static_cast<int>(at_json["base_scores"].size());
-
-    AddTreeType type = at_json["type"];
+    AddTreeType type = addtree_type_from_str(at_json["at_type"]);
 
     AddTreeT at(num_leaf_values, type);
 

@@ -1,62 +1,69 @@
-# \file lgb.py
+# \file lgbm.py
 #
 # This requires `lightgbm` to be installed.
 #
-# Copyright 2022 DTAI Research Group - KU Leuven.
+# Copyright 2023 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
-# Author: Laurens Devos
+# Author: Laurens Devos, Alexander Schoeters
 
 from . import AddTree, AddTreeType, AddTreeConverter
+from . import InapplicableAddTreeConverter
 import numpy as np
 
-
-class LGB_AddTreeConverter(AddTreeConverter):
-    def get_addtree(self,model):
-
+class LGBMAddTreeConverter(AddTreeConverter):
+    def convert(self,model):
         try:
             from lightgbm import LGBMModel
-            from lightgbm import Booster as lgbmbooster
-        except ModuleNotFoundError as e: pass
-            
+            from lightgbm import Booster as LGBMBooster
+        except ModuleNotFoundError:
+            raise InapplicableAddTreeConverter("lgbm not installed")
 
         if isinstance(model, LGBMModel):
             model = model.booster_
-        assert isinstance(
-            model, lgbmbooster), f"not xgb.Booster but {type(model)}"
+
+        if not isinstance(model, LGBMBooster):
+            raise InapplicableAddTreeConverter("not a lgbm model")
 
         dump = model.dump_model()
         num_class = dump["num_class"]
-        type_ = dump["objective"]
+        objective = dump["objective"]
         if num_class > 2:
-            return multi_addtree_lgbm(model,num_class)
-        if "binary" in type_:
-            return addtree_lgbm(model, type_=AddTreeType.GB_CLF)
+            return multi_addtree_lgbm(model, num_class)
+        if "binary" in objective:
+            return addtree_lgbm(model, at_type=AddTreeType.GB_BINARY)
         else:
-            return addtree_lgbm(model, type_=AddTreeType.GB_REGR)
+            return addtree_lgbm(model, at_type=AddTreeType.GB_REGR)
 
+    def test_conversion(self, model):
+        # TODO
+        raise NotImplementedError()
 
-def multi_addtree_lgbm(model,num_class):
-    ats = [addtree_lgbm(model, type_=AddTreeType.GB_MULTI, multiclass=(clazz, num_class)) for clazz in range(num_class)]
+def multi_addtree_lgbm(model, num_class):
+    ats = [addtree_lgbm(model,
+                        at_type=AddTreeType.GB_MULTI,
+                        multiclass=(clazz, num_class))
+           for clazz in range(num_class)]
+
     at = ats[0].make_multiclass(0, num_class)
+
     for k in range(1, num_class):
         at.add_trees(ats[k], k)
+
     return at
 
-
-def addtree_lgbm(model, type_=AddTreeType.RAW, multiclass=(0, 1)):
+def addtree_lgbm(model, at_type, multiclass=(0, 1)):
     dump = model.dump_model()
-    at = AddTree(1, type_)
+    at = AddTree(1, at_type)
 
     offset, num_classes = multiclass
 
     trees = dump["tree_info"]
     for i in range(offset, len(trees), num_classes):
-        _parse_tree_lgbm(at, trees[i]["tree_structure"])
+        parse_tree_lgbm(at, trees[i]["tree_structure"])
 
     return at
 
-
-def _parse_tree_lgbm(at, tree_json):
+def parse_tree_lgbm(at, tree_json):
     tree = at.add_tree()
     stack = [(tree.root(), tree_json)]
 

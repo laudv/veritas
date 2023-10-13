@@ -4,16 +4,14 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit, time, os, contextlib
+import timeit
+import time
+import os
+import contextlib
 import numpy as np
 
-from . import AddTree, Search, get_closest_example, Interval
+from . import AddTree, get_closest_example, Interval
 from . import Config, HeuristicType
-
-try:
-    from .kantchelian import KantchelianOutputOpt
-except:
-    pass
 
 ## \ingroup python
 # \brief Base class binary robustness search
@@ -247,6 +245,9 @@ class MilpRobustnessSearch(RobustnessSearch):
         self.silent = silent
 
     def get_milp(self, delta, rem_time):
+        # will fail if Gurobi not installed because the name is not defined
+        from . import KantchelianOutputOpt
+
         milp = KantchelianOutputOpt(self.at, silent=self.silent, max_time=rem_time)
         box = [Interval(x-delta, x+delta) for x in self.example]
         milp.constrain_to_box(box)

@@ -7,9 +7,100 @@
 */
 
 #include "addtree.hpp"
+#include <cmath>
+#include <cstdint>
 #include <stdexcept>
 
 namespace veritas {
+
+static uint8_t _to_uint8(AddTreeType a) {
+    return static_cast<uint8_t>(a);
+}
+
+static bool _is_a(AddTreeType a, AddTreeType b) {
+    return (_to_uint8(a) & _to_uint8(b)) == _to_uint8(b);
+}
+
+static AddTreeType operator| (AddTreeType a, AddTreeType b) {
+    return static_cast<AddTreeType>(_to_uint8(a) | _to_uint8(b));
+}
+
+static AddTreeType operator& (AddTreeType a, AddTreeType b) {
+    return static_cast<AddTreeType>(_to_uint8(a) & _to_uint8(b));
+}
+
+static AddTreeType operator~ (AddTreeType a) {
+    return static_cast<AddTreeType>(~_to_uint8(a));
+}
+
+static AddTreeType _make_binary(AddTreeType a) {
+    if (a == AddTreeType::RAW)
+        return AddTreeType::RAW;
+    return (a & ~AddTreeType::MULTI) | AddTreeType::BINARY;
+}
+
+static AddTreeType _make_multi(AddTreeType a) {
+    if (a == AddTreeType::RAW)
+        return AddTreeType::RAW;
+    return (a & ~AddTreeType::BINARY) | AddTreeType::MULTI;
+}
+
+
+const char *
+addtree_type_to_str(AddTreeType t) {
+
+#define VER_ADDTREE_TYPE_CASE(name) case AddTreeType::name: \
+    return #name; \
+    break
+
+    switch (t) {
+    VER_ADDTREE_TYPE_CASE(RAW);
+    VER_ADDTREE_TYPE_CASE(REGR);
+    VER_ADDTREE_TYPE_CASE(BINARY);
+    VER_ADDTREE_TYPE_CASE(MULTI);
+    VER_ADDTREE_TYPE_CASE(RF);
+    VER_ADDTREE_TYPE_CASE(GB);
+
+    VER_ADDTREE_TYPE_CASE(RF_REGR);
+    VER_ADDTREE_TYPE_CASE(RF_BINARY);
+    VER_ADDTREE_TYPE_CASE(RF_MULTI);
+    VER_ADDTREE_TYPE_CASE(GB_REGR);
+    VER_ADDTREE_TYPE_CASE(GB_BINARY);
+    VER_ADDTREE_TYPE_CASE(GB_MULTI);
+    default:
+        throw std::runtime_error("unknown AddTreeType");
+    }
+
+#undef VER_ADDTREE_TYPE_CASE
+}
+
+AddTreeType
+addtree_type_from_str(const std::string& s) {
+#define VER_ADDTREE_TYPE_CASE(name) \
+    if (s == #name) return veritas::AddTreeType::name;
+
+    VER_ADDTREE_TYPE_CASE(RAW);
+    VER_ADDTREE_TYPE_CASE(REGR);
+    VER_ADDTREE_TYPE_CASE(BINARY);
+    VER_ADDTREE_TYPE_CASE(MULTI);
+    VER_ADDTREE_TYPE_CASE(RF);
+    VER_ADDTREE_TYPE_CASE(GB);
+
+    VER_ADDTREE_TYPE_CASE(RF_REGR);
+    VER_ADDTREE_TYPE_CASE(RF_BINARY);
+    VER_ADDTREE_TYPE_CASE(RF_MULTI);
+    VER_ADDTREE_TYPE_CASE(GB_REGR);
+    VER_ADDTREE_TYPE_CASE(GB_BINARY);
+    VER_ADDTREE_TYPE_CASE(GB_MULTI);
+    throw std::runtime_error("unknown AddTreeType");
+
+#undef VER_ADDTREE_TYPE_CASE
+}
+
+std::ostream&
+operator<<(std::ostream& strm, AddTreeType t) {
+    return strm << addtree_type_to_str(t);
+}
 
 template <typename TreeT>
 void
@@ -37,10 +128,14 @@ GAddTree<TreeT>
 GAddTree<TreeT>::make_multiclass(int c, int num_leaf_values) const {
     if (this->num_leaf_values() != 1)
         throw std::runtime_error("AddTree::make_multiclass on multiclass");
-    GAddTree<TreeT> new_at(num_leaf_values, type_);
+
+    GAddTree<TreeT> new_at(num_leaf_values, _make_multi(at_type_));
+
     for (const TreeT& t : *this)
         new_at.add_tree(t.make_multiclass(c, num_leaf_values));
+
     new_at.base_score(c) = base_score(0);
+
     return new_at;
 }
 
@@ -51,10 +146,16 @@ GAddTree<TreeT>::make_singleclass(int c) const {
         throw std::runtime_error("AddTree::make_singleclass: already singleclass");
     if (this->num_leaf_values() <= c)
         throw std::runtime_error("AddTree::make_singleclass: num_leaf_values <= c");
-    GAddTree<TreeT> new_at(1);
-    for (const TreeT& t : *this)
-        new_at.add_tree(t.make_singleclass(c));
+
+    GAddTree<TreeT> new_at(1, _make_binary(at_type_));
+
+    for (const TreeT& t : *this) {
+        if (!t.is_all_zeros(c))
+            new_at.add_tree(t.make_singleclass(c));
+    }
+
     new_at.base_score(0) = base_score(c);
+
     return new_at;
 }
 
@@ -67,10 +168,17 @@ GAddTree<TreeT>::contrast_classes(int pos_c, int neg_c) const {
         throw std::runtime_error("AddTree::make_singleclass: num_leaf_values <= pos_c");
     if (this->num_leaf_values() <= neg_c)
         throw std::runtime_error("AddTree::make_singleclass: num_leaf_values <= neg_c");
-    GAddTree<TreeT> new_at(1);
-    for (const TreeT& t : *this)
-        new_at.add_tree(t.contrast_classes(pos_c, neg_c));
+
+    GAddTree<TreeT> new_at(1, _make_binary(at_type_));
+
+    for (const TreeT& t : *this) {
+        TreeT new_tree = t.contrast_classes(pos_c, neg_c);
+        if (!new_tree.is_all_zeros(0))
+            new_at.add_tree(std::move(new_tree));
+    }
+
     new_at.base_score(0) = base_score(pos_c) - base_score(neg_c);
+
     return new_at;
 }
 
@@ -204,6 +312,23 @@ template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::negate_leaf_values() const {
     return GAddTree<TreeT>(num_leaf_values()).concat_negated(*this);
+}
+
+template <typename TreeT>
+std::enable_if_t<std::is_same_v<typename GAddTree<TreeT>::LeafValueType, FloatT>>
+GAddTree<TreeT>::predict(const data<SplitValueT>& row, data<LeafValueType>& result) const {
+    const int nlv = num_leaf_values();
+    eval(row, result);
+
+    if (_is_a(at_type_, AddTreeType::RF)) { // mean, same for BINARY and MULTI
+        for(int j = 0; j < nlv; ++j) result[j] = result[j] / size();
+    } else if (_is_a(at_type_, AddTreeType::GB_MULTI)) { // softmax
+        FloatT e = 0;
+        for(int j = 0; j < nlv; ++j) e += std::exp(result[j]);
+        for(int j = 0; j < nlv; ++j) result[j] = std::exp(result[j]) / e;
+    } else if (_is_a(at_type_, AddTreeType::GB_BINARY)) { // sigmoid
+        result[0] = 1.0 / (1.0 + std::exp(-result[0]));
+    }
 }
 
 template <typename TreeT>

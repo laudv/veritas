@@ -36,8 +36,8 @@ void init_interval(py::module& m) {
         ; // Interval
 
     m.attr("BOOL_SPLIT_VALUE") = BOOL_SPLIT_VALUE;
-    m.attr("TRUE_DOMAIN") = TRUE_DOMAIN;
-    m.attr("FALSE_DOMAIN") = FALSE_DOMAIN;
+    m.attr("TRUE_INTERVAL") = TRUE_INTERVAL;
+    m.attr("FALSE_INTERVAL") = FALSE_INTERVAL;
 
     py::class_<LtSplit>(m, "LtSplit", R"pbdoc(
         LtSplit class
