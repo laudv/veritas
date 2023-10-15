@@ -30,7 +30,7 @@ class AddTreeConverter:
         is not of the right type.
         """
         raise NotImplementedError()
-    
+
     def test_conversion(self, model):
         """ Check the correctness of generated `AddTree`.
 
@@ -47,7 +47,7 @@ class AddTreeConverterRegistry:
     def add_converter(self, converter):
         assert isinstance(converter, AddTreeConverter)
 
-        # Append to the from of the list so this new converter takes precedence
+        # Prepend to the front so this new converter takes precedence
         self._converters.insert(0, converter)
 
     def get_addtree(self, model):

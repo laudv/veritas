@@ -66,14 +66,18 @@ def addtree_sklearn_ensemble(ensemble):
 
     elif isinstance(ensemble, RandomForestClassifier):
         num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_  > 2 else 1 
-        at_type = AddTreeType.RF_BINARY
         if num_leaf_values > 2:
             at_type = AddTreeType.RF_MULTI
+            def extract_value_fun(v, i):
+                return v[0][i]/sum(v[0])
+        else:
+            at_type = AddTreeType.RF_BINARY
+            def extract_value_fun(v, i):
+                assert i == 0
+                return v[0][1]/sum(v[0])
+
         print(f"SKLEARN: classifier with {num_leaf_values} classes")
 
-        def extract_value_fun(v, i):
-            # print("skl leaf clf", v[0], sum(v[0]), v[0][i])
-            return v[0][i]/sum(v[0])
     else:
         raise InapplicableAddTreeConverter(f"not sklearn: {type(ensemble)}")
 
