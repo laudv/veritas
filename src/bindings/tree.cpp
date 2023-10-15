@@ -68,6 +68,8 @@ void init_tree(py::module &m) {
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) {
                 data rrow = rdata.row(i);
+                for (int i = 0; i < nlv; ++i)
+                    rrow[i] = 0.0;
                 r.get().eval(nid, d.row(i), rrow);
             }
 

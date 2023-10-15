@@ -31,5 +31,8 @@ if __name__ == "__main__":
         long_description=META["doc"],
         packages=find_packages('src/python'),
         package_dir={ "": "src/python" },
+        install_requires=[
+            "numpy",
+        ],
         zip_safe=False,
     )
