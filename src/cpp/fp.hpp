@@ -152,20 +152,20 @@ public:
 
     inline TreeFp transform(const Tree& t) const {
         TreeFp u(t.num_leaf_values());
-        transform(t, u, t.root());
+        transform(t, t.root(), u, u.root());
         return u;
     }
 
-    inline void transform(const Tree& t, TreeFp& tfp, NodeId id) const {
+    inline void transform(const Tree& t, NodeId id, TreeFp& tfp, NodeId idfp) const {
         if (t.is_leaf(id)) {
             for (int i = 0; i < t.num_leaf_values(); ++i)
-                tfp.leaf_value(id, i) = t.leaf_value(id, i);
+                tfp.leaf_value(idfp, i) = t.leaf_value(id, i);
         } else {
             LtSplit s = t.get_split(id);
             LtSplitFp sfp{s.feat_id, transform(s)};
-            tfp.split(id, sfp);
-            transform(t, tfp, t.left(id));
-            transform(t, tfp, t.right(id));
+            tfp.split(idfp, sfp);
+            transform(t, t.left(id), tfp, tfp.left(idfp));
+            transform(t, t.right(id), tfp, tfp.right(idfp));
         }
     }
 

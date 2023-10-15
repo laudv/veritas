@@ -133,11 +133,47 @@ int test_fp_with_tree1() {
     return result;
 }
 
+int test_invalid_leaf_access() {
+    AddTree at(1);
+    Tree& t = at.add_tree();
+
+    t.split(t[""], {0, 1.0});
+    for (auto p : {"l", "r"})
+        t.split(t[p], {1, 1.0});
+    for (auto p : {"ll", "lr", "rl"})
+        t.split(t[p], {2, 1.0});
+    for (auto p : {"lll", "lrr", "rlr", "rr"})
+        t.leaf_value(t[p], 0) = -1000.0;
+
+    std::cout << t << std::endl;
+    
+    FpMap m;
+    m.add(at);
+    m.finalize();
+    AddTreeFp atfp = m.transform(at);
+    const TreeFp& tfp = atfp[0];
+
+    // The node ids of at and atfp are different!!
+
+    std::cout << atfp[0] << std::endl;
+
+    bool result = true
+        && t["l"] == tfp["l"]
+        && t["r"] == tfp["r"]
+        && t["rl"] != tfp["rl"]
+        && t["rr"] != tfp["rr"]
+        ;
+
+    std::cout << "test_invalid_leaf_access " << result << std::endl;
+    return result;
+}
+
 int main_fp() {
     int result = 1
         && test_fp()
         && test_fp_interval()
         && test_fp_with_tree1()
+        && test_invalid_leaf_access()
         ;
     return !result;
 }
