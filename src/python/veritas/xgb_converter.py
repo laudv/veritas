@@ -7,9 +7,11 @@
 # Author: Laurens Devos, Alexander Schoeters
 
 import json
+import numpy as np
 
 from . import AddTree, AddTreeType, AddTreeConverter
 from . import InapplicableAddTreeConverter
+from . import FloatT
 
 class XGBAddTreeConverter(AddTreeConverter):
     def convert(self,model):
@@ -26,43 +28,76 @@ class XGBAddTreeConverter(AddTreeConverter):
             raise InapplicableAddTreeConverter("not an xgb model")
 
         param_dump = json.loads(model.save_config())['learner']
-        base_score = float(param_dump['learner_model_param']["base_score"])
         objective = param_dump["objective"]["name"]
+
+        at = None
 
         if "multi" in objective:
             num_class = int(param_dump['learner_model_param']["num_class"])
-            return multi_addtree_xgb(model, num_class, base_score)
+            at = multi_addtree_xgb(model, num_class)
         elif "logistic" in objective:
-            print(f"base_score according to XGB: {base_score}")
-            print("base_score set to 0.0 if base_score was 0.5")
-            base_score = 0.0 if base_score == 0.5 else base_score
-            # -------------- This is still not fixed it seems --------------
-            # Base_score is set to 0.5 but produces an offset of 0.5
-            # Base_margin is porbably used but unable to retrieve from xgboost
-            # https://xgboost.readthedocs.io/en/stable/prediction.html#base-margin
-            return addtree_xgb(model, base_score, at_type=AddTreeType.GB_BINARY)
-        return addtree_xgb(model, base_score, at_type=AddTreeType.GB_REGR)
+            at = addtree_xgb(model, at_type=AddTreeType.GB_BINARY)
+        else:
+            at = addtree_xgb(model, at_type=AddTreeType.GB_REGR)
 
-    def test_conversion(self, model):
-        # TODO
-        raise NotImplementedError()
+        base_score_dump = float(param_dump['learner_model_param']["base_score"])
+        base_score = try_determine_base_score(model, at)
 
-def multi_addtree_xgb(model, num_class, base_score):
-    ats = [addtree_xgb(model, base_score,
-                       at_type=AddTreeType.GB_MULTI,
-                       multiclass=(clazz, num_class))
-           for clazz in range(num_class)]
-    at = ats[0].make_multiclass(0, num_class)
+        if np.max(np.abs(base_score_dump - base_score)) > 1e-5:
+            print(f"Warning! XGBoost's repored base_score of {base_score_dump:.6f}",
+                  f"does not match manually determined score of {base_score:.6f}")
+        else:
+            print("XGB converter: manually determined base_score",
+                  base_score, f" (dump value {base_score_dump:.6f})")
+
+        if at.num_leaf_values() > 1:
+            for k in range(at.num_leaf_values()):
+                at.set_base_score(k, base_score[k])
+        else:
+            at.set_base_score(0, base_score)
+
+        return at
+
+def try_determine_base_score(booster, at, seed=472934901, n=1000):
+    import xgboost as xgb
+    num_features = booster.num_features()
+
+    rng = np.random.default_rng(seed)
+    x = rng.random((n, num_features), dtype=FloatT)
+
+    for k, vs in at.get_splits().items():
+        vmin, vmax = min(vs), max(vs)
+        vdiff = vmax-vmin
+        vmin -= 0.05 * vdiff
+        vmax += 0.05 * vdiff
+        x[:, k] = x[:, k] * (vmax-vmin) + vmin
+
+    pred0 = booster.predict(xgb.DMatrix(x), output_margin=True)
+    pred1 = at.eval(x)
+
+    if pred1.shape[1] == 1:
+        pred1 = pred1.reshape(pred1.shape[0])
+
+    pred0 = pred0.astype(FloatT).mean(axis=0)
+    pred1 = pred1.astype(FloatT).mean(axis=0)
+
+    return pred0 - pred1
+
+def multi_addtree_xgb(model, num_class):
+    at0 = addtree_xgb(model, at_type=AddTreeType.GB_MULTI,
+                      multiclass=(0, num_class))
+    at = at0.make_multiclass(0, num_class)
     for k in range(1, num_class):
-        at.add_trees(ats[k], k)
+        atk = addtree_xgb(model, at_type=AddTreeType.GB_MULTI,
+                          multiclass=(k, num_class))
+        at.add_trees(atk, k)
     return at
 
-def addtree_xgb(model, base_score, at_type, multiclass=(0, 1)):
+def addtree_xgb(model, at_type, multiclass=(0, 1)):
     dump = model.get_dump("", dump_format="json")
 
     at = AddTree(1, at_type)
     offset, num_classes = multiclass
-    at.set_base_score(0, base_score)
 
     for i in range(offset, len(dump), num_classes):
         parse_tree_xgb(at, dump[i])
