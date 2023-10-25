@@ -1,4 +1,5 @@
 #include "bindings.h"
+#include <limits>
 #include <pybind11/pybind11.h>
 #include <pybind11/numpy.h>
 
@@ -45,7 +46,7 @@ Box::BufT tobox(py::object pybox) {
     return buf;
 }
 
-data<FloatT> get_data(py::handle h) {
+data<FloatT> get_data(py::handle h, size_t min_num_cols) {
     auto arr = py::array::ensure(h);
     if (!arr) throw std::runtime_error("invalid eval array");
     if (!arr.dtype().is(pybind11::dtype::of<FloatT>()))
@@ -65,5 +66,9 @@ data<FloatT> get_data(py::handle h) {
         d.stride_col = buf.strides[1] / sizeof(FloatT);
     }
     else throw py::value_error("invalid data");
+
+    if (d.num_cols < min_num_cols)
+        throw std::runtime_error("not enough columns in the data");
+
     return d;
 }

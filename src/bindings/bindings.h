@@ -35,7 +35,8 @@ std::string tostr(const T& o) {
 veritas::Box::BufT tobox(pybind11::object pybox);
 
 /** Get the veritas data object from a Python handle. */
-veritas::data<veritas::FloatT> get_data(pybind11::handle h);
+veritas::data<veritas::FloatT> get_data(pybind11::handle h,
+                                        size_t min_num_cols = 0);
 
 /* Avoid invalid pointers to Tree's by storing indexes rather than pointers */
 struct TreeRef {

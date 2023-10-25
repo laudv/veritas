@@ -51,6 +51,7 @@ void init_addtree(py::module &m) {
         .def("get_type", &AddTree::get_type)
         .def("num_leaf_values", &AddTree::num_leaf_values, ":ref:`C++ API`")
         .def("get_splits", &AddTree::get_splits, ":ref:`C++ API`")
+        .def("get_maximum_feat_id", &AddTree::get_maximum_feat_id)
         .def("add_tree", [](const std::shared_ptr<AddTree> &at)
             { at->add_tree(); return TreeRef{at, at->size()-1}; })
         .def("add_tree", [](const std::shared_ptr<AddTree> &at, const TreeRef &tref)
@@ -104,14 +105,16 @@ void init_addtree(py::module &m) {
             })
         .def("predict", [](const AddTree& at, py::handle arr)
             {
-                data d = get_data(arr);
+                size_t min_num_cols = static_cast<size_t>(
+                        at.get_maximum_feat_id()) + 1;
+                data d = get_data(arr, min_num_cols);
                 int nlv = at.num_leaf_values();
 
                 py::array_t<FloatT, py::array::c_style | py::array::forcecast>
                     result(d.num_rows * nlv);
                 result = result.reshape({ (long)d.num_rows, (long)nlv });
 
-                data rdata = get_data(result);
+                data rdata = get_data(result, nlv);
 
                 for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) {
                     data rrow = rdata.row(i);
@@ -126,14 +129,16 @@ void init_addtree(py::module &m) {
             )pbdoc")
         .def("eval", [](const AddTree &at, py::handle arr)
             {
-                data d = get_data(arr);
+                size_t min_num_cols = static_cast<size_t>(
+                        at.get_maximum_feat_id()) + 1;
+                data d = get_data(arr, min_num_cols);
                 int nlv = at.num_leaf_values();
 
                 py::array_t<FloatT, py::array::c_style | py::array::forcecast>
                     result(d.num_rows * nlv);
                 result = result.reshape({(long)d.num_rows, (long)nlv});
 
-                data rdata = get_data(result);
+                data rdata = get_data(result, nlv);
 
                 for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) {
                     data rrow = rdata.row(i);

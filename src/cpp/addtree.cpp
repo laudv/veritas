@@ -228,6 +228,16 @@ GAddTree<TreeT>::get_splits() const {
     return splits;
 }
 
+
+template <typename TreeT>
+FeatId
+GAddTree<TreeT>::get_maximum_feat_id() const {
+    FeatId max = 0;
+    for (const TreeT& tree : *this)
+        max = std::max(max, tree.get_maximum_feat_id(tree.root()));
+    return max;
+}
+
 template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::prune(const BoxRefT& box) const

@@ -170,6 +170,10 @@ public:
 
     /** Map feature -> [list of split values, sorted, unique]. */
     SplitMapT get_splits() const;
+
+    /** Get the maximum feat id value that is used in the trees */
+    FeatId get_maximum_feat_id() const;
+
     /** Prune each tree in the ensemble. See TreeT::prune. */
     GAddTree prune(const BoxRefT& box) const;
 
