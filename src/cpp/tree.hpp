@@ -411,6 +411,17 @@ public:
         return splits;
     }
 
+    /** Compute the maximum feat_id value used in a split. */
+    FeatId get_maximum_feat_id(NodeId id) const {
+        if (is_internal(id)) {
+            FeatId feat_id = get_split(id).feat_id;
+            return std::max({get_maximum_feat_id(left(id)),
+                             get_maximum_feat_id(right(id)), feat_id});
+        } else {
+            return 0;
+        }
+    }
+
     /** Evaluate this tree on an instance. */
     void eval(const data<SplitValueT>& row, data<LeafValueT>& result) const {
         return eval(root(), row, result);

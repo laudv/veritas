@@ -57,14 +57,17 @@ void init_tree(py::module &m) {
         .def("split", [](TreeRef& r, NodeId n, FeatId fid, FloatT sv) { r.get().split(n, {fid, sv}); })
         .def("split", [](TreeRef& r, NodeId n, FeatId fid) { r.get().split(n, bool_ltsplit(fid)); })
         .def("eval", [](const TreeRef& r, py::handle arr, NodeId nid) {
-            data d = get_data(arr);
             int nlv = r.get().num_leaf_values();
+            size_t min_num_cols = static_cast<size_t>(
+                    r.get().get_maximum_feat_id(r.get().root())) + 1;
+
+            data d = get_data(arr, min_num_cols);
 
             py::array_t<FloatT, py::array::c_style | py::array::forcecast>
                 result(d.num_rows * nlv);
             result = result.reshape({(long)d.num_rows, (long)nlv});
 
-            data rdata = get_data(result);
+            data rdata = get_data(result, nlv);
 
             for (size_t i = 0; i < static_cast<size_t>(d.num_rows); ++i) {
                 data rrow = rdata.row(i);
@@ -76,7 +79,9 @@ void init_tree(py::module &m) {
             return result;
         })
         .def("eval_node", [](const TreeRef& r, py::handle arr, NodeId nid) {
-            data d = get_data(arr);
+            size_t min_num_cols = static_cast<size_t>(
+                    r.get().get_maximum_feat_id(r.get().root())) + 1;
+            data d = get_data(arr, min_num_cols);
 
             auto result = py::array_t<NodeId>(d.num_rows);
             py::buffer_info out = result.request();
@@ -98,6 +103,8 @@ void init_tree(py::module &m) {
                 d[py::int_(feat_id)] = dom;
             return d;
         })
+        .def("get_maximum_feat_id", [](const TreeRef& r)
+            { return r.get().get_maximum_feat_id(r.get().root()); })
         .def("prune", [](const TreeRef& r, const py::object& pybox) {
             Box::BufT buf = tobox(pybox);
             Box box{buf};
