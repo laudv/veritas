@@ -183,9 +183,9 @@ class TestTree(unittest.TestCase):
             ypred1 = at0.predict(X).ravel()
             ypred2 = 1.0 / (1.0 + np.exp(-at0.eval(X).ravel()))
 
-            print(ypred0)
-            print(ypred1)
-            print(ypred2)
+            #print(ypred0)
+            #print(ypred1)
+            #print(ypred2)
 
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred1)), 0.0)
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred2)), 0.0)
@@ -206,15 +206,36 @@ class TestTree(unittest.TestCase):
             ypred1 = at0.predict(X).ravel()
             ypred2 = at0.eval(X).ravel() / len(at0)
 
-            print(ypred0)
-            print(ypred1)
-            print(ypred2)
+            #print(ypred0)
+            #print(ypred1)
+            #print(ypred2)
 
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred1)), 0.0)
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred2)), 0.0)
 
 
+    def test_get_maximum_feat_id(self):
+        at = AddTree(1)
+        t = at.add_tree()
+        t.split(t.root(), 3, 4.0)
+         
+        # check that get_maximum_feat_id returns 3
+        self.assertEqual(at[0].get_maximum_feat_id(), 3)
 
+    def test_min_num_columns(self):
+        at = AddTree(1)
+        t = at.add_tree()
+        t.split(t.root(), 3, 4.0)
+
+        # 2-column input (= too small)
+        X = np.array([[0.0, 0.0]], dtype=FloatT)
+
+        # both eval and predict should now fail (too few columns)
+        self.assertRaises(RuntimeError, at[0].eval, X)
+        self.assertRaises(RuntimeError, at.predict, X)
+        self.assertRaises(RuntimeError, at.eval, X)
+   
+        
 
 if __name__ == "__main__":
     unittest.main()
