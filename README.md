@@ -1,5 +1,7 @@
 [![PyPi Version](https://img.shields.io/pypi/v/dtai-veritas)](https://pypi.org/project/dtai-veritas/)
 
+> ℹ️ We're working on an improved version of Veritas. If you are interested in trying out Veritas and want the latest and greatest, then pull and manually install the [finiteprec](https://github.com/laudv/veritas/tree/finiteprec) branch.
+
 # Versatile Verification of Tree Ensembles with VERITAS
 [View API documentation](https://laudv.github.io/veritas/) | [Veritas in action blog post](https://dtai.cs.kuleuven.be/sports/blog/versatile-verification-of-soccer-analytics-models/)
 
