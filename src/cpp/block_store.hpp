@@ -14,6 +14,14 @@
 
 namespace veritas {
 
+class BlockStoreOOM : public std::exception {
+public:
+    virtual const char* what() const noexcept override {
+        return "BlockStore: out of memory";
+    }
+};
+
+
 /**
  * Store immutable dynamically-sized arrays of type T in stable memory.
  * Pointers returned by `BlockStore::store` are stable for as long as this
@@ -28,11 +36,9 @@ public:
 private:
     std::vector<Block> blocks_;
 
-    Block& get_block_with_remaining_capacity(size_t cap, size_t rem_memory_capacity)
-    {
+    Block& get_block_with_remaining_capacity(size_t cap, size_t rem_memory_capacity) {
         Block& block = blocks_.back();
-        if (block.capacity() - block.size() < cap) // allocate a new block
-        {
+        if (block.capacity() - block.size() < cap) {
             size_t rem_capacity = rem_memory_capacity / sizeof(T);
             if (rem_capacity > block.capacity() * 2) // double size of blocks each time,..
                 rem_capacity = block.capacity() * 2; // .. unless memory limit almost reached
@@ -41,7 +47,7 @@ private:
                     << static_cast<double>(rem_memory_capacity) / (1024.0*1024.0)
                     << " mb left " << std::endl;
             else
-                throw std::runtime_error("BlockStore: out of memory");
+                throw BlockStoreOOM();
 
             Block new_block;
             new_block.reserve(rem_capacity);
@@ -62,11 +68,14 @@ public:
         const_iterator end;
     };
 
-    const static size_t MIN_BLOCK_SIZE = 5*1024*1024 / sizeof(T); // 5MB
+    const static size_t MIN_BLOCK_SIZE = 5 * 1024 * 1024; // 5MB
 
-    BlockStore() : blocks_{} {
+    /**
+     * @param min_block_size size in bytes of the first block in the store
+     */
+    BlockStore(size_t min_block_size = MIN_BLOCK_SIZE) : blocks_{} {
         Block block;
-        block.reserve(MIN_BLOCK_SIZE);
+        block.reserve(min_block_size / sizeof(T));
         blocks_.push_back(std::move(block));
     }
 
@@ -93,8 +102,7 @@ public:
     }
 
     template <typename IT>
-    Ref store(IT begin, IT end, size_t rem_memory_capacity)
-    {
+    Ref store(IT begin, IT end, size_t rem_memory_capacity) {
         // this store_ block has enough space to accomodate the workspace
         size_t size = end - begin;
         Block& block = get_block_with_remaining_capacity(size, rem_memory_capacity);

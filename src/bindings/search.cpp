@@ -43,6 +43,7 @@ void init_search(py::module &m) {
 
     py::class_<Config>(m, "Config")
         .def(py::init<HeuristicType>())
+        .def_readwrite("max_memory", &Config::max_memory)
         .def_readwrite("focal_eps", &Config::focal_eps)
         .def_readwrite("max_focal_size", &Config::max_focal_size)
         .def_readwrite("stop_when_num_solutions_exceeds",
@@ -70,8 +71,6 @@ void init_search(py::module &m) {
         .def("step_for", &Search::step_for)
         .def("num_solutions", &Search::num_solutions)
         .def("num_open", &Search::num_open)
-        .def("get_max_memory", &Search::get_max_memory)
-        .def("set_max_memory", &Search::set_max_memory)
         .def("get_used_memory", &Search::get_used_memory)
         .def("time_since_start", &Search::time_since_start)
         .def("current_bounds", &Search::current_bounds)
