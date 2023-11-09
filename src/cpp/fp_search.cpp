@@ -517,6 +517,8 @@ private:
     mutable LeafIter<TreeFp> leafiter_;
     BoxFp::BufT boxbuf_; // buffer to construct box of new state
 
+    bool is_oom_;
+
 public:
     std::shared_ptr<Heuristic> heuristic;
 
@@ -528,6 +530,7 @@ public:
         , solutions_{}
         , leafiter_{}
         , boxbuf_{}
+        , is_oom_{false}
         , heuristic{std::move(h)} { init_(); }
 
   public: // virtual Search methods
@@ -626,7 +629,11 @@ public:
 
 private:
     size_t get_remaining_unallocated_memory_() const {
-        return max_memory_ - store_.get_mem_size();
+#if VERITAS_SANITY_CHECKS
+        if (config.max_memory < store_.get_mem_size())
+            throw std::runtime_error("max memory underflow");
+#endif
+        return config.max_memory - store_.get_mem_size();
     }
 
     void init_() {
@@ -642,6 +649,9 @@ private:
     }
 
     StopReason step_() {
+        if (is_oom_)
+            throw std::runtime_error(
+                "Cannot continue, previous StopReason was OUT_OF_MEMORY.");
         if (open_.empty())
             return StopReason::NO_MORE_OPEN;
 
@@ -654,7 +664,21 @@ private:
             //const auto& solsol = solutions_[sol];
 
         } else {
-            expand_(state);
+            try {
+                expand_(state);
+            } catch (const BlockStoreOOM&) {
+                leafiter_.clear();
+
+                /*
+                 * This leaves Veritas in an invalid state because some state
+                 * expansions might not have been added to the open list. We
+                 * can't really recover from this, so the next call to step_
+                 * should lead to an exception.
+                 */
+                is_oom_ = true;
+
+                return StopReason::OUT_OF_MEMORY;
+            }
         }
 
         if (config.stop_when_optimal && is_optimal()) {
@@ -1040,10 +1064,14 @@ Search::Search(const Config& config, const AddTree& at, const FlatBox& prune_box
     , atfp_{at.num_leaf_values()}
     , fpmap_{}
     , start_time_{time_clock::now()}
-    , max_memory_{size_t(4)*1024*1024*1024}
-    , store_{}
+    , store_{config.memory_min_block_size}
     , prune_box_{}
 {
+    if (config.max_memory < store_.get_mem_size()) {
+        std::cout << config.max_memory << " vs " << store_.get_mem_size() << std::endl;
+        throw std::runtime_error("max_memory too low");
+    }
+
     fpmap_.add(at_);
     fpmap_.add(prune_box);
     fpmap_.finalize();
@@ -1063,10 +1091,6 @@ double Search::time_since_start() const {
     return std::chrono::duration_cast<std::chrono::microseconds>(
             now-start_time_).count() * 1e-6;
 }
-
-void Search::set_max_memory(size_t bytes) { max_memory_ = bytes; }
-
-size_t Search::get_max_memory() const { return max_memory_; }
 
 size_t Search::get_used_memory() const {
     return store_.get_used_mem_size();

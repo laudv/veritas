@@ -44,10 +44,24 @@ class Search; // forward decl for Config
 struct Config {
 
     /**
+     * The maximum memory the search can use.
+     */
+    size_t max_memory = size_t(4) * 1024 * 1024 * 1024;
+
+    /**
+     * Veritas allocates blocks of memory to store the boxes of the search
+     * states with stable pointers. When a block is full, an additional new
+     * block twice the size is allocated. This configures the size of the first
+     * block.
+     *
+     * This is mainly useful for testing.
+     */
+    size_t memory_min_block_size = 5 * 1024 * 1024;
+
+    /**
      * Type of heuristic for the upcoming Search
      */
     HeuristicType heuristic;
-
 
     /**
      * Discount factor of state score h in order to qualify for the focal
@@ -195,7 +209,6 @@ protected:
     FpMap fpmap_;
     time_point start_time_;
 
-    size_t max_memory_;
     BlockStore<IntervalPairFp> store_;
     FlatBoxFp prune_box_;
 
@@ -220,9 +233,6 @@ public: // abstract interface methods
 
 public:
     double time_since_start() const;
-
-    void set_max_memory(size_t bytes);
-    size_t get_max_memory() const;
     size_t get_used_memory() const;
 
     const AddTree& get_addtree() const;

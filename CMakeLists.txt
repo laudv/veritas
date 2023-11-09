@@ -109,6 +109,7 @@ if (BUILD_TESTS)
         "${TEST_DIR}/test_fp.cpp"
         "${TEST_DIR}/test_leafiter.cpp"
         "${TEST_DIR}/test_search.cpp"
+        "${TEST_DIR}/test_memory.cpp"
     )
 
     # Generate a test executable
@@ -131,4 +132,6 @@ if (BUILD_TESTS)
         COMMAND "test${PROJECT_NAME}" leafiter)
     add_test(NAME test_search
         COMMAND "test${PROJECT_NAME}" search)
+    add_test(NAME test_memory
+        COMMAND "test${PROJECT_NAME}" memory)
 endif (BUILD_TESTS)

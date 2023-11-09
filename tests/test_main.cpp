@@ -896,6 +896,7 @@ int main_json_io();
 int main_fp();
 int main_leafiter();
 int main_search();
+int main_memory();
 
 int main(int argc, char **args) {
     if (argc != 2) {
@@ -913,6 +914,7 @@ int main(int argc, char **args) {
     if (t == "fp") return main_fp();
     if (t == "leafiter") return main_leafiter();
     if (t == "search") return main_search();
+    if (t == "memory") return main_memory();
 
     std::cerr << "unknown test\n";
     return 2;
