@@ -163,6 +163,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
 
     def get_search(self, delta):
         config = Config(HeuristicType.MAX_OUTPUT)
+        config.max_memory = self.mem_capacity
         config.stop_when_optimal = True
         config.ignore_state_when_worse_than = 0.0
         config.stop_when_num_solutions_exceeds =\
@@ -172,7 +173,6 @@ class VeritasRobustnessSearch(RobustnessSearch):
 
         box = [Interval(x-delta, x+delta) for x in self.example]
         s = config.get_search(self.at, box)
-        s.set_max_memory(self.mem_capacity)
 
         return s
 
