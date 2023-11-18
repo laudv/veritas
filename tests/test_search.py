@@ -1,4 +1,5 @@
-import unittest, sys, os
+import unittest
+import os
 import numpy as np
 
 try:

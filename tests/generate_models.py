@@ -206,6 +206,45 @@ def generate_img_multiclass():
     plt.show()
 
 
+def generate_img_multioutput():
+    img = imageio.imread("tests/data/img.png")
+    X = np.array([[x, y] for x in range(100) for y in range(100)])
+    y = np.array([img[x, y] for x, y in X])
+    yc = np.digitize(y, np.quantile(y, [0.25, 0.5, 0.75]))  # multiclass
+    X = X.astype(float)
+
+    model = xgb.XGBClassifier(
+        objective="multi:softmax",
+        num_class=4,
+        multi_strategy="multi_output_tree",
+        nthread=4,
+        tree_method="hist",
+        max_depth=2,
+        learning_rate=1.0,
+        n_estimators=2)
+    model.fit(X, yc)
+    yhat = model.predict(X)
+
+    print(model)
+
+    model.get_booster().save_model("/tmp/xgboostmodel.json")
+    with open("/tmp/xgboostmodel.json") as f:
+        mdl = json.load(f)
+
+    trees = mdl["learner"]["gradient_booster"]["model"]["trees"]
+    __import__('pprint').pprint(trees)
+
+    print(len(trees[0]["base_weights"]))
+
+
+
+
+
+    acc = np.mean(yhat == yc)
+    print(f"multiout: acc train {acc*100:.1f}%")
+
+
+
 def generate_allstate():
     allstate_data_path = os.path.join(
         os.environ["VERITAS_DATA_DIR"], "allstate.h5")
@@ -463,7 +502,8 @@ def generate_allstate():
 
 if __name__ == "__main__":
     #generate_img()
-    generate_img_multiclass()
+    #generate_img_multiclass()
+    generate_img_multioutput()
     # generate_allstate()
     # generate_california_housing()
     # generate_covertype()
