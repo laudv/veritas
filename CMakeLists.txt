@@ -1,6 +1,6 @@
 # https://github.com/benjaminjack/python_cpp_example
 
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.5)
 project(veritas)
 
 set(VERITAS_CORE, "${PROJECT_NAME}_core")
@@ -80,7 +80,7 @@ endif (VERITAS_SANITY_CHECKS)
 
 option(VERITAS_BUILD_PYBINDINGS "Build C++ to Python bindings" ON)
 if (VERITAS_BUILD_PYBINDINGS)
-    #find_package(pybind11 REQUIRED)
+    find_package(Python COMPONENTS Interpreter Development)
     add_subdirectory(lib/pybind11)
     pybind11_add_module("${PROJECT_NAME}_core" MODULE
         "${BINDINGS_DIR}/utility.cpp"
