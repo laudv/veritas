@@ -331,7 +331,7 @@ GAddTree<TreeT>::predict(const data<SplitValueT>& row, data<LeafValueType>& resu
     eval(row, result);
 
     if (_is_a(at_type_, AddTreeType::RF)) { // mean, same for BINARY and MULTI
-        for(int j = 0; j < nlv; ++j) result[j] = result[j] / size();
+        for(int j = 0; j < nlv; ++j) result[j] = result[j] / size() + 0.5;
     } else if (_is_a(at_type_, AddTreeType::GB_MULTI)) { // softmax
         FloatT e = 0;
         for(int j = 0; j < nlv; ++j) e += std::exp(result[j]);
