@@ -23,6 +23,8 @@ import gurobipy as gu
 import numpy as np
 from veritas import AddTree, Interval
 
+import math #test
+
 class NodeInfo:
     def __init__(self, var, leafs_in_subtree):
         self.leafs_in_subtree = leafs_in_subtree
@@ -32,8 +34,8 @@ class NodeInfo:
 # \brief Base class for MILP methods
 class KantchelianBase:
 
-    def __init__(self, split_values, max_time=1e100, silent=True):
-        self.guard = 1e-4
+    def __init__(self, split_values, guard=1e-4, max_time=1e100, silent=True):
+        self.guard = guard
         self.split_values = split_values
         self.model = gu.Model("KantchelianAttack")
         if silent:
@@ -281,6 +283,7 @@ class KantchelianBase:
 
     def _extract_adv_example(self, example): # uses self.split_values, self.pvars, self.guard
         adv_example = example.copy()
+        #print(self._extract_ensemble_output(self.at, self.node_info_per_tree))
         for attribute, split_values in self.split_values.items():
             pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
             x = self.example[attribute]
@@ -288,13 +291,48 @@ class KantchelianBase:
             for split_value in split_values:
                 pvar = self.pvars[(attribute, split_value)]
                 if pvar.x > 0.5 and x >= split_value: # greater than or equal to split_value
-                    #print("adjusting attribute", attribute, "down from", x, "to", split_value-self.guard)
+                    #print("adjusting attribute", attribute, "down from", x, "to", split_value-self.guard,\
+                    #    f"(split value: {split_value})")
                     adv_example[attribute] = split_value - self.guard
                     break # pick first active pvar we encounter
                 if pvar.x <= 0.5 and x < split_value:
                     #print("adjusting attribute", attribute, "up from", x, "to", split_value)
-                    adv_example[attribute] = split_value# + self.guard
+                    adv_example[attribute] = split_value #+ self.guard
                     # pick last active pvar we encouter!
+        
+        ### old debug stuff
+        # active_leafs = []
+        # for tree_index in range(len(self.at)):
+        #     tree = self.at[tree_index]
+        #     node_infos = self.node_info_per_tree[tree_index]
+        #     leafs = node_infos[tree.root()].leafs_in_subtree
+        #     lvars = [node_infos[n].var.x for n in leafs]
+        #     for l, v in zip(leafs, lvars):
+        #         if v:
+        #             active_leafs.append(l)
+        #             if l!=self.at[tree_index].eval_node(adv_example)[0]:
+        #                 print(f"ISSUE at tree {tree_index}!")
+        #                 #print(self.at[tree_index].get_splits())
+        #                 #print(adv_example)
+
+
+        #                 # start from leaf, go up
+        #                 node = tree.eval_node(adv_example)[0]
+        #                 while not tree.is_root(node):
+        #                     node = tree.parent(node)
+        #                     split = tree.get_split(node)
+        #                     print()
+        #                     print(split.feat_id, split.split_value, adv_example[split.feat_id], np.abs(adv_example[split.feat_id]-split.split_value))
+        #                     if np.abs(adv_example[split.feat_id]-split.split_value)<self.guard:
+        #                         print(
+        #                             f"[Warning] Feature {split.feat_id}: {example[split.feat_id]}    Split value: {split.split_value}")
+        #                 #exit()
+            
+        # print(active_leafs)
+        # print([tree.eval_node(adv_example)[0] for tree in self.at])
+
+        # print("at.eval(adv_ex): ", self.at.eval(adv_example))
+        # exit()
         return adv_example
 
     def _extract_intervals(self):
@@ -446,8 +484,9 @@ class KantchelianTargetedAttack(KantchelianBase):
 # \brief Variation of the Kantchelian attack where the output is optimized rather than
 # the distance to the closest adversarial example.
 class KantchelianOutputOpt(KantchelianBase):
-    def __init__(self, at, **kwargs):
+    def __init__(self, at, example, **kwargs):
         self.at = at
+        self.example = example
         super().__init__(self.at.get_splits(), **kwargs)
         self.node_info_per_tree = self._collect_node_info(self.at)
         self._add_leaf_consistency(self.at, self.node_info_per_tree)
@@ -457,8 +496,19 @@ class KantchelianOutputOpt(KantchelianBase):
         self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MAXIMIZE)
         # self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MINIMIZE)
 
+        # mislabel constraint: instance we find should have a specific class
+        self._add_mislabel_constraint(self.at, self.node_info_per_tree,
+                target_output=True) # always maximinize: need output >0
+
         self.model.update()
 
     def solution(self):
         intervals = self._extract_intervals()
         return self.model.objVal, intervals
+
+    def solution2(self):
+        adv_example = self._extract_adv_example(self.example)
+        ensemble_output = self._extract_ensemble_output(self.at,
+                self.node_info_per_tree)
+        return adv_example, ensemble_output
+

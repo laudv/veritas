@@ -118,10 +118,26 @@ try: # fails when gurobipy not installed
 except ModuleNotFoundError:
     pass
 
+try: 
+    from .smt import \
+            Verifier, \
+            VerifierTimeout
+    del smt
+except ModuleNotFoundError:
+    pass
+
+try: 
+    from .z3backend import \
+            Z3Backend
+    del z3backend
+except ModuleNotFoundError:
+    pass
+
 from .robustness import \
         RobustnessSearch, \
         VeritasRobustnessSearch, \
-        MilpRobustnessSearch
+        MilpRobustnessSearch, \
+        SMTRobustnessSearch
 del robustness
 
 from .addtree_conversion import \
@@ -131,6 +147,9 @@ from .addtree_conversion import \
         add_addtree_converter, \
         get_addtree
 del addtree_conversion
+
+#temporary hack to work with sklearn.tree.DecisionTree
+from .sklearn_converter import addtree_sklearn_tree 
 
 try: # fails when groot not installed
     from .groot import \
