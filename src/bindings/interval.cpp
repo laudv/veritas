@@ -12,9 +12,10 @@ void init_interval(py::module& m) {
 
         )pbdoc")
         .def(py::init<>())
-        .def(py::init<FloatT, FloatT>())
+        .def(py::init(&Interval::checked))
         .def_static("from_lo", &Interval::from_lo)
         .def_static("from_hi", &Interval::from_hi)
+        .def_static("constant", &Interval::constant)
         .def_readwrite("lo", &Interval::lo)
         .def_readwrite("hi", &Interval::hi)
         .def("lo_is_unbound", &Interval::lo_is_unbound)
