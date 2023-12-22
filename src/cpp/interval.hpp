@@ -10,6 +10,7 @@
 #define VERITAS_INTERVAL_HPP
 
 #include "basics.hpp"
+#include <cmath>
 #include <sstream>
 #include <stdexcept>
 #include <tuple>
@@ -26,18 +27,28 @@ template <typename T> struct GInterval { // generic interval
     GInterval() : GInterval{Limits<T>::min, Limits<T>::max} {}
     GInterval(T lo, T hi) : lo{lo}, hi{hi} {
         if constexpr (check_sanity()) {
-            if (lo >= hi) {
-                std::stringstream s;
-                s << "Interval<"
-                  << typeid(T).name()
-                  << "> error: lo > hi: [" << lo << ", " << hi << "]";
-                throw std::invalid_argument(s.str());
-            }
+            GInterval::check_or_throw(lo, hi);
         }
+    }
+
+    static inline void check_or_throw(T lo, T hi) {
+        if (lo >= hi) {
+            std::stringstream s;
+            s << "Interval<"
+              << typeid(T).name()
+              << "> error: lo >= hi: [" << lo << ", " << hi << "]";
+            throw std::invalid_argument(s.str());
+        }
+    }
+
+    static inline GInterval checked(T lo, T hi) {
+        check_or_throw(lo, hi);
+        return { lo, hi };
     }
 
     static inline GInterval from_lo(T lo) { return {lo, Limits<T>::max}; }
     static inline GInterval from_hi(T hi) { return {Limits<T>::min, hi}; }
+    static inline GInterval constant(T x) { return {x, std::nextafter(x, Limits<T>::max)}; }
 
     inline bool lo_is_unbound() const { return lo == Limits<T>::min; }
     inline bool hi_is_unbound() const { return hi == Limits<T>::max; }
