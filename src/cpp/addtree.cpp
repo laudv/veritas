@@ -331,11 +331,12 @@ GAddTree<TreeT>::predict(const data<SplitValueT>& row, data<LeafValueType>& resu
     eval(row, result);
 
     if (_is_a(at_type_, AddTreeType::RF)) { // mean, same for BINARY and MULTI
-        for(int j = 0; j < nlv; ++j) result[j] = result[j] / size() + 0.5;
+        FloatT shift =_is_a(at_type_, AddTreeType::RF_REGR) ? 0.0 :  0.5;
+        for (int j = 0; j < nlv; ++j) result[j] = result[j] / size() + shift;
     } else if (_is_a(at_type_, AddTreeType::GB_MULTI)) { // softmax
         FloatT e = 0;
-        for(int j = 0; j < nlv; ++j) e += std::exp(result[j]);
-        for(int j = 0; j < nlv; ++j) result[j] = std::exp(result[j]) / e;
+        for (int j = 0; j < nlv; ++j) e += std::exp(result[j]);
+        for (int j = 0; j < nlv; ++j) result[j] = std::exp(result[j]) / e;
     } else if (_is_a(at_type_, AddTreeType::GB_BINARY)) { // sigmoid
         result[0] = 1.0 / (1.0 + std::exp(-result[0]));
     }
