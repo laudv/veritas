@@ -1,6 +1,5 @@
 import numpy as np
-
-from pprint import pprint
+import unittest
 
 from veritas import AddTree
 
@@ -31,10 +30,24 @@ def transform_addtree(at0):
     return at1
 
 
-if __name__ == "__main__":
-    at0 = AddTree.read("tests/models/rf_model.json")
-    at1 = transform_addtree(at0)
+# Round the split values of a random forest to .5 (1.0, 1.5, 2.0, 2.5, ...)
 
-    pprint(at0.get_splits())
-    print()
-    pprint(at1.get_splits())
+class TestRfModelSplitRounding(unittest.TestCase):
+
+    def test_it(self):
+        at0 = AddTree.read("tests/models/rf_model.json")
+        at1 = transform_addtree(at0)
+
+        #from pprint import pprint
+        #pprint(at0.get_splits())
+        #print()
+        #pprint(at1.get_splits())
+
+        for vs in at1.get_splits().values():
+            for v in vs:
+                x = v * 2.0
+                self.assertEqual(float(round(x)), x)
+
+
+if __name__ == "__main__":
+    unittest.main()

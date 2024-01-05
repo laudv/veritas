@@ -202,9 +202,9 @@ class TestTree(unittest.TestCase):
             at0 = at.make_singleclass(c)
             self.assertTrue(at0.get_type() == AddTreeType.RF_BINARY)
 
-            ypred0 = ypred[:, c] / len(at)
+            ypred0 = ypred[:, c] / len(at) + 0.5
             ypred1 = at0.predict(X).ravel()
-            ypred2 = at0.eval(X).ravel() / len(at0)
+            ypred2 = at0.eval(X).ravel() / len(at0) + 0.5
 
             #print(ypred0)
             #print(ypred1)

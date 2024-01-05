@@ -145,7 +145,8 @@ from .addtree_conversion import \
         InapplicableAddTreeConverter, \
         NoRegisteredConverterException, \
         add_addtree_converter, \
-        get_addtree
+        get_addtree, \
+        test_conversion
 del addtree_conversion
 
 #temporary hack to work with sklearn.tree.DecisionTree

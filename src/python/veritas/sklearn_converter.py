@@ -61,8 +61,7 @@ def addtree_sklearn_ensemble(ensemble):
         at_type = AddTreeType.RF_REGR
 
         def extract_value_fun(v, i):
-            # print("skl leaf regr", v)
-            return v[0]
+            return v[0][0]
 
     elif isinstance(ensemble, RandomForestClassifier):
         num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_  > 2 else 1 
@@ -84,4 +83,9 @@ def addtree_sklearn_ensemble(ensemble):
     at = AddTree(num_leaf_values, at_type)
     for tree in ensemble.estimators_:
         addtree_sklearn_tree(at, tree.tree_, extract_value_fun)
+
+    if at_type != AddTreeType.RF_REGR:
+        for k in range(num_leaf_values):
+            at.set_base_score(k, -len(at)/2.0)
+
     return at

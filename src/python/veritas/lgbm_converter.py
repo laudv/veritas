@@ -34,10 +34,6 @@ class LGBMAddTreeConverter(AddTreeConverter):
         else:
             return addtree_lgbm(model, at_type=AddTreeType.GB_REGR)
 
-    def test_conversion(self, model):
-        # TODO
-        raise NotImplementedError()
-
 def multi_addtree_lgbm(model, num_class):
     ats = [addtree_lgbm(model,
                         at_type=AddTreeType.GB_MULTI,
