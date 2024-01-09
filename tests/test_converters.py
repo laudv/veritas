@@ -107,7 +107,7 @@ class TestConverters(unittest.TestCase):
         ypred_model = model.predict(df)
 
         at = veritas.get_addtree(model)
-        is_correct = veritas.test_conversion(at, X, ypred_model)
+        is_correct = veritas.test_conversion(at, df, ypred_model)
         self.assertTrue(is_correct)
 
     def test_rf_binary(self):
