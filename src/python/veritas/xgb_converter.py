@@ -69,20 +69,23 @@ class XGBAddTreeConverter(AddTreeConverter):
 
         single_rel_tol = 1e-5
         rel_tol = single_rel_tol * len(at)
-        base_score_manual = try_determine_base_score(model, at, feature_names)
+        base_score_manual, base_score_diff_std = try_determine_base_score(
+                model, at, feature_names)
         err = np.abs(base_score_manual-base_score)
+        print()
+        print("| XGBOOST's base_score")
+        print("|   base_score diff std     ", base_score_diff_std,
+              "(!) NOT OK" if np.any(base_score_diff_std > 1e-6) else "OK")
+        print("|   base_score reported     ", base_score)
+        print("|   versus manually detected", base_score_manual)
+        print("|   abs err                 ", err)
+        print("|   rel err                 ", err/base_score)
         if not np.all(np.isclose(base_score_manual, base_score, rtol=rel_tol)):
-            msg = "(!) NOT THE SAME"
+            msg = "(!) base_score NOT THE SAME"
             base_score = base_score_manual
         else:
-            msg = "OK"
-        print()
-        print( "| XGBOOST's base_score")
-        print( "|   base_score reported     ", base_score)
-        print( "|   versus manually detected", base_score_manual)
+            msg = "base_score OK"
         print(f"|   {msg} with relative tolerance {rel_tol:g}")
-        print(f"|   abs err {err}")
-        print(f"|   rel err {err/base_score}")
         print()
 
         if isinstance(base_score, float):
@@ -174,7 +177,10 @@ def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000)
     if pred1.shape[1] == 1:
         pred1 = pred1.reshape(pred1.shape[0])
 
-    pred0 = pred0.astype(FloatT).mean(axis=0)
-    pred1 = pred1.astype(FloatT).mean(axis=0)
+    diff = (pred0 - pred1).astype(FloatT)
 
-    return pred0 - pred1
+    # All the errors should be the same, otherwise it is not a mistake in the
+    # base_score, but one in the structure of the trees! That is why we also report
+    # the np.std.
+
+    return np.mean(diff, axis=0), np.std(diff, axis=0)
