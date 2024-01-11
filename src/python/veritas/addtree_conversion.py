@@ -127,7 +127,7 @@ def is_split_float_error(at, x, rel_tol):
         n = tree.eval_node(x)[0]
         leaf_values = tree.get_leaf_values(n)
 
-        while not tree.is_root(n):
+        while True:
             if tree.is_internal(n):
                 split = tree.get_split(n)
                 if np.isclose(x[split.feat_id], split.split_value, rtol=rel_tol):
@@ -136,4 +136,7 @@ def is_split_float_error(at, x, rel_tol):
                           "(diff",
                           f"{np.abs((x[split.feat_id]-split.split_value)/x[split.feat_id])},",
                           f"leaf_values {leaf_values})")
-            n = tree.parent(n)
+            if not tree.is_root(n):
+                n = tree.parent(n)
+            else:
+                break

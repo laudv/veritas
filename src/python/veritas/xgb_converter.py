@@ -111,8 +111,16 @@ def get_booster_json(booster):
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as fp:
         fp.close() # not deleted because delete=False
         booster.save_model(fp.name)
+
         with open(fp.name) as f:
-            booster_json = json.load(f)
+            # XGBoost dumps floats as float32, so we also need to parse them as
+            # float32s, even though Veritas uses float64
+            # e.g.
+            #   - the real float32 is 0.123452
+            #   - the JSON (a string) contains 0.12345
+            #   - the closest float32 is 0.123452
+            #   - the closest float64 might be 0.123450001 (!! lower than 0.123452)
+            booster_json = json.load(f, parse_float=np.float32)
 
         # clean up our mess
         os.remove(fp.name)
