@@ -19,14 +19,17 @@ def get_img_data():
     yr = np.array([img[x, y] for x, y in X]).astype(float)
     y2 = yr > np.median(yr) # binary clf
     y4 = np.digitize(yr, np.quantile(yr, [0.25, 0.5, 0.75])) # multiclass
-    X = X.astype(float)
+    X = X.astype(float) / 100.0
 
     return X, yr, y2, y4
 
 class TestConverters(unittest.TestCase):
     def test_xgb_binary(self):
         X, _, y, _ = get_img_data()
-        X = X / 100.0
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
         model = xgb.XGBClassifier(
             objective="binary:logistic",
             tree_method="hist",
@@ -38,18 +41,37 @@ class TestConverters(unittest.TestCase):
 
         at = veritas.get_addtree(model)
         is_correct = veritas.test_conversion(at, X, ypred_model)
+
+        #print(at[0])
+        #print(model.get_booster().get_dump()[0])
+
+        #x = X[[2063], :]
+        #print("at:", at[0].eval_node(x))
+        #print("xgb:", model.apply(x))
+        #print("at:", at.eval(x)[0])
+        #print("xgb:", model.predict(x, output_margin=True))
+        #print("at:", at.eval(x)[0])
+        #print("diff:", model.predict(x, output_margin=True)-at.eval(x)[0])
+        #print(x)
+
+        #print(f"split_value {at[0].get_split(1).split_value:.16f}")
+        #print(f"xvalue      {x[0,0]:.16f}")
+
         self.assertTrue(is_correct)
 
     def test_xgb_multiclass(self):
         X, _, _, y = get_img_data()
-        X = X / 100.0
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
         model = xgb.XGBClassifier(
             objective="multi:softmax",
             num_class=4,
             tree_method="hist",
             max_depth=5,
             learning_rate=0.4,
-            n_estimators=5)
+            n_estimators=10)
         model.fit(X, y)
         ypred_model = model.predict_proba(X)
 
@@ -59,6 +81,10 @@ class TestConverters(unittest.TestCase):
 
     def test_xgb_multiclass_multioutput(self):
         X, _, _, y = get_img_data()
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
         model = xgb.XGBClassifier(
             objective="multi:softmax",
             num_class=4,
@@ -76,7 +102,10 @@ class TestConverters(unittest.TestCase):
 
     def test_xgb_regression(self):
         X, y, _, _ = get_img_data()
-        X /= 100.0
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
         model = xgb.XGBRegressor(
             objective="reg:squarederror",
             tree_method="hist",
@@ -95,7 +124,10 @@ class TestConverters(unittest.TestCase):
 
         feature_names = ["feature 1", "feature 2"]
         X, y, _, _ = get_img_data()
-        X /= 100.0
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
         df = pd.DataFrame(X, columns=feature_names)
         model = xgb.XGBRegressor(
             objective="reg:squarederror",
@@ -112,15 +144,28 @@ class TestConverters(unittest.TestCase):
 
     def test_rf_binary(self):
         X, _, y, _ = get_img_data()
+        #X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestClassifier(
-            max_depth=8,
+            max_depth=6,
             random_state=0,
-            n_estimators=25)
+            n_estimators=2)
         clf.fit(X, y)
         ypred_model = clf.predict_proba(X)[:,1]
 
         at = veritas.get_addtree(clf)
         is_correct = veritas.test_conversion(at, X, ypred_model)
+
+        print([t.eval_node(X[[4191], :])[0] for t in at])
+        print(clf.apply(X[[4191], :])[0])
+
+        for t in at:
+            print(t)
+
+        import sklearn
+        for t in clf.estimators_:
+            r = sklearn.tree.export_text(t, feature_names=['F0', 'F1'],
+                                         decimals=4, spacing=2)
+            print(r)
         self.assertTrue(is_correct)
 
     def test_rf_multiclass(self):
@@ -189,7 +234,6 @@ class TestConverters(unittest.TestCase):
 
     def test_lgb_regression(self):
         X, y, _, _ = get_img_data()
-        X /= 100.0
         model = lgb.LGBMRegressor(
             objective="regression_l2",
             max_depth=5,

@@ -33,8 +33,11 @@ def addtree_sklearn_tree(at, tree, extract_value_fun):
         if is_internal:
             feat_id = tree.feature[n]
             thrs = tree.threshold[n]
-            split_value = np.nextafter(np.float32(
-                thrs), np.float32(np.inf))  # <= splits
+            #split_value = thrs
+            #split_value = np.nextafter(np.float32(
+            #    thrs), np.float32(np.inf))  # <= splits
+            split_value = np.nextafter(np.float64(
+                thrs), np.float64(np.inf))  # <= splits
             t.split(m, feat_id, split_value)
             stack.append((tree.children_right[n], t.right(m)))
             stack.append((tree.children_left[n], t.left(m)))
