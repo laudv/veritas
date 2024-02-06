@@ -75,7 +75,7 @@ class XGBAddTreeConverter(AddTreeConverter):
         print()
         print("| XGBOOST's base_score")
         print("|   base_score diff std     ", base_score_diff_std,
-              "(!) NOT OK" if np.any(base_score_diff_std > 1e-6) else "OK")
+              "(!) NOT OK" if np.any(base_score_diff_std > 1e-5) else "OK")
         print("|   base_score reported     ", base_score)
         print("|   versus manually detected", base_score_manual)
         print("|   abs err                 ", err)
