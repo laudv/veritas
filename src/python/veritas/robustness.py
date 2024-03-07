@@ -13,8 +13,8 @@ import numpy as np
 from . import AddTree, get_closest_example, Interval
 from . import Config, HeuristicType
 
-from veritas.smt import Verifier
-from veritas.z3backend import Z3Backend as Backend
+#from veritas.smt import Verifier, VerifierTimeout
+#from veritas.z3backend import Z3Backend as Backend
 
 ## \ingroup python
 # \brief Base class binary robustness search
@@ -45,8 +45,7 @@ class RobustnessSearch:
         elif source_at is None:
             self.at = target_at
         elif target_at is None:
-            self.at = AddTree(1).concat_negated(source_at) 
-            # NOTE: binary classification, one leaf value only here!
+            self.at = source_at.negate_leaf_values()
         else:
             raise RuntimeError("source_at and target_at None")
 
@@ -272,7 +271,7 @@ class MilpRobustnessSearch(RobustnessSearch):
         # (!) looks like this happens only on UNSATs --> manually put -inf
         try:
             max_output_diff = milp.objective_bound()
-        except:
+        except AttributeError:
             max_output_diff = -np.inf
 
         if milp.has_solution():
@@ -290,6 +289,10 @@ class SMTRobustnessSearch(RobustnessSearch):
         self.log = []
 
     def get_smt_verifier(self, delta, max_time):
+        # will fail if z3 not installed 
+        from veritas.smt import Verifier
+        from veritas.z3backend import Z3Backend as Backend
+
         box = {f: Interval(self.example[f]-delta, self.example[f]+delta) for f in range(len(self.example))}
         v = Verifier(self.at, box, Backend())
         v.set_timeout(max_time)
@@ -306,12 +309,15 @@ class SMTRobustnessSearch(RobustnessSearch):
         return v
 
     def get_max_output_difference(self, delta, max_time):
+        from veritas.smt import Verifier, VerifierTimeout
+
         v = self.get_smt_verifier(delta, max_time)
 
         start_time = timeit.default_timer()
         try:
             res = v.check()
-        except:
+        # TODO: check this works
+        except VerifierTimeout:
             res = Verifier.Result.UNKNOWN
         dur = timeit.default_timer() - start_time
         self.log.append({"time": dur})
