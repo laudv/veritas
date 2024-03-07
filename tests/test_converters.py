@@ -144,7 +144,7 @@ class TestConverters(unittest.TestCase):
 
     def test_rf_binary(self):
         X, _, y, _ = get_img_data()
-        #X = X.astype(np.float32).astype(np.float64)
+        X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestClassifier(
             max_depth=6,
             random_state=0,
@@ -155,21 +155,22 @@ class TestConverters(unittest.TestCase):
         at = veritas.get_addtree(clf)
         is_correct = veritas.test_conversion(at, X, ypred_model)
 
-        print([t.eval_node(X[[4191], :])[0] for t in at])
-        print(clf.apply(X[[4191], :])[0])
+        #print([t.eval_node(X[[4191], :])[0] for t in at])
+        #print(clf.apply(X[[4191], :])[0])
 
-        for t in at:
-            print(t)
+        #for t in at:
+        #    print(t)
 
-        import sklearn
-        for t in clf.estimators_:
-            r = sklearn.tree.export_text(t, feature_names=['F0', 'F1'],
-                                         decimals=4, spacing=2)
-            print(r)
+        #import sklearn
+        #for t in clf.estimators_:
+        #    r = sklearn.tree.export_text(t, feature_names=['F0', 'F1'],
+        #                                 decimals=4, spacing=2)
+        #    print(r)
         self.assertTrue(is_correct)
 
     def test_rf_multiclass(self):
         X, _, _, y = get_img_data()
+        X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestClassifier(
             max_depth=8,
             random_state=0,
@@ -183,6 +184,7 @@ class TestConverters(unittest.TestCase):
 
     def test_rf_regression(self):
         X, y, _, _ = get_img_data()
+        X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestRegressor(
             max_depth=8,
             random_state=0,
@@ -202,6 +204,7 @@ class TestConverters(unittest.TestCase):
 
     def test_lgb_binary(self):
         X, _, y, _ = get_img_data()
+        X = X.astype(np.float32).astype(np.float64)
         model = lgb.LGBMClassifier(
             objective="binary",
             num_leaves=64,
@@ -216,6 +219,7 @@ class TestConverters(unittest.TestCase):
 
     def test_lgb_multiclass(self):
         X, _, _, y = get_img_data()
+        X = X.astype(np.float32).astype(np.float64)
         model = lgb.LGBMClassifier(
             objective="multiclass",
             num_class=4,
@@ -234,6 +238,7 @@ class TestConverters(unittest.TestCase):
 
     def test_lgb_regression(self):
         X, y, _, _ = get_img_data()
+        X = X.astype(np.float32).astype(np.float64)
         model = lgb.LGBMRegressor(
             objective="regression_l2",
             max_depth=5,
