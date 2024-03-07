@@ -61,11 +61,12 @@ class XGBAddTreeConverter(AddTreeConverter):
             at_type = AddTreeType.GB_REGR
 
         size_leaf_vector = int(trees[0]["tree_param"]["size_leaf_vector"])
-        num_leaf_values = max(size_leaf_vector, num_class)
+        num_leaf_values = max(size_leaf_vector, num_class, 1)
         at = AddTree(num_leaf_values, at_type)
 
+        version = booster_json['version'][0]
         for tree_json, clazz in zip(trees, tree_info):
-            convert_xgb_json_tree(at, tree_json, clazz)
+            convert_xgb_json_tree(at, tree_json, clazz, version)
 
         single_rel_tol = 1e-5
         rel_tol = single_rel_tol * len(at)
@@ -126,15 +127,15 @@ def get_booster_json(booster):
         os.remove(fp.name)
     return booster_json
 
-def convert_xgb_json_tree(at, tree_json, clazz):
+def convert_xgb_json_tree(at, tree_json, clazz, version):
     t = at.add_tree()
     slv = int(tree_json["tree_param"]["size_leaf_vector"])
     nlv = at.num_leaf_values()
 
     if len(tree_json["categories"]) > 0:
         raise RuntimeError("xgb categories not supported")
-    if any(map(lambda v: v!=0, tree_json["default_left"])):
-        raise RuntimeError("none default_left not supported")
+    #if any(map(lambda v: v!=0, tree_json["default_left"])):
+    #    raise RuntimeError("none default_left not supported")
     if any(map(lambda v: v!=0, tree_json["split_type"])):
         raise RuntimeError("split_type not supported")
 
@@ -143,6 +144,12 @@ def convert_xgb_json_tree(at, tree_json, clazz):
     thresholds = tree_json["split_conditions"]
     feat_ids = tree_json["split_indices"]
     leafvals = tree_json["base_weights"]
+
+    # versions <2 put even leaf values into tree_json['split_conditions']
+    # (?) what is in tree_json['base_weights'] then?
+    # https://github.com/dmlc/xgboost/blob/4de866211d5bba706f6b94d1ba4a102fe885c1b9/demo/json-model/json_parser.py#L132 
+    if version < 2:
+        leafvals = thresholds 
 
     stack = [(0, t.root())]
     while len(stack) > 0:
@@ -160,7 +167,6 @@ def convert_xgb_json_tree(at, tree_json, clazz):
             for k in range(nlv):
                 u = i * nlv + k
                 t.set_leaf_value(j, k, leafvals[u])
-
 
 
 def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000):
