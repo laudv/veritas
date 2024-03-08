@@ -343,7 +343,8 @@ class TestSearch(unittest.TestCase):
         example = [70, 50]
         ypred = at.eval(example)[0]
         self.assertTrue(ypred < 0.0)
-        rob = VeritasRobustnessSearch(None, at, example, start_delta=15)
+        start_delta = 15
+        rob = VeritasRobustnessSearch(example, start_delta, None, at)
         rob.search()
 
         ypred = at.eval(rob.generated_examples)
