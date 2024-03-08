@@ -149,9 +149,6 @@ from .addtree_conversion import \
         test_conversion
 del addtree_conversion
 
-#temporary hack to work with sklearn.tree.DecisionTree
-from .sklearn_converter import addtree_sklearn_tree 
-
 try: # fails when groot not installed
     from .groot import \
         addtree_from_groot_ensemble

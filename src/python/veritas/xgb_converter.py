@@ -52,13 +52,9 @@ class XGBAddTreeConverter(AddTreeConverter):
         if grad_boost_name != "gbtree":
             raise RuntimeError(f"Tree type {grad_boost_name} not supported")
 
-        at_type = AddTreeType.RAW
-        if "multi" in objective:
-            at_type = AddTreeType.GB_MULTI
-        elif "logistic" in objective:
-            at_type = AddTreeType.GB_BINARY
-        else:
-            at_type = AddTreeType.GB_REGR
+        at_type = AddTreeType.REGR
+        if "multi" in objective or "logistic" in objective:
+            at_type = AddTreeType.CLF_SOFTMAX
 
         size_leaf_vector = int(trees[0]["tree_param"]["size_leaf_vector"])
         num_leaf_values = max(size_leaf_vector, num_class, 1)

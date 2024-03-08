@@ -13,13 +13,10 @@ using namespace veritas;
 
 void init_addtree(py::module &m) {
     py::enum_<AddTreeType>(m, "AddTreeType")
-        .value("RAW", AddTreeType::RAW)
-        .value("RF_REGR", AddTreeType::RF_REGR)
-        .value("RF_BINARY", AddTreeType::RF_BINARY)
-        .value("RF_MULTI", AddTreeType::RF_MULTI)
-        .value("GB_REGR", AddTreeType::GB_REGR)
-        .value("GB_BINARY", AddTreeType::GB_BINARY)
-        .value("GB_MULTI", AddTreeType::GB_MULTI)
+        .value("REGR", AddTreeType::REGR)
+        .value("REGR_MEAN", AddTreeType::REGR_MEAN)
+        .value("CLF_MEAN", AddTreeType::CLF_MEAN)
+        .value("CLF_SOFTMAX", AddTreeType::CLF_SOFTMAX)
         ; // AddTreeType
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree", R"pbdoc(
