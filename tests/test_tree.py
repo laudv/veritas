@@ -171,13 +171,13 @@ class TestTree(unittest.TestCase):
         at = AddTree.read(os.path.join(BPATH, "models/xgb-img-multiclass.json"))
         X = np.array([[x, y] for x in range(100) for y in range(100)], dtype=FloatT)
 
-        self.assertTrue(at.get_type(), AddTreeType.GB_MULTI)
+        self.assertTrue(at.get_type(), AddTreeType.CLF_SOFTMAX)
 
         ypred = at.eval(X)
 
         for c in range(at.num_leaf_values()):
             at0 = at.make_singleclass(c)
-            self.assertTrue(at0.get_type() == AddTreeType.GB_BINARY)
+            self.assertTrue(at0.get_type() == AddTreeType.CLF_SOFTMAX)
 
             ypred0 = 1.0 / (1.0 + np.exp(-ypred[:, c]))
             ypred1 = at0.predict(X).ravel()
@@ -194,13 +194,13 @@ class TestTree(unittest.TestCase):
         at = AddTree.read(os.path.join(BPATH, "models/rf-img-multiclass.json"))
         X = np.array([[x, y] for x in range(100) for y in range(100)], dtype=FloatT)
 
-        self.assertTrue(at.get_type(), AddTreeType.RF_MULTI)
+        self.assertTrue(at.get_type(), AddTreeType.CLF_MEAN)
 
         ypred = at.eval(X)
 
         for c in range(at.num_leaf_values()):
             at0 = at.make_singleclass(c)
-            self.assertTrue(at0.get_type() == AddTreeType.RF_BINARY)
+            self.assertTrue(at0.get_type() == AddTreeType.CLF_MEAN)
 
             ypred0 = ypred[:, c] / len(at) + 0.5
             ypred1 = at0.predict(X).ravel()

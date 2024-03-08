@@ -167,9 +167,9 @@ class RobustnessSearch:
 ## \ingroup python
 # \brief Robustness search using Veritas for the output estimate
 class VeritasRobustnessSearch(RobustnessSearch):
-    def __init__(self, mem_capacity=1024*1024*1024,
-            **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, example, start_delta, source_at, target_at,
+                 mem_capacity=1024*1024*1024, **kwargs):
+        super().__init__(example, start_delta, source_at, target_at, **kwargs)
         self.mem_capacity = mem_capacity
         self.stop_when_num_solutions_exceeds = 1
         self.keep_at_most_generated_examples = 1
@@ -241,8 +241,9 @@ class VeritasRobustnessSearch(RobustnessSearch):
         return max_output_diff, generated_examples
 
 class MilpRobustnessSearch(RobustnessSearch):
-    def __init__(self, silent=True, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, example, start_delta, source_at, target_at,
+                 silent=True, **kwargs):
+        super().__init__(example, start_delta, source_at, target_at, **kwargs)
         self.silent = silent
 
     def get_milp(self, delta, rem_time):
@@ -284,8 +285,8 @@ class MilpRobustnessSearch(RobustnessSearch):
 
 
 class SMTRobustnessSearch(RobustnessSearch):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self, example, start_delta, source_at, target_at, **kwargs):
+        super().__init__(example, start_delta, source_at, target_at, **kwargs)
         self.log = []
 
     def get_smt_verifier(self, delta, max_time):
