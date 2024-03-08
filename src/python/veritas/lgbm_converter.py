@@ -30,13 +30,15 @@ class LGBMAddTreeConverter(AddTreeConverter):
         if num_class > 2:
             return multi_addtree_lgbm(model, num_class)
         if "binary" in objective:
-            return addtree_lgbm(model, at_type=AddTreeType.GB_BINARY)
+            return addtree_lgbm(model, at_type=AddTreeType.CLF_SOFTMAX)
         else:
-            return addtree_lgbm(model, at_type=AddTreeType.GB_REGR)
+            return addtree_lgbm(model, at_type=AddTreeType.REGR)
+        
 
 def multi_addtree_lgbm(model, num_class):
     ats = [addtree_lgbm(model,
-                        at_type=AddTreeType.GB_MULTI,
+                        # at_type=AddTreeType.GB_MULTI,
+                        at_type=AddTreeType.CLF_SOFTMAX,
                         multiclass=(clazz, num_class))
            for clazz in range(num_class)]
 

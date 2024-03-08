@@ -23,23 +23,19 @@ namespace veritas {
 /*!
  * @brief  Type of AddTree
  * When a GAddTree instance is created an no type is specified, the GAddTree
- * will have the `AddTreeType::RAW` Currently AddTreeType is only used in the
+ * will have the `AddTreeType::REGR` Currently AddTreeType is only used in the
  * pybind predict() function
  */
 enum class AddTreeType : uint8_t {
-    RAW       = 0b00000000,
-    REGR      = 0b00000001,
-    BINARY    = 0b00000010,
-    MULTI     = 0b00000100,
-    RF        = 0b00001000,
-    GB        = 0b00010000,
+    REGR        = 0b00000000,
+    CLF         = 0b00000001,
+    // (SUM implicit)
+    MEAN        = 0b00000010,
+    SOFTMAX     = 0b00000100,
 
-    RF_REGR   = RF | REGR,   ///< Random forest regressor
-    RF_BINARY = RF | BINARY, ///< Random forest classifier
-    RF_MULTI  = RF | MULTI,  ///< Random forest multiclass classifier
-    GB_REGR   = GB | REGR,   ///< Gradient boosted regressor
-    GB_BINARY = GB | BINARY, ///< Gradient boosted classifier
-    GB_MULTI  = GB | MULTI   ///< Gradient boosted multiclass classifier
+    REGR_MEAN   = REGR | MEAN, 
+    CLF_MEAN    = CLF | MEAN, 
+    CLF_SOFTMAX = CLF | SOFTMAX
 };
 
 const char *
@@ -79,10 +75,10 @@ public:
      * @param nleaf_values The number of values in a single leaf
      * @param at_type Type of AddTree
      * 
-     *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::RAW`
+     *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::REGR`
      *  @see `veritas::AddTreeType`
      */
-    inline GAddTree(int nleaf_values, AddTreeType at_type = AddTreeType::RAW)
+    inline GAddTree(int nleaf_values, AddTreeType at_type = AddTreeType::REGR)
         : trees_(), base_scores_(nleaf_values, {}), at_type_(at_type) {}
 
     ///** Copy trees (begin, begin+num) from given `at`. */

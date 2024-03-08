@@ -19,13 +19,18 @@ def get_img_data():
     yr = np.array([img[x, y] for x, y in X]).astype(float)
     y2 = yr > np.median(yr) # binary clf
     y4 = np.digitize(yr, np.quantile(yr, [0.25, 0.5, 0.75])) # multiclass
+
+    # build y for multi-target regression
+    yr2 = np.array([img[99-x, 99-y] for x, y in X]).astype(float) # bottom-up
+    yr_mt = np.array([[c1, c2, c3] for c1,c2,c3 in zip(yr,yr2,y4)])
+
     X = X.astype(float) / 100.0
 
-    return X, yr, y2, y4
+    return X, yr, y2, y4, yr_mt
 
 class TestConverters(unittest.TestCase):
     def test_xgb_binary(self):
-        X, _, y, _ = get_img_data()
+        X, _, y, _, _ = get_img_data()
 
         # also downscale X's precision because XGBoost uses float32
         X = X.astype(np.float32).astype(np.float64)
@@ -60,7 +65,7 @@ class TestConverters(unittest.TestCase):
         self.assertTrue(is_correct)
 
     def test_xgb_multiclass(self):
-        X, _, _, y = get_img_data()
+        X, _, _, y, _ = get_img_data()
 
         # also downscale X's precision because XGBoost uses float32
         X = X.astype(np.float32).astype(np.float64)
@@ -80,7 +85,7 @@ class TestConverters(unittest.TestCase):
         self.assertTrue(is_correct)
 
     def test_xgb_multiclass_multioutput(self):
-        X, _, _, y = get_img_data()
+        X, _, _, y, _ = get_img_data()
 
         # also downscale X's precision because XGBoost uses float32
         X = X.astype(np.float32).astype(np.float64)
@@ -101,7 +106,7 @@ class TestConverters(unittest.TestCase):
         self.assertTrue(is_correct)
 
     def test_xgb_regression(self):
-        X, y, _, _ = get_img_data()
+        X, y, _, _, _ = get_img_data()
 
         # also downscale X's precision because XGBoost uses float32
         X = X.astype(np.float32).astype(np.float64)
@@ -123,7 +128,7 @@ class TestConverters(unittest.TestCase):
         import pandas as pd
 
         feature_names = ["feature 1", "feature 2"]
-        X, y, _, _ = get_img_data()
+        X, y, _, _, _ = get_img_data()
 
         # also downscale X's precision because XGBoost uses float32
         X = X.astype(np.float32).astype(np.float64)
@@ -142,8 +147,29 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, df, ypred_model)
         self.assertTrue(is_correct)
 
+    def test_xgb_regression_multioutput(self):
+        X, _, _, _, y = get_img_data()
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
+        model = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            multi_strategy="multi_output_tree",
+            num_target=y.shape[1],
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=0.5,
+            n_estimators=10)
+        model.fit(X, y)
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model)
+        is_correct = veritas.test_conversion(at, X, ypred_model, single_rel_tol=1e-4)
+        self.assertTrue(is_correct)
+
     def test_rf_binary(self):
-        X, _, y, _ = get_img_data()
+        X, _, y, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestClassifier(
             max_depth=6,
@@ -169,7 +195,7 @@ class TestConverters(unittest.TestCase):
         self.assertTrue(is_correct)
 
     def test_rf_multiclass(self):
-        X, _, _, y = get_img_data()
+        X, _, _, y, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestClassifier(
             max_depth=8,
@@ -183,7 +209,7 @@ class TestConverters(unittest.TestCase):
         self.assertTrue(is_correct)
 
     def test_rf_regression(self):
-        X, y, _, _ = get_img_data()
+        X, y, _, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
         clf = RandomForestRegressor(
             max_depth=8,
@@ -202,8 +228,26 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+    def test_rf_regression_multioutput(self):
+        X, _, _, _, y = get_img_data()
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
+        model = RandomForestRegressor(
+            max_depth=2,
+            random_state=0,
+            n_estimators=25)
+        model.fit(X, y)
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model)
+        is_correct = veritas.test_conversion(at, X, ypred_model)
+        self.assertTrue(is_correct)
+
+
     def test_lgb_binary(self):
-        X, _, y, _ = get_img_data()
+        X, _, y, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
         model = lgb.LGBMClassifier(
             objective="binary",
@@ -218,7 +262,7 @@ class TestConverters(unittest.TestCase):
         self.assertTrue(is_correct)
 
     def test_lgb_multiclass(self):
-        X, _, _, y = get_img_data()
+        X, _, _, y, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
         model = lgb.LGBMClassifier(
             objective="multiclass",
@@ -237,7 +281,7 @@ class TestConverters(unittest.TestCase):
               [at.get_base_score(k) for k in range(at.num_leaf_values())])
 
     def test_lgb_regression(self):
-        X, y, _, _ = get_img_data()
+        X, y, _, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
         model = lgb.LGBMRegressor(
             objective="regression_l2",

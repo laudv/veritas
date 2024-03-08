@@ -60,20 +60,21 @@ def addtree_sklearn_ensemble(ensemble):
     # TODO add sklearn boosted trees, extra trees, isolation forest, ...
 
     if isinstance(ensemble, RandomForestRegressor):
-        print("SKLEARN: regressor")
-        at_type = AddTreeType.RF_REGR
+        at_type = AddTreeType.REGR_MEAN 
 
+        num_leaf_values = ensemble.n_outputs_ 
         def extract_value_fun(v, i):
-            return v[0][0]
+            return v[i][0]
+
+        print(f"SKLEARN: regressor with {num_leaf_values} target(s)")
 
     elif isinstance(ensemble, RandomForestClassifier):
-        num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_  > 2 else 1 
+        at_type = AddTreeType.CLF_MEAN
+        num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_ > 2 else 1 
         if num_leaf_values > 2:
-            at_type = AddTreeType.RF_MULTI
             def extract_value_fun(v, i):
                 return v[0][i]/sum(v[0])
         else:
-            at_type = AddTreeType.RF_BINARY
             def extract_value_fun(v, i):
                 assert i == 0
                 return v[0][1]/sum(v[0])
@@ -87,7 +88,7 @@ def addtree_sklearn_ensemble(ensemble):
     for tree in ensemble.estimators_:
         addtree_sklearn_tree(at, tree.tree_, extract_value_fun)
 
-    if at_type != AddTreeType.RF_REGR:
+    if at_type != AddTreeType.REGR_MEAN:
         for k in range(num_leaf_values):
             at.set_base_score(k, -len(at)/2.0)
 
