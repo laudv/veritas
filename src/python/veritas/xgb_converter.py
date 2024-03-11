@@ -36,6 +36,7 @@ class XGBAddTreeConverter(AddTreeConverter):
         objective = booster_json["learner"]["objective"]["name"]
         base_score = float(booster_json["learner"]["learner_model_param"]["base_score"])
         num_class = int(booster_json["learner"]["learner_model_param"]["num_class"])
+        num_target = int(booster_json["learner"]["learner_model_param"]["num_target"])
         grad_boost_name = booster_json["learner"]["gradient_booster"]["name"]
         tree_info = booster_json["learner"]["gradient_booster"]["model"]["tree_info"]
 
@@ -57,7 +58,7 @@ class XGBAddTreeConverter(AddTreeConverter):
             at_type = AddTreeType.CLF_SOFTMAX
 
         size_leaf_vector = int(trees[0]["tree_param"]["size_leaf_vector"])
-        num_leaf_values = max(size_leaf_vector, num_class, 1)
+        num_leaf_values = max(size_leaf_vector, num_class, num_target, 1)
         at = AddTree(num_leaf_values, at_type)
 
         version = booster_json['version'][0]

@@ -168,6 +168,27 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model, single_rel_tol=1e-4)
         self.assertTrue(is_correct)
 
+    def test_xgb_regression_multioutput_onepertree(self):
+        X, _, _, _, y = get_img_data()
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
+        model = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            multi_strategy = "one_output_per_tree",
+            num_target=y.shape[1],
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=0.5,
+            n_estimators=10)
+        model.fit(X, y)
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model)
+        is_correct = veritas.test_conversion(at, X, ypred_model, single_rel_tol=1e-4)
+        self.assertTrue(is_correct)
+
     def test_rf_binary(self):
         X, _, y, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
