@@ -235,7 +235,7 @@ template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::prune(const BoxRefT& box) const
 {
-    GAddTree<TreeT> new_at(num_leaf_values());
+    GAddTree<TreeT> new_at(num_leaf_values(), at_type_);
     new_at.base_scores_ = base_scores_;
     for (const TreeT& t : *this)
         new_at.add_tree(t.prune(box));
@@ -245,7 +245,7 @@ GAddTree<TreeT>::prune(const BoxRefT& box) const
 template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::neutralize_negative_leaf_values() const {
-    GAddTree<TreeT> new_at = *this;
+    GAddTree<TreeT> new_at(*this);
 
     for (size_t m = 0; m < size(); ++m) {
         const TreeT& tree = trees_[m];
@@ -314,7 +314,7 @@ GAddTree<TreeT>::concat_negated(const GAddTree<TreeT>& other) const {
 template <typename TreeT>
 GAddTree<TreeT>
 GAddTree<TreeT>::negate_leaf_values() const {
-    return GAddTree<TreeT>(num_leaf_values()).concat_negated(*this);
+    return GAddTree<TreeT>(num_leaf_values(), at_type_).concat_negated(*this);
 }
 
 template <typename TreeT>

@@ -26,7 +26,6 @@ void init_addtree(py::module &m) {
             :param AddTreeType: Optional AdTreeType
             :type AddTreeType: AddTreeType or None
         )pbdoc")
-        .def(py::init<int>())
         .def(py::init<int, AddTreeType>())
         //.def(py::init<const AddTree&, size_t, size_t>())
         .def("get_base_score", [](const AddTree &at, int idx)

@@ -1,3 +1,4 @@
+#include "addtree.hpp"
 #include "tree.hpp"
 #include "json_io.hpp"
 #include <ostream>
@@ -51,7 +52,7 @@ int test_json2() {
 int test_json3() {
     std::stringstream s;
 
-    AddTreeFp at(2);
+    AddTreeFp at(2, AddTreeType::REGR);
     at.base_score(0) = 9.99;
     at.base_score(1) = 99.99;
     {

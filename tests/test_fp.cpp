@@ -1,3 +1,4 @@
+#include "addtree.hpp"
 #include "basics.hpp"
 #include "box.hpp"
 #include "tree.hpp"
@@ -134,7 +135,7 @@ int test_fp_with_tree1() {
 }
 
 int test_invalid_leaf_access() {
-    AddTree at(1);
+    AddTree at(1, AddTreeType::REGR);
     Tree& t = at.add_tree();
 
     t.split(t[""], {0, 1.0});

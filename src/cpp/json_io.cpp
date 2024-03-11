@@ -6,6 +6,7 @@
  * Author: Laurens Devos
 */
 
+#include "addtree.hpp"
 #include "basics.hpp"
 #include "json_io.hpp"
 #include "tree.hpp"
@@ -68,7 +69,7 @@ void tree_from_oldjson(std::istream& s, Tree& tree, NodeId id) {
 }
 
 AddTree addtree_from_oldjson(std::istream& s) {
-    AddTree at(1);
+    AddTree at(1, AddTreeType::REGR);
 
     std::string buf;
     char c;

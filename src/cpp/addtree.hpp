@@ -78,7 +78,7 @@ public:
      *  Create an empty AddTree. When an AddTreeType is not specified, the AddTree will have the `AddTreeType::REGR`
      *  @see `veritas::AddTreeType`
      */
-    inline GAddTree(int nleaf_values, AddTreeType at_type = AddTreeType::REGR)
+    inline GAddTree(int nleaf_values, AddTreeType at_type)
         : trees_(), base_scores_(nleaf_values, {}), at_type_(at_type) {}
 
     ///** Copy trees (begin, begin+num) from given `at`. */

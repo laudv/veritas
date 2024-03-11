@@ -11,7 +11,7 @@
 using namespace veritas;
 
 static AddTree get_simple_addtree1() {
-    AddTree at(1);
+    AddTree at(1, AddTreeType::REGR);
     at.base_score(0) = 2;
     {
         Tree& t = at.add_tree();

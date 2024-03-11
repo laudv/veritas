@@ -7,11 +7,13 @@
 */
 
 #include "fp_search.hpp"
+#include "addtree.hpp"
 #include "basics.hpp"
 #include "block_store.hpp"
 #include "box.hpp"
 #include "leafiter.hpp"
 #include "tree.hpp"
+
 #include <algorithm>
 #include <cmath> // isinf
 #include <memory>
@@ -1061,7 +1063,7 @@ Search::Search(const Config& config, const AddTree& at, const FlatBox& prune_box
     : config{config}
     , stats{}
     , at_{at.neutralize_negative_leaf_values()}
-    , atfp_{at.num_leaf_values()}
+    , atfp_{1, AddTreeType::REGR} // placeholder, replaced in constructor
     , fpmap_{}
     , start_time_{time_clock::now()}
     , store_{config.memory_min_block_size}
