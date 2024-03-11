@@ -20,7 +20,7 @@ def round_splits(t0, i0, t1, i1):
             t1.set_leaf_value(i1, i, v)
 
 def transform_addtree(at0):
-    at1 = AddTree(at0.num_leaf_values())
+    at1 = AddTree(at0.num_leaf_values(), at0.get_type())
     for t0 in at0:
         t1 = at1.add_tree()
         round_splits(t0, t0.root(), t1, t1.root())

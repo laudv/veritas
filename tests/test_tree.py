@@ -3,7 +3,8 @@ import unittest
 import pickle
 import numpy as np
 
-from veritas import *
+from veritas import AddTree, AddTreeType, FloatT, Interval, LtSplit
+from veritas import TRUE_INTERVAL, FALSE_INTERVAL, BOOL_SPLIT_VALUE
 
 BPATH = os.path.dirname(__file__)
 
@@ -21,7 +22,7 @@ class TestTree(unittest.TestCase):
             self.assertEqual(a, b)
 
     def test_tree1(self):
-        at = AddTree(2)
+        at = AddTree(2, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 1, 16.0)
         t.set_leaf_value(t.left(t.root()), 0, 1.1)
@@ -40,7 +41,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(at.compute_box([2]), {1: Interval.from_lo(16.0)})
 
     def test_boolsplit(self):
-        at = AddTree(2)
+        at = AddTree(2, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 0, 2.0)
         t.split(t.left(t.root()), 1, 1.0)
@@ -76,7 +77,7 @@ class TestTree(unittest.TestCase):
                                               [8.0, -8.0],
                                               [4.0, -4.0]], dtype=FloatT))
 
-        s = at.to_json();
+        s = at.to_json()
         att = AddTree.from_json(s)
         t = att[0]
 
@@ -84,7 +85,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(t.get_split(t.right(t.root())), LtSplit(2, BOOL_SPLIT_VALUE))
 
     def test_tree_json(self):
-        at = AddTree(3)
+        at = AddTree(3, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 1, 2.0)
         t.split(t.left(t.root()), 2, 4.0)
@@ -126,7 +127,7 @@ class TestTree(unittest.TestCase):
         self.assertTrue(np.all(tt.get_leaf_values(4) == np.array([0.45, -0.45, 0.0])))
 
     def test_addtree_get_splits(self):
-        at = AddTree(1)
+        at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 1, 4.0)
         t.split(t.left(t.root()), 2, 0.12)
@@ -151,7 +152,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(sorted(list(s.keys())), [1, 2])
 
     def test_pickle1(self):
-        at = AddTree(1)
+        at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 1, 4.0)
         t.split(t.left(t.root()), 2, 0.12)
@@ -215,7 +216,7 @@ class TestTree(unittest.TestCase):
 
 
     def test_get_maximum_feat_id(self):
-        at = AddTree(1)
+        at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 3, 4.0)
          
@@ -223,7 +224,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(at[0].get_maximum_feat_id(), 3)
 
     def test_min_num_columns(self):
-        at = AddTree(1)
+        at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 3, 4.0)
 

@@ -118,7 +118,7 @@ namespace veritas {
         /** Replace the feature ids used in the given at by the replacements in this FeatMap. */
         AddTree transform(const AddTree& at, int instance=0) const {
             instance = clean_instance(instance);
-            AddTree new_at(at.num_leaf_values());
+            AddTree new_at(at.num_leaf_values(), at.get_type());
             for (const Tree& t : at)
             {
                 Tree& new_t = new_at.add_tree();

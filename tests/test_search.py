@@ -11,8 +11,8 @@ except ModuleNotFoundError:
     MATPLOTLIB=False
 
 import veritas
-from veritas import AddTree, HeuristicType, Config, Interval, \
-        StopReason, VeritasRobustnessSearch
+from veritas import AddTree, AddTreeType, HeuristicType, Config, \
+        Interval, StopReason, VeritasRobustnessSearch
 
 BPATH = os.path.dirname(__file__)
 
@@ -46,7 +46,7 @@ def get_img_data():
 
 class TestSearch(unittest.TestCase):
     def test_single_tree(self):
-        at = AddTree(1)
+        at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)

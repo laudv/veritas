@@ -1,3 +1,4 @@
+#include "addtree.hpp"
 #include "bindings.h"
 #include "tree.hpp"
 #include <pybind11/pytypes.h>
@@ -108,7 +109,7 @@ void init_tree(py::module &m) {
         .def("prune", [](const TreeRef& r, const py::object& pybox) {
             Box::BufT buf = tobox(pybox);
             Box box{buf};
-            AddTree at(r.get().num_leaf_values());
+            AddTree at(r.get().num_leaf_values(), AddTreeType::REGR);
             at.add_tree(r.get().prune(BoxRef{box}));
             return at;
         })

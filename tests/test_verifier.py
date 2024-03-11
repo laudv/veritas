@@ -1,13 +1,16 @@
-import unittest, os, json, math
+import os
+import math
+import unittest
 import numpy as np
 import z3
 
-from veritas import *
-from veritas import Interval
+from veritas import Interval, FloatT, AddTreeType, AddTree, Config, StopReason, \
+        HeuristicType
 from veritas.smt import Verifier#, not_in_domain_constraint, in_domain_constraint
 from veritas.z3backend import Z3Backend as Backend
-from veritas.kantchelian import KantchelianOutputOpt
-from veritas.robustness import SMTRobustnessSearch
+from veritas import KantchelianOutputOpt
+from veritas import SMTRobustnessSearch, VeritasRobustnessSearch
+from veritas import MilpRobustnessSearch
 
 ### NOTE: some tests were taken from treeck, and adapted to discard useless stuff (DomTree, etc.)
 BPATH = os.path.dirname(__file__)
@@ -27,8 +30,8 @@ class TestVerifier(unittest.TestCase):
 
 
     def test_single_tree(self):
-        at = AddTree(1)
-        t = at.add_tree();
+        at = AddTree(1, AddTreeType.REGR)
+        t = at.add_tree()
         t.split(t.root(), 0, 2)
         t.split(t.left(t.root()), 0, 1)
         t.split(t.right(t.root()), 0, 3)
@@ -52,7 +55,9 @@ class TestVerifier(unittest.TestCase):
         v = Verifier(at, prune_box, Backend())
         v.add_all_trees()
         v.add_constraint(v.xvar(0) < 2.0)
-        check = v.check(v.fvar() != t.get_leaf_value(t.right( t.left(t.root())),0)) ### value for class 0 manually read here!
+
+        ### value for class 0 manually read here!
+        check = v.check(v.fvar() != t.get_leaf_value(t.right(t.left(t.root())), 0)) 
         self.assertEqual(check, Verifier.Result.UNSAT)
 
         prune_box = {0: Interval(1, 3)}
@@ -65,8 +70,8 @@ class TestVerifier(unittest.TestCase):
    
 
     def test_two_trees(self):
-        at = AddTree(1)
-        t = at.add_tree();
+        at = AddTree(1, AddTreeType.REGR)
+        t = at.add_tree()
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 0, 1)
         t.split(t.right(t.root()), 0, 3)
@@ -74,7 +79,7 @@ class TestVerifier(unittest.TestCase):
         t.set_leaf_value(t.right( t.left(t.root())), 0.2)
         t.set_leaf_value( t.left(t.right(t.root())), 0.3)
         t.set_leaf_value(t.right(t.right(t.root())), 0.4)
-        t = at.add_tree();
+        t = at.add_tree()
         t.split(t.root(), 0, 2)
         t.split( t.left(t.root()), 1, 1)
         t.split(t.right(t.root()), 1, 3)
@@ -123,7 +128,8 @@ class TestVerifier(unittest.TestCase):
         ### WIP 
         model = v.model()
         self.myAssertAlmostEqual(model["ws"], [0.3, -0.3])
-        self.assertEqual(v.model_family(model), {0: Interval(2,3), 1: Interval(-math.inf,3)})
+        self.assertEqual(v.model_family(model), {0: Interval(2, 3),
+                                                 1: Interval(-math.inf, 3)})
         #v.add_constraint(not_in_domain_constraint(v, v.model_family(model), 0))
         #self.assertEqual(v.check(v.fvar() < 0.01), Verifier.Result.UNSAT)
 
@@ -216,7 +222,6 @@ class TestVerifier(unittest.TestCase):
 
 
     def test_img_robustness_search(self):
-
         img = np.load(os.path.join(BPATH, "../data/img.npy"))
         X = np.array([[x, y] for x in range(100) for y in range(100)])
         y = np.array([img[x, y] for x, y in X])
