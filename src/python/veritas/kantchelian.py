@@ -484,6 +484,7 @@ class KantchelianTargetedAttack(KantchelianBase):
 # \brief Variation of the Kantchelian attack where the output is optimized rather than
 # the distance to the closest adversarial example.
 class KantchelianOutputOpt(KantchelianBase):
+     # TODO: change example+solution2 (not always needed!)
     def __init__(self, at, example, **kwargs):
         self.at = at
         self.example = example
