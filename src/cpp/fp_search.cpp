@@ -299,7 +299,7 @@ struct CountingOutputHeuristic
         state.fscore += get_count_for(tree_index, leaf_id);
     };
 
-    int get_count_for(size_t tree_index, NodeId leaf_id) const {
+    FloatT get_count_for(size_t tree_index, NodeId leaf_id) const {
         if (tree_index >= counts.size())
             return 1;
         const std::vector<int>& counts_for_tree = counts[tree_index];
@@ -1090,8 +1090,9 @@ Search::Search(const Config& config, const AddTree& at, const FlatBox& prune_box
 // Helper methods in abstract class Search
 double Search::time_since_start() const {
     time_point now = time_clock::now();
-    return std::chrono::duration_cast<std::chrono::microseconds>(
-            now-start_time_).count() * 1e-6;
+    auto cnt = std::chrono::duration_cast<std::chrono::microseconds>(
+            now-start_time_).count();
+    return static_cast<double>(cnt) * 1e-6;
 }
 
 size_t Search::get_used_memory() const {

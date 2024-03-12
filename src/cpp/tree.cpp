@@ -28,9 +28,9 @@ GTree<SplitT, ValueT>::prune(const BoxRefT& box) const {
     stack2.push(new_tree.root());
 
     while (stack1.size() != 0) {
-        size_t n1 = stack1.top();
+        NodeId n1 = stack1.top();
         stack1.pop();
-        size_t n2 = stack2.top();
+        NodeId n2 = stack2.top();
 
         if (is_leaf(n1)) {
             stack2.pop();

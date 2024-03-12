@@ -318,14 +318,15 @@ GAddTree<TreeT>::negate_leaf_values() const {
 }
 
 template <typename TreeT>
-std::enable_if_t<std::is_same_v<typename GAddTree<TreeT>::LeafValueType, FloatT>>
+std::enable_if_t<std::is_same_v<typename TreeT::LeafValueType, FloatT>>
 GAddTree<TreeT>::predict(const data<SplitValueT>& row, data<LeafValueType>& result) const {
     const int nlv = num_leaf_values();
     eval(row, result);
 
     if (_is_a(at_type_, AddTreeType::MEAN)) {
         FloatT shift =_is_a(at_type_, AddTreeType::CLF) ? 0.5 :  0.0;
-        for (int j = 0; j < nlv; ++j) result[j] = result[j] / size() + shift;
+        double denom = static_cast<double>(size());
+        for (int j = 0; j < nlv; ++j) result[j] = result[j] / denom + shift;
     } else if (_is_a(at_type_, AddTreeType::SOFTMAX)) {
         FloatT e = 0;
         for (int j = 0; j < nlv; ++j) e += std::exp(result[j]);

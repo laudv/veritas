@@ -45,8 +45,7 @@ namespace veritas {
         explicit
         FeatMap(Args... feature_names) : names_(feature_names...) { init(); }
 
-        FeatMap(FeatId num_features)
-        {
+        FeatMap(FeatId num_features) {
             for (FeatId index = 0; index < num_features; ++index)
             {
                 std::stringstream buffer;
@@ -58,8 +57,7 @@ namespace veritas {
 
         size_t num_features() const { return names_.size(); }
 
-        FeatId get_index(const std::string& feature_name, int instance) const
-        {
+        FeatId get_index(const std::string& feature_name, int instance) const {
 
             auto it = index_map_.find(feature_name);
             if (it != index_map_.end())
@@ -67,44 +65,38 @@ namespace veritas {
             throw std::runtime_error("invalid feature name");
         }
 
-        FeatId get_index(FeatId index, int instance) const
-        {
+        FeatId get_index(FeatId index, int instance) const {
             // second instance's indexes are offset by number of features
-            int offset = clean_instance(instance) * num_features();
+            int nfeats = static_cast<int>(num_features());
+            int offset = clean_instance(instance) * nfeats;
             return index + offset;
         }
 
-        int get_instance(FeatId index) const
-        {
+        int get_instance(FeatId index) const {
             return static_cast<size_t>(index) >= num_features();
         }
 
-        const std::string& get_name(FeatId index) const
-        {
+        const std::string &get_name(FeatId index) const {
             return names_.at(index % num_features());
         }
 
-        void get_indices_map(std::multimap<FeatId, FeatId>& out, int instance=-1) const
-        {
+        void get_indices_map(std::multimap<FeatId, FeatId>& out, int instance=-1) const {
             FeatId begin = (instance==1) * static_cast<FeatId>(num_features());
             FeatId end = (static_cast<FeatId>(instance!=0) + 1) * static_cast<FeatId>(num_features());
 
-            for (FeatId index = begin; index < end; ++index)
-            {
+            for (FeatId index = begin; index < end; ++index) {
                 FeatId feat_id = get_feat_id(index);
                 out.insert({feat_id, index});
             }
         }
 
-        std::multimap<FeatId, FeatId> get_indices_map(int instance=-1) const
-        {
+        std::multimap<FeatId, FeatId> get_indices_map(int instance=-1) const {
             std::multimap<FeatId, FeatId> mmap;
             get_indices_map(mmap, instance);
             return mmap;
         }
 
-        void share_all_features_between_instances()
-        {
+        void share_all_features_between_instances() {
             for (FeatId index = 0; static_cast<size_t>(index) < names_.size(); ++index)
                 uf_union(index, index+num_features());
         }
@@ -119,8 +111,7 @@ namespace veritas {
         AddTree transform(const AddTree& at, int instance=0) const {
             instance = clean_instance(instance);
             AddTree new_at(at.num_leaf_values(), at.get_type());
-            for (const Tree& t : at)
-            {
+            for (const Tree& t : at) {
                 Tree& new_t = new_at.add_tree();
                 transform(t, t.root(), new_t, new_t.root(), instance);
             }
