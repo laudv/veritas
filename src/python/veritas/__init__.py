@@ -29,7 +29,7 @@ del veritas_core
 
 # PACKAGE META
 
-__version__ = "0.1.3"
+__version__ = "0.2.0"
 __title__ = "veritas"
 __description__ = "Versatile Verification of Tree Ensembles"
 __url__ = "https://github.com/laudv/veritas"
