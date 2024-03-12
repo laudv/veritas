@@ -1,6 +1,6 @@
 # https://github.com/benjaminjack/python_cpp_example
 
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.18)
 project(veritas)
 
 set(VERITAS_CORE, "${PROJECT_NAME}_core")
