@@ -70,9 +70,11 @@ class RobustnessSearch:
         for self.i in range(self.num_steps):
             self.delta_log.append((delta, lower, upper, timeit.default_timer()-self.start_time))
             step_time = self.get_step_time()
-            if step_time < 0.0: break
+            if step_time < 0.0:
+                break
             res = self.get_max_output_difference(delta, step_time)
-            if res is None: break
+            if res is None:
+                break
             max_output_diff, generated_examples = res
             best_example_delta = delta
             if len(generated_examples) > 0:
@@ -97,7 +99,8 @@ class RobustnessSearch:
                       f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]", end="")
                 if len(generated_examples):
                     print(f" (!) ex.w/ delta {best_example_delta-self.guard:.4f}")
-                else: print()
+                else:
+                    print()
             else: # no adv. can exist
                 # #NOPE - we don't double delta anymore
                 # if delta == upper and lower == 0.0:

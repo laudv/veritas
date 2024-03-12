@@ -23,7 +23,6 @@ from .veritas_core import \
         Config, \
         Search, \
         Solution
-del veritas_core
 
 
 
@@ -106,7 +105,6 @@ setattr(Tree, "eval_node", __tree_eval_node)
 ################################################################################
 
 from .util import get_closest_example
-del util
 
 try: # fails when gurobipy not installed
     from .kantchelian import \
@@ -114,7 +112,6 @@ try: # fails when gurobipy not installed
             KantchelianAttack, \
             KantchelianTargetedAttack, \
             KantchelianOutputOpt
-    del kantchelian
 except ModuleNotFoundError:
     pass
 
@@ -122,14 +119,12 @@ try:
     from .smt import \
             Verifier, \
             VerifierTimeout
-    del smt
 except ModuleNotFoundError:
     pass
 
 try: 
     from .z3backend import \
             Z3Backend
-    del z3backend
 except ModuleNotFoundError:
     pass
 
@@ -138,7 +133,6 @@ from .robustness import \
         VeritasRobustnessSearch, \
         MilpRobustnessSearch, \
         SMTRobustnessSearch
-del robustness
 
 from .addtree_conversion import \
         AddTreeConverter, \
@@ -147,12 +141,10 @@ from .addtree_conversion import \
         add_addtree_converter, \
         get_addtree, \
         test_conversion
-del addtree_conversion
 
 try: # fails when groot not installed
     from .groot import \
         addtree_from_groot_ensemble
-    del groot
 except ModuleNotFoundError:
     pass
 
@@ -162,11 +154,8 @@ except ModuleNotFoundError:
 ################################################################################
 
 from .xgb_converter import XGBAddTreeConverter
-del xgb_converter
 from .lgbm_converter import LGBMAddTreeConverter
-del lgbm_converter
 from .sklearn_converter import SklAddTreeConverter
-del sklearn_converter
 
 add_addtree_converter(LGBMAddTreeConverter())
 add_addtree_converter(SklAddTreeConverter())
