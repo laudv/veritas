@@ -42,7 +42,7 @@ print(at[1])
 
 print("---------------\n")
 ### <PART get_addtree_example>
-from veritas import *
+import veritas
 from sklearn.datasets import make_moons
 from sklearn.ensemble import RandomForestClassifier
 
@@ -52,16 +52,13 @@ clf = RandomForestClassifier(
         max_depth=4,
         random_state=0,
         n_estimators=3)
-
-trained_model = clf.fit(X, Y)
+clf.fit(X, Y)
 
 # Convert the RandomForestClassifier model to a Veritas tree ensemble
-addtree = get_addtree(trained_model)
+at = veritas.get_addtree(clf)
 
-print(f"{addtree}\n")
-
-# Print all trees in the ensemble
-for tree in addtree:
+print(at)
+for tree in at:
     print(tree)
 ### </PART>
 
