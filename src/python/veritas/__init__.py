@@ -2,6 +2,8 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
+# ruff: noqa: F401, E402
+
 import gzip as _gzip
 import numpy as _np
 
@@ -155,8 +157,9 @@ except ModuleNotFoundError:
 
 from .xgb_converter import XGBAddTreeConverter
 from .lgbm_converter import LGBMAddTreeConverter
-from .sklearn_converter import SklAddTreeConverter
+from .sklearn_converter import SklRfAddTreeConverter, SklGbdtAddTreeConverter
 
 add_addtree_converter(LGBMAddTreeConverter())
-add_addtree_converter(SklAddTreeConverter())
+add_addtree_converter(SklRfAddTreeConverter())
+add_addtree_converter(SklGbdtAddTreeConverter())
 add_addtree_converter(XGBAddTreeConverter())
