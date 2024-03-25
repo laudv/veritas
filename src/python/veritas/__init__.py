@@ -30,7 +30,7 @@ from .veritas_core import \
 
 # PACKAGE META
 
-__version__ = "0.2.0"
+__version__ = "0.2.1"
 __title__ = "veritas"
 __description__ = "Versatile Verification of Tree Ensembles"
 __url__ = "https://github.com/laudv/veritas"
@@ -157,9 +157,14 @@ except ModuleNotFoundError:
 
 from .xgb_converter import XGBAddTreeConverter
 from .lgbm_converter import LGBMAddTreeConverter
-from .sklearn_converter import SklRfAddTreeConverter, SklGbdtAddTreeConverter
+from .sklearn_converter import (
+    SklRfAddTreeConverter,
+    SklGbdtAddTreeConverter,
+    SklTreeAddTreeConverter,
+)
 
 add_addtree_converter(LGBMAddTreeConverter())
 add_addtree_converter(SklRfAddTreeConverter())
 add_addtree_converter(SklGbdtAddTreeConverter())
+add_addtree_converter(SklTreeAddTreeConverter())
 add_addtree_converter(XGBAddTreeConverter())

@@ -115,6 +115,41 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
 
         return at
 
+
+class SklTreeAddTreeConverter(AddTreeConverter):
+    def convert(self, ensemble):
+        try:
+            from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
+        except ModuleNotFoundError:
+            raise InapplicableAddTreeConverter("no sklearn")
+
+        if isinstance(ensemble, DecisionTreeClassifier):
+            tree = ensemble
+            at_type = AddTreeType.CLF_MEAN
+            num_leaf_values = 1
+            def extract_value_fun(v, i):
+                assert i == 0
+                return v[0][1]/sum(v[0])
+
+            print(f"SKLEARN: single tree classifier with {num_leaf_values} classes")
+
+        elif isinstance(ensemble, DecisionTreeRegressor):
+            tree = ensemble
+            at_type = AddTreeType.REGR_MEAN
+            num_leaf_values = 1
+
+            def extract_value_fun(v, i):
+                assert i == 0
+                return v[i][0]
+
+        else:
+            raise InapplicableAddTreeConverter(f"not sklearn clf tree: {type(ensemble)}")
+
+        at = AddTree(num_leaf_values, at_type)
+        addtree_sklearn_tree(at, tree, extract_value_fun)
+        return at
+
+
 def addtree_sklearn_tree(at, tree, extract_value_fun):
     import sklearn.tree as sktree
     if isinstance(tree, sktree.DecisionTreeClassifier) \
