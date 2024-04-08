@@ -30,6 +30,32 @@ Veritas should work on Linux (GCC), Mac (LLVM), and Windows (MSVC). If you encou
 
 To pull the latest updates from Github, simply `git pull` the changes and reinstall using `pip`: `pip install --force-reinstall .`.
 
+### Developer Installation
+
+```
+# clone this repository
+git clone https://github.com/laudv/veritas.git
+cd veritas
+git submodule init && git submodule update
+
+# editable install
+pip install —editable .
+
+# build manually to avoid scikit-learn issues
+mkdir manual_build && cd manual_build
+cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake --build .
+
+# symlink to .so in src/python/veritas
+cd .. 
+ln -sr manual_build/veritas_core_XXX.so src/python/veritas 
+[on Mac no relative symlink: need to do ln -sf ../../../manual_build/...  ]
+```
+
+`ls -l src/python/veritas` should show symlink - if so, we're done!
+
+To recompile, just run `make -C manual_build` in veritas root.
+
 ## Example
 
 You can convert an existing ensemble using the `veritas.get_addtree` function for XGBoost, LightGBM and scikit-learn.
