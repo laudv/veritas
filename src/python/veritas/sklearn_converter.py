@@ -12,7 +12,7 @@ from . import AddTree, AddTreeType, AddTreeConverter
 from . import InapplicableAddTreeConverter
 
 class SklRfAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble):
+    def convert(self, ensemble, silent):
         try:
             from sklearn.ensemble import \
                     RandomForestClassifier, \
@@ -31,7 +31,8 @@ class SklRfAddTreeConverter(AddTreeConverter):
             def extract_value_fun(v, i):
                 return v[i][0]
 
-            print(f"SKLEARN: RF regressor with {num_leaf_values} target(s)")
+            if not silent:
+                print(f"SKLEARN: RF regressor with {num_leaf_values} target(s)")
 
         elif isinstance(ensemble, RandomForestClassifier):
             at_type = AddTreeType.CLF_MEAN
@@ -44,7 +45,8 @@ class SklRfAddTreeConverter(AddTreeConverter):
                     assert i == 0
                     return v[0][1]/sum(v[0])
 
-            print(f"SKLEARN: RF classifier with {num_leaf_values} classes")
+            if not silent:
+                print(f"SKLEARN: RF classifier with {num_leaf_values} classes")
 
         else:
             raise InapplicableAddTreeConverter(f"not sklearn rf: {type(ensemble)}")
@@ -60,7 +62,7 @@ class SklRfAddTreeConverter(AddTreeConverter):
         return at
 
 class SklGbdtAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble):
+    def convert(self, ensemble, silent):
         try:
             from sklearn.ensemble import \
                     GradientBoostingClassifier, \
@@ -75,7 +77,8 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
             def extract_value_fun(v, i):
                 return v[i][0] * ensemble.learning_rate
 
-            print(f"SKLEARN: GDBT regressor with {num_leaf_values} target(s)")
+            if not silent:
+                print(f"SKLEARN: GDBT regressor with {num_leaf_values} target(s)")
 
         elif isinstance(ensemble, GradientBoostingClassifier):
             # __import__('pprint').pprint(ensemble.__dict__)
@@ -95,7 +98,8 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
             def extract_value_fun(v, i):
                 return v[i][0] * ensemble.learning_rate
 
-            print(f"SKLEARN: GDBT regressor with {num_leaf_values} target(s)")
+            if not silent:
+                print(f"SKLEARN: GDBT regressor with {num_leaf_values} target(s)")
 
         else:
             raise InapplicableAddTreeConverter(f"not sklearn gbdt: {type(ensemble)}")
@@ -117,7 +121,7 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
 
 
 class SklTreeAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble):
+    def convert(self, ensemble, silent):
         try:
             from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
         except ModuleNotFoundError:
@@ -131,7 +135,8 @@ class SklTreeAddTreeConverter(AddTreeConverter):
                 assert i == 0
                 return v[0][1]/sum(v[0])
 
-            print(f"SKLEARN: single tree classifier with {num_leaf_values} classes")
+            if not silent:
+                print(f"SKLEARN: single tree classifier with {num_leaf_values} classes")
 
         elif isinstance(ensemble, DecisionTreeRegressor):
             tree = ensemble

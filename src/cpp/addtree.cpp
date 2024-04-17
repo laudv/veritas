@@ -143,8 +143,9 @@ GAddTree<TreeT>::make_singleclass(int c) const {
     GAddTree<TreeT> new_at(1, at_type_);
 
     for (const TreeT& t : *this) {
-        if (!t.is_all_zeros(c))
+        if (!t.is_all_zeros(c)) {
             new_at.add_tree(t.make_singleclass(c));
+        }
     }
 
     new_at.base_score(0) = base_score(c);
@@ -199,6 +200,14 @@ size_t GAddTree<TreeT>::num_leafs() const {
     for (const TreeT& tree : *this)
         c += tree.num_leaves();
     return c;
+}
+
+template <typename TreeT>
+int GAddTree<TreeT>::max_depth() const {
+    int mx = 0;
+    for (const TreeT& tree : *this)
+        mx = std::max(mx, tree.max_depth(tree.root()));
+    return mx;
 }
 
 template <typename TreeT>

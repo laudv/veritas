@@ -13,19 +13,16 @@ class NoRegisteredConverterException(Exception):
     pass
 
 class AddTreeConverter:
-    """ AddTreeConverter Base Interface
+    """AddTreeConverter Base Interface
 
     Interface that gives the opportunity to implement a conversion from one's
     own model to Veritas' represention of tree ensembles.
 
-    The function to implement is ``get_addtree(model)``. The converter then
-    needs to be added to the convertermanager using
-    ``add_addtree_converter()``.
-
-    For an example see :ref:`Model Conversion implementation`.
+    The function to implement is ``convert(model, silent)``. The converter then
+    needs to be added to the convertermanager using ``add_addtree_converter()``.
     """
 
-    def convert(self, model):
+    def convert(self, model, silent):
         """ Convert the given model to an `AddTree`
 
         This method throws an `InapplicableAddTreeConverter` if the given model
@@ -44,10 +41,10 @@ class AddTreeConverterRegistry:
         # Prepend to the front so this new converter takes precedence
         self._converters.insert(0, converter)
 
-    def get_addtree(self, model):
+    def get_addtree(self, model, silent):
         for converter in self._converters:
             try:
-                addtree = converter.convert(model)
+                addtree = converter.convert(model, silent)
                 assert isinstance(addtree, AddTree)
                 return addtree
             except InapplicableAddTreeConverter:
@@ -70,7 +67,7 @@ def add_addtree_converter(converter):
     """
     _converter_registry.add_converter(converter)
 
-def get_addtree(model):
+def get_addtree(model, silent=False):
     """Convert the given model to a Veritas `AddTree`.
 
     This will try each registered `AddTreeConverter` known to Veritas. There
@@ -86,7 +83,7 @@ def get_addtree(model):
     :param model: model that needs to be converted to a Veritas tree ensemble
     :rtype: AddTree
     """
-    return _converter_registry.get_addtree(model)
+    return _converter_registry.get_addtree(model, silent=silent)
 
 def test_conversion(at, X, ypred_model, single_rel_tol=1e-5):
     """Test the conversion of a model to a Veritas `AddTree`

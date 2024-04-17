@@ -213,6 +213,14 @@ public:
         return depth;
     }
 
+    inline int max_depth(NodeId id, int depth = 0) const {
+        if (is_internal(id)) {
+            return 1 + std::max(max_depth(left(id)), max_depth(right(id)));
+        } else {
+            return depth;
+        }
+    }
+
     inline const SplitType& get_split(NodeId id) const {
         if (is_leaf(id)) throw std::runtime_error("get_split of leaf");
         return node(id).split();

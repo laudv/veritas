@@ -24,6 +24,14 @@ void init_tree(py::module &m) {
         .def("parent", [](const TreeRef& r, NodeId n) { return r.get().parent(n); })
         .def("tree_size", [](const TreeRef& r, NodeId n) { return r.get().tree_size(n); })
         .def("depth", [](const TreeRef& r, NodeId n) { return r.get().depth(n); })
+        .def("max_depth", [](const TreeRef& r, std::optional<NodeId> n) {
+                if (n.has_value()) {
+                    return r.get().max_depth(n.value());
+                } else {
+                    return r.get().max_depth(r.get().root());
+                }
+            },
+            py::arg("n") = py::none())
         .def("get_leaf_value", [](const TreeRef& r, NodeId n, int i) {
             return r.get().leaf_value(n, i);
         })

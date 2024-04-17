@@ -14,7 +14,7 @@ from . import InapplicableAddTreeConverter
 from . import FloatT
 
 class XGBAddTreeConverter(AddTreeConverter):
-    def convert(self, model):
+    def convert(self, model, silent):
         try:
             from xgboost import XGBModel
             from xgboost.core import Booster as XGBBooster
@@ -70,21 +70,25 @@ class XGBAddTreeConverter(AddTreeConverter):
         base_score_manual, base_score_diff_std = try_determine_base_score(
                 model, at, feature_names)
         err = np.abs(base_score_manual-base_score)
-        print()
-        print("| XGBOOST's base_score")
-        print("|   base_score diff std     ", base_score_diff_std,
-              "(!) NOT OK" if np.any(base_score_diff_std > 1e-5) else "OK")
-        print("|   base_score reported     ", base_score)
-        print("|   versus manually detected", base_score_manual)
-        print("|   abs err                 ", err)
-        print("|   rel err                 ", err/base_score)
+
+        if not silent:
+            print()
+            print("| XGBOOST's base_score")
+            print("|   base_score diff std     ", base_score_diff_std,
+                  "(!) NOT OK" if np.any(base_score_diff_std > 1e-5) else "OK")
+            print("|   base_score reported     ", base_score)
+            print("|   versus manually detected", base_score_manual)
+            print("|   abs err                 ", err)
+            print("|   rel err                 ", err/base_score)
         if not np.all(np.isclose(base_score_manual, base_score, rtol=rel_tol)):
-            msg = "(!) base_score NOT THE SAME"
+            if not silent:
+                msg = "(!) base_score NOT THE SAME"
             base_score = base_score_manual
-        else:
+        elif not silent:
             msg = "base_score OK"
-        print(f"|   {msg} with relative tolerance {rel_tol:g}")
-        print()
+        if not silent:
+            print(f"|   {msg} with relative tolerance {rel_tol:g}")
+            print()
 
         if isinstance(base_score, float):
             base_score = np.full(num_leaf_values, base_score)

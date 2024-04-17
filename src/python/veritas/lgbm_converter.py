@@ -11,7 +11,7 @@ from . import InapplicableAddTreeConverter
 import numpy as np
 
 class LGBMAddTreeConverter(AddTreeConverter):
-    def convert(self,model):
+    def convert(self, model, silent):
         try:
             from lightgbm import LGBMModel
             from lightgbm import Booster as LGBMBooster

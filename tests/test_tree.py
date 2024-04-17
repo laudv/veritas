@@ -40,6 +40,15 @@ class TestTree(unittest.TestCase):
         self.assertEqual(at.compute_box([1]), {1: Interval.from_hi(16.0)})
         self.assertEqual(at.compute_box([2]), {1: Interval.from_lo(16.0)})
 
+        self.assertEqual(t.depth(t.root()), 0)
+        self.assertEqual(t.depth(t["l"]), 1)
+        self.assertEqual(t.depth(t["r"]), 1)
+        self.assertEqual(at.max_depth(), 1)
+        self.assertEqual(t.max_depth(), 1)
+        self.assertEqual(t.max_depth(t["l"]), 0)
+        self.assertEqual(t.max_depth(t["r"]), 0)
+        self.assertEqual(at.max_depth(), t.depth(t["l"]))
+
     def test_boolsplit(self):
         at = AddTree(2, AddTreeType.REGR)
         t = at.add_tree()
@@ -56,6 +65,9 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.right(t.right(t.root())), 1, -8.0)
 
         #print(at[0])
+
+        self.assertEqual(t.max_depth(), t.depth(t["ll"]))
+        self.assertTrue(t.is_leaf(t["ll"]))
 
         self.assertEqual(t.get_split(        t.root() ), LtSplit(0, 2.0))
         self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
@@ -102,7 +114,7 @@ class TestTree(unittest.TestCase):
         self.assertEqual(at.compute_box([4]), {1: Interval.from_hi(2.0),
                                                2: Interval.from_lo(4.0)})
 
-        s = at.to_json();
+        s = at.to_json()
         att = AddTree.from_json(s)
         tt = att[0]
 

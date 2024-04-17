@@ -161,6 +161,7 @@ public:
 
     size_t num_nodes() const;
     size_t num_leafs() const;
+    int max_depth() const;
 
     inline AddTreeType get_type() const { return at_type_; }
 

@@ -21,10 +21,6 @@ void init_addtree(py::module &m) {
 
     py::class_<AddTree, std::shared_ptr<AddTree>>(m, "AddTree", R"pbdoc(
             Additive binary tree ensemble.
-
-            :param num_leaf_values: Number of values in single leaf 
-            :param AddTreeType: Optional AdTreeType
-            :type AddTreeType: AddTreeType or None
         )pbdoc")
         .def(py::init<int, AddTreeType>())
         //.def(py::init<const AddTree&, size_t, size_t>())
@@ -44,6 +40,7 @@ void init_addtree(py::module &m) {
         .def("__len__", &AddTree::size)
         .def("num_nodes", &AddTree::num_nodes, ":ref:`C++ API`")
         .def("num_leafs", &AddTree::num_leafs, ":ref:`C++ API`")
+        .def("max_depth", &AddTree::max_depth)
         .def("get_type", &AddTree::get_type)
         .def("num_leaf_values", &AddTree::num_leaf_values, ":ref:`C++ API`")
         .def("get_splits", &AddTree::get_splits, ":ref:`C++ API`")
