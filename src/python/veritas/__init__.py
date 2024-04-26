@@ -50,8 +50,8 @@ def __interval_hash(self):
 
 setattr(Interval, "hash", __interval_hash)
 
-def __addtree_write(self, f, compress=False):
-    if compress:
+def __addtree_write(self, f, compressed=False):
+    if compressed:
         with _gzip.open(f, "wb") as fh:
             json = self.to_json()
             fh.write(json.encode("utf-8"))
@@ -63,7 +63,7 @@ def __addtree_read(f, compressed=False):
     if compressed:
         with _gzip.open(f, "rb") as fh:
             json = fh.read()
-            return AddTree.from_json(json.decode("asci"))
+            return AddTree.from_json(json.decode("utf-8"))
     else:
         with open(f, "r") as fh:
             return AddTree.from_json(fh.read())
