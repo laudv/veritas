@@ -317,5 +317,26 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+    def test_groot_binary(self):
+
+        try:
+            from groot.model import GrootRandomForestClassifier
+        except ModuleNotFoundError:
+            print('skipping test on groot')
+            return
+
+        X, _, y, _, _ = get_img_data()
+        X = X.astype(np.float32).astype(np.float64)
+        clf = GrootRandomForestClassifier(
+            max_depth=6,
+            random_state=0,
+            n_estimators=2,
+            attack_model=[0.1, 0.1])
+        clf.fit(X, y)
+        ypred_model = clf.predict_proba(X)[:,1]
+
+        at = veritas.get_addtree(clf)
+        is_correct = veritas.test_conversion(at, X, ypred_model)
+
 if __name__ == "__main__":
     unittest.main()

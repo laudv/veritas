@@ -144,11 +144,11 @@ from .addtree_conversion import \
         get_addtree, \
         test_conversion
 
-try: # fails when groot not installed
-    from .groot import \
-        addtree_from_groot_ensemble
-except ModuleNotFoundError:
-    pass
+# try: # fails when groot not installed
+#     from .groot import \
+#         addtree_from_groot_ensemble
+# except ModuleNotFoundError:
+#     pass
 
 
 ################################################################################
@@ -168,3 +168,9 @@ add_addtree_converter(SklRfAddTreeConverter())
 add_addtree_converter(SklGbdtAddTreeConverter())
 add_addtree_converter(SklTreeAddTreeConverter())
 add_addtree_converter(XGBAddTreeConverter())
+
+try:
+    from .groot import GrootAddTreeConverter
+    add_addtree_converter(GrootAddTreeConverter())
+except ModuleNotFoundError:
+    pass

@@ -9,9 +9,9 @@
 # Author: Laurens Devos
 
 import numpy as np
-from . import AddTree, Interval
-
-import groot.model
+from . import AddTree, Interval, AddTreeType, AddTreeConverter
+from . import InapplicableAddTreeConverter
+# import groot.model
 
 def _addtree_from_groot_tree(at, gtree, extract_value_fun):
     vtree = at.add_tree()
@@ -46,23 +46,58 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
             stack.append((vtree.right(vnode), gnode.right_child))
             stack.append((vtree.left(vnode), gnode.left_child))
 
-def addtree_from_groot_ensemble(model, extract_value_fun=None):
-    assert isinstance(model, groot.model.GrootRandomForestClassifier),\
-        f"not GrootRandomForestClassifier but {type(model)}"
+# def addtree_from_groot_ensemble(model, extract_value_fun=None):
+#     assert isinstance(model, groot.model.GrootRandomForestClassifier),\
+#         f"not GrootRandomForestClassifier but {type(model)}"
 
-    num_trees = len(model.estimators_)
-    if extract_value_fun is None:
-        if "Classifier" in type(model).__name__:
-            print("GROOT Classifier")
+#     num_leaf_values = 1
+
+#     # TODO: multiclass groot forest classifier?
+
+#     num_trees = len(model.estimators_)
+#     if extract_value_fun is None:
+#         if "Classifier" in type(model).__name__:
+#             print("GROOT Classifier")
+#             extract_value_fun = lambda v: v[1]
+#         else:
+#             raise RuntimeError(f"{type(model).__name__} not supported")
+
+#     at = AddTree(1, AddTreeType.CLF_MEAN)
+#     for i, gtree in enumerate(model.estimators_):
+#         _addtree_from_groot_tree(at, gtree, extract_value_fun)
+#         #print(at[len(at)-1])
+#         #print(gtree.root_.pretty_print())
+#     # at.base_score = -num_trees / 2
+#     for k in range(num_leaf_values):
+#         at.set_base_score(k, -num_trees/2.0)
+#     return at
+
+class GrootAddTreeConverter(AddTreeConverter):
+    def convert(self, ensemble, silent):
+        try:
+            import groot.model
+        except ModuleNotFoundError:
+            raise InapplicableAddTreeConverter("no groot")
+
+        if isinstance(ensemble, groot.model.GrootRandomForestClassifier):
+            num_leaf_values = 1
+            at_type = AddTreeType.CLF_MEAN
             extract_value_fun = lambda v: v[1]
-        else:
-            raise RuntimeError(f"{type(model).__name__} not supported")
 
-    at = AddTree(1)
-    for i, gtree in enumerate(model.estimators_):
-        _addtree_from_groot_tree(at, gtree, extract_value_fun)
-        #print(at[len(at)-1])
-        #print(gtree.root_.pretty_print())
-    at.base_score = -num_trees / 2
-    return at
+            if not silent:
+                print(f"GROOT: GrootRandomForestClassifier with {num_leaf_values} classes")
+
+        else:
+            # TODO add support for other GROOT models (single tree? multi-class trees?)
+            raise InapplicableAddTreeConverter(f"not GrootRandomForestClassifier but {type(ensemble)}")
+
+        at = AddTree(num_leaf_values, at_type)
+        num_trees = len(ensemble.estimators_)
+        
+        for i, gtree in enumerate(ensemble.estimators_):
+            _addtree_from_groot_tree(at, gtree, extract_value_fun)
+            
+        for k in range(num_leaf_values):
+            at.set_base_score(k, -num_trees/2.0)
+        return at
 

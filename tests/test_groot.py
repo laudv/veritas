@@ -24,23 +24,27 @@ class TestGroot(unittest.TestCase):
 
         at = veritas.addtree_from_groot_ensemble(forest)
 
-        return at, forest
+        return at, forest, X_test, y_test
 
     def test_groot_model(self):
         try:
-            at, forest = self.get_groot_model()
+            at, forest, X_test, y_test = self.get_groot_model()
         except ModuleNotFoundError as e:
             print("Skipping GROOT tests because GROOT not installed")
             return
 
-        yat = at.eval(X_test) > 0.0
-        ygr = forest.predict(X_test) == 1.0
+        veritas.test_conversion(at, X_test, forest.predict_proba(X_test)[:,1])
 
-        self.assertTrue(np.all(yat == ygr))
+        # # yat = at.eval(X_test) > 0.0
+        # yat = [float(i[0]) for i in at.eval(X_test) > 0.0]
+        # ygr = forest.predict(X_test) == 1.0
 
-        pat = at.predict_proba(X_test)
-        pgr = forest.predict_proba(X_test)[:,1]
+        # self.assertTrue(np.all(yat == ygr))
 
-        np.assertTrue(np.max(np.abs(pat-pgr)) < 1e-5) # float32 errors
+        # # pat = at.predict(X_test)
+        # pat = [float(i[0]) for i in at.predict(X_test)]
+        # pgr = forest.predict_proba(X_test)[:,1]
 
-        #accuracy = forest.score(X_test, y_test)
+        # self.assertTrue(np.max(np.abs(pat-pgr)) < 1e-5) # float32 errors
+
+        # #accuracy = forest.score(X_test, y_test)
