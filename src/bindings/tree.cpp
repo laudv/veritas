@@ -19,6 +19,8 @@ void init_tree(py::module &m) {
         .def("is_root", [](const TreeRef& r, NodeId n) { return r.get().is_root(n); })
         .def("is_leaf", [](const TreeRef& r, NodeId n) { return r.get().is_leaf(n); })
         .def("is_internal", [](const TreeRef& r, NodeId n) { return r.get().is_internal(n); })
+        .def("is_left_child", [](const TreeRef& r, NodeId n) {return r.get().is_left_child(n); })
+        .def("is_right_child", [](const TreeRef& r, NodeId n) {return r.get().is_right_child(n); })
         .def("left", [](const TreeRef& r, NodeId n) { return r.get().left(n); })
         .def("right", [](const TreeRef& r, NodeId n) { return r.get().right(n); })
         .def("parent", [](const TreeRef& r, NodeId n) { return r.get().parent(n); })
