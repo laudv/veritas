@@ -18,12 +18,11 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit, time
+import timeit
+import time
 import gurobipy as gu
 import numpy as np
 from veritas import AddTree, Interval
-
-import math #test
 
 class NodeInfo:
     def __init__(self, var, leafs_in_subtree):
@@ -279,7 +278,7 @@ class KantchelianBase:
                 or self.model.status == gu.GRB.SUBOPTIMAL
 
     def objective_bound(self):
-        return self.model.objBound;
+        return self.model.objBound
 
     def _extract_adv_example(self, example): # uses self.split_values, self.pvars, self.guard
         adv_example = example.copy()

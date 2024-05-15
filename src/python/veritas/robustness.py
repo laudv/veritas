@@ -23,9 +23,19 @@ class RobustnessSearch:
     NO_STOP_COND = lambda lo, up: False
     INT_STOP_COND = lambda lo, up: np.floor(up) == np.ceil(lo)
 
-    def __init__(self, example, start_delta, source_at, target_at,
-                    num_steps=10, guard=0.0, max_time = 10,
-                    stop_condition=NO_STOP_COND, search_guard=1e-4):
+    def __init__(
+        self,
+        example,
+        start_delta,
+        source_at,
+        target_at,
+        num_steps=10,
+        guard=0.0,
+        max_time=10,
+        stop_condition=NO_STOP_COND,
+        search_guard=1e-4,
+        silent=False,
+    ):
         self.example = example
         self.start_delta = start_delta+guard
         self.num_steps = num_steps
@@ -33,6 +43,7 @@ class RobustnessSearch:
         self.max_time = max_time
         self.stop_condition = stop_condition
         self.search_guard = search_guard
+        self.silent = silent
 
         self.generated_examples = []
         self.delta_log = []
@@ -92,15 +103,22 @@ class RobustnessSearch:
             if max_output_diff >= 0.0:
                 upper = min(delta, best_example_delta)
                 delta = upper - 0.5 * (upper - lower)
-                maybe_sat_str = "? SAT" if len(generated_examples) == 0 else "  SAT"
-                t = timeit.default_timer() - self.start_time
-                print(f"[{self.i} {t:3.1f}s]:"
-                      f" {maybe_sat_str} for delta {old_delta:.5f}" #/{best_example_delta:.5f}"
-                      f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]", end="")
-                if len(generated_examples):
-                    print(f" (!) ex.w/ delta {best_example_delta-self.guard:.4f}")
-                else:
-                    print()
+
+                if np.isclose(delta, 0.0):
+                    if not self.silent:
+                        print("done early delta is zero")
+                    break
+
+                if not self.silent:
+                    maybe_sat_str = "? SAT" if len(generated_examples) == 0 else "  SAT"
+                    t = timeit.default_timer() - self.start_time
+                    print(f"[{self.i} {t:3.1f}s]:"
+                          f" {maybe_sat_str} for delta {old_delta:.5f}" #/{best_example_delta:.5f}"
+                          f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]", end="")
+                    if len(generated_examples):
+                        print(f" (!) ex.w/ delta {best_example_delta-self.guard:.4f}")
+                    else:
+                        print()
             else: # no adv. can exist
                 # #NOPE - we don't double delta anymore
                 # if delta == upper and lower == 0.0:
@@ -110,19 +128,22 @@ class RobustnessSearch:
                 assert upper > 0.0, f"Error - upper={upper}"
                 if (upper - lower) / upper < 1e-5:
                     self.early_stop = True
-                    print(self.delta_log)
-                    print("STOPPING EARLY")
+                    if not self.silent:
+                        print(self.delta_log)
+                        print("STOPPING EARLY")
                     break
                 else:
                     lower = delta
                     delta = lower + 0.5 * (upper - lower)
-                t = timeit.default_timer() - self.start_time
-                print(f"[{self.i} {t:3.1f}s]:"
-                      f" UNSAT for delta {old_delta:.5f}"
-                      f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
+                if not self.silent:
+                    t = timeit.default_timer() - self.start_time
+                    print(f"[{self.i} {t:3.1f}s]:"
+                          f" UNSAT for delta {old_delta:.5f}"
+                          f" -> {delta:.5f} [{lower:.5f}, {upper:.5f}]")
 
             if self.stop_condition(lower, upper):
-                print(f"done early {lower} <= {delta} <= {upper}")
+                if not self.silent:
+                    print(f"done early {lower} <= {delta} <= {upper}")
                 break
 
         self.total_time = timeit.default_timer() - self.start_time

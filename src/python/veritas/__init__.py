@@ -30,7 +30,7 @@ from .veritas_core import \
 
 # PACKAGE META
 
-__version__ = "0.2.2"
+__version__ = "0.2.3"
 __title__ = "veritas"
 __description__ = "Versatile Verification of Tree Ensembles"
 __url__ = "https://github.com/laudv/veritas"
