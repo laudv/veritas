@@ -179,6 +179,7 @@ GAddTree<TreeT>::contrast_classes(int pos_c, int neg_c) const {
 template <typename TreeT>
 void
 GAddTree<TreeT>::swap_class(int c) {
+    std::swap(base_score(0), base_score(c));
     for (auto& t : *this) {
         t.swap_class(c);
     }

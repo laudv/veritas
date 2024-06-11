@@ -1,3 +1,4 @@
+#include "addtree.hpp"
 #include "basics.hpp"
 #include "box.hpp"
 #include "interval.hpp"
@@ -321,36 +322,50 @@ int test_negate_leaf_values() {
 }
 
 int test_make_multiclass() {
-    TreeFp t(1);
+    AddTreeFp at(1, AddTreeType::REGR);
+    at.base_score(0) = 10.0;
+
+    TreeFp& t = at.add_tree();
     t.split(t[""], {1, 5});
     t.leaf_value(t["l"], 0) = 4;
     t.leaf_value(t["r"], 0) = 2;
 
     int c = 3;
-    TreeFp tm = t.make_multiclass(c, 10);
+    AddTreeFp atm = at.make_multiclass(c, 10);
+    const TreeFp& tm = atm[0];
 
     int result = true
+        && atm.base_score(c) == 10.0
+        && atm.size() == 1
         && tm.leaf_value(tm["l"], c) == 4
-        && tm.leaf_value(tm["r"], c) == 2;
+        && tm.leaf_value(tm["r"], c) == 2
         ;
 
     for (int cc = 0; cc < 10; ++cc) {
         if (cc == c) continue;
-        result &= tm.leaf_value(tm["l"], cc) == 0;
-        result &= tm.leaf_value(tm["r"], cc) == 0;
+        result &= true
+            && tm.leaf_value(tm["l"], cc) == 0
+            && tm.leaf_value(tm["r"], cc) == 0
+            && atm.base_score(cc) == 0.0
+            ;
     }
 
     // swap_class
-    tm.swap_class(c);
+    atm.swap_class(c);
+    std::cout << tm << std::endl;
 
     result &= true
+        && atm.base_score(0) == 10.0
         && tm.leaf_value(tm["l"], 0) == 4
-        && tm.leaf_value(tm["r"], 0) == 2;
+        && tm.leaf_value(tm["r"], 0) == 2
         ;
 
     for (int cc = 1; cc < 10; ++cc) {
-        result &= tm.leaf_value(tm["l"], cc) == 0;
-        result &= tm.leaf_value(tm["r"], cc) == 0;
+        result &= true
+            && tm.leaf_value(tm["l"], cc) == 0
+            && tm.leaf_value(tm["r"], cc) == 0
+            && atm.base_score(cc) == 0.0
+            ;
     }
 
     std::cout << "test_make_multiclass " << result << std::endl;
