@@ -10,7 +10,7 @@ from .smt import Verifier, ORDER_CONSTRAINTS
 from .smt import VerifierBoolExpr, VerifierVar
 from .smt import VerifierLtExpr, VerifierGtExpr, VerifierLeExpr, VerifierGeExpr, VerifierEqExpr, VerifierNeExpr
 from .smt import VerifierAndExpr, VerifierOrExpr, VerifierNotExpr
-from .smt import SumExpr
+from .smt import SumExpr, AbsExpr
 from .smt import VerifierBackend
 
 class Z3Backend(VerifierBackend):
@@ -158,6 +158,9 @@ class Z3Backend(VerifierBackend):
             for p in c.parts[1:]:
                 s += self._enc_real_expr(p)
             return s
+        elif isinstance(c, AbsExpr):
+            expr = self._enc_real_expr(c.expr)
+            return z3.If(expr >= 0, expr, -expr)
         else:
             raise RuntimeError("unsupported VerifierRealExpr of type "
                     + type(c).__qualname__)

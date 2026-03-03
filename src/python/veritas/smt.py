@@ -8,6 +8,8 @@ from bisect import bisect
 from enum import Enum
 from . import AddTree, Interval
 
+# @TODO this does not work with multi-class ensembles yet.
+
 class VerifierExpr:
     pass
 
@@ -67,6 +69,14 @@ class SumExpr(VerifierRealExpr):
         """
         assert len(parts) > 0
         self.parts = parts
+
+class AbsExpr(VerifierRealExpr):
+    def __init__(self, expr):
+        """
+        Absolute value of expression `expr`. The expr is VerifierExpr,
+        VerifierVar, or float.
+        """
+        self.expr = expr
 
 ORDER_CONSTRAINTS = [
     ("VerifierLtExpr", "__lt__"),
@@ -215,7 +225,7 @@ class Verifier:
             if self == Verifier.Result.UNSAT:   return "UNSAT"
             if self == Verifier.Result.UNKNOWN: return "UNKNOWN"
 
-    def __init__(self, addtree, prune_box, backend):
+    def __init__(self, addtree, prune_box, backend, budget=None, instance=None):
         assert isinstance(addtree, AddTree)
         assert isinstance(prune_box, dict)
         if len(prune_box.keys())>0:
@@ -244,7 +254,8 @@ class Verifier:
         # possibily, additional real variables
         self._rvars = {} 
 
-        ### NOTE what if multi-class? I manually put a "0" into get_base_score now
+        # @TODO does not work with multi-class ensemble! 
+        # --> we are manually putting a "0" into get_base_score now
         # FVAR = sum{WVARS}
         fexpr = SumExpr(self._addtree.get_base_score(0), *self._wvars)
         self.add_constraint(fexpr == self.fvar())
@@ -258,8 +269,17 @@ class Verifier:
                     self._xvars[fid] = self._backend.add_real_var(f"x{fid}")
             self.add_constraint(encode_prune_box(self, self._prune_box))
 
+        # If budget + instance are passed, we also add an L1 budget constraint
+        #   (i.e., sum{|x_i - x0_i|} <= budget)
+        if budget is not None and instance is not None:
+            l1_terms = []
+            for fid, xvar in self._xvars.items():
+                x0_i = instance[fid]
+                l1_terms.append(AbsExpr(xvar - x0_i))
+            l1_norm = SumExpr(*l1_terms)
+            self.add_constraint(l1_norm <= budget)
 
-        #print(self._xvars, self._wvars, self._fvar, self._backend._solver)
+        # print(self._xvars, self._wvars, self._fvar, self._backend._solver)
 
         self._splits = None
         self.leaf_count = 0
