@@ -56,6 +56,39 @@ cmake --build build/cp312-cp312-linux_x86_64
 make -C build/cp312-cp312-linux_x86_64
 ```
 
+CMake's Python discovery (`find_package(Python3 ...)`) resolves against
+whichever `python3` is first on `PATH`. Activate your virtual environment
+before running `cmake` directly (e.g. for a from-scratch manual build, see
+below), or it will pick up the system Python instead. This only matters for
+manual CMake invocations — `pip install` always builds against the interpreter
+running `pip` itself, regardless of `PATH`.
+
+### Running the tests
+
+Python tests (from the repository root):
+
+```sh
+python -m unittest discover tests
+```
+
+Some tests exercise optional integrations (XGBoost, LightGBM, scikit-learn,
+Gurobi, z3) and are skipped automatically if the corresponding package isn't
+installed; install the extras you need (e.g. `pip install .[xgboost,smt]`) to
+run them too.
+
+C++ tests use a separate CMake configuration
+(`-DVERITAS_BUILD_CPPTESTS=ON -DVERITAS_BUILD_PYBINDINGS=OFF`). The test
+binary looks up its data files with paths relative to the repository root
+(e.g. `../tests/models/...`), so the build directory must sit exactly one
+level below the repository root:
+
+```sh
+mkdir manual_build_cpp && cd manual_build_cpp
+cmake -DCMAKE_BUILD_TYPE=Release -DVERITAS_BUILD_CPPTESTS=ON -DVERITAS_BUILD_PYBINDINGS=OFF ..
+make -j
+ctest --output-on-failure
+```
+
 ## Example
 
 You can convert an existing ensemble using the `veritas.get_addtree` function for XGBoost, LightGBM and scikit-learn.

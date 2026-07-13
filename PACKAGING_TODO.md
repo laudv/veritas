@@ -39,8 +39,27 @@ independently.
       vendored pybind11 (v2.12) predates free-threading support — revisit once
       item 6 updates it. Verified end-to-end: built and smoke-tested an actual
       manylinux wheel locally via `cibuildwheel --output-dir ...` + a clean venv.
-- [ ] 6. Update vendored submodules (pybind11 ~1.5yr stale, nlohmann_json v3.11.3);
+- [x] 6. Update vendored submodules (pybind11 ~1.5yr stale, nlohmann_json v3.11.3);
       evaluate pybind11 stable-ABI (abi3) build to shrink the wheel matrix.
+      DONE 2026-07-13: bumped `lib/pybind11` v2.12(dev)->v3.0.4 and
+      `lib/nlohmann_json` v3.11.3->v3.12.0. pybind11 v3.0 changes ABI (rebuild
+      required, no source changes needed for our bindings) and needs
+      `PYBIND11_FINDPYTHON` for the modern `FindPython` CMake module, but our
+      CMakeLists already finds `Python3` directly (not via pybind11's own
+      discovery) so no CMakeLists change was needed. Verified: local editable
+      build, full C++ `ctest` suite (9/9 pass), Python `unittest` suite, and an
+      actual `cibuildwheel`-built manylinux wheel smoke-tested in a clean venv,
+      all before and after the bump. Found a pre-existing (not a regression)
+      bug along the way: `AddTree.__eq__` returns False after a JSON
+      round-trip (`at.to_json()` -> `AddTree.from_json()`) even for a trivial
+      one-tree ensemble — reproduces identically on the pre-bump submodule
+      commits too. Flagged to Laurens, not fixed here (out of scope for
+      packaging work).
+      abi3/stable-ABI: **not possible** — pybind11 (checked v3.0.4 source)
+      explicitly does not support `Py_LIMITED_API`
+      (`include/pybind11/detail/internals.h`: "we cannot use Py_LIMITED_API
+      anyway"). Dropping this sub-item; one wheel per CPython minor version
+      remains necessary.
 - [ ] 7. Actually exercise built wheels in CI: fill in `test-requires`/`test-command`
       in `pyproject.toml`'s `[tool.cibuildwheel]` (currently commented out).
 

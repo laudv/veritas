@@ -73,6 +73,12 @@ def __execute_part(code, globals):
     return f.getvalue()
 
 if __name__ == "__main__":
+    # Import here, outside any `redirect_stdout` block below: a first-time
+    # `import veritas` can trigger a scikit-build-core editable rebuild that
+    # prints a status line to stdout, which would otherwise leak into a
+    # captured code part's output.
+    import veritas  # noqa: F401
+
     with open(CODE_FILE) as f:
         parts = __parse_code_parts(f)
     print()
