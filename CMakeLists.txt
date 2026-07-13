@@ -5,7 +5,6 @@ project(veritas)
 
 set(VERITAS_CORE, "${PROJECT_NAME}_core")
 
-set(SOURCE_DIR_PY "src/python")
 set(SOURCE_DIR "src/cpp")
 set(BINDINGS_DIR "src/bindings")
 
@@ -92,7 +91,10 @@ if (VERITAS_BUILD_PYBINDINGS)
         "${BINDINGS_DIR}/search.cpp"
         "${BINDINGS_DIR}/bindings.cpp")
     target_link_libraries("${PROJECT_NAME}_core" PRIVATE ${PROJECT_NAME})
-    install(TARGETS "${PROJECT_NAME}_core" DESTINATION "${SOURCE_DIR_PY}/${PROJECT_NAME}")
+    # scikit-build-core stages `cmake --install` output straight into the
+    # wheel; DESTINATION is the package dir *inside* the wheel, not a path in
+    # the source tree (that's handled by wheel.packages in pyproject.toml).
+    install(TARGETS "${PROJECT_NAME}_core" DESTINATION "${PROJECT_NAME}")
 endif (VERITAS_BUILD_PYBINDINGS)
 
 option(VERITAS_BUILD_CPPTESTS "Build C++ test files" OFF)

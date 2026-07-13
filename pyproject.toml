@@ -1,11 +1,52 @@
 [build-system]
-requires = [
-    "setuptools>=42",
-    "scikit-build>=0.13",
-    "cmake>=3.18",
-    "ninja",
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "dtai-veritas"
+dynamic = ["version"]
+description = "Versatile Verification of Tree Ensembles"
+readme = "README.md"
+license = { text = "Apache-2.0" }
+authors = [{ name = "Laurens Devos", email = "laurens.devos@kuleuven.be" }]
+maintainers = [{ name = "Laurens Devos", email = "laurens.devos@kuleuven.be" }]
+requires-python = ">=3.9"
+dependencies = ["numpy"]
+
+[project.urls]
+Homepage = "https://github.com/laudv/veritas"
+
+[project.optional-dependencies]
+xgboost = ["xgboost"]
+lightgbm = ["lightgbm"]
+sklearn = ["scikit-learn"]
+milp = ["gurobipy"]
+smt = ["z3-solver"]
+
+[tool.scikit-build]
+minimum-version = "0.10"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/python/veritas"]
+
+[tool.scikit-build.editable]
+rebuild = true
+# verbose = false
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "src/python/veritas/__init__.py"
+regex = '__version__\s*=\s*"(?P<value>[^"]+)"'
+
+[tool.scikit-build.sdist]
+# git submodules are not picked up by scikit-build-core's default
+# git-ls-files-based sdist listing, so they must be added explicitly.
+include = ["lib/pybind11/**", "lib/nlohmann_json/**"]
+exclude = [
+    "lib/pybind11/tests/**",
+    "lib/pybind11/docs/**",
+    "lib/nlohmann_json/test/**",
+    "lib/nlohmann_json/docs/**",
 ]
-build-backend = "setuptools.build_meta"
 
 [tool.cibuildwheel]
 skip = "*-win32 *-manylinux_i686 *-musllinux*"
@@ -18,4 +59,4 @@ skip = "*-win32 *-manylinux_i686 *-musllinux*"
 #before-build = "rm -rf {project}/build"
 
 [tool.cibuildwheel.macos]
-environment = { MACOSX_DEPLOYMENT_TARGET="10.14" }
+environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }

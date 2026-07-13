@@ -46,7 +46,7 @@ import veritas
 from sklearn.datasets import make_moons
 from sklearn.ensemble import RandomForestClassifier
 
-(X,Y) = make_moons(100)
+(X,Y) = make_moons(100, random_state=0)
 
 clf = RandomForestClassifier(
         max_depth=4,
