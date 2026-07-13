@@ -81,6 +81,18 @@ independently.
       `json.loads()` for the array form). Verified: full local `unittest`
       suite (41/41 pass) and a full `cibuildwheel` build+test run, both green.
 
+- [x] 12. (discovered during the first real `build_wheels.yml` dry run, v0.3.0 tag,
+      2026-07-13) macOS wheel builds failed: `.github/workflows/build_wheels.yml`'s
+      matrix used `macos-13`/`macos-14`, which are **deprecated** GitHub-hosted
+      runner images (GitHub only supports the latest 2 macOS versions; currently
+      15 and 26). This surfaced as a `z3-solver` install failure during the
+      cibuildwheel test step on `macos-14`, because `z3-solver` publishes
+      `macosx_15_0_arm64` wheels as of 4.15.5.0 (bumped from `macosx_13_0_arm64`)
+      — the deprecated macOS-14 runner is below that floor. Fixed by updating the
+      matrix to current runners (`macos-15-intel`, `macos-15`) rather than pinning
+      `z3-solver` down — this fixes the immediate issue *and* gets CI off
+      soon-to-be-removed runner images. No `pyproject.toml` change needed.
+
 ## Nice-to-have
 
 - [ ] 8. Ship `py.typed` + generated `.pyi` stubs for `veritas_core` via
