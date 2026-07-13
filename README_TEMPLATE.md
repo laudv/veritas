@@ -46,6 +46,13 @@ The `veritas`'s Python sources are picked up from `src/python/veritas`. Editing
 a C++ source under `src/cpp` or `src/bindings` triggers a rebuild the next time
 you `import veritas`.
 
+`--no-build-isolation` tells pip to build the extension using the packages
+already installed in your current environment instead of a temporary, isolated
+one. It's required for the editable-rebuild-on-import behavior above: that
+mechanism reruns CMake using this environment's Python at import time, so the
+initial install has to use this same environment too (an isolated build
+environment gets deleted once the install finishes).
+
 To manually trigger a rebuild instead (e.g. to see full compiler output/errors
 directly), build the CMake directory scikit-build-core created under `build/`
 (one per Python/platform combination, e.g. `build/cp312-cp312-linux_x86_64`):
@@ -88,6 +95,27 @@ cmake -DCMAKE_BUILD_TYPE=Release -DVERITAS_BUILD_CPPTESTS=ON -DVERITAS_BUILD_PYB
 make -j
 ctest --output-on-failure
 ```
+
+### Building a release wheel with cibuildwheel
+
+CI builds release wheels with [`cibuildwheel`](https://cibuildwheel.pypa.io/),
+which builds the extension in an isolated container/environment per target
+Python version and platform, so you can reproduce a CI wheel build locally
+(requires Docker on Linux):
+
+```sh
+pip install cibuildwheel
+cibuildwheel --output-dir wheelhouse
+```
+
+This uses the `[tool.cibuildwheel]` settings in `pyproject.toml`: after
+building each wheel, it installs it into a fresh venv along with
+`test-requires` (the optional integrations exercised by the test suite) and
+runs `test-command`, which is `cd {project} && python -m unittest discover
+tests` — the same test suite as above, but run against the actual built
+wheel rather than an editable install. Restrict this to a single target while
+iterating with e.g. `CIBW_BUILD="cp312-manylinux_x86_64" cibuildwheel
+--output-dir wheelhouse`.
 
 ## Example
 
