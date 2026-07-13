@@ -49,11 +49,13 @@ exclude = [
 ]
 
 [tool.cibuildwheel]
-# cp314t (free-threaded) is held back until the vendored pybind11 (currently
-# v2.12, predates free-threading support added in pybind11 2.13+) is updated;
-# see PACKAGING_TODO.md item 6.
-skip = "pp* cp38-* cp39-* cp310-* *t-* *-win32 *-manylinux_i686 *-musllinux*"
-#skip = "*-win32 *-win_arm64 *-manylinux_i686 *-musllinux*"
+# Note: cibuildwheel 3.0+ no longer builds PyPy or Python <3.9 by default, so
+# "pp*"/"cp38-*" selectors are gone (they'd now be no-ops with a warning).
+# cp314t (free-threaded) re-enabled now that pybind11 is v3.0.4 (has real
+# free-threading support); our module doesn't declare
+# py::mod_gil_not_used(), so CPython just re-enables the GIL when importing
+# it (the standard safe fallback) -- no real no-GIL parallelism yet, but safe.
+skip = "cp39-* cp310-* *-win32 *-manylinux_i686 *-musllinux*"
 test-requires = "xgboost lightgbm scikit-learn z3-solver gurobipy imageio pandas"
 # cd into {project} first: several tests open data/model files using paths
 # relative to the repo root (e.g. "tests/models/rf_model.json"), and
@@ -66,3 +68,6 @@ test-command = "cd {project} && python -m unittest discover tests"
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }
+# xgboost's macOS wheels dynamically link libomp.dylib (OpenMP runtime) but
+# don't bundle it, and GitHub's macOS runners don't have it preinstalled.
+before-test = "brew install libomp"

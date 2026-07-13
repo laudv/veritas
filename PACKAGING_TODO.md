@@ -92,6 +92,19 @@ independently.
       matrix to current runners (`macos-15-intel`, `macos-15`) rather than pinning
       `z3-solver` down — this fixes the immediate issue *and* gets CI off
       soon-to-be-removed runner images. No `pyproject.toml` change needed.
+- [x] 13. (discovered on the next `deploy` dry run after item 12's fix, 2026-07-13)
+      macOS build still failed, this time on `test_converters.py`'s `import
+      xgboost`: `libxgboost.dylib` couldn't load `libomp.dylib` (OpenMP
+      runtime) — xgboost's macOS wheels link it dynamically but don't bundle
+      it, and it's not preinstalled on GitHub's macOS runners (this is
+      XGBoost's own documented macOS caveat). Fixed with
+      `[tool.cibuildwheel.macos] before-test = "brew install libomp"`.
+      Also cleaned up two cibuildwheel-4.x no-op warnings surfaced in the same
+      run: `pp*`/`cp38-*` skip selectors are gone (v3.0+ no longer builds
+      PyPy or Python <3.9 by default, so those selectors matched nothing).
+      Not verified end-to-end locally — no macOS runner available in this
+      sandbox; verified only via TOML validity + cibuildwheel accepting the
+      config. Needs a real `deploy` dry run to confirm.
 
 ## Nice-to-have
 
