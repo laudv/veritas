@@ -54,8 +54,11 @@ exclude = [
 # see PACKAGING_TODO.md item 6.
 skip = "pp* cp38-* cp39-* cp310-* *t-* *-win32 *-manylinux_i686 *-musllinux*"
 #skip = "*-win32 *-win_arm64 *-manylinux_i686 *-musllinux*"
-#test-requires = "xgboost lightgbm imageio pandas"
-#test-command = "python -m unittest discover {project}/tests test_*.py"
+test-requires = "xgboost lightgbm scikit-learn z3-solver gurobipy imageio pandas"
+# cd into {project} first: several tests open data/model files using paths
+# relative to the repo root (e.g. "tests/models/rf_model.json"), and
+# cibuildwheel does not run test-command from the project directory.
+test-command = "cd {project} && python -m unittest discover tests"
 
 # Setuptools bug causes collision between pypy and cpython artifacts
 # (from pybind/cmake_example, is necessary)

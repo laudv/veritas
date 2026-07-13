@@ -60,8 +60,26 @@ independently.
       (`include/pybind11/detail/internals.h`: "we cannot use Py_LIMITED_API
       anyway"). Dropping this sub-item; one wheel per CPython minor version
       remains necessary.
-- [ ] 7. Actually exercise built wheels in CI: fill in `test-requires`/`test-command`
+- [x] 7. Actually exercise built wheels in CI: fill in `test-requires`/`test-command`
       in `pyproject.toml`'s `[tool.cibuildwheel]` (currently commented out).
+      DONE 2026-07-13: `test-requires = "xgboost lightgbm scikit-learn z3-solver
+      gurobipy imageio pandas"` (matches every unconditional import across
+      `tests/*.py`, checked file by file); `test-command = "cd {project} &&
+      python -m unittest discover tests"` (`cd` is required — several tests
+      open data/model files via paths relative to the repo root, and
+      cibuildwheel does not run test-command from the project directory).
+      Running this for real via `cibuildwheel --output-dir ...` surfaced a
+      genuine bug that had never actually been exercised before: every
+      `test_xgb_*` test in `test_converters.py` errored, because that whole
+      test module imports `imageio` unconditionally at the top — so in every
+      environment used so far (which lacked `imageio`), the module failed to
+      import and these tests silently never ran. With `imageio` now installed,
+      they revealed that `xgb_converter.py`'s `base_score` parsing
+      (`float(...)`) breaks on newer XGBoost JSON exports, which encode it as
+      a stringified array (e.g. `"[4.89E-1]"`) instead of a bare float. Fixed
+      in `src/python/veritas/xgb_converter.py` (try `float()`, fall back to
+      `json.loads()` for the array form). Verified: full local `unittest`
+      suite (41/41 pass) and a full `cibuildwheel` build+test run, both green.
 
 ## Nice-to-have
 
