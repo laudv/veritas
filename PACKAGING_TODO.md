@@ -111,6 +111,5 @@ independently.
 - [ ] 8. Ship `py.typed` + generated `.pyi` stubs for `veritas_core` via
       `pybind11-stubgen`.
 - [ ] 9. Merge `python_package.yml` and `build_wheels.yml` into one matrixed workflow.
-- [ ] 10. Fill in `author_email` (currently `""` in `__init__.py`).
-- [ ] 11. Reconsider vendoring pybind11/nlohmann_json as git submodules vs. depending
+- [ ] 10. Reconsider vendoring pybind11/nlohmann_json as git submodules vs. depending
       on them as regular build requirements.
