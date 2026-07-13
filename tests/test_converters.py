@@ -189,6 +189,27 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model, single_rel_tol=1e-4)
         self.assertTrue(is_correct)
 
+    def test_xgb_base_score_random_data(self):
+        # Regression test for the base_score parsing bug: newer XGBoost
+        # versions encode `base_score` in the saved JSON model as a
+        # stringified array (e.g. "[4.89E-1]") instead of a bare float.
+        rng = np.random.default_rng(0)
+        X = rng.uniform(size=(200, 5)).astype(np.float32).astype(np.float64)
+        y = rng.uniform(size=200)
+
+        model = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            tree_method="hist",
+            max_depth=3,
+            learning_rate=0.5,
+            n_estimators=5)
+        model.fit(X, y)
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model)
+        is_correct = veritas.test_conversion(at, X, ypred_model)
+        self.assertTrue(is_correct)
+
     def test_rf_binary(self):
         X, _, y, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)

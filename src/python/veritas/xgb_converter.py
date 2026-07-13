@@ -34,7 +34,13 @@ class XGBAddTreeConverter(AddTreeConverter):
         if len(feature_names) == 0:
             feature_names = None
         objective = booster_json["learner"]["objective"]["name"]
-        base_score = float(booster_json["learner"]["learner_model_param"]["base_score"])
+        base_score_raw = booster_json["learner"]["learner_model_param"]["base_score"]
+        try:
+            base_score = float(base_score_raw)
+        except ValueError:
+            # newer XGBoost versions encode a per-output base_score as a
+            # JSON-array-in-a-string, e.g. "[4.89E-1]" or "[-1.6e-2,1.5e-2]"
+            base_score = np.array(json.loads(base_score_raw), dtype=np.float32)
         num_class = int(booster_json["learner"]["learner_model_param"]["num_class"])
         num_target = int(booster_json["learner"]["learner_model_param"]["num_target"])
         grad_boost_name = booster_json["learner"]["gradient_booster"]["name"]
