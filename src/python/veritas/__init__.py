@@ -1,4 +1,4 @@
-# Copyright 2023 DTAI Research Group - KU Leuven.
+# Copyright 2026 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
 # Author: Laurens Devos
 
@@ -30,7 +30,7 @@ from .veritas_core import \
 
 # PACKAGE META
 
-__version__ = "0.2.3"
+__version__ = "0.3.0"
 __title__ = "veritas"
 __description__ = "Versatile Verification of Tree Ensembles"
 __url__ = "https://github.com/laudv/veritas"
@@ -40,7 +40,7 @@ __author__ = "Laurens Devos"
 __email__ = ""
 
 __license__ = "Apache-2.0"
-__copyright__ = "Copyright (c) 2022 DTAI Research Group, KU Leuven"
+__copyright__ = "Copyright (c) 2026 DTAI Research Group, KU Leuven"
 
 
 

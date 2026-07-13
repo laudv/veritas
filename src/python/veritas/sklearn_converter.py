@@ -2,7 +2,7 @@
 #
 # This requires `scikit-learn` to be installed.
 #
-# Copyright 2023 DTAI Research Group - KU Leuven.
+# Copyright 2026 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
 # Author: Laurens Devos, Alexander Schoeters
 

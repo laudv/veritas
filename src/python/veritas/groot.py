@@ -4,7 +4,7 @@
 #
 # This requires `groot` to be installed.
 #
-# Copyright 2022 DTAI Research Group - KU Leuven.
+# Copyright 2026 DTAI Research Group - KU Leuven.
 # License: Apache License 2.0
 # Author: Laurens Devos
 
