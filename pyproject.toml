@@ -76,3 +76,13 @@ environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }
 # xgboost's macOS wheels dynamically link libomp.dylib (OpenMP runtime) but
 # don't bundle it, and GitHub's macOS runners don't have it preinstalled.
 before-test = "brew install libomp"
+
+[tool.cibuildwheel.windows]
+# plain `cd` in cmd.exe does not switch drives; GitHub's Windows runners put
+# the checkout on D: while the shell's active drive is elsewhere, so the
+# top-level test-command's `cd {project}` silently no-ops and `discover`
+# then runs from the wrong directory ("tests" isn't found as a directory, so
+# unittest falls back to importing it as a dotted module name, which fails
+# with the same "Start directory is not importable" text -- unrelated to
+# tests/__init__.py). `cd /d` actually switches drives too.
+test-command = "cd /d {project} && python -m unittest discover tests"

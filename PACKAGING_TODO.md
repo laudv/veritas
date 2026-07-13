@@ -106,9 +106,25 @@ independently.
       sandbox; verified only via TOML validity + cibuildwheel accepting the
       config. Needs a real `deploy` dry run to confirm.
 - [x] 14. (discovered on the next `deploy` dry run, 2026-07-13) `windows-latest`
-      failed with `ImportError: Start directory is not importable: 'tests'`
-      (a known `unittest discover` gotcha). Fixed by adding an empty
-      `tests/__init__.py`. Separately, `macos-15-intel` failed with
+      failed with `ImportError: Start directory is not importable: 'tests'`.
+      First attempt: added an empty `tests/__init__.py`, believing it was the
+      standard `unittest discover` gotcha — **wrong diagnosis**, it recurred
+      identically on a later run even with `tests/__init__.py` present. Real
+      cause (confirmed against CPython's actual `unittest/loader.py` source):
+      plain `cd` in `cmd.exe` does not switch drives, and GitHub's Windows
+      runners put the checkout on `D:` while the shell's active drive when
+      cibuildwheel runs `test-command` is elsewhere — so
+      `test-command = "cd {project} && ..."`'s `cd` silently no-ops,
+      `discover` runs from the wrong directory, "tests" isn't found as a
+      directory there, and `unittest` falls back to importing it as a dotted
+      module name, which fails with the exact same error text (unrelated to
+      `__init__.py`, which is why that "fix" didn't help). Fixed with a
+      `[tool.cibuildwheel.windows]` `test-command` override using `cd /d`
+      instead of `cd` (`/d` also switches drives). `tests/__init__.py` is
+      harmless and left in place (doesn't hurt, matches common convention)
+      but wasn't actually the fix for this. Not verified end-to-end — no
+      Windows runner in this sandbox; needs a real `deploy` dry run.
+      Separately, `macos-15-intel` failed with
       `z3.z3types.Z3Exception: libz3.dylib not found.` raised from deep inside
       `z3-solver` itself at import time — since `veritas/__init__.py`'s
       optional-import guards intentionally only catch `ModuleNotFoundError`
