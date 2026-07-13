@@ -31,8 +31,14 @@ independently.
       `cibuildwheel` (`skip = "pp* ..."`) per Laurens's call — pybind11/PyPy is a
       niche combo unlikely to have real users of this package; also skip
       cp38/cp39/cp310 in the cibuildwheel matrix to match the new floor.
-- [ ] 5. Add cp313 (and consider free-threaded) wheels to the `cibuildwheel` matrix;
-      bump `cibuildwheel` itself from 2.17.0 to current.
+- [x] 5. Add cp313 (and consider free-threaded) wheels to the `cibuildwheel` matrix;
+      bump `cibuildwheel` itself from 2.17.0 to current. DONE 2026-07-13: bumped
+      `pypa/cibuildwheel` action to v4.1.0 (2.17.0 -> 3.0.0 -> 4.0.0 -> 4.1.0
+      changelog checked, no breaking impact here). cp313/cp314 now build
+      automatically; cp314t (free-threaded) explicitly skipped (`*t-*`) since the
+      vendored pybind11 (v2.12) predates free-threading support — revisit once
+      item 6 updates it. Verified end-to-end: built and smoke-tested an actual
+      manylinux wheel locally via `cibuildwheel --output-dir ...` + a clean venv.
 - [ ] 6. Update vendored submodules (pybind11 ~1.5yr stale, nlohmann_json v3.11.3);
       evaluate pybind11 stable-ABI (abi3) build to shrink the wheel matrix.
 - [ ] 7. Actually exercise built wheels in CI: fill in `test-requires`/`test-command`

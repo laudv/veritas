@@ -49,7 +49,10 @@ exclude = [
 ]
 
 [tool.cibuildwheel]
-skip = "pp* cp38-* cp39-* cp310-* *-win32 *-manylinux_i686 *-musllinux*"
+# cp314t (free-threaded) is held back until the vendored pybind11 (currently
+# v2.12, predates free-threading support added in pybind11 2.13+) is updated;
+# see PACKAGING_TODO.md item 6.
+skip = "pp* cp38-* cp39-* cp310-* *t-* *-win32 *-manylinux_i686 *-musllinux*"
 #skip = "*-win32 *-win_arm64 *-manylinux_i686 *-musllinux*"
 #test-requires = "xgboost lightgbm imageio pandas"
 #test-command = "python -m unittest discover {project}/tests test_*.py"

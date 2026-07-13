@@ -25,7 +25,7 @@ jobs:
           submodules: true  # Optional, use if you have submodules
 
       - name: Build wheels
-        uses: pypa/cibuildwheel@v2.17.0
+        uses: pypa/cibuildwheel@v4.1.0
         # env:
         #   CIBW_SOME_OPTION: value
         #    ...
