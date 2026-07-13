@@ -11,10 +11,10 @@ independently.
       manual_build/ + symlink workflow in the README. DONE 2026-07-13: CMakeLists.txt
       install destination changed to `${PROJECT_NAME}` (relative, wheel-package-root
       style); `[tool.scikit-build.editable] rebuild = true` gives auto-rebuild-on-import;
-      README/README_TEMPLATE developer-install section rewritten; also fixed two bugs
+      README/README_TEMPLATE developer-install section rewritten; also fixed a bug
       surfaced along the way: `tests/readme_code.py`'s `make_moons()` had no fixed seed
-      (non-deterministic README example output), and the rebuild hook's stdout noise is
-      now silenced via `editable.verbose = false`.
+      (non-deterministic README example output). (`editable.verbose` toggle was tried
+      to silence the rebuild hook's stdout noise but is currently commented out.)
 - [x] 2. Adopt PEP 621: move metadata into `pyproject.toml`'s `[project]` table; stop
       scraping version/author/etc. out of `__init__.py` via regex+exec. Use
       scikit-build-core's dynamic-version support (or setuptools-scm) so version has
@@ -24,8 +24,13 @@ independently.
 - [x] 3. Declare optional extras in `pyproject.toml` (`milp`, `smt`, `xgboost`,
       `lightgbm`, `sklearn`) instead of undocumented try/except imports in `__init__.py`.
       DONE 2026-07-13: added `[project.optional-dependencies]`.
-- [ ] 4. Bump `requires-python` to >=3.9 or >=3.10 (3.8 is EOL); reconsider whether
-      PyPy wheels are worth keeping in the build matrix.
+- [x] 4. Bump `requires-python` to >=3.9 or >=3.10 (3.8 is EOL); reconsider whether
+      PyPy wheels are worth keeping in the build matrix. DONE 2026-07-13:
+      `requires-python = ">=3.11"` (3.9 is already past EOL as of today, 3.10 has
+      ~3 months left; 3.11 gives ~1 year more runway); dropped PyPy wheels from
+      `cibuildwheel` (`skip = "pp* ..."`) per Laurens's call — pybind11/PyPy is a
+      niche combo unlikely to have real users of this package; also skip
+      cp38/cp39/cp310 in the cibuildwheel matrix to match the new floor.
 - [ ] 5. Add cp313 (and consider free-threaded) wheels to the `cibuildwheel` matrix;
       bump `cibuildwheel` itself from 2.17.0 to current.
 - [ ] 6. Update vendored submodules (pybind11 ~1.5yr stale, nlohmann_json v3.11.3);

@@ -10,7 +10,7 @@ readme = "README.md"
 license = { text = "Apache-2.0" }
 authors = [{ name = "Laurens Devos", email = "laurens.devos@kuleuven.be" }]
 maintainers = [{ name = "Laurens Devos", email = "laurens.devos@kuleuven.be" }]
-requires-python = ">=3.9"
+requires-python = ">=3.11"
 dependencies = ["numpy"]
 
 [project.urls]
@@ -49,7 +49,7 @@ exclude = [
 ]
 
 [tool.cibuildwheel]
-skip = "*-win32 *-manylinux_i686 *-musllinux*"
+skip = "pp* cp38-* cp39-* cp310-* *-win32 *-manylinux_i686 *-musllinux*"
 #skip = "*-win32 *-win_arm64 *-manylinux_i686 *-musllinux*"
 #test-requires = "xgboost lightgbm imageio pandas"
 #test-command = "python -m unittest discover {project}/tests test_*.py"
