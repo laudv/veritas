@@ -86,3 +86,9 @@ before-test = "brew install libomp"
 # with the same "Start directory is not importable" text -- unrelated to
 # tests/__init__.py). `cd /d` actually switches drives too.
 test-command = "cd /d {project} && python -m unittest discover tests"
+# Tree.__str__/AddTree.__str__ (tree.hpp's print_node) use box-drawing
+# characters (├─ └─ │); Windows consoles default stdout to a legacy codepage
+# (e.g. cp1252) that can't encode them, crashing any `print(tree)`.
+# PYTHONUTF8 forces Python's text I/O to UTF-8 regardless of the console
+# codepage (this is what PEP 540/686 eventually make the default anyway).
+environment = { PYTHONUTF8 = "1" }

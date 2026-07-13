@@ -146,6 +146,27 @@ independently.
       Still open: whether to set `fail-fast: false` on the `build_wheels`
       matrix so unrelated platform failures don't cancel each other's jobs
       mid-debug (came up but wasn't decided).
+- [x] 16. Set `fail-fast: false` on the `build_wheels` matrix strategy in
+      `.github/workflows/build_wheels.yml` (resolves item 14's open question)
+      — no cost concern since Actions minutes are free for this public repo,
+      and it immediately paid off: the very next `deploy` run surfaced a
+      genuinely new, unrelated Windows failure instead of hiding behind
+      whatever failed first.
+- [x] 17. (surfaced by item 16, 2026-07-13) `windows-latest` failed on
+      `print(at[0])`: `UnicodeEncodeError: 'charmap' codec can't encode
+      characters`. `tree.hpp`'s `print_node` uses box-drawing characters
+      (`├─ └─ │`); Windows consoles default `stdout` to a legacy codepage
+      (e.g. `cp1252`) that can't encode them. Fixed by setting
+      `PYTHONUTF8 = "1"` in `[tool.cibuildwheel.windows]`'s `environment`,
+      which forces Python's text I/O to UTF-8 regardless of console codepage
+      (this is what PEP 540/686 eventually make the default anyway).
+      Note: this only fixes cibuildwheel's CI test venv — a real end user on
+      Windows running our code in a plain, non-UTF-8-configured console could
+      still hit this same crash calling `print(tree)`/`print(addtree)`; a
+      full fix would mean not relying on console-encoding for the C++ side's
+      box-drawing output. Not fixed at that level here (out of scope for this
+      CI debugging pass) — worth a follow-up if this comes up as a real user
+      report. Not verified end-to-end — no Windows runner in this sandbox.
 
 ## Nice-to-have
 
