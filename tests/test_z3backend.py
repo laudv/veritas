@@ -1,9 +1,13 @@
 import unittest
-import z3
+
+try:
+    import z3
+    from veritas.z3backend import Z3Backend
+except ModuleNotFoundError as e:
+    raise unittest.SkipTest(f"z3 not installed: {e}")
 
 from veritas import *
 from veritas.smt import Verifier, Rvar, SumExpr
-from veritas.z3backend import Z3Backend
 
 class DummyVerifier:
     def __init__(self, backend):

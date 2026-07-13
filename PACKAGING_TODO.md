@@ -105,6 +105,31 @@ independently.
       Not verified end-to-end locally — no macOS runner available in this
       sandbox; verified only via TOML validity + cibuildwheel accepting the
       config. Needs a real `deploy` dry run to confirm.
+- [x] 14. (discovered on the next `deploy` dry run, 2026-07-13) `windows-latest`
+      failed with `ImportError: Start directory is not importable: 'tests'`
+      (a known `unittest discover` gotcha). Fixed by adding an empty
+      `tests/__init__.py`. Separately, `macos-15-intel` failed with
+      `z3.z3types.Z3Exception: libz3.dylib not found.` raised from deep inside
+      `z3-solver` itself at import time — since `veritas/__init__.py`'s
+      optional-import guards intentionally only catch `ModuleNotFoundError`
+      (by design, not a bug — see memory `feedback_exception_handling`), this
+      uncaught exception broke `import veritas` entirely, cascading into ~40
+      unrelated test failures. Decided not to chase the native-library issue
+      further (SMT/z3 is an optional integration, and per Laurens real-world
+      Windows usage of it is negligible too): restructured
+      `[tool.cibuildwheel]`'s `test-requires` to exclude `z3-solver` by
+      default (so Windows/macOS don't install it) and re-add it only via a
+      `[tool.cibuildwheel.linux]` `test-requires` override — z3/SMT is now
+      exercised in CI on Linux only. Made `test_verifier.py`/
+      `test_z3backend.py` skip cleanly on `ModuleNotFoundError` (mirroring the
+      existing `test_groot.py` pattern) rather than erroring when it's
+      missing. Verified locally by simulating `z3` being
+      genuinely absent: suite now reports `OK (skipped=2)`, exit code 0,
+      instead of errors — and confirmed the real z3-available path still runs
+      those tests normally (not accidentally always-skipped).
+      Still open: whether to set `fail-fast: false` on the `build_wheels`
+      matrix so unrelated platform failures don't cancel each other's jobs
+      mid-debug (came up but wasn't decided).
 
 ## Nice-to-have
 

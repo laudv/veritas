@@ -56,7 +56,9 @@ exclude = [
 # py::mod_gil_not_used(), so CPython just re-enables the GIL when importing
 # it (the standard safe fallback) -- no real no-GIL parallelism yet, but safe.
 skip = "cp39-* cp310-* *-win32 *-manylinux_i686 *-musllinux*"
-test-requires = "xgboost lightgbm scikit-learn z3-solver gurobipy imageio pandas"
+# z3-solver is only exercised on Linux (see per-platform overrides below)
+# macOS wheels failed and fixing it is not worth the time at the moment
+test-requires = "xgboost lightgbm scikit-learn gurobipy imageio pandas"
 # cd into {project} first: several tests open data/model files using paths
 # relative to the repo root (e.g. "tests/models/rf_model.json"), and
 # cibuildwheel does not run test-command from the project directory.
@@ -65,6 +67,9 @@ test-command = "cd {project} && python -m unittest discover tests"
 # Setuptools bug causes collision between pypy and cpython artifacts
 # (from pybind/cmake_example, is necessary)
 #before-build = "rm -rf {project}/build"
+
+[tool.cibuildwheel.linux]
+test-requires = "xgboost lightgbm scikit-learn gurobipy imageio pandas z3-solver"
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }

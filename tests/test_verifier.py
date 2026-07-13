@@ -2,12 +2,16 @@ import os
 import math
 import unittest
 import numpy as np
-import z3
+
+try:
+    import z3
+    from veritas.z3backend import Z3Backend as Backend
+except ModuleNotFoundError as e:
+    raise unittest.SkipTest(f"z3 not installed: {e}")
 
 from veritas import Interval, FloatT, AddTreeType, AddTree, Config, StopReason, \
         HeuristicType
 from veritas.smt import Verifier#, not_in_domain_constraint, in_domain_constraint
-from veritas.z3backend import Z3Backend as Backend
 from veritas import KantchelianOutputOpt
 from veritas import SMTRobustnessSearch, VeritasRobustnessSearch
 from veritas import MilpRobustnessSearch
