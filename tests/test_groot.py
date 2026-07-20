@@ -1,11 +1,13 @@
 import unittest
 
+import pytest
 import veritas
 
 
+@pytest.mark.sklearn
 class TestGroot(unittest.TestCase):
     def get_groot_model(self):
-
+        # from groot.adversary import DecisionTreeAdversary
         # from groot.model import GrootTreeClassifier
         from groot.model import GrootRandomForestClassifier
         from sklearn.datasets import make_moons
@@ -26,7 +28,7 @@ class TestGroot(unittest.TestCase):
     def test_groot_model(self):
         try:
             at, forest, X_test, y_test = self.get_groot_model()
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as e:
             print("Skipping GROOT tests because GROOT not installed")
             return
 
