@@ -1,25 +1,18 @@
 import unittest
+
 import imageio
+import lightgbm as lgbm
 import numpy as np
+import xgboost
+from sklearn.datasets import load_breast_cancer, load_digits, make_moons
+from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+from veritas import *
 
 # from veritas.add_tree import get_addtree
 from veritas.model_conversion_test import test_model_conversion
-import xgboost
-import lightgbm as lgbm
-
-from sklearn.datasets import load_digits
-from sklearn.datasets import load_breast_cancer
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.ensemble import RandomForestRegressor
-from sklearn.datasets import make_moons
-
-from veritas import *
-
-import timeit
 
 
 class Test_AddTree_Regression(unittest.TestCase):
-
     @classmethod
     def setUpClass(self):
         ############# Load Regression Data #############
@@ -35,17 +28,12 @@ class Test_AddTree_Regression(unittest.TestCase):
         ############# XGB #############
         print("XGB - Regression:")
         regr = xgboost.XGBRegressor(
-            objective="reg:squarederror",
-            nthread=4,
-            tree_method="hist",
-            max_depth=3,
-            learning_rate=1.0,
-            n_estimators=3)
+            objective="reg:squarederror", nthread=4, tree_method="hist", max_depth=3, learning_rate=1.0, n_estimators=3
+        )
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model_conversion(
-            model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
@@ -54,17 +42,12 @@ class Test_AddTree_Regression(unittest.TestCase):
         at.write("models/xgboost-img-very-easy-new.json")
 
         regr = xgboost.XGBRegressor(
-            objective="reg:squarederror",
-            nthread=4,
-            tree_method="hist",
-            max_depth=6,
-            learning_rate=0.5,
-            n_estimators=10)
+            objective="reg:squarederror", nthread=4, tree_method="hist", max_depth=6, learning_rate=0.5, n_estimators=10
+        )
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model_conversion(
-            model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
@@ -73,17 +56,12 @@ class Test_AddTree_Regression(unittest.TestCase):
         at.write("models/xgboost-img-easy-new.json")
 
         regr = xgboost.XGBRegressor(
-            objective="reg:squarederror",
-            nthread=4,
-            tree_method="hist",
-            max_depth=6,
-            learning_rate=0.4,
-            n_estimators=50)
+            objective="reg:squarederror", nthread=4, tree_method="hist", max_depth=6, learning_rate=0.4, n_estimators=50
+        )
         model = regr.fit(X, y)
         at = get_addtree(model)
 
-        mae, rmse = test_model_conversion(
-            model, at, (X, y))
+        mae, rmse = test_model_conversion(model, at, (X, y))
         self.assertAlmostEqual(mae, 0.0, delta=1e-4)
 
         print(f"very easy img: rmse train {rmse}")
@@ -97,10 +75,7 @@ class Test_AddTree_Regression(unittest.TestCase):
 
         ############# SkLearn #############
         print("SkLearn - Regression:")
-        clf = RandomForestRegressor(
-            max_depth=6,
-            random_state=0,
-            n_estimators=50)
+        clf = RandomForestRegressor(max_depth=6, random_state=0, n_estimators=50)
         model = clf.fit(X, y)
         at = get_addtree(model)
 
@@ -119,13 +94,8 @@ class Test_AddTree_Regression(unittest.TestCase):
         ############# LGBM #############
         print("LGBM - Regression:")
         regr = lgbm.LGBMRegressor(
-            objective="regression",
-            num_leaves=10,
-            nthread=4,
-            max_depth=3,
-            learning_rate=1,
-            n_estimators=3,
-            verbose=-1)
+            objective="regression", num_leaves=10, nthread=4, max_depth=3, learning_rate=1, n_estimators=3, verbose=-1
+        )
         model = regr.fit(X, y)
         at = get_addtree(model)
 
@@ -138,13 +108,8 @@ class Test_AddTree_Regression(unittest.TestCase):
         at.write("models/lgbm-img-very-easy-new.json")
 
         regr = lgbm.LGBMRegressor(
-            objective="regression",
-            nthread=4,
-            num_leaves=65,
-            max_depth=6,
-            learning_rate=0.5,
-            n_estimators=10,
-            verbose=-1)
+            objective="regression", nthread=4, num_leaves=65, max_depth=6, learning_rate=0.5, n_estimators=10, verbose=-1
+        )
         model = regr.fit(X, y)
         at = get_addtree(model)
 
@@ -159,13 +124,8 @@ class Test_AddTree_Regression(unittest.TestCase):
         #    json.dump(list(map(float, yhat)), f)
 
         regr = lgbm.LGBMRegressor(
-            objective="regression",
-            nthread=4,
-            num_leaves=65,
-            max_depth=6,
-            learning_rate=0.4,
-            n_estimators=50,
-            verbose=-1)
+            objective="regression", nthread=4, num_leaves=65, max_depth=6, learning_rate=0.4, n_estimators=50, verbose=-1
+        )
         model = regr.fit(X, y)
         at = get_addtree(model)
 
@@ -180,7 +140,6 @@ class Test_AddTree_Regression(unittest.TestCase):
 
 
 class Test_AddTree_BinaryClassification(unittest.TestCase):
-
     @classmethod
     def setUpClass(self):
         ############# Load Binary Data #############
@@ -191,16 +150,12 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         ############# XGB #############
         print("XGB - Binary Classification:")
 
-        print("Make moons") 
-        (X,Y) = make_moons(100)
+        print("Make moons")
+        (X, Y) = make_moons(100)
 
         clf = xgboost.XGBClassifier(
-            objective="binary:logistic",
-            nthread=4,
-            tree_method="hist",
-            max_depth=4,
-            learning_rate=1,
-            n_estimators=1)
+            objective="binary:logistic", nthread=4, tree_method="hist", max_depth=4, learning_rate=1, n_estimators=1
+        )
 
         trained_model = clf.fit(X, Y)
 
@@ -213,16 +168,12 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         print(f"easy bc: mae model difference {mae}")
         print()
 
-        print("Dataset") 
+        print("Dataset")
         X, y = self.bin_data
 
         clf = xgboost.XGBClassifier(
-            objective="binary:logistic",
-            nthread=4,
-            tree_method="hist",
-            max_depth=4,
-            learning_rate=1,
-            n_estimators=1)
+            objective="binary:logistic", nthread=4, tree_method="hist", max_depth=4, learning_rate=1, n_estimators=1
+        )
         model = clf.fit(X, y)
 
         at = get_addtree(model)
@@ -232,7 +183,7 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         print(f"easy bc: accuracy {model_acc}")
         print(f"easy bc: mae model difference {mae}")
         print()
-        
+
         # NOT GOOD ENOUGH ! Show floating error
         self.assertAlmostEqual(mae, 0.0, delta=1e-2)
 
@@ -246,7 +197,8 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         clf = RandomForestClassifier(
             max_depth=6,
             random_state=0,
-            n_estimators=50,)
+            n_estimators=50,
+        )
         model = clf.fit(X, y)
         at = get_addtree(model)
 
@@ -265,13 +217,8 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
         ############# LGBM #############
         print("LGBM - Binary Classification:")
         clf = lgbm.LGBMClassifier(
-            objective="binary",
-            num_leaves=31,
-            nthread=4,
-            max_depth=3,
-            learning_rate=1,
-            n_estimators=3,
-            verbose=-1)
+            objective="binary", num_leaves=31, nthread=4, max_depth=3, learning_rate=1, n_estimators=3, verbose=-1
+        )
         model = clf.fit(X, y)
         at = get_addtree(model)
 
@@ -286,7 +233,6 @@ class Test_AddTree_BinaryClassification(unittest.TestCase):
 
 
 class Test_AddTree_MultiClass(unittest.TestCase):
-
     @classmethod
     def setUpClass(self):
         ############# Load Multiclass Data #############
@@ -305,14 +251,15 @@ class Test_AddTree_MultiClass(unittest.TestCase):
             tree_method="hist",
             max_depth=6,
             learning_rate=0.5,
-            n_estimators=10)
+            n_estimators=10,
+        )
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
         self.assertAlmostEqual(mae, 0.0, delta=1e-6)
-        print(f"multi: acc train {acc*100:.1f}%")
+        print(f"multi: acc train {acc * 100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()
 
@@ -321,15 +268,14 @@ class Test_AddTree_MultiClass(unittest.TestCase):
 
         ############# SkLearn #############
         print("SkLearn - Multiclass:")
-        clf = RandomForestClassifier(
-            max_depth=8, random_state=0, n_estimators=20)
+        clf = RandomForestClassifier(max_depth=8, random_state=0, n_estimators=20)
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
         self.assertAlmostEqual(mae, 0.0, delta=1e-6)
-        print(f"multi: acc train RF {acc*100:.1f}%")
+        print(f"multi: acc train RF {acc * 100:.1f}%")
         print(f"multi: mae mae model difference {mae}")
         print()
 
@@ -339,20 +285,15 @@ class Test_AddTree_MultiClass(unittest.TestCase):
         ############## LGBM #############
         print("LGBM - Multiclass:")
         clf = lgbm.LGBMClassifier(
-            objective="multiclass",
-            num_leaves=31,
-            nthread=4,
-            max_depth=3,
-            learning_rate=0.5,
-            n_estimators=20,
-            verbose=-1)
+            objective="multiclass", num_leaves=31, nthread=4, max_depth=3, learning_rate=0.5, n_estimators=20, verbose=-1
+        )
         model = clf.fit(X, y)
         ats = get_addtree(model)
 
         mae, acc = test_model_conversion(model, ats, (X, y))
 
         self.assertAlmostEqual(mae, 0.0, delta=1e-6)
-        print(f"multi: acc train {acc*100:.1f}%")
+        print(f"multi: acc train {acc * 100:.1f}%")
         print(f"multi: mae model difference {mae}")
         print()
 

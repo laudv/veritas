@@ -4,26 +4,36 @@
 
 import z3
 
-from . import LtSplit#, BoolSplit
+from . import LtSplit  # , BoolSplit
+from .smt import (
+    ORDER_CONSTRAINTS,
+    AbsExpr,
+    SumExpr,
+    Verifier,
+    VerifierAndExpr,
+    VerifierBackend,
+    VerifierBoolExpr,
+    VerifierEqExpr,  # noqa: F401
+    VerifierGeExpr,  # noqa: F401
+    VerifierGtExpr,  # noqa: F401
+    VerifierLeExpr,  # noqa: F401
+    VerifierLtExpr,  # noqa: F401
+    VerifierNeExpr,  # noqa: F401
+    VerifierNotExpr,
+    VerifierOrExpr,
+    VerifierVar,
+)
 
-from .smt import Verifier, ORDER_CONSTRAINTS
-from .smt import VerifierBoolExpr, VerifierVar
-from .smt import VerifierLtExpr, VerifierGtExpr, VerifierLeExpr, VerifierGeExpr, VerifierEqExpr, VerifierNeExpr
-from .smt import VerifierAndExpr, VerifierOrExpr, VerifierNotExpr
-from .smt import SumExpr, AbsExpr
-from .smt import VerifierBackend
 
 class Z3Backend(VerifierBackend):
-
-    ORDER_CONSTRAINTS_MAP = dict(
-        [(eval(name), method) for (name, method) in ORDER_CONSTRAINTS])
+    ORDER_CONSTRAINTS_MAP = dict([(eval(name), method) for (name, method) in ORDER_CONSTRAINTS])
 
     def __init__(self):
         self._ctx = z3.Context()
         self._solver = z3.Solver(ctx=self._ctx)
 
     def set_timeout(self, timeout):
-        self._solver.set("timeout", int(timeout * 1000)) # Z3 seems to interpret timeout as milli seconds
+        self._solver.set("timeout", int(timeout * 1000))  # Z3 seems to interpret timeout as milli seconds
 
     def add_real_var(self, name):
         return z3.Real(name, self._ctx)
@@ -40,7 +50,7 @@ class Z3Backend(VerifierBackend):
         pass
 
     def encode_leaf(self, tree_var, leaf_value):
-        return (tree_var == leaf_value)
+        return tree_var == leaf_value
 
     def encode_internal(self, cond, left, right):
         if left == False and right == False:
@@ -53,8 +63,8 @@ class Z3Backend(VerifierBackend):
 
     def encode_split(self, feat_var, split):
         if isinstance(split, LtSplit):
-            return (feat_var < split.split_value) # consistent with AddTree definition
-        #elif isinstance(split, BoolSplit):
+            return feat_var < split.split_value  # consistent with AddTree definition
+        # elif isinstance(split, BoolSplit):
         #    return feat_var # true goes left, false goes right
         else:
             raise RuntimeError(f"unknown split {split}")
@@ -64,9 +74,12 @@ class Z3Backend(VerifierBackend):
         if isinstance(encs, bool) and not encs:
             return Verifier.Result.UNSAT
         status = self._solver.check(*encs)
-        if status == z3.sat:     return Verifier.Result.SAT
-        elif status == z3.unsat: return Verifier.Result.UNSAT
-        else:                    return Verifier.Result.UNKNOWN
+        if status == z3.sat:
+            return Verifier.Result.SAT
+        elif status == z3.unsat:
+            return Verifier.Result.UNSAT
+        else:
+            return Verifier.Result.UNKNOWN
 
     def model(self, *name_vars_pairs):
         z3model = self._solver.model()
@@ -74,26 +87,26 @@ class Z3Backend(VerifierBackend):
 
     def _model_aux(self, z3model, name_vars_pairs):
         model = {}
-        #print("*** call ***")
-        #print(name_vars_pairs)
-        for (name, vs) in name_vars_pairs:
-            #print()
-            #print(name, " - ", vs)
+        # print("*** call ***")
+        # print(name_vars_pairs)
+        for name, vs in name_vars_pairs:
+            # print()
+            # print(name, " - ", vs)
             # either (pair (name=>(dict|list|var), list=[var...] or [name=>(dict|list|var)... recur])
             if isinstance(vs, list):
                 if len(vs) > 0 and isinstance(vs[0], tuple):
-                    #print("recur list:", name, "=>", vs)
+                    # print("recur list:", name, "=>", vs)
                     model[name] = self._model_aux(z3model, vs)
                 else:
-                    #print("plain list:", name, "=>", vs)
+                    # print("plain list:", name, "=>", vs)
                     model[name] = [self._extract_var(z3model, v) for v in vs]
             elif isinstance(vs, dict):
-                #print("recur dict:", name, "=>", vs)
+                # print("recur dict:", name, "=>", vs)
                 model[name] = self._model_aux(z3model, list(vs.items()))
             else:
-                #print("plain var:", name, "=>", vs)
+                # print("plain var:", name, "=>", vs)
                 model[name] = self._extract_var(z3model, vs)
-            #print("model: ", model)
+            # print("model: ", model)
         return model
 
     # -- private --
@@ -103,9 +116,11 @@ class Z3Backend(VerifierBackend):
         for c in cs:
             enc = self._enc_constraint(c)
             if isinstance(enc, bool):
-                if not enc: return [False]
+                if not enc:
+                    return [False]
                 # skip True
-            else: encs.append(enc)
+            else:
+                encs.append(enc)
         return encs
 
     def _enc_constraint(self, c):
@@ -119,11 +134,10 @@ class Z3Backend(VerifierBackend):
         elif isinstance(c, VerifierBoolExpr):
             return self._enc_verifier_bool_expr(c)
         else:
-            raise RuntimeError("unsupported expression of type "
-                    + type(c).__qualname__)
+            raise RuntimeError("unsupported expression of type " + type(c).__qualname__)
 
     def _enc_verifier_bool_expr(self, c):
-        
+
         if isinstance(c, VerifierAndExpr):
             cs = list(map(self._enc_bool_expr, c.conjuncts))
             return z3.And(*cs, self._ctx) if len(cs) > 0 else True
@@ -137,12 +151,11 @@ class Z3Backend(VerifierBackend):
             real2 = self._enc_real_expr(c.rhs)
             method = Z3Backend.ORDER_CONSTRAINTS_MAP[type(c)]
             method = getattr(real1, method)
-            return method(real2) # call float's or Z3's ArithRef's __lt__, __gt__, ...
+            return method(real2)  # call float's or Z3's ArithRef's __lt__, __gt__, ...
         elif isinstance(c, VerifierVar):
             return c.get()
         else:
-            raise RuntimeError("unsupported VerifierBoolExpr of type "
-                    + type(c).__qualname__)
+            raise RuntimeError("unsupported VerifierBoolExpr of type " + type(c).__qualname__)
 
     def _enc_real_expr(self, c):
         if z3.is_real(c):
@@ -162,8 +175,7 @@ class Z3Backend(VerifierBackend):
             expr = self._enc_real_expr(c.expr)
             return z3.If(expr >= 0, expr, -expr)
         else:
-            raise RuntimeError("unsupported VerifierRealExpr of type "
-                    + type(c).__qualname__)
+            raise RuntimeError("unsupported VerifierRealExpr of type " + type(c).__qualname__)
 
     def _extract_var(self, z3model, var):
         val = z3model[var]

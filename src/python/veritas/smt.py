@@ -2,19 +2,22 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import math, timeit
-from bisect import bisect
-
+import math
+import timeit
 from enum import Enum
+
 from . import AddTree, Interval
 
 # @TODO this does not work with multi-class ensembles yet.
 
+
 class VerifierExpr:
     pass
 
+
 class VerifierRealExpr(VerifierExpr):
     pass
+
 
 class VerifierBoolExpr(VerifierExpr):
     def __and__(self, other):
@@ -23,6 +26,7 @@ class VerifierBoolExpr(VerifierExpr):
     def __or__(self, other):
         return VerifierOrExpr(self, other)
 
+
 class VerifierVar:
     def __init__(self, verifier):
         self._verifier = verifier
@@ -30,7 +34,8 @@ class VerifierVar:
     def get(self):
         raise RuntimeError("abstract method")
 
-class Xvar(VerifierVar, VerifierRealExpr, VerifierBoolExpr): 
+
+class Xvar(VerifierVar, VerifierRealExpr, VerifierBoolExpr):
     def __init__(self, verifier, feat_id):
         super().__init__(verifier)
         self._feat_id = feat_id
@@ -38,13 +43,15 @@ class Xvar(VerifierVar, VerifierRealExpr, VerifierBoolExpr):
     def get(self):
         return self._verifier._xvars[self._feat_id]
 
-class Rvar(VerifierVar, VerifierRealExpr): # An additional real variable
+
+class Rvar(VerifierVar, VerifierRealExpr):  # An additional real variable
     def __init__(self, verifier, name):
         super().__init__(verifier)
         self._name = name
 
     def get(self):
         return self._verifier._rvars[self._name]
+
 
 class Wvar(VerifierVar, VerifierRealExpr):
     def __init__(self, verifier, tree_index):
@@ -54,12 +61,14 @@ class Wvar(VerifierVar, VerifierRealExpr):
     def get(self):
         return self._verifier._wvars[self._tree_index]
 
+
 class Fvar(VerifierVar, VerifierRealExpr):
     def __init__(self, verifier):
         super().__init__(verifier)
 
     def get(self):
         return self._verifier._fvar
+
 
 class SumExpr(VerifierRealExpr):
     def __init__(self, *parts):
@@ -70,6 +79,7 @@ class SumExpr(VerifierRealExpr):
         assert len(parts) > 0
         self.parts = parts
 
+
 class AbsExpr(VerifierRealExpr):
     def __init__(self, expr):
         """
@@ -78,15 +88,17 @@ class AbsExpr(VerifierRealExpr):
         """
         self.expr = expr
 
+
 ORDER_CONSTRAINTS = [
     ("VerifierLtExpr", "__lt__"),
     ("VerifierGtExpr", "__gt__"),
     ("VerifierLeExpr", "__le__"),
     ("VerifierGeExpr", "__ge__"),
     ("VerifierEqExpr", "__eq__"),
-    ("VerifierNeExpr", "__ne__")]
+    ("VerifierNeExpr", "__ne__"),
+]
 
-for (clazz, method) in ORDER_CONSTRAINTS:
+for clazz, method in ORDER_CONSTRAINTS:
     exec(f"""
 class {clazz}(VerifierBoolExpr):
     def __init__(self, lhs, rhs):
@@ -94,25 +106,36 @@ class {clazz}(VerifierBoolExpr):
         self.rhs = rhs
 """)
     locs = {"f": None}
-    exec(f"""
+    exec(
+        f"""
 def f(self, other):
     return {clazz}(self, other)
-""", globals(), locs)
+""",
+        globals(),
+        locs,
+    )
     setattr(VerifierRealExpr, method, locs["f"])
+
 
 class VerifierAndExpr(VerifierBoolExpr):
     def __init__(self, *conjuncts):
         self.conjuncts = []
         for c in conjuncts:
-            if isinstance(c, VerifierAndExpr): self.conjuncts += c.conjuncts;
-            else: self.conjuncts.append(c)
+            if isinstance(c, VerifierAndExpr):
+                self.conjuncts += c.conjuncts
+            else:
+                self.conjuncts.append(c)
+
 
 class VerifierOrExpr(VerifierBoolExpr):
     def __init__(self, *disjuncts):
         self.disjuncts = []
         for d in disjuncts:
-            if isinstance(d, VerifierOrExpr): self.disjuncts += d.disjuncts;
-            else: self.disjuncts.append(d)
+            if isinstance(d, VerifierOrExpr):
+                self.disjuncts += d.disjuncts
+            else:
+                self.disjuncts.append(d)
+
 
 class VerifierNotExpr(VerifierBoolExpr):
     def __init__(self, expr):
@@ -125,8 +148,10 @@ def encode_prune_box(verifier, prune_box):
         if interval.is_everything():
             raise RuntimeError("Unconstrained feature -> should not be in dict")
         var = verifier.xvar(feat_id)
-        if interval.lo_is_unbound(): cs.append(var <  interval.hi)
-        elif interval.hi_is_unbound(): cs.append(var >= interval.lo)
+        if interval.lo_is_unbound():
+            cs.append(var < interval.hi)
+        elif interval.hi_is_unbound():
+            cs.append(var >= interval.lo)
         else:
             cs.append((var >= interval.lo) & (var < interval.hi))
     return VerifierAndExpr(*cs)
@@ -136,7 +161,6 @@ def encode_prune_box(verifier, prune_box):
 
 
 class VerifierBackend:
-
     def set_timeout(self, timeout):
         """
         Set the maximum number of SECONDS the backend is allowed to spend.
@@ -145,11 +169,11 @@ class VerifierBackend:
         raise RuntimeError("abstract method")
 
     def add_real_var(self, name):
-        """ Add a new real variable to the session. """
+        """Add a new real variable to the session."""
         raise RuntimeError("abstract method")
 
     def add_bool_var(self, name):
-        """ Add a new boolean variable to the session. """
+        """Add a new boolean variable to the session."""
         raise RuntimeError("abstract method")
 
     def add_constraint(self, constraint):
@@ -160,11 +184,11 @@ class VerifierBackend:
         raise RuntimeError("abstract method")
 
     def simplify(self):
-        """ Given the backend a chance to process a bunch of added constraints. """
+        """Given the backend a chance to process a bunch of added constraints."""
         raise RuntimeError("abstract method")
 
     def encode_leaf(self, tree_var, leaf_value):
-        """ Encode the leaf node """
+        """Encode the leaf node"""
         raise RuntimeError("abstract method")
 
     def encode_internal(self, split, left, right):
@@ -175,11 +199,11 @@ class VerifierBackend:
         raise RuntimeError("abstract method")
 
     def encode_split(self, feat_var, split):
-        """ Encode the given split test. """
+        """Encode the given split test."""
         raise RuntimeError("abstract method")
 
     def check(self, *constraints):
-        """ Satisfiability check, optionally with additional constraints. """
+        """Satisfiability check, optionally with additional constraints."""
         raise RuntimeError("abstract method")
 
     def model(self, *name_vars_pairs):
@@ -192,9 +216,7 @@ class VerifierBackend:
         raise RuntimeError("abstract method")
 
 
-
 # -----------------------------------------------------------------------------
-
 
 
 class VerifierTimeout(Exception):
@@ -204,9 +226,7 @@ class VerifierTimeout(Exception):
         self.unk_after = unk_after
 
 
-
 # -----------------------------------------------------------------------------
-
 
 
 class Verifier:
@@ -221,14 +241,17 @@ class Verifier:
             return self == Verifier.Result.SAT
 
         def __str__(self):
-            if self == Verifier.Result.SAT:     return "SAT"
-            if self == Verifier.Result.UNSAT:   return "UNSAT"
-            if self == Verifier.Result.UNKNOWN: return "UNKNOWN"
+            if self == Verifier.Result.SAT:
+                return "SAT"
+            if self == Verifier.Result.UNSAT:
+                return "UNSAT"
+            if self == Verifier.Result.UNKNOWN:
+                return "UNKNOWN"
 
     def __init__(self, addtree, prune_box, backend, budget=None, instance=None):
         assert isinstance(addtree, AddTree)
         assert isinstance(prune_box, dict)
-        if len(prune_box.keys())>0:
+        if len(prune_box.keys()) > 0:
             for k, v in prune_box.items():
                 assert isinstance(k, int)
                 assert isinstance(v, Interval)
@@ -245,23 +268,21 @@ class Verifier:
         self.nchecks = 0
 
         # extract variables from addtree
-        self._xvars = {fid: self._backend.add_real_var(f"x{fid}")
-                for fid in range(self._addtree.get_maximum_feat_id()+1)}
-        self._wvars = [self._backend.add_real_var(f"w{i}")
-                for i in range(len(self._addtree))]
-        self._fvar = self._backend.add_real_var(f"f")
+        self._xvars = {fid: self._backend.add_real_var(f"x{fid}") for fid in range(self._addtree.get_maximum_feat_id() + 1)}
+        self._wvars = [self._backend.add_real_var(f"w{i}") for i in range(len(self._addtree))]
+        self._fvar = self._backend.add_real_var("f")
 
         # possibily, additional real variables
-        self._rvars = {} 
+        self._rvars = {}
 
-        # @TODO does not work with multi-class ensemble! 
+        # @TODO does not work with multi-class ensemble!
         # --> we are manually putting a "0" into get_base_score now
         # FVAR = sum{WVARS}
         fexpr = SumExpr(self._addtree.get_base_score(0), *self._wvars)
         self.add_constraint(fexpr == self.fvar())
 
-        # add constraints from prune_box 
-        if len(self._prune_box.keys())>0:
+        # add constraints from prune_box
+        if len(self._prune_box.keys()) > 0:
             # (!) add xvars not present in addtree (rare, but possible)
             # --> if addtree uses X1, X2 but *not* X3, we don't have X3 in model
             for fid in self._prune_box.keys():
@@ -284,41 +305,39 @@ class Verifier:
         self._splits = None
         self.leaf_count = 0
 
-
     def xvar(self, feat_id):
-        """ Get the decision variable associated with feature `feat_id`. """
+        """Get the decision variable associated with feature `feat_id`."""
         return Xvar(self, feat_id)
 
     def wvar(self, tree_index):
-        """ Get the decision variable associated with the output value of tree `tree_index`. """
+        """Get the decision variable associated with the output value of tree `tree_index`."""
         return Wvar(self, tree_index)
 
     def fvar(self):
-        """ Get the decision variable associated with the output of the model. """
+        """Get the decision variable associated with the output of the model."""
         return Fvar(self)
 
     def add_rvar(self, name):
-        """ Add an additional decision variable to the problem. """
+        """Add an additional decision variable to the problem."""
         assert name not in self._rvars
         rvar = self._backend.add_real_var(f"r_{name}")
         self._rvars[name] = rvar
 
     def rvar(self, name):
-        """ Get one of the additional decision variables. """
+        """Get one of the additional decision variables."""
         return Rvar(self, name)
 
-
     def add_all_trees(self):
-        """ Add all trees in the addtree. """
+        """Add all trees in the addtree."""
         for tree_index in range(len(self._addtree)):
             self.add_tree(tree_index)
 
     def add_tree(self, tree_index):
-        """ Add the full encoding of a tree to the backend.  """
+        """Add the full encoding of a tree to the backend."""
         tree = self._addtree[tree_index]
         enc = self._enc_tree(tree, tree.root(), tree_index)
         self._backend.add_constraint(enc)
-        lo, hi = tree.find_minmax_leaf_value(tree.root())[0] 
+        lo, hi = tree.find_minmax_leaf_value(tree.root())[0]
         wvar = self._wvars[tree_index]
         if not math.isinf(lo):
             self._backend.add_constraint(wvar >= lo)
@@ -328,7 +347,7 @@ class Verifier:
     def _enc_tree(self, tree, node, tree_index):
         if tree.is_leaf(node):
             wvar = self._wvars[tree_index]
-            leaf_value = tree.get_leaf_value(node, 0) ### CLASS 0 ONLY???
+            leaf_value = tree.get_leaf_value(node, 0)  ### CLASS 0 ONLY???
             self.leaf_count += 1
             return self._backend.encode_leaf(wvar, leaf_value)
         else:
@@ -340,7 +359,6 @@ class Verifier:
             split_enc = self._backend.encode_split(xvar, split)
             return self._backend.encode_internal(split_enc, l, r)
 
-
     def add_constraint(self, constraint):
         """
         Add a user-defined constraint. Use add_rvar, rvar, bvar, xvar, and fvar
@@ -349,9 +367,8 @@ class Verifier:
         return self._backend.add_constraint(constraint)
 
     def set_timeout(self, timeout):
-        """ Set the timeout of the backend solver. """
+        """Set the timeout of the backend solver."""
         self._backend.set_timeout(timeout)
-
 
     def check(self, *constraints):
         """
@@ -383,12 +400,10 @@ class Verifier:
             "bs": { name => value } value map of additional bool variables
             }
         """
-        args = [("xs", self._xvars),
-                ("ws", self._wvars),
-                ("f",  self._fvar )]
+        args = [("xs", self._xvars), ("ws", self._wvars), ("f", self._fvar)]
 
         args.append(("rs", self._rvars))
-        
+
         return self._backend.model(*args)
 
     def model_family(self, model):
@@ -397,7 +412,7 @@ class Verifier:
         change its predicted value.
         """
         xs = model["xs"]
-        
+
         if isinstance(xs, dict):
             xs = list(xs.values())
 
@@ -405,7 +420,3 @@ class Verifier:
         leafs = [tree.eval_node(xs)[0] for tree in self._addtree]
 
         return self._addtree.compute_box(leafs)
-
-
-    
-

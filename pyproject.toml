@@ -92,3 +92,60 @@ test-command = "cd /d {project} && python -m unittest discover tests"
 # PYTHONUTF8 forces Python's text I/O to UTF-8 regardless of the console
 # codepage (this is what PEP 540/686 eventually make the default anyway).
 environment = { PYTHONUTF8 = "1" }
+
+[tool.ruff]
+# Target Python version matching requires-python
+target-version = "py311"
+
+# Line length matching the previous flake8 setting
+line-length = 127
+
+# Exclude typical build/cache/dependency directories
+exclude = [
+    ".git",
+    ".github",
+    ".nox",
+    ".pytest_cache",
+    ".venv",
+    "build",
+    "lib",
+    "tests/experiments",
+    "scratch",
+    "examples",
+]
+
+[tool.ruff.lint]
+# Enable Pyflakes (F), pycodestyle errors (E) and warnings (W), bugbear (B), McCabe (C90), and isort (I)
+select = ["E", "F", "W", "B", "C90", "I"]
+ignore = [
+    "E701", # Multiple statements on one line (colon)
+    "E712", # Avoid equality comparisons to True/False (breaks z3 symbolic comparisons)
+    "E731", # Do not assign a lambda expression
+    "E741", # Ambiguous variable name 'l' (used for left child in trees)
+    "C901", # Function too complex
+    "B905", # zip() without strict=
+    "B020", # Loop control variable self overrides iterable
+    "B904", # raise ... from err in except block
+    "E501", # Line too long
+    "B023", # Function definition does not bind loop variable
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = [
+    "F403",  # star imports
+    "F405",  # undefined name from star imports
+    "F841",  # unused variables
+    "E721",  # type comparisons
+    "E402",  # module level import not at top of file
+    "B007",  # loop control variable not used
+]
+
+
+[tool.ruff.lint.mccabe]
+# Maximum McCabe complexity matching the previous flake8 setting
+max-complexity = 10
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

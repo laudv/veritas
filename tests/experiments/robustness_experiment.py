@@ -1,13 +1,19 @@
-import os, sys, json, gzip, time
+import gzip
+import json
+import os
+import sys
+import time
+
 import datasets
-from veritas import GraphRobustnessSearch, get_closest_example
-from veritas.robustness import RobustnessSearch, VeritasRobustnessSearch, MilpRobustnessSearch
-from veritas.kantchelian import KantchelianAttack, KantchelianTargetedAttack
 import numpy as np
+from veritas import GraphRobustnessSearch, get_closest_example
+from veritas.kantchelian import KantchelianTargetedAttack
+from veritas.robustness import MilpRobustnessSearch, RobustnessSearch, VeritasRobustnessSearch
+
 
 def write_result(result, outfile):
     result_str = json.dumps(result)
-    result_bytes = result_str.encode('utf-8')  
+    result_bytes = result_str.encode("utf-8")
     outfile.write(result_bytes)
     outfile.write(b"\n")
 
@@ -15,12 +21,13 @@ def write_result(result, outfile):
     outfile.flush()
     os.fsync(outfile)
 
+
 def run(at0, at1, example, start_delta, max_time, algos, result):
-    if algos[0] == "b" or algos[0] == "a": # binary (or all)
+    if algos[0] == "b" or algos[0] == "a":  # binary (or all)
         print("\n== VERITAS ======================================", f"({time.ctime()})")
-        ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta,
-                max_time=max_time,
-                stop_condition=RobustnessSearch.NO_STOP_COND)
+        ver = VeritasRobustnessSearch(
+            at0, at1, example, start_delta=start_delta, max_time=max_time, stop_condition=RobustnessSearch.NO_STOP_COND
+        )
         ver_norm, ver_lo, ver_hi = ver.search()
         result["veritas_deltas"] = ver.delta_log
         result["veritas_log"] = ver.log
@@ -29,21 +36,17 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         result["veritas_examples"] = ver.generated_examples
         print("veritas time", ver.total_time, ver.total_time_p)
 
-    if algos[0] == "g" or algos[0] == "a": # graph (or all)
+    if algos[0] == "g" or algos[0] == "a":  # graph (or all)
         print("\n== VERITAS robustness search ====================", f"({time.ctime()})")
         ver = VeritasRobustnessSearch(at0, at1, example, start_delta=start_delta)
         ver = GraphRobustnessSearch(ver.at, example, start_delta)
         ver.set_eps(0.5)
         ver.stop_when_num_solutions_equals = 1
         done = ver.step_for(max_time, 100)
-        result["ver_graph_delta"] = [ver.get_solution(i).delta
-                for i in range(ver.num_solutions())]
+        result["ver_graph_delta"] = [ver.get_solution(i).delta for i in range(ver.num_solutions())]
         result["ver_graph_time"] = ver.time_since_start()
-        result["ver_graph_examples"] = [get_closest_example(ver.get_solution(i), example)
-                for i in range(ver.num_solutions())]
-        print("veritas time", ver.time_since_start(),
-                "delta", result["ver_graph_delta"],
-                "steps", ver.num_steps())
+        result["ver_graph_examples"] = [get_closest_example(ver.get_solution(i), example) for i in range(ver.num_solutions())]
+        print("veritas time", ver.time_since_start(), "delta", result["ver_graph_delta"], "steps", ver.num_steps())
 
     if algos[1] == "1":
         print("\n== KANTCHELIAN MILP =============================", f"({time.ctime()})")
@@ -59,8 +62,9 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
 
     if algos[2] == "1":
         print("\n== MILP BINARY SEARCH ===========================", f"({time.ctime()})")
-        milp = MilpRobustnessSearch(at0, at1, example, start_delta=start_delta,
-                max_time=max_time, stop_condition=RobustnessSearch.NO_STOP_COND)
+        milp = MilpRobustnessSearch(
+            at0, at1, example, start_delta=start_delta, max_time=max_time, stop_condition=RobustnessSearch.NO_STOP_COND
+        )
         ver_norm, ver_lo, ver_hi = milp.search()
         result["milp_deltas"] = milp.delta_log
         result["milp_time"] = milp.total_time
@@ -69,13 +73,13 @@ def run(at0, at1, example, start_delta, max_time, algos, result):
         print("MILP BIN SEARCH delta", milp.delta_log[-1])
         print("MILP BIN SEARCH time", milp.total_time, milp.total_time_p)
 
-def robustness_experiment_multiclass(dataset, example_is, max_time,
-        start_delta, num_classes, outfile, algos):
+
+def robustness_experiment_multiclass(dataset, example_is, max_time, start_delta, num_classes, outfile, algos):
     for example_i in example_is:
-        example = list(dataset.X.iloc[example_i,:])
+        example = list(dataset.X.iloc[example_i, :])
         example_label = int(dataset.y[example_i])
         at0 = dataset.at[example_label]
-        for target_label in [j for j in range(num_classes) if j!=example_label]:
+        for target_label in [j for j in range(num_classes) if j != example_label]:
             at1 = dataset.at[target_label]
 
             print(f"\n\n== EXAMPLE {example_i}: {example_label} vs {target_label} ({algos}) ===========")
@@ -89,10 +93,10 @@ def robustness_experiment_multiclass(dataset, example_is, max_time,
             run(at0, at1, example, start_delta, max_time, algos, result)
             write_result(result, outfile)
 
-def robustness_experiment_binary(dataset, example_is, max_time, start_delta,
-        outfile, algos):
+
+def robustness_experiment_binary(dataset, example_is, max_time, start_delta, outfile, algos):
     for example_i in example_is:
-        example = list(dataset.X.iloc[example_i,:])
+        example = list(dataset.X.iloc[example_i, :])
         example_np = np.array([example])
         example_label = int(dataset.y[example_i])
         at = dataset.at
@@ -103,7 +107,7 @@ def robustness_experiment_binary(dataset, example_is, max_time, start_delta,
         if example_label == 1:  # label is POS, MINIMIZE at output
             print("POS:", predicted_value, "with true label", example_label)
             at0, at1 = at, None
-        else:                   # label is NEG, MAXIMIZE at output
+        else:  # label is NEG, MAXIMIZE at output
             print("NEG:", predicted_value, "with true label", example_label)
             at0, at1 = None, at
 
@@ -112,70 +116,71 @@ def robustness_experiment_binary(dataset, example_is, max_time, start_delta,
             "max_time": max_time,
             "example_i": example_i,
             "example_label": example_label,
-            "target_label": abs(example_label-1),
+            "target_label": abs(example_label - 1),
             "algos": algos,
         }
         run(at0, at1, example, start_delta, max_time, algos, result)
         write_result(result, outfile)
 
+
 def parse_dataset(dataset):
     if dataset == "covtype":
-        dataset = datasets.CovtypeNormalized() # normalized
+        dataset = datasets.CovtypeNormalized()  # normalized
         dataset.load_dataset()
         dataset.load_model(80, 8)
         start_delta = 0.2
         num_classes = 2
-        T, L = 2, 2 # from 2, 3, too slow!
+        T, L = 2, 2  # from 2, 3, too slow!
     elif dataset == "covtype_small":
-        dataset = datasets.CovtypeNormalized() # normalized
+        dataset = datasets.CovtypeNormalized()  # normalized
         dataset.load_dataset()
         dataset.load_model(20, 4)
         start_delta = 0.2
         num_classes = 2
-        T, L = 2, 2 # from 2, 3, too slow!
+        T, L = 2, 2  # from 2, 3, too slow!
     elif dataset == "f-mnist":
-        dataset = datasets.FashionMnist() # non-normalized (0-255)
+        dataset = datasets.FashionMnist()  # non-normalized (0-255)
         dataset.load_dataset()
         dataset.load_model(200, 8)
         start_delta = 20
         num_classes = 10
         T, L = 2, 1
     elif dataset == "mnist":
-        dataset = datasets.Mnist() # non-normalized (0-255)
+        dataset = datasets.Mnist()  # non-normalized (0-255)
         dataset.load_dataset()
         dataset.load_model(200, 8)
         start_delta = 40
         num_classes = 10
         T, L = 2, 2
     elif dataset == "mnist_small":
-        dataset = datasets.Mnist() # non-normalized (0-255)
+        dataset = datasets.Mnist()  # non-normalized (0-255)
         dataset.load_dataset()
         dataset.load_model(20, 4)
         start_delta = 40
         num_classes = 10
         T, L = 2, 2
     elif dataset == "higgs":
-        dataset = datasets.LargeHiggs() # normalized
+        dataset = datasets.LargeHiggs()  # normalized
         dataset.load_dataset()
         dataset.load_model(300, 8)
         start_delta = 0.05
         num_classes = 2
         T, L = 4, 1
     elif dataset == "ijcnn1":
-        dataset = datasets.Ijcnn1() # normalized
+        dataset = datasets.Ijcnn1()  # normalized
         dataset.load_dataset()
         dataset.load_model(60, 8)
         start_delta = 0.1
         num_classes = 2
         T, L = 2, 2
     elif dataset == "webspam":
-        dataset = datasets.Webspam() # normalized
+        dataset = datasets.Webspam()  # normalized
         dataset.load_dataset()
         dataset.load_model(100, 8)
         start_delta = 0.05
         num_classes = 2
         T, L = 2, 1
-    elif dataset == "mnist2v6":      # non-normalized! (0-255)
+    elif dataset == "mnist2v6":  # non-normalized! (0-255)
         dataset = datasets.Mnist2v6()
         dataset.load_dataset()
         dataset.load_model(1000, 4)
@@ -187,12 +192,13 @@ def parse_dataset(dataset):
 
     return dataset, start_delta, num_classes, T, L
 
+
 def main():
     dataset = sys.argv[1]
     example_is = range(*(int(i) for i in sys.argv[2].split(":")))
     outfile_base = sys.argv[3]
     max_time = int(sys.argv[4])
-    algos = sys.argv[5] # algo order: veritas merge treeck kantchelian
+    algos = sys.argv[5]  # algo order: veritas merge treeck kantchelian
     assert len(algos) == 3
     outfile = f"{outfile_base}-{dataset}-{example_is.start}:{example_is.stop}-time{max_time}-{algos}.gz"
 
@@ -206,13 +212,12 @@ def main():
     with gzip.open(outfile, "wb") as f:
         try:
             if num_classes == 2:
-                robustness_experiment_binary(dataset, example_is, max_time,
-                        start_delta, f, algos)
+                robustness_experiment_binary(dataset, example_is, max_time, start_delta, f, algos)
             else:
-                robustness_experiment_multiclass(dataset, example_is, max_time,
-                        start_delta, num_classes, f, algos)
-        finally: 
+                robustness_experiment_multiclass(dataset, example_is, max_time, start_delta, num_classes, f, algos)
+        finally:
             print("results written to", outfile, f"({time.ctime()})")
+
 
 if __name__ == "__main__":
     main()

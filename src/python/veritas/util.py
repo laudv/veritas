@@ -4,6 +4,7 @@
 
 from veritas import Solution
 
+
 ## \ingroup python
 # \brief Generate a concrete instance.
 #
@@ -40,7 +41,7 @@ def get_closest_example(solution_or_box, example, eps, featmap=None):
         for feat_id in featmap[index]:
             x = example[feat_id]
             if dom.lo <= x and x < dom.hi:
-                continue # keep the value x
+                continue  # keep the value x
 
             dist_lo = abs(dom.lo - x)
             dist_hi = abs(x - dom.hi)
@@ -49,7 +50,7 @@ def get_closest_example(solution_or_box, example, eps, featmap=None):
             else:
                 closest[feat_id] = dom.lo
 
-            #print(f"dom {feat_id}:", dom, x, "->", closest[feat_id])
+            # print(f"dom {feat_id}:", dom, x, "->", closest[feat_id])
 
     return closest
 

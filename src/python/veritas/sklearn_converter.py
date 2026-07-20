@@ -8,15 +8,13 @@
 
 import numpy as np
 
-from . import AddTree, AddTreeType, AddTreeConverter
-from . import InapplicableAddTreeConverter
+from . import AddTree, AddTreeConverter, AddTreeType, InapplicableAddTreeConverter
+
 
 class SklRfAddTreeConverter(AddTreeConverter):
     def convert(self, ensemble, silent):
         try:
-            from sklearn.ensemble import \
-                    RandomForestClassifier, \
-                    RandomForestRegressor
+            from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
         except ModuleNotFoundError:
             raise InapplicableAddTreeConverter("no sklearn")
 
@@ -25,9 +23,10 @@ class SklRfAddTreeConverter(AddTreeConverter):
         # TODO add sklearn boosted trees, extra trees, isolation forest, ...
 
         if isinstance(ensemble, RandomForestRegressor):
-            at_type = AddTreeType.REGR_MEAN 
+            at_type = AddTreeType.REGR_MEAN
 
-            num_leaf_values = ensemble.n_outputs_ 
+            num_leaf_values = ensemble.n_outputs_
+
             def extract_value_fun(v, i):
                 return v[i][0]
 
@@ -36,14 +35,16 @@ class SklRfAddTreeConverter(AddTreeConverter):
 
         elif isinstance(ensemble, RandomForestClassifier):
             at_type = AddTreeType.CLF_MEAN
-            num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_ > 2 else 1 
+            num_leaf_values = ensemble.n_classes_ if ensemble.n_classes_ > 2 else 1
             if num_leaf_values > 2:
+
                 def extract_value_fun(v, i):
-                    return v[0][i]/sum(v[0])
+                    return v[0][i] / sum(v[0])
             else:
+
                 def extract_value_fun(v, i):
                     assert i == 0
-                    return v[0][1]/sum(v[0])
+                    return v[0][1] / sum(v[0])
 
             if not silent:
                 print(f"SKLEARN: RF classifier with {num_leaf_values} classes")
@@ -57,16 +58,15 @@ class SklRfAddTreeConverter(AddTreeConverter):
 
         if at_type != AddTreeType.REGR_MEAN:
             for k in range(num_leaf_values):
-                at.set_base_score(k, -len(at)/2.0)
+                at.set_base_score(k, -len(at) / 2.0)
 
         return at
+
 
 class SklGbdtAddTreeConverter(AddTreeConverter):
     def convert(self, ensemble, silent):
         try:
-            from sklearn.ensemble import \
-                    GradientBoostingClassifier, \
-                    GradientBoostingRegressor
+            from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
         except ModuleNotFoundError:
             raise InapplicableAddTreeConverter("no sklearn")
 
@@ -74,6 +74,7 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
             at_type = AddTreeType.REGR
             num_leaf_values = 1
             base_scores = [ensemble.init_.constant_[0][k] for k in range(num_leaf_values)]
+
             def extract_value_fun(v, i):
                 return v[i][0] * ensemble.learning_rate
 
@@ -88,7 +89,7 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
 
             if size_pred == 2:
                 num_leaf_values = 1
-                base_scores = ensemble._loss.link.link(test_instance_pred[:,1]).ravel()
+                base_scores = ensemble._loss.link.link(test_instance_pred[:, 1]).ravel()
             else:
                 num_leaf_values = size_pred
                 base_scores = ensemble._loss.link.link(test_instance_pred).ravel()
@@ -107,8 +108,8 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
         at = AddTree(num_leaf_values, at_type)
         for trees in ensemble.estimators_:
             for k, tree in enumerate(trees):
-                #import sklearn.tree
-                #print(sklearn.tree.export_text(tree))
+                # import sklearn.tree
+                # print(sklearn.tree.export_text(tree))
 
                 at_tmp = AddTree(1, at_type)
                 addtree_sklearn_tree(at_tmp, tree.tree_, extract_value_fun)
@@ -131,9 +132,10 @@ class SklTreeAddTreeConverter(AddTreeConverter):
             tree = ensemble
             at_type = AddTreeType.CLF_MEAN
             num_leaf_values = 1
+
             def extract_value_fun(v, i):
                 assert i == 0
-                return v[0][1]/sum(v[0])
+                return v[0][1] / sum(v[0])
 
             if not silent:
                 print(f"SKLEARN: single tree classifier with {num_leaf_values} classes")
@@ -157,8 +159,8 @@ class SklTreeAddTreeConverter(AddTreeConverter):
 
 def addtree_sklearn_tree(at, tree, extract_value_fun):
     import sklearn.tree as sktree
-    if isinstance(tree, sktree.DecisionTreeClassifier) \
-            or isinstance(tree, sktree.DecisionTreeRegressor):
+
+    if isinstance(tree, sktree.DecisionTreeClassifier) or isinstance(tree, sktree.DecisionTreeRegressor):
         tree = tree.tree_
 
     if not isinstance(tree, sktree._tree.Tree):
@@ -173,11 +175,10 @@ def addtree_sklearn_tree(at, tree, extract_value_fun):
         if is_internal:
             feat_id = tree.feature[n]
             thrs = tree.threshold[n]
-            #split_value = thrs
-            #split_value = np.nextafter(np.float32(
+            # split_value = thrs
+            # split_value = np.nextafter(np.float32(
             #    thrs), np.float32(np.inf))  # <= splits
-            split_value = np.nextafter(np.float64(
-                thrs), np.float64(np.inf))  # <= splits
+            split_value = np.nextafter(np.float64(thrs), np.float64(np.inf))  # <= splits
             t.split(m, feat_id, split_value)
             stack.append((tree.children_right[n], t.right(m)))
             stack.append((tree.children_left[n], t.left(m)))

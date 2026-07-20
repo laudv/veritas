@@ -7,7 +7,8 @@ except ModuleNotFoundError as e:
     raise unittest.SkipTest(f"z3 not installed: {e}")
 
 from veritas import *
-from veritas.smt import Verifier, Rvar, SumExpr
+from veritas.smt import Rvar, SumExpr, Verifier
+
 
 class DummyVerifier:
     def __init__(self, backend):
@@ -19,6 +20,7 @@ class DummyVerifier:
         self._rvars[name] = v
         return v
 
+
 class TestZ3Backend(unittest.TestCase):
     def test_dummy_verifier_interaction(self):
         b = Z3Backend()
@@ -26,7 +28,7 @@ class TestZ3Backend(unittest.TestCase):
 
         x = Rvar(v, "x")
         y = Rvar(v, "y")
-        cs = [x < y, x==1.0, y==2.0]
+        cs = [x < y, x == 1.0, y == 2.0]
 
         zx = v.add_var("x")
         zy = v.add_var("y")
@@ -72,7 +74,6 @@ class TestZ3Backend(unittest.TestCase):
         b.add_constraint((x < 5.0))
         status = b.check()
         self.assertEqual(status, Verifier.Result.UNSAT)
-
 
     def test_sum_expr(self):
         b = Z3Backend()

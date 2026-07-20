@@ -1,15 +1,14 @@
 import os
-import unittest
 import pickle
-import numpy as np
+import unittest
 
-from veritas import AddTree, AddTreeType, FloatT, Interval, LtSplit
-from veritas import TRUE_INTERVAL, FALSE_INTERVAL, BOOL_SPLIT_VALUE
+import numpy as np
+from veritas import BOOL_SPLIT_VALUE, FALSE_INTERVAL, TRUE_INTERVAL, AddTree, AddTreeType, FloatT, Interval, LtSplit
 
 BPATH = os.path.dirname(__file__)
 
-class TestTree(unittest.TestCase):
 
+class TestTree(unittest.TestCase):
     def myAssertAlmostEqual(self, a, b, eps=1e-6):
         self.assertTrue(type(a) == type(b))
         if isinstance(a, list) or isinstance(a, tuple) or isinstance(a, np.ndarray):
@@ -30,11 +29,9 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.root()), 1, -1.1)
         t.set_leaf_value(t.right(t.root()), 1, -2.2)
 
-        y = at.eval(np.array([[1.0, 1.0, 3.0], [1.0, 22.0, 3.0]],
-                             dtype=FloatT))
+        y = at.eval(np.array([[1.0, 1.0, 3.0], [1.0, 22.0, 3.0]], dtype=FloatT))
 
-        self.myAssertAlmostEqual(np.array([[1.1, -1.1], [2.2, -2.2]],
-                                          dtype=FloatT), y)
+        self.myAssertAlmostEqual(np.array([[1.1, -1.1], [2.2, -2.2]], dtype=FloatT), y)
 
         self.assertRaises(RuntimeError, at.compute_box, [1, 2])
         self.assertEqual(at.compute_box([1]), {1: Interval.from_hi(16.0)})
@@ -64,36 +61,29 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.right(t.root())), 1, -4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 1, -8.0)
 
-        #print(at[0])
+        # print(at[0])
 
         self.assertEqual(t.max_depth(), t.depth(t["ll"]))
         self.assertTrue(t.is_leaf(t["ll"]))
 
-        self.assertEqual(t.get_split(        t.root() ), LtSplit(0, 2.0))
-        self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
+        self.assertEqual(t.get_split(t.root()), LtSplit(0, 2.0))
+        self.assertEqual(t.get_split(t.left(t.root())), LtSplit(1, 1.0))
         self.assertEqual(t.get_split(t.right(t.root())), LtSplit(2, BOOL_SPLIT_VALUE))
 
-        self.assertEqual(at.compute_box([5]), {0: Interval.from_lo(2.0),
-                                               2: FALSE_INTERVAL})
-        self.assertEqual(at.compute_box([6]), {0: Interval.from_lo(2.0),
-                                               2: TRUE_INTERVAL})
+        self.assertEqual(at.compute_box([5]), {0: Interval.from_lo(2.0), 2: FALSE_INTERVAL})
+        self.assertEqual(at.compute_box([6]), {0: Interval.from_lo(2.0), 2: TRUE_INTERVAL})
 
         T, F = 1.0, 0.0
 
-        y = at.eval(np.array([
-            [0.0, 0.5, F], [0.0, 1.5, T],
-            [2.5, 0.5, T], [2.5, 0.5, F]], dtype=FloatT))
+        y = at.eval(np.array([[0.0, 0.5, F], [0.0, 1.5, T], [2.5, 0.5, T], [2.5, 0.5, F]], dtype=FloatT))
 
-        self.myAssertAlmostEqual(y, np.array([[1.0, -1.0],
-                                              [2.0, -2.0],
-                                              [8.0, -8.0],
-                                              [4.0, -4.0]], dtype=FloatT))
+        self.myAssertAlmostEqual(y, np.array([[1.0, -1.0], [2.0, -2.0], [8.0, -8.0], [4.0, -4.0]], dtype=FloatT))
 
         s = at.to_json()
         att = AddTree.from_json(s)
         t = att[0]
 
-        self.assertEqual(t.get_split( t.left(t.root())), LtSplit(1, 1.0))
+        self.assertEqual(t.get_split(t.left(t.root())), LtSplit(1, 1.0))
         self.assertEqual(t.get_split(t.right(t.root())), LtSplit(2, BOOL_SPLIT_VALUE))
 
     def test_tree_json(self):
@@ -109,10 +99,8 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.right(t.root()), 1, -2.2)
 
         self.assertEqual(at.compute_box([2]), {1: Interval.from_lo(2.0)})
-        self.assertEqual(at.compute_box([3]), {1: Interval.from_hi(2.0),
-                                               2: Interval.from_hi(4.0)})
-        self.assertEqual(at.compute_box([4]), {1: Interval.from_hi(2.0),
-                                               2: Interval.from_lo(4.0)})
+        self.assertEqual(at.compute_box([3]), {1: Interval.from_hi(2.0), 2: Interval.from_hi(4.0)})
+        self.assertEqual(at.compute_box([4]), {1: Interval.from_hi(2.0), 2: Interval.from_lo(4.0)})
 
         s = at.to_json()
         att = AddTree.from_json(s)
@@ -152,10 +140,9 @@ class TestTree(unittest.TestCase):
         t.set_leaf_value(t.left(t.root()), 0, 0.5)
         t.set_leaf_value(t.right(t.root()), 0, 2.3)
 
-        self.assertRaises(RuntimeError, at.compute_box, [2, 1]) # incompatible leafs
+        self.assertRaises(RuntimeError, at.compute_box, [2, 1])  # incompatible leafs
         self.assertEqual(at.compute_box([2, 2]), {1: Interval.from_lo(4.0)})
-        self.assertEqual(at.compute_box([3, 1]), {1: Interval.from_hi(2.0),
-                                                  2: Interval.from_hi(0.12)})
+        self.assertEqual(at.compute_box([3, 1]), {1: Interval.from_hi(2.0), 2: Interval.from_hi(0.12)})
 
         s = at.get_splits()
 
@@ -196,9 +183,9 @@ class TestTree(unittest.TestCase):
             ypred1 = at0.predict(X).ravel()
             ypred2 = 1.0 / (1.0 + np.exp(-at0.eval(X).ravel()))
 
-            #print(ypred0)
-            #print(ypred1)
-            #print(ypred2)
+            # print(ypred0)
+            # print(ypred1)
+            # print(ypred2)
 
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred1)), 0.0)
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred2)), 0.0)
@@ -219,19 +206,18 @@ class TestTree(unittest.TestCase):
             ypred1 = at0.predict(X).ravel()
             ypred2 = at0.eval(X).ravel() / len(at0) + 0.5
 
-            #print(ypred0)
-            #print(ypred1)
-            #print(ypred2)
+            # print(ypred0)
+            # print(ypred1)
+            # print(ypred2)
 
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred1)), 0.0)
             self.assertAlmostEqual(np.sum(np.abs(ypred0 - ypred2)), 0.0)
-
 
     def test_get_maximum_feat_id(self):
         at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 3, 4.0)
-         
+
         # check that get_maximum_feat_id returns 3
         self.assertEqual(at[0].get_maximum_feat_id(), 3)
 
@@ -247,8 +233,7 @@ class TestTree(unittest.TestCase):
         self.assertRaises(RuntimeError, at[0].eval, X)
         self.assertRaises(RuntimeError, at.predict, X)
         self.assertRaises(RuntimeError, at.eval, X)
-   
-        
+
 
 if __name__ == "__main__":
     unittest.main()

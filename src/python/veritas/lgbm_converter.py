@@ -6,15 +6,16 @@
 # License: Apache License 2.0
 # Author: Laurens Devos, Alexander Schoeters
 
-from . import AddTree, AddTreeType, AddTreeConverter
-from . import InapplicableAddTreeConverter
 import numpy as np
+
+from . import AddTree, AddTreeConverter, AddTreeType, InapplicableAddTreeConverter
+
 
 class LGBMAddTreeConverter(AddTreeConverter):
     def convert(self, model, silent):
         try:
-            from lightgbm import LGBMModel
             from lightgbm import Booster as LGBMBooster
+            from lightgbm import LGBMModel
         except ModuleNotFoundError:
             raise InapplicableAddTreeConverter("lgbm not installed")
 
@@ -33,14 +34,18 @@ class LGBMAddTreeConverter(AddTreeConverter):
             return addtree_lgbm(model, at_type=AddTreeType.CLF_SOFTMAX)
         else:
             return addtree_lgbm(model, at_type=AddTreeType.REGR)
-        
+
 
 def multi_addtree_lgbm(model, num_class):
-    ats = [addtree_lgbm(model,
-                        # at_type=AddTreeType.GB_MULTI,
-                        at_type=AddTreeType.CLF_SOFTMAX,
-                        multiclass=(clazz, num_class))
-           for clazz in range(num_class)]
+    ats = [
+        addtree_lgbm(
+            model,
+            # at_type=AddTreeType.GB_MULTI,
+            at_type=AddTreeType.CLF_SOFTMAX,
+            multiclass=(clazz, num_class),
+        )
+        for clazz in range(num_class)
+    ]
 
     at = ats[0].make_multiclass(0, num_class)
 
@@ -48,6 +53,7 @@ def multi_addtree_lgbm(model, num_class):
         at.add_trees(ats[k], k)
 
     return at
+
 
 def addtree_lgbm(model, at_type, multiclass=(0, 1)):
     dump = model.dump_model()
@@ -60,6 +66,7 @@ def addtree_lgbm(model, at_type, multiclass=(0, 1)):
         parse_tree_lgbm(at, trees[i]["tree_structure"])
 
     return at
+
 
 def parse_tree_lgbm(at, tree_json):
     tree = at.add_tree()
@@ -74,14 +81,12 @@ def parse_tree_lgbm(at, tree_json):
                     print("warning: default_left != True not supported")
                 if node_json["decision_type"] == "<=":
                     split_value = np.float32(node_json["threshold"])
-                    split_value = np.nextafter(
-                        split_value, -np.inf, dtype=np.float32)
+                    split_value = np.nextafter(split_value, -np.inf, dtype=np.float32)
                     tree.split(node, feat_id, split_value)
                     left = node_json["left_child"]
                     right = node_json["right_child"]
                 else:
-                    raise RuntimeError(
-                        f"not supported decision_type {node_json['decision_type']}")
+                    raise RuntimeError(f"not supported decision_type {node_json['decision_type']}")
 
                 stack.append((tree.right(node), right))
                 stack.append((tree.left(node), left))

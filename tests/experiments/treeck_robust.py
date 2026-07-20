@@ -1,10 +1,10 @@
-import sys, timeit
-from veritas import LtSplit
-from veritas import RobustnessSearch
+import timeit
 
 import treeck
 from treeck.verifier import Verifier
 from treeck.z3backend import Z3Backend as Backend
+from veritas import LtSplit, RobustnessSearch
+
 
 # copy trees between veritas and treeck formats
 def _veritas_at_to_treeck_at(veritas_at):
@@ -47,7 +47,7 @@ class TreeckRobustnessSearch(RobustnessSearch):
         l0 = dt.get_leaf(dt.tree().root())
         v = Verifier(l0, Backend())
         rem_time = self.max_time - timeit.default_timer() + self.start_time
-        v.set_timeout(rem_time/2.0)
+        v.set_timeout(rem_time / 2.0)
         v.add_all_trees()
 
         fids0 = set(v.instance(0).feat_ids())
@@ -57,11 +57,11 @@ class TreeckRobustnessSearch(RobustnessSearch):
         for i in fids0:
             x = v.instance(0).xvar(i)
             pixel = self.example[i]
-            v.add_constraint((x > max(0, pixel-delta)) & (x < min(255, pixel+delta)))
+            v.add_constraint((x > max(0, pixel - delta)) & (x < min(255, pixel + delta)))
         for i in fids1:
             x = v.instance(1).xvar(i)
             pixel = self.example[i]
-            v.add_constraint((x > max(0, pixel-delta)) & (x < min(255, pixel+delta)))
+            v.add_constraint((x > max(0, pixel - delta)) & (x < min(255, pixel + delta)))
 
         for i in fids01:
             x0 = v.instance(0).xvar(i)
@@ -83,19 +83,19 @@ class TreeckRobustnessSearch(RobustnessSearch):
         # direct the search
         if res == Verifier.Result.SAT:
             generated_example = self.get_closest_example(v.model())
-            return 1.0, [generated_example] # output_difference > 0 => an example exists
+            return 1.0, [generated_example]  # output_difference > 0 => an example exists
         elif res == Verifier.Result.UNKNOWN:
-            return 1.0, [] # output_difference > 0 => an example may exist
-        else: # UNSAT
-            return -1.0, [] # no adv example can exist
+            return 1.0, []  # output_difference > 0 => an example may exist
+        else:  # UNSAT
+            return -1.0, []  # no adv example can exist
 
     def get_closest_example(self, model):
         closest = self.example.copy()
         print("Treeck generated example:", model[0]["f"], model[1]["f"])
         for fid, value in model[0]["xs"].items():
-            #print(f"changing {fid} from {self.example[fid]} -> {value}")
+            # print(f"changing {fid} from {self.example[fid]} -> {value}")
             closest[fid] = value
         for fid, value in model[1]["xs"].items():
-            #print(f"changing {fid} from {self.example[fid]} -> {value}")
+            # print(f"changing {fid} from {self.example[fid]} -> {value}")
             closest[fid] = value
         return closest
