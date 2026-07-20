@@ -10,11 +10,17 @@ import tempfile
 
 import numpy as np
 
-from . import AddTree, AddTreeConverter, AddTreeType, FloatT, InapplicableAddTreeConverter
+from . import (
+    AddTree,
+    AddTreeConverter,
+    AddTreeType,
+    FloatT,
+    InapplicableAddTreeConverter,
+)
 
 
 class XGBAddTreeConverter(AddTreeConverter):
-    def convert(self, model, silent):
+    def convert(self, model, silent, handle_missing=False):
         try:
             from xgboost import XGBModel
             from xgboost.core import Booster as XGBBooster
@@ -68,8 +74,16 @@ class XGBAddTreeConverter(AddTreeConverter):
         at = AddTree(num_leaf_values, at_type)
 
         version = booster_json["version"][0]
+        num_features = model.num_features()
         for tree_json, clazz in zip(trees, tree_info):
-            convert_xgb_json_tree(at, tree_json, clazz, version)
+            convert_xgb_json_tree(
+                at,
+                tree_json,
+                clazz,
+                version,
+                handle_missing=handle_missing,
+                num_features=num_features,
+            )
 
         single_rel_tol = 1e-5
         rel_tol = single_rel_tol * len(at)
@@ -139,15 +153,13 @@ def get_booster_json(booster):
     return booster_json
 
 
-def convert_xgb_json_tree(at, tree_json, clazz, version):
+def convert_xgb_json_tree(at, tree_json, clazz, version, handle_missing=False, num_features=None):
     t = at.add_tree()
     slv = int(tree_json["tree_param"]["size_leaf_vector"])
     nlv = at.num_leaf_values()
 
     if len(tree_json["categories"]) > 0:
         raise RuntimeError("xgb categories not supported")
-    # if any(map(lambda v: v!=0, tree_json["default_left"])):
-    #    raise RuntimeError("none default_left not supported")
     if any(map(lambda v: v != 0, tree_json["split_type"])):
         raise RuntimeError("split_type not supported")
 
@@ -156,6 +168,7 @@ def convert_xgb_json_tree(at, tree_json, clazz, version):
     thresholds = tree_json["split_conditions"]
     feat_ids = tree_json["split_indices"]
     leafvals = tree_json["base_weights"]
+    default_lefts = tree_json.get("default_left", [])
 
     # versions <2 put even leaf values into tree_json['split_conditions']
     # (?) what is in tree_json['base_weights'] then?
@@ -163,22 +176,56 @@ def convert_xgb_json_tree(at, tree_json, clazz, version):
     if version < 2:
         leafvals = thresholds
 
-    stack = [(0, t.root())]
-    while len(stack) > 0:
-        i, j = stack.pop()
-        left, right = lefts[i], rights[i]
+    if handle_missing:
+        if num_features is None:
+            raise ValueError("num_features is required when handle_missing=True")
 
-        # internal
-        if left != -1 and right != -1:
-            t.split(j, feat_ids[i], thresholds[i])
-            stack.append((right, t.right(j)))
-            stack.append((left, t.left(j)))
-        elif slv == 1:
-            t.set_leaf_value(j, clazz, leafvals[i])
-        else:
-            for k in range(nlv):
-                u = i * nlv + k
-                t.set_leaf_value(j, k, leafvals[u])
+        def build_subtree(i, j):
+            left, right = lefts[i], rights[i]
+            if left != -1 and right != -1:
+                feat_id = feat_ids[i]
+                thresh = thresholds[i]
+                def_left = default_lefts[i]  # 1 if missing goes left, 0 if right
+
+                missing_feat = feat_id + num_features
+                t.split(j, missing_feat, 0.5)
+
+                not_missing_node = t.left(j)
+                t.split(not_missing_node, feat_id, thresh)
+
+                build_subtree(left, t.left(not_missing_node))
+                build_subtree(right, t.right(not_missing_node))
+
+                missing_node = t.right(j)
+                if def_left:
+                    build_subtree(left, missing_node)
+                else:
+                    build_subtree(right, missing_node)
+            else:
+                if slv == 1:
+                    t.set_leaf_value(j, clazz, leafvals[i])
+                else:
+                    for k in range(nlv):
+                        t.set_leaf_value(j, k, leafvals[i * nlv + k])
+
+        build_subtree(0, t.root())
+    else:
+        stack = [(0, t.root())]
+        while len(stack) > 0:
+            i, j = stack.pop()
+            left, right = lefts[i], rights[i]
+
+            # internal
+            if left != -1 and right != -1:
+                t.split(j, feat_ids[i], thresholds[i])
+                stack.append((right, t.right(j)))
+                stack.append((left, t.left(j)))
+            elif slv == 1:
+                t.set_leaf_value(j, clazz, leafvals[i])
+            else:
+                for k in range(nlv):
+                    u = i * nlv + k
+                    t.set_leaf_value(j, k, leafvals[u])
 
 
 def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000):
@@ -191,15 +238,21 @@ def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000)
 
     # use the split values to generate a random dataset
     for k, vs in at.get_splits().items():
-        vmin, vmax = min(vs), max(vs)
-        vdiff = vmax - vmin
-        vmin -= 0.05 * vdiff
-        vmax += 0.05 * vdiff
-        x[:, k] = x[:, k] * (vmax - vmin) + vmin
+        if k < num_features:
+            vmin, vmax = min(vs), max(vs)
+            vdiff = vmax - vmin
+            vmin -= 0.05 * vdiff
+            vmax += 0.05 * vdiff
+            x[:, k] = x[:, k] * (vmax - vmin) + vmin
 
     dmat = xgb.DMatrix(x, feature_names=feature_names)
     pred0 = booster.predict(dmat, output_margin=True)
-    pred1 = at.eval(x)
+
+    x_eval = x
+    max_feat_id = at.get_maximum_feat_id()
+    if x.shape[1] < max_feat_id + 1:
+        x_eval = np.hstack([x, np.zeros((n, max_feat_id + 1 - x.shape[1]), dtype=FloatT)])
+    pred1 = at.eval(x_eval)
 
     if pred1.shape[1] == 1:
         pred1 = pred1.reshape(pred1.shape[0])

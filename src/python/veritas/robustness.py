@@ -191,7 +191,15 @@ class RobustnessSearch:
 ## \ingroup python
 # \brief Robustness search using Veritas for the output estimate
 class VeritasRobustnessSearch(RobustnessSearch):
-    def __init__(self, example, start_delta, source_at, target_at, mem_capacity=1024 * 1024 * 1024, **kwargs):
+    def __init__(
+        self,
+        example,
+        start_delta,
+        source_at,
+        target_at,
+        mem_capacity=1024 * 1024 * 1024,
+        **kwargs,
+    ):
         super().__init__(example, start_delta, source_at, target_at, **kwargs)
         self.mem_capacity = mem_capacity
         self.stop_when_num_solutions_exceeds = 1
@@ -231,7 +239,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         # print("mip relax", kanup, kanlo)
         # print("====================================")
         # print()
-        s.step_for(max_time, 100)
+        stop_reason = s.step_for(max_time, 100)
         upper_bound = s.current_bounds().best
         # print("stop reason", stop_reason, upper_bound)
         max_output_diff = upper_bound
@@ -273,7 +281,11 @@ class MilpRobustnessSearch(RobustnessSearch):
         from . import KantchelianOutputOpt
 
         milp = KantchelianOutputOpt(
-            self.at, example=self.example, silent=self.silent, max_time=rem_time, guard=self.search_guard
+            self.at,
+            example=self.example,
+            silent=self.silent,
+            max_time=rem_time,
+            guard=self.search_guard,
         )
         box = [Interval(x - delta, x + delta) for x in self.example]
         milp.constrain_to_box(box)

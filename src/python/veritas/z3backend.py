@@ -13,12 +13,6 @@ from .smt import (
     VerifierAndExpr,
     VerifierBackend,
     VerifierBoolExpr,
-    VerifierEqExpr,  # noqa: F401
-    VerifierGeExpr,  # noqa: F401
-    VerifierGtExpr,  # noqa: F401
-    VerifierLeExpr,  # noqa: F401
-    VerifierLtExpr,  # noqa: F401
-    VerifierNeExpr,  # noqa: F401
     VerifierNotExpr,
     VerifierOrExpr,
     VerifierVar,

@@ -12,7 +12,7 @@ from . import AddTree, AddTreeConverter, AddTreeType, InapplicableAddTreeConvert
 
 
 class SklRfAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble, silent):
+    def convert(self, ensemble, silent, handle_missing=False):
         try:
             from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
         except ModuleNotFoundError:
@@ -53,8 +53,15 @@ class SklRfAddTreeConverter(AddTreeConverter):
             raise InapplicableAddTreeConverter(f"not sklearn rf: {type(ensemble)}")
 
         at = AddTree(num_leaf_values, at_type)
+        num_features = ensemble.n_features_in_
         for tree in ensemble.estimators_:
-            addtree_sklearn_tree(at, tree.tree_, extract_value_fun)
+            addtree_sklearn_tree(
+                at,
+                tree.tree_,
+                extract_value_fun,
+                handle_missing=handle_missing,
+                num_features=num_features,
+            )
 
         if at_type != AddTreeType.REGR_MEAN:
             for k in range(num_leaf_values):
@@ -64,9 +71,12 @@ class SklRfAddTreeConverter(AddTreeConverter):
 
 
 class SklGbdtAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble, silent):
+    def convert(self, ensemble, silent, handle_missing=False):
         try:
-            from sklearn.ensemble import GradientBoostingClassifier, GradientBoostingRegressor
+            from sklearn.ensemble import (
+                GradientBoostingClassifier,
+                GradientBoostingRegressor,
+            )
         except ModuleNotFoundError:
             raise InapplicableAddTreeConverter("no sklearn")
 
@@ -106,13 +116,20 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
             raise InapplicableAddTreeConverter(f"not sklearn gbdt: {type(ensemble)}")
 
         at = AddTree(num_leaf_values, at_type)
+        num_features = ensemble.n_features_in_
         for trees in ensemble.estimators_:
             for k, tree in enumerate(trees):
                 # import sklearn.tree
                 # print(sklearn.tree.export_text(tree))
 
                 at_tmp = AddTree(1, at_type)
-                addtree_sklearn_tree(at_tmp, tree.tree_, extract_value_fun)
+                addtree_sklearn_tree(
+                    at_tmp,
+                    tree.tree_,
+                    extract_value_fun,
+                    handle_missing=handle_missing,
+                    num_features=num_features,
+                )
                 at.add_trees(at_tmp, k)
 
         for k, val in enumerate(base_scores):
@@ -122,7 +139,7 @@ class SklGbdtAddTreeConverter(AddTreeConverter):
 
 
 class SklTreeAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble, silent):
+    def convert(self, ensemble, silent, handle_missing=False):
         try:
             from sklearn.tree import DecisionTreeClassifier, DecisionTreeRegressor
         except ModuleNotFoundError:
@@ -153,11 +170,21 @@ class SklTreeAddTreeConverter(AddTreeConverter):
             raise InapplicableAddTreeConverter(f"not sklearn clf tree: {type(ensemble)}")
 
         at = AddTree(num_leaf_values, at_type)
-        addtree_sklearn_tree(at, tree, extract_value_fun)
+        num_features = ensemble.n_features_in_
+        addtree_sklearn_tree(
+            at,
+            tree,
+            extract_value_fun,
+            handle_missing=handle_missing,
+            num_features=num_features,
+        )
+        if at_type == AddTreeType.CLF_MEAN:
+            for k in range(num_leaf_values):
+                at.set_base_score(k, -len(at) / 2.0)
         return at
 
 
-def addtree_sklearn_tree(at, tree, extract_value_fun):
+def addtree_sklearn_tree(at, tree, extract_value_fun, handle_missing=False, num_features=None):
     import sklearn.tree as sktree
 
     if isinstance(tree, sktree.DecisionTreeClassifier) or isinstance(tree, sktree.DecisionTreeRegressor):
@@ -167,22 +194,57 @@ def addtree_sklearn_tree(at, tree, extract_value_fun):
         raise InapplicableAddTreeConverter("not a sklearn Tree")
 
     t = at.add_tree()
-    stack = [(0, t.root())]
-    while len(stack) != 0:
-        n, m = stack.pop()
-        is_internal = tree.children_left[n] != tree.children_right[n]
 
-        if is_internal:
-            feat_id = tree.feature[n]
-            thrs = tree.threshold[n]
-            # split_value = thrs
-            # split_value = np.nextafter(np.float32(
-            #    thrs), np.float32(np.inf))  # <= splits
-            split_value = np.nextafter(np.float64(thrs), np.float64(np.inf))  # <= splits
-            t.split(m, feat_id, split_value)
-            stack.append((tree.children_right[n], t.right(m)))
-            stack.append((tree.children_left[n], t.left(m)))
-        else:
-            for i in range(at.num_leaf_values()):
-                leaf_value = extract_value_fun(tree.value[n], i)
-                t.set_leaf_value(m, i, leaf_value)
+    if handle_missing:
+        if num_features is None:
+            raise ValueError("num_features is required when handle_missing=True")
+
+        def build_subtree(n, j):
+            is_internal = tree.children_left[n] != tree.children_right[n]
+            if is_internal:
+                feat_id = tree.feature[n]
+                thrs = tree.threshold[n]
+                split_value = np.nextafter(np.float64(thrs), np.float64(np.inf))  # <= splits
+
+                if hasattr(tree, "missing_go_to_left"):
+                    def_left = bool(tree.missing_go_to_left[n])
+                else:
+                    def_left = True
+
+                missing_feat = feat_id + num_features
+                t.split(j, missing_feat, 0.5)
+
+                not_missing_node = t.left(j)
+                t.split(not_missing_node, feat_id, split_value)
+
+                build_subtree(tree.children_left[n], t.left(not_missing_node))
+                build_subtree(tree.children_right[n], t.right(not_missing_node))
+
+                missing_node = t.right(j)
+                if def_left:
+                    build_subtree(tree.children_left[n], missing_node)
+                else:
+                    build_subtree(tree.children_right[n], missing_node)
+            else:
+                for i in range(at.num_leaf_values()):
+                    leaf_value = extract_value_fun(tree.value[n], i)
+                    t.set_leaf_value(j, i, leaf_value)
+
+        build_subtree(0, t.root())
+    else:
+        stack = [(0, t.root())]
+        while len(stack) != 0:
+            n, m = stack.pop()
+            is_internal = tree.children_left[n] != tree.children_right[n]
+
+            if is_internal:
+                feat_id = tree.feature[n]
+                thrs = tree.threshold[n]
+                split_value = np.nextafter(np.float64(thrs), np.float64(np.inf))  # <= splits
+                t.split(m, feat_id, split_value)
+                stack.append((tree.children_right[n], t.right(m)))
+                stack.append((tree.children_left[n], t.left(m)))
+            else:
+                for i in range(at.num_leaf_values()):
+                    leaf_value = extract_value_fun(tree.value[n], i)
+                    t.set_leaf_value(m, i, leaf_value)

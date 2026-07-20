@@ -20,10 +20,14 @@ except ImportError:
     lgb = None
 
 try:
+    import sklearn.ensemble as skensemble
+    import sklearn.tree as sktree
     from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
 except ImportError:
     RandomForestClassifier = None
     RandomForestRegressor = None
+    skensemble = None
+    sktree = None
 
 
 def get_img_data():
@@ -40,6 +44,25 @@ def get_img_data():
     X = X.astype(float) / 100.0
 
     return X, yr, y2, y4, yr_mt
+
+
+def get_missing_data(seed=42):
+    rng = np.random.default_rng(seed)
+    X = rng.uniform(0, 10, (200, 4))
+
+    # Downscale X's precision because tree packages might internally use float32
+    X = X.astype(np.float32).astype(np.float64)
+
+    mask = rng.choice([True, False], size=X.shape, p=[0.2, 0.8])
+    X[mask] = np.nan
+
+    y = np.sum(np.nan_to_num(X), axis=1) + rng.normal(0, 1, 200).astype(np.float32)
+    # Binary classification labels
+    y_bin = (y > np.median(y)).astype(int)
+    # Multiclass labels
+    y_multi = np.digitize(y, np.quantile(y, [0.33, 0.66]))
+
+    return X, y, y_bin, y_multi
 
 
 @pytest.mark.xgboost
@@ -233,6 +256,75 @@ class TestXgbConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+    def test_xgb_regressor_missing(self):
+        X, y, _, _ = get_missing_data()
+        model = xgb.XGBRegressor(max_depth=3, n_estimators=5, random_state=42)
+        model.fit(X, y)
+
+        ypred_model = model.predict(X, output_margin=True)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_xgb_classifier_binary_missing(self):
+        X, _, y, _ = get_missing_data()
+        model = xgb.XGBClassifier(objective="binary:logistic", max_depth=3, n_estimators=5, random_state=42)
+        model.fit(X, y)
+
+        ypred_model = model.predict_proba(X)[:, 1]
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_xgb_classifier_multiclass_missing(self):
+        X, _, _, y = get_missing_data()
+        model = xgb.XGBClassifier(
+            objective="multi:softprob",
+            num_class=3,
+            max_depth=3,
+            n_estimators=5,
+            random_state=42,
+        )
+        model.fit(X, y)
+
+        ypred_model = model.predict_proba(X)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_missing_values_error_handling(self):
+        X, y, _, _ = get_missing_data()
+        model = xgb.XGBRegressor(max_depth=2, n_estimators=1, random_state=42)
+        model.fit(X, y)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+
+        with self.assertRaises(ValueError) as ctx:
+            at.predict(X)
+        self.assertIn("Input data contains missing values", str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            at.eval(X)
+        self.assertIn("Input data contains missing values", str(ctx.exception))
+
+        tree = at[0]
+        with self.assertRaises(ValueError) as ctx:
+            tree.eval(X)
+        self.assertIn("Input data contains missing values", str(ctx.exception))
+
+        with self.assertRaises(ValueError) as ctx:
+            tree.eval_node(X)
+        self.assertIn("Input data contains missing values", str(ctx.exception))
+
 
 @pytest.mark.sklearn
 class TestSklearnConverters(unittest.TestCase):
@@ -301,6 +393,58 @@ class TestSklearnConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+    def test_sklearn_rf_regressor_missing(self):
+        X, y, _, _ = get_missing_data()
+        model = skensemble.RandomForestRegressor(max_depth=3, n_estimators=5, random_state=42)
+        model.fit(X, y)
+
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_sklearn_rf_classifier_missing(self):
+        X, _, y, _ = get_missing_data()
+        model = skensemble.RandomForestClassifier(max_depth=3, n_estimators=5, random_state=42)
+        model.fit(X, y)
+
+        ypred_model = model.predict_proba(X)[:, 1]
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_sklearn_tree_classifier_missing(self):
+        X, _, y, _ = get_missing_data()
+        model = sktree.DecisionTreeClassifier(max_depth=3, random_state=42)
+        model.fit(X, y)
+
+        ypred_model = model.predict_proba(X)[:, 1]
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_sklearn_tree_regressor_missing(self):
+        X, y, _, _ = get_missing_data()
+        model = sktree.DecisionTreeRegressor(max_depth=3, random_state=42)
+        model.fit(X, y)
+
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
 
 @pytest.mark.lightgbm
 class TestLgbConverters(unittest.TestCase):
@@ -352,6 +496,52 @@ class TestLgbConverters(unittest.TestCase):
 
         at = veritas.get_addtree(model)
         is_correct = veritas.test_conversion(at, X, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_lgb_regressor_missing(self):
+        X, y, _, _ = get_missing_data()
+        model = lgb.LGBMRegressor(max_depth=3, n_estimators=5, random_state=42, verbose=-1)
+        model.fit(X, y)
+
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_lgb_classifier_binary_missing(self):
+        X, _, y, _ = get_missing_data()
+        model = lgb.LGBMClassifier(objective="binary", max_depth=3, n_estimators=5, random_state=42, verbose=-1)
+        model.fit(X, y)
+
+        ypred_model = model.predict_proba(X)[:, 1]
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_lgb_classifier_multiclass_missing(self):
+        X, _, _, y = get_missing_data()
+        model = lgb.LGBMClassifier(
+            objective="multiclass",
+            num_class=3,
+            max_depth=3,
+            n_estimators=5,
+            random_state=42,
+            verbose=-1,
+        )
+        model.fit(X, y)
+
+        ypred_model = model.predict_proba(X)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
         self.assertTrue(is_correct)
 
 

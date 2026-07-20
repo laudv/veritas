@@ -25,7 +25,7 @@ class AddTreeConverter:
     needs to be added to the convertermanager using ``add_addtree_converter()``.
     """
 
-    def convert(self, model, silent):
+    def convert(self, model, silent, handle_missing=False):
         """Convert the given model to an `AddTree`
 
         This method throws an `InapplicableAddTreeConverter` if the given model
@@ -44,10 +44,10 @@ class AddTreeConverterRegistry:
         # Prepend to the front so this new converter takes precedence
         self._converters.insert(0, converter)
 
-    def get_addtree(self, model, silent):
+    def get_addtree(self, model, silent, handle_missing=False):
         for converter in self._converters:
             try:
-                addtree = converter.convert(model, silent)
+                addtree = converter.convert(model, silent, handle_missing=handle_missing)
                 assert isinstance(addtree, AddTree)
                 return addtree
             except InapplicableAddTreeConverter:
@@ -74,7 +74,7 @@ def add_addtree_converter(converter):
     _converter_registry.add_converter(converter)
 
 
-def get_addtree(model, silent=False):
+def get_addtree(model, silent=False, handle_missing=False):
     """Convert the given model to a Veritas `AddTree`.
 
     This will try each registered `AddTreeConverter` known to Veritas. There
@@ -90,7 +90,7 @@ def get_addtree(model, silent=False):
     :param model: model that needs to be converted to a Veritas tree ensemble
     :rtype: AddTree
     """
-    return _converter_registry.get_addtree(model, silent=silent)
+    return _converter_registry.get_addtree(model, silent=silent, handle_missing=handle_missing)
 
 
 def test_conversion(at, X, ypred_model, single_rel_tol=1e-5, silent=False):
@@ -119,7 +119,10 @@ def test_conversion(at, X, ypred_model, single_rel_tol=1e-5, silent=False):
                 err = np.abs((at_pred[i] - ypred_model[i]))
                 print(f"┌ example {i:<6d}  at prediction: {at_pred[i]}")
                 print(f"│              model prediction: {ypred_model[i]}")
-                print("│               abs / rel error:", f"{err} / {err / ypred_model[i]}")
+                print(
+                    "│               abs / rel error:",
+                    f"{err} / {err / ypred_model[i]}",
+                )
                 is_correct = False
                 is_split_float_error(at, X[i, :], rel_tol)
     elif not silent:
@@ -127,7 +130,9 @@ def test_conversion(at, X, ypred_model, single_rel_tol=1e-5, silent=False):
 
     return is_correct
 
+
 test_conversion.__test__ = False
+
 
 def is_split_float_error(at, x, rel_tol):
     for m, tree in enumerate(at):

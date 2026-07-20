@@ -82,19 +82,46 @@ __addtree_eval_cpp = AddTree.eval
 
 def __addtree_eval(self, data):
     data = _np.array(data, dtype=FloatT)
+    if _np.isnan(data).any():
+        raise ValueError(
+            "Input data contains missing values (NaNs). Veritas trees do not natively "
+            "evaluate NaNs. Please transform your dataset using `veritas.transform_data_for_missing(X)` "
+            "and convert your model using `veritas.get_addtree(model, handle_missing=True)`."
+        )
     return __addtree_eval_cpp(self, data)
+
+
+__addtree_predict_cpp = AddTree.predict
+
+
+def __addtree_predict(self, data):
+    data = _np.array(data, dtype=FloatT)
+    if _np.isnan(data).any():
+        raise ValueError(
+            "Input data contains missing values (NaNs). Veritas trees do not natively "
+            "evaluate NaNs. Please transform your dataset using `veritas.transform_data_for_missing(X)` "
+            "and convert your model using `veritas.get_addtree(model, handle_missing=True)`."
+        )
+    return __addtree_predict_cpp(self, data)
 
 
 AddTree.write = __addtree_write
 AddTree.read = __addtree_read
 AddTree.__iter__ = __addtree_iter
 AddTree.eval = __addtree_eval
+AddTree.predict = __addtree_predict
 
 __tree_eval_cpp = Tree.eval
 
 
 def __tree_eval(self, data, nid=None):
     data = _np.array(data, dtype=FloatT)
+    if _np.isnan(data).any():
+        raise ValueError(
+            "Input data contains missing values (NaNs). Veritas trees do not natively "
+            "evaluate NaNs. Please transform your dataset using `veritas.transform_data_for_missing(X)` "
+            "and convert your model using `veritas.get_addtree(model, handle_missing=True)`."
+        )
     if nid is None:
         nid = self.root()
     return __tree_eval_cpp(self, data, nid)
@@ -105,6 +132,12 @@ __tree_eval_node_cpp = Tree.eval_node
 
 def __tree_eval_node(self, data, nid=None):
     data = _np.array(data, dtype=FloatT)
+    if _np.isnan(data).any():
+        raise ValueError(
+            "Input data contains missing values (NaNs). Veritas trees do not natively "
+            "evaluate NaNs. Please transform your dataset using `veritas.transform_data_for_missing(X)` "
+            "and convert your model using `veritas.get_addtree(model, handle_missing=True)`."
+        )
     if nid is None:
         nid = self.root()
     return __tree_eval_node_cpp(self, data, nid)
@@ -118,10 +151,15 @@ Tree.eval_node = __tree_eval_node
 #              Imports that rely on initialized Veritas core below             #
 ################################################################################
 
-from .util import get_closest_example
+from .util import get_closest_example, transform_data_for_missing
 
 try:  # fails when gurobipy not installed
-    from .kantchelian import KantchelianAttack, KantchelianBase, KantchelianOutputOpt, KantchelianTargetedAttack
+    from .kantchelian import (
+        KantchelianAttack,
+        KantchelianBase,
+        KantchelianOutputOpt,
+        KantchelianTargetedAttack,
+    )
 except ModuleNotFoundError:
     pass
 
@@ -144,7 +182,12 @@ from .addtree_conversion import (
     test_conversion,
 )
 from .lgbm_converter import LGBMAddTreeConverter
-from .robustness import MilpRobustnessSearch, RobustnessSearch, SMTRobustnessSearch, VeritasRobustnessSearch
+from .robustness import (
+    MilpRobustnessSearch,
+    RobustnessSearch,
+    SMTRobustnessSearch,
+    VeritasRobustnessSearch,
+)
 from .sklearn_converter import (
     SklGbdtAddTreeConverter,
     SklRfAddTreeConverter,

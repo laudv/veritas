@@ -6,7 +6,7 @@ try:
 except ModuleNotFoundError as e:
     raise unittest.SkipTest(f"z3 not installed: {e}")
 
-from veritas import *
+from veritas import LtSplit
 from veritas.smt import Rvar, SumExpr, Verifier
 
 

@@ -10,7 +10,13 @@
 
 import numpy as np
 
-from . import AddTree, AddTreeConverter, AddTreeType, InapplicableAddTreeConverter, Interval
+from . import (
+    AddTree,
+    AddTreeConverter,
+    AddTreeType,
+    InapplicableAddTreeConverter,
+    Interval,
+)
 
 # import groot.model
 
@@ -31,7 +37,10 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
             box = vtree.compute_box(vnode)
             doml, domr = Interval().split(split_value)
             if feat_id in box:
-                validl, validr = doml.overlaps(box[feat_id]), domr.overlaps(box[feat_id])
+                validl, validr = (
+                    doml.overlaps(box[feat_id]),
+                    domr.overlaps(box[feat_id]),
+                )
                 if not validl or not validr:
                     print(
                         f"WARNING: invalid split, node interval of feat {feat_id} is {box[feat_id]}",
@@ -79,7 +88,7 @@ def _addtree_from_groot_tree(at, gtree, extract_value_fun):
 
 
 class GrootAddTreeConverter(AddTreeConverter):
-    def convert(self, ensemble, silent):
+    def convert(self, ensemble, silent, handle_missing=False):
         try:
             import groot.model
         except ModuleNotFoundError:
@@ -100,7 +109,7 @@ class GrootAddTreeConverter(AddTreeConverter):
         at = AddTree(num_leaf_values, at_type)
         num_trees = len(ensemble.estimators_)
 
-        for gtree in ensemble.estimators_:
+        for i, gtree in enumerate(ensemble.estimators_):
             _addtree_from_groot_tree(at, gtree, extract_value_fun)
 
         for k in range(num_leaf_values):
