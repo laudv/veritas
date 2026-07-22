@@ -1,21 +1,26 @@
+[build-system]
+requires = ["scikit-build-core>=0.10"]
+build-backend = "scikit_build_core.build"
+
 [project]
 name = "dtai-veritas"
+dynamic = ["version"]
 description = "Versatile Verification of Tree Ensembles"
 readme = "README.md"
-requires-python = ">=3.11"
-license = "Apache-2.0"
+license = { text = "Apache-2.0" }
 authors = [{ name = "Laurens Devos", email = "laurens.devos@kuleuven.be" }]
 maintainers = [{ name = "Laurens Devos", email = "laurens.devos@kuleuven.be" }]
+requires-python = ">=3.11"
 dependencies = ["numpy"]
-dynamic = ["version"]
 
 [project.urls]
 Homepage = "https://github.com/laudv/veritas"
 
 [project.optional-dependencies]
+xgboost = ["xgboost"]
 lightgbm = ["lightgbm"]
-milp = ["gurobipy"]
 sklearn = ["scikit-learn"]
+milp = ["gurobipy"]
 smt = ["z3-solver"]
 test = [
   "pytest",
@@ -28,11 +33,31 @@ test = [
   "gurobipy",
   "z3-solver"
 ]
-xgboost = ["xgboost"]
 
-[build-system]
-requires = ["scikit-build-core>=0.10"]
-build-backend = "scikit_build_core.build"
+[tool.scikit-build]
+minimum-version = "0.10"
+build-dir = "build/{wheel_tag}"
+wheel.packages = ["src/python/veritas"]
+
+[tool.scikit-build.editable]
+rebuild = true
+# verbose = false
+
+[tool.scikit-build.metadata.version]
+provider = "scikit_build_core.metadata.regex"
+input = "src/python/veritas/__init__.py"
+regex = '__version__\s*=\s*"(?P<value>[^"]+)"'
+
+[tool.scikit-build.sdist]
+# git submodules are not picked up by scikit-build-core's default
+# git-ls-files-based sdist listing, so they must be added explicitly.
+include = ["lib/pybind11/**", "lib/nlohmann_json/**"]
+exclude = [
+  "lib/pybind11/tests/**",
+  "lib/pybind11/docs/**",
+  "lib/nlohmann_json/test/**",
+  "lib/nlohmann_json/docs/**",
+]
 
 [tool.cibuildwheel]
 # Note: cibuildwheel 3.0+ no longer builds PyPy or Python <3.9 by default, so
@@ -52,7 +77,7 @@ test-command = "cd {project} && python -m unittest discover tests"
 
 # Setuptools bug causes collision between pypy and cpython artifacts
 # (from pybind/cmake_example, is necessary)
-# before-build = "rm -rf {project}/build"
+#before-build = "rm -rf {project}/build"
 
 [tool.cibuildwheel.linux]
 test-requires = "xgboost lightgbm scikit-learn gurobipy imageio pandas z3-solver"
@@ -126,7 +151,6 @@ ignore = [
     "B007",  # loop control variable not used
 ]
 
-
 [tool.ruff.lint.mccabe]
 # Maximum McCabe complexity matching the previous flake8 setting
 max-complexity = 10
@@ -141,29 +165,4 @@ markers = [
   "xgboost: tests for xgboost converter",
   "lightgbm: tests for lightgbm converter",
   "sklearn: tests for scikit-learn converter",
-]
-
-[tool.scikit-build]
-minimum-version = "0.10"
-build-dir = "build/{wheel_tag}"
-wheel.packages = ["src/python/veritas"]
-
-[tool.scikit-build.editable]
-rebuild = true
-# verbose = false
-
-[tool.scikit-build.metadata.version]
-provider = "scikit_build_core.metadata.regex"
-input = "src/python/veritas/__init__.py"
-regex = '__version__\s*=\s*"(?P<value>[^"]+)"'
-
-[tool.scikit-build.sdist]
-# git submodules are not picked up by scikit-build-core's default
-# git-ls-files-based sdist listing, so they must be added explicitly.
-include = ["lib/pybind11/**", "lib/nlohmann_json/**"]
-exclude = [
-  "lib/pybind11/tests/**",
-  "lib/pybind11/docs/**",
-  "lib/nlohmann_json/test/**",
-  "lib/nlohmann_json/docs/**",
 ]

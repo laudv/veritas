@@ -127,7 +127,9 @@ def test_conversion(at, X, ypred_model, single_rel_tol=1e-5, silent=False):
 
     return is_correct
 
+
 test_conversion.__test__ = False
+
 
 def is_split_float_error(at, x, rel_tol):
     for m, tree in enumerate(at):

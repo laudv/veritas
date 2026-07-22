@@ -46,9 +46,7 @@ SKLEARN_BY_PYTHON = {
 
 def get_unique_versions(by_python_dict):
     """Extract list of unique version strings from a python-compatibility dictionary."""
-    return list(
-        dict.fromkeys(v for versions in by_python_dict.values() for v in versions)
-    )
+    return list(dict.fromkeys(v for versions in by_python_dict.values() for v in versions))
 
 
 # Dynamically derive global lists of versions to parameterize nox sessions
@@ -79,9 +77,7 @@ def run_segmented_tests(
     4. Invokes pytest targeting the designated framework tests.
     """
     if version not in compatibility_dict.get(session.python, all_versions):
-        session.skip(
-            f"{package_name} {version} is not supported/tested on Python {session.python}"
-        )
+        session.skip(f"{package_name} {version} is not supported/tested on Python {session.python}")
 
     install_veritas(session)
     session.install(f"{package_name}=={version}")
