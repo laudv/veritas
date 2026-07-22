@@ -1,15 +1,15 @@
+import math
 import os
+
 import numpy as np
 import pandas as pd
-import scipy
-import scipy.io
 import xgboost as xgb
-import math
 from sklearn.datasets import fetch_openml
 
-#from veritas import Optimizer, RealDomain
+# from veritas import Optimizer, RealDomain
 
 data_dir = "tests/data"
+
 
 def load_openml(name, data_id, task="classification", force=False):
     """
@@ -20,13 +20,13 @@ def load_openml(name, data_id, task="classification", force=False):
     if not os.path.exists(f"{data_dir}/{name}.h5") or force:
         print(f"loading {name} with fetch_openml")
         X, y = fetch_openml(data_id=data_id, return_X_y=True, as_frame=True)
-        #if task == "regression":
+        # if task == "regression":
         #    y = np.array(list(map(float, d["target"])))
-        #elif task == "classification":
+        # elif task == "classification":
         #    y = np.array(list(map(int, d["target"])))
-        #else:
+        # else:
         #    raise RuntimeError("invalid task")
-        #scipy.io.savemat(f"tests/data/{name}.mat", {"X": X, "y": y},
+        # scipy.io.savemat(f"tests/data/{name}.mat", {"X": X, "y": y},
         #        do_compression=True, format="5")
         X = X.astype(np.float32)
         y = y.astype(np.float32)
@@ -39,15 +39,17 @@ def load_openml(name, data_id, task="classification", force=False):
 
     return X, y
 
+
 def train_test_indices(num_examples, seed=82394188):
     np.random.seed(seed)
     indices = np.random.permutation(num_examples)
 
-    m = int(num_examples*0.9)
+    m = int(num_examples * 0.9)
     Itrain = indices[0:m]
     Itest = indices[m:]
 
     return Itrain, Itest
+
 
 def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
     num_examples, num_features = X.shape
@@ -75,8 +77,7 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
         lr_values_tested.add(lr)
         print("(1) LEARNING_RATE =", lr)
         params["learning_rate"] = lr
-        model = xgb.train(params, dtrain, num_boost_round=num_trees,
-                          evals=[(dtrain, "train"), (dtest, "test")])
+        model = xgb.train(params, dtrain, num_boost_round=num_trees, evals=[(dtrain, "train"), (dtest, "test")])
         m = metric2(model)
         print(f"(1) metric = {m}")
         if m > best_metric:
@@ -86,12 +87,13 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
             best_lr = lr
 
     for lr in np.linspace(best_lr - 0.25, best_lr + 0.25, 7)[1:-1]:
-        if lr <= 0.0 or lr > 1.0: continue
-        if lr in lr_values_tested: continue
+        if lr <= 0.0 or lr > 1.0:
+            continue
+        if lr in lr_values_tested:
+            continue
         print("(2) LEARNING_RATE =", lr)
         params["learning_rate"] = lr
-        model = xgb.train(params, dtrain, num_boost_round=num_trees,
-                          evals=[(dtrain, "train"), (dtest, "test")])
+        model = xgb.train(params, dtrain, num_boost_round=num_trees, evals=[(dtrain, "train"), (dtest, "test")])
         m = metric2(model)
         print(f"(2) metric = {m}")
         if m > best_metric:
@@ -104,13 +106,15 @@ def optimize_learning_rate(X, y, params, num_trees, metric, seed=12419):
 
     return best_model, float(best_lr), float(best_metric)
 
+
 def double_check_at_output(model, at, X):
     max_diff = 0.0
     tmp = model.predict(xgb.DMatrix(X, missing=None), output_margin=True)
     for i in range(X.shape[0]):
         p = at.predict_single(X[i, :])
-        max_diff = max(max_diff, p-tmp[i])
+        max_diff = max(max_diff, p - tmp[i])
     return max_diff
+
 
 def get_ara_bound(epses, sols, task="maximize"):
     """
@@ -126,21 +130,22 @@ def get_ara_bound(epses, sols, task="maximize"):
     epsesbest = epses.copy()
     ibest = 0
     for i in range(1, len(sols) + 1):
-        better = i == len(sols) \
-              or (task == "maximize" and sols[ibest] < sols[i]) \
-              or (task == "minimize" and sols[ibest] > sols[i])
+        better = (
+            i == len(sols) or (task == "maximize" and sols[ibest] < sols[i]) or (task == "minimize" and sols[ibest] > sols[i])
+        )
         if better:
             old_ibest = ibest
             while ibest < i:
-                solsbest[ibest] = sols[old_ibest] # ibest was better than everything until i
-                epsesbest[ibest] = epses[i-1] # sols[old_ibest] is epses[i-1] optimal
+                solsbest[ibest] = sols[old_ibest]  # ibest was better than everything until i
+                epsesbest[ibest] = epses[i - 1]  # sols[old_ibest] is epses[i-1] optimal
                 ibest += 1
             assert ibest == i
-    bound = [s/e for s, e in zip(solsbest, epsesbest)]
+    bound = [s / e for s, e in zip(solsbest, epsesbest)]
     return solsbest, epsesbest, bound
 
+
 def filter_solutions(*args):
-    #if len(args) == 1 and isinstance(args[0], ParallelOptimizer):
+    # if len(args) == 1 and isinstance(args[0], ParallelOptimizer):
     #    sols = []
     #    paropt = args[0]
     #    for i in range(paropt.num_threads()):
@@ -161,20 +166,20 @@ def filter_solutions(*args):
         opt = args[0]
         sols = opt.solutions()
         sols.sort(key=lambda s: s.output_difference(), reverse=True)
-        sols.sort(key=lambda s: s.eps) # stable sort
+        sols.sort(key=lambda s: s.eps)  # stable sort
 
-        fsols = [] # filtered solutions
+        fsols = []  # filtered solutions
         prev_eps = -1
         for s in sols:
             if s.eps != prev_eps:
                 fsols.append(s)
             prev_eps = s.eps
         return fsols
- 
-    if len(args) == 4: # (output0, output1, time, epses)
+
+    if len(args) == 4:  # (output0, output1, time, epses)
         sols = list(zip(*args))
-        sols.sort(key=lambda x: x[1]-x[0], reverse=True)
-        sols.sort(key=lambda x: x[3]) # stable sort
+        sols.sort(key=lambda x: x[1] - x[0], reverse=True)
+        sols.sort(key=lambda x: x[3])  # stable sort
         prev_eps = -1
         s0, s1, ts, es = [], [], [], []
         for i in range(len(sols)):
@@ -187,17 +192,19 @@ def filter_solutions(*args):
             prev_eps = sols[i][3]
         return s0, s1, ts, es
 
+
 def flatten_ara_upper(ss, es):
     bs = []
     last_b = math.inf
     for s, e in zip(ss, es):
-        b = s/e
+        b = s / e
         if b < last_b:
             bs.append(b)
             last_b = b
         else:
             bs.append(last_b)
     return bs
+
 
 def get_best_astar(A, task="maximize"):
     if task == "maximize":
@@ -213,6 +220,7 @@ def get_best_astar(A, task="maximize"):
             return A["solutions"][0]
         return A["bounds"][-1]
 
+
 def generate_random_constraints(X, num_constraints, seed):
     K = X.shape[1]
     m = X.min(axis=0)
@@ -225,9 +233,12 @@ def generate_random_constraints(X, num_constraints, seed):
     maybe_binary = [m == 0.0 and M == 1.0 for m, M in zip(m, M)]
     binary = [False for _ in range(K)]
     for k in range(K):
-        if not maybe_binary[k]: continue
-        if len(np.unique(X[0:100, k])) > 2: continue
-        if len(np.unique(X[:, k])) == 2: binary[k] = True
+        if not maybe_binary[k]:
+            continue
+        if len(np.unique(X[0:100, k])) > 2:
+            continue
+        if len(np.unique(X[:, k])) == 2:
+            binary[k] = True
 
     for k in rng.randint(0, K, num_constraints):
         if binary[k]:
@@ -243,9 +254,10 @@ def generate_random_constraints(X, num_constraints, seed):
             except:
                 continue
             constraints[k] = l if rng.rand() < 0.5 else r
-            #print(f"{c} -> {constraints[k]}")
+            # print(f"{c} -> {constraints[k]}")
 
     return constraints
+
 
 def randomly_prune_opt(X, opt, seed):
     K = X.shape[1]
@@ -259,8 +271,8 @@ def randomly_prune_opt(X, opt, seed):
     fraction = max(0.05, rng.rand())
     num_vertices_goal = fraction * (opt.g0.num_vertices() + opt.g1.num_vertices())
 
-    #print("prune start:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
-    
+    # print("prune start:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
+
     while opt.g0.num_vertices() + opt.g1.num_vertices() > num_vertices_goal and num_tries < 100:
         num_tries += 1
         for k in rng.randint(0, K, 10):
@@ -274,6 +286,6 @@ def randomly_prune_opt(X, opt, seed):
         opt.prune_box(box, 0)
         opt.prune_box(box, 1)
 
-        #print("prune progress:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
+        # print("prune progress:", fraction, num_vertices_goal, (opt.g0.num_vertices() + opt.g1.num_vertices()))
 
-    return box,num_vertices_goal
+    return box, num_vertices_goal

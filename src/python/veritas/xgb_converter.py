@@ -4,14 +4,14 @@
 #
 # This requires `xgboost` to be installed.
 
-import os
 import json
+import os
 import tempfile
+
 import numpy as np
 
-from . import AddTree, AddTreeType, AddTreeConverter
-from . import InapplicableAddTreeConverter
-from . import FloatT
+from . import AddTree, AddTreeConverter, AddTreeType, FloatT, InapplicableAddTreeConverter
+
 
 class XGBAddTreeConverter(AddTreeConverter):
     def convert(self, model, silent):
@@ -27,7 +27,7 @@ class XGBAddTreeConverter(AddTreeConverter):
         if not isinstance(model, XGBBooster):
             raise InapplicableAddTreeConverter("not an xgb model")
 
-        #param_dump = json.loads(model.save_config())["learner"]
+        # param_dump = json.loads(model.save_config())["learner"]
         booster_json = get_booster_json(model)
         trees = booster_json["learner"]["gradient_booster"]["model"]["trees"]
         feature_names = booster_json["learner"]["feature_names"]
@@ -46,15 +46,15 @@ class XGBAddTreeConverter(AddTreeConverter):
         grad_boost_name = booster_json["learner"]["gradient_booster"]["name"]
         tree_info = booster_json["learner"]["gradient_booster"]["model"]["tree_info"]
 
-        #print("OBJECTIVE", objective)
-        #print("FEATURES", feature_names)
-        #print("BASE_SCORE", base_score)
-        #print("NUM_CLASS", num_class)
-        #print("TREE_INFO", tree_info)
+        # print("OBJECTIVE", objective)
+        # print("FEATURES", feature_names)
+        # print("BASE_SCORE", base_score)
+        # print("NUM_CLASS", num_class)
+        # print("TREE_INFO", tree_info)
 
-        #cpy = __import__('copy').deepcopy(booster_json)
-        #cpy["learner"]["gradient_booster"]["model"]["trees"] = "The TREES"
-        #__import__('pprint').pprint(cpy)
+        # cpy = __import__('copy').deepcopy(booster_json)
+        # cpy["learner"]["gradient_booster"]["model"]["trees"] = "The TREES"
+        # __import__('pprint').pprint(cpy)
 
         if grad_boost_name != "gbtree":
             raise RuntimeError(f"Tree type {grad_boost_name} not supported")
@@ -67,25 +67,27 @@ class XGBAddTreeConverter(AddTreeConverter):
         num_leaf_values = max(size_leaf_vector, num_class, num_target, 1)
         at = AddTree(num_leaf_values, at_type)
 
-        version = booster_json['version'][0]
+        version = booster_json["version"][0]
         for tree_json, clazz in zip(trees, tree_info):
             convert_xgb_json_tree(at, tree_json, clazz, version)
 
         single_rel_tol = 1e-5
         rel_tol = single_rel_tol * len(at)
-        base_score_manual, base_score_diff_std = try_determine_base_score(
-                model, at, feature_names)
-        err = np.abs(base_score_manual-base_score)
+        base_score_manual, base_score_diff_std = try_determine_base_score(model, at, feature_names)
+        err = np.abs(base_score_manual - base_score)
 
         if not silent:
             print()
             print("| XGBOOST's base_score")
-            print("|   base_score diff std     ", base_score_diff_std,
-                  "(!) NOT OK" if np.any(base_score_diff_std > 1e-5) else "OK")
+            print(
+                "|   base_score diff std     ",
+                base_score_diff_std,
+                "(!) NOT OK" if np.any(base_score_diff_std > 1e-5) else "OK",
+            )
             print("|   base_score reported     ", base_score)
             print("|   versus manually detected", base_score_manual)
             print("|   abs err                 ", err)
-            print("|   rel err                 ", err/base_score)
+            print("|   rel err                 ", err / base_score)
         if not np.all(np.isclose(base_score_manual, base_score, rtol=rel_tol)):
             if not silent:
                 msg = "(!) base_score NOT THE SAME"
@@ -104,8 +106,9 @@ class XGBAddTreeConverter(AddTreeConverter):
         return at
 
     def predict(self, model, X):
-        from xgboost import XGBModel, DMatrix
+        from xgboost import DMatrix, XGBModel
         from xgboost.core import Booster as XGBBooster
+
         if isinstance(model, XGBModel):
             model = model.get_booster()
         if not isinstance(model, XGBBooster):
@@ -114,10 +117,11 @@ class XGBAddTreeConverter(AddTreeConverter):
         pred = model.predict(DMatrix(X), output_margin=True)
         return pred
 
+
 def get_booster_json(booster):
     # Write to a temp file using XGBoost's save_model
     with tempfile.NamedTemporaryFile(delete=False, suffix=".json") as fp:
-        fp.close() # not deleted because delete=False
+        fp.close()  # not deleted because delete=False
         booster.save_model(fp.name)
 
         with open(fp.name) as f:
@@ -134,6 +138,7 @@ def get_booster_json(booster):
         os.remove(fp.name)
     return booster_json
 
+
 def convert_xgb_json_tree(at, tree_json, clazz, version):
     t = at.add_tree()
     slv = int(tree_json["tree_param"]["size_leaf_vector"])
@@ -141,9 +146,9 @@ def convert_xgb_json_tree(at, tree_json, clazz, version):
 
     if len(tree_json["categories"]) > 0:
         raise RuntimeError("xgb categories not supported")
-    #if any(map(lambda v: v!=0, tree_json["default_left"])):
+    # if any(map(lambda v: v!=0, tree_json["default_left"])):
     #    raise RuntimeError("none default_left not supported")
-    if any(map(lambda v: v!=0, tree_json["split_type"])):
+    if any(map(lambda v: v != 0, tree_json["split_type"])):
         raise RuntimeError("split_type not supported")
 
     lefts = tree_json["left_children"]
@@ -154,9 +159,9 @@ def convert_xgb_json_tree(at, tree_json, clazz, version):
 
     # versions <2 put even leaf values into tree_json['split_conditions']
     # (?) what is in tree_json['base_weights'] then?
-    # https://github.com/dmlc/xgboost/blob/4de866211d5bba706f6b94d1ba4a102fe885c1b9/demo/json-model/json_parser.py#L132 
+    # https://github.com/dmlc/xgboost/blob/4de866211d5bba706f6b94d1ba4a102fe885c1b9/demo/json-model/json_parser.py#L132
     if version < 2:
-        leafvals = thresholds 
+        leafvals = thresholds
 
     stack = [(0, t.root())]
     while len(stack) > 0:
@@ -178,6 +183,7 @@ def convert_xgb_json_tree(at, tree_json, clazz, version):
 
 def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000):
     import xgboost as xgb
+
     num_features = booster.num_features()
 
     rng = np.random.default_rng(seed)
@@ -186,10 +192,10 @@ def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000)
     # use the split values to generate a random dataset
     for k, vs in at.get_splits().items():
         vmin, vmax = min(vs), max(vs)
-        vdiff = vmax-vmin
+        vdiff = vmax - vmin
         vmin -= 0.05 * vdiff
         vmax += 0.05 * vdiff
-        x[:, k] = x[:, k] * (vmax-vmin) + vmin
+        x[:, k] = x[:, k] * (vmax - vmin) + vmin
 
     dmat = xgb.DMatrix(x, feature_names=feature_names)
     pred0 = booster.predict(dmat, output_margin=True)

@@ -1,6 +1,11 @@
-import sys, os, gzip, time
-from robustness_experiment import parse_dataset, write_result
+import gzip
+import os
+import sys
+import time
+
 from external_merge import external_merge_binary, external_merge_multiclass
+from robustness_experiment import parse_dataset, write_result
+
 
 def main():
     dataset = sys.argv[1]
@@ -19,41 +24,31 @@ def main():
         try:
             if num_classes == 2:
                 print("\n== MERGE (external) =============================", f"({time.ctime()})")
-                example_is, example_labels, deltas, times = external_merge_binary(
-                        dataset, example_is, start_delta, T, L)
+                example_is, example_labels, deltas, times = external_merge_binary(dataset, example_is, start_delta, T, L)
                 for i, el, ds, ts in zip(example_is, example_labels, deltas, times):
                     result = {
                         "example_i": i,
                         "example_label": el,
-                        "merge_ext": {
-                            "deltas": ds,
-                            "times": ts,
-                            "max_clique": T,
-                            "max_level": L
-                        }
+                        "merge_ext": {"deltas": ds, "times": ts, "max_clique": T, "max_level": L},
                     }
                     write_result(result, f)
             else:
                 print("\n== MERGE (external) multiclass ==================", f"({time.ctime()})")
                 example_is, example_labels, target_labels, deltas, times = external_merge_multiclass(
-                        dataset, example_is, start_delta, T, L, num_classes)
+                    dataset, example_is, start_delta, T, L, num_classes
+                )
                 print("DEBUG", example_is, example_labels, target_labels)
-                for i, el, tl, ds, ts in zip(example_is, example_labels,
-                        target_labels, deltas, times):
+                for i, el, tl, ds, ts in zip(example_is, example_labels, target_labels, deltas, times):
                     result = {
                         "example_i": i,
                         "example_label": el,
                         "target_label": tl,
-                        "merge_ext": {
-                            "deltas": ds,
-                            "times": ts,
-                            "max_clique": T,
-                            "max_level": L
-                        }
+                        "merge_ext": {"deltas": ds, "times": ts, "max_clique": T, "max_level": L},
                     }
                     write_result(result, f)
-        finally: 
+        finally:
             print("results written to", outfile, f"({time.ctime()})")
+
 
 if __name__ == "__main__":
     main()

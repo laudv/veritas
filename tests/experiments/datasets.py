@@ -1,27 +1,28 @@
-import os, json
-import util
+import json
+import os
 import pickle
+
 import numpy as np
 import pandas as pd
-
 import sklearn.metrics as metrics
+import util
 from sklearn import preprocessing
-
 from veritas import addtree_from_xgb_model, addtrees_from_multiclass_xgb_model
+
 
 class Dataset:
     models_dir = "tests/experiments/models"
 
     def __init__(self, special_name_tag=""):
-        self.special_tag = special_name_tag # special parameters, name indication
+        self.special_tag = special_name_tag  # special parameters, name indication
         self.X = None
         self.y = None
 
-    def load_dataset(self): # populate X, y
+    def load_dataset(self):  # populate X, y
         raise RuntimeError("not implemented")
 
-    def load_model(self, num_trees, tree_depth): # populate self.model, self.at, self.feat2id
-        """ populate self.model, self.at """
+    def load_model(self, num_trees, tree_depth):  # populate self.model, self.at, self.feat2id
+        """populate self.model, self.at"""
         raise RuntimeError("not implemented")
 
     def get_model_name(self, num_trees, tree_depth):
@@ -34,8 +35,8 @@ class Dataset:
         df = pd.DataFrame(X_scaled, columns=self.X.columns)
         self.X = df
 
-class Calhouse(Dataset):
 
+class Calhouse(Dataset):
     def __init__(self):
         super().__init__()
         self.params = {
@@ -44,7 +45,7 @@ class Calhouse(Dataset):
             "seed": 14,
             "nthread": 1,
         }
-    
+
     def load_dataset(self):
         if self.X is None or self.y is None:
             self.X, self.y = util.load_openml("calhouse", data_id=537)
@@ -56,12 +57,11 @@ class Calhouse(Dataset):
             self.load_dataset()
             print(f"training model depth={tree_depth}, num_trees={num_trees}")
 
-            def metric(y, raw_yhat): #maximized
+            def metric(y, raw_yhat):  # maximized
                 return -metrics.mean_squared_error(y, raw_yhat)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -80,6 +80,7 @@ class Calhouse(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+
 
 class Allstate(Dataset):
     def __init__(self):
@@ -104,12 +105,11 @@ class Allstate(Dataset):
             self.load_dataset()
             print(f"training model depth={tree_depth}, num_trees={num_trees}")
 
-            def metric(y, raw_yhat): #maximized
+            def metric(y, raw_yhat):  # maximized
                 return -metrics.mean_squared_error(y, raw_yhat)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -128,6 +128,7 @@ class Allstate(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+
 
 class Covtype(Dataset):
     def __init__(self):
@@ -143,7 +144,7 @@ class Covtype(Dataset):
     def load_dataset(self):
         if self.X is None or self.y is None:
             self.X, self.y = util.load_openml("covtype", data_id=1596)
-            self.y = (self.y==2)
+            self.y = self.y == 2
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)
@@ -155,8 +156,7 @@ class Covtype(Dataset):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -175,7 +175,8 @@ class Covtype(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
-        
+
+
 class CovtypeNormalized(Covtype):
     def __init__(self):
         super().__init__()
@@ -184,6 +185,7 @@ class CovtypeNormalized(Covtype):
         if self.X is None or self.y is None:
             super().load_dataset()
             self.minmax_normalize()
+
 
 class Higgs(Dataset):
     def __init__(self):
@@ -212,8 +214,7 @@ class Higgs(Dataset):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -232,6 +233,7 @@ class Higgs(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+
 
 class LargeHiggs(Dataset):
     def __init__(self):
@@ -264,8 +266,7 @@ class LargeHiggs(Dataset):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -287,7 +288,6 @@ class LargeHiggs(Dataset):
 
 
 class Mnist(Dataset):
-
     def __init__(self):
         super().__init__()
         self.params = {
@@ -309,12 +309,11 @@ class Mnist(Dataset):
             self.load_dataset()
             print(f"training model depth={tree_depth}, num_trees={num_trees}")
 
-            def metric(y, yhat): #maximized
+            def metric(y, yhat):  # maximized
                 return metrics.accuracy_score(y, yhat)
-            
+
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
             with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "wb") as f:
@@ -334,6 +333,7 @@ class Mnist(Dataset):
         for at in self.at:
             at.base_score = 0
 
+
 class MnistNormalized(Mnist):
     def __init__(self):
         super().__init__()
@@ -342,6 +342,7 @@ class MnistNormalized(Mnist):
         if self.X is None or self.y is None:
             super().load_dataset()
             self.minmax_normalize()
+
 
 class Mnist2v6(Mnist):
     def __init__(self):
@@ -359,8 +360,8 @@ class Mnist2v6(Mnist):
     def load_dataset(self):
         if self.X is None or self.y is None:
             super().load_dataset()
-            self.X = self.X.loc[(self.y==2) | (self.y==6), :]
-            self.y = self.y[(self.y==2) | (self.y==6)]
+            self.X = self.X.loc[(self.y == 2) | (self.y == 6), :]
+            self.y = self.y[(self.y == 2) | (self.y == 6)]
             self.y = (self.y == 2.0).astype(float)
             self.X.reset_index(inplace=True, drop=True)
             self.y.reset_index(inplace=True, drop=True)
@@ -375,8 +376,7 @@ class Mnist2v6(Mnist):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -396,6 +396,7 @@ class Mnist2v6(Mnist):
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
 
+
 class FashionMnist(Dataset):
     def __init__(self):
         super().__init__()
@@ -411,7 +412,7 @@ class FashionMnist(Dataset):
     def load_dataset(self):
         if self.X is None or self.y is None:
             self.X, self.y = util.load_openml("fashion_mnist", data_id=40996)
-            #self.minmax_normalize()
+            # self.minmax_normalize()
 
     def load_model(self, num_trees, tree_depth):
         model_name = self.get_model_name(num_trees, tree_depth)
@@ -419,12 +420,11 @@ class FashionMnist(Dataset):
             self.load_dataset()
             print(f"training model depth={tree_depth}, num_trees={num_trees}")
 
-            def metric(y, yhat): #maximized
+            def metric(y, yhat):  # maximized
                 return metrics.accuracy_score(y, yhat)
-            
+
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
             with open(os.path.join(self.models_dir, f"{model_name}.xgb"), "wb") as f:
@@ -444,6 +444,7 @@ class FashionMnist(Dataset):
         for at in self.at:
             at.base_score = 0
 
+
 class FashionMnist2v6(FashionMnist):
     def __init__(self):
         super().__init__()
@@ -460,8 +461,8 @@ class FashionMnist2v6(FashionMnist):
     def load_dataset(self):
         if self.X is None or self.y is None:
             super().load_dataset()
-            self.X = self.X.loc[(self.y==2) | (self.y==6), :]
-            self.y = self.y[(self.y==2) | (self.y==6)]
+            self.X = self.X.loc[(self.y == 2) | (self.y == 6), :]
+            self.y = self.y[(self.y == 2) | (self.y == 6)]
             self.y = (self.y == 2.0).astype(float)
             self.X.reset_index(inplace=True, drop=True)
             self.y.reset_index(inplace=True, drop=True)
@@ -476,8 +477,7 @@ class FashionMnist2v6(FashionMnist):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -496,6 +496,7 @@ class FashionMnist2v6(FashionMnist):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+
 
 class Ijcnn1(Dataset):
     def __init__(self):
@@ -530,8 +531,7 @@ class Ijcnn1(Dataset):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 
@@ -550,6 +550,7 @@ class Ijcnn1(Dataset):
         self.feat2id = lambda x: feat2id_dict[x]
         self.at = addtree_from_xgb_model(self.model, feat2id_map=self.feat2id)
         self.at.base_score = 0
+
 
 class Webspam(Dataset):
     def __init__(self):
@@ -580,8 +581,7 @@ class Webspam(Dataset):
                 return metrics.accuracy_score(y, raw_yhat > 0)
 
             self.params["max_depth"] = tree_depth
-            self.model, lr, metric_value = util.optimize_learning_rate(self.X,
-                    self.y, self.params, num_trees, metric)
+            self.model, lr, metric_value = util.optimize_learning_rate(self.X, self.y, self.params, num_trees, metric)
 
             self.meta = {"lr": lr, "metric": metric_value, "columns": list(self.X.columns)}
 

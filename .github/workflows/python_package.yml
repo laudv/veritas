@@ -40,18 +40,18 @@ jobs:
 
       - name: Install unittest dependencies
         run: |
-          python -m pip install flake8
+          python -m pip install ruff
           python -m pip install lightgbm
           python -m pip install z3-solver
           python -m pip install imageio
           python -m pip install pandas
 
-      - name: Lint with flake8
+      - name: Lint and format with ruff
         run: |
-          # stop the build if there are Python syntax errors or undefined names
-          flake8 src/python --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
-          flake8 src/python --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          # run ruff linter
+          ruff check .
+          # check ruff formatting
+          ruff format --check .
 
       - name: Test with unittest
         run: |

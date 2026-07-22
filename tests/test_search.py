@@ -1,20 +1,21 @@
-import unittest
 import os
+import unittest
+
 import imageio.v3 as imageio
 import numpy as np
 
 try:
-    MATPLOTLIB=True
-    import matplotlib.pyplot as plt
+    MATPLOTLIB = True
     import matplotlib.patches as patches
+    import matplotlib.pyplot as plt
 except ModuleNotFoundError:
-    MATPLOTLIB=False
+    MATPLOTLIB = False
 
 import veritas
-from veritas import AddTree, AddTreeType, HeuristicType, Config, \
-        Interval, StopReason, VeritasRobustnessSearch
+from veritas import AddTree, AddTreeType, Config, HeuristicType, Interval, StopReason, VeritasRobustnessSearch
 
 BPATH = os.path.dirname(__file__)
+
 
 def plot_img_solutions(imghat, solutions):
     if not MATPLOTLIB:
@@ -27,33 +28,35 @@ def plot_img_solutions(imghat, solutions):
         box = s.box()
         x0, y0 = max(0.0, box[i].lo), max(0.0, box[j].lo)
         x1, y1 = min(100.0, box[i].hi), min(100.0, box[j].hi)
-        w, h = x1-x0, y1-y0
-        #print((x0, y0), (x1, y1), w, h, s.output)
-        rect = patches.Rectangle((x0-0.5,y0-0.5),w,h,lw=1,ec=c,fc='none')
+        w, h = x1 - x0, y1 - y0
+        # print((x0, y0), (x1, y1), w, h, s.output)
+        rect = patches.Rectangle((x0 - 0.5, y0 - 0.5), w, h, lw=1, ec=c, fc="none")
         ax.add_patch(rect)
 
     plt.show()
+
 
 def get_img_data():
     img = imageio.imread("tests/data/img.png")
     X = np.array([[x, y] for x in range(100) for y in range(100)])
     yr = np.array([img[x, y] for x, y in X]).astype(float)
-    y2 = yr > np.median(yr) # binary clf
-    y4 = np.digitize(yr, np.quantile(yr, [0.25, 0.5, 0.75])) # multiclass
+    y2 = yr > np.median(yr)  # binary clf
+    y4 = np.digitize(yr, np.quantile(yr, [0.25, 0.5, 0.75]))  # multiclass
     X = X.astype(float)
 
     return img, X, yr, y2, y4
+
 
 class TestSearch(unittest.TestCase):
     def test_single_tree(self):
         at = AddTree(1, AddTreeType.REGR)
         t = at.add_tree()
         t.split(t.root(), 0, 2)
-        t.split( t.left(t.root()), 0, 1)
+        t.split(t.left(t.root()), 0, 1)
         t.split(t.right(t.root()), 0, 3)
-        t.set_leaf_value( t.left( t.left(t.root())), 0, 1.0)
-        t.set_leaf_value(t.right( t.left(t.root())), 0, 2.0)
-        t.set_leaf_value( t.left(t.right(t.root())), 0, 4.0)
+        t.set_leaf_value(t.left(t.left(t.root())), 0, 1.0)
+        t.set_leaf_value(t.right(t.left(t.root())), 0, 2.0)
+        t.set_leaf_value(t.left(t.right(t.root())), 0, 4.0)
         t.set_leaf_value(t.right(t.right(t.root())), 0, 8.0)
         print(at[0])
 
@@ -96,15 +99,14 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(search.num_solutions(), 32)
 
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
-        self.assertTrue(all(x.output >= y.output for x, y
-                            in zip(solutions[:-1], solutions[1:]))) #sorted?
+        self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:])))  # sorted?
         print(solutions[0].output, M)
         self.assertAlmostEqual(solutions[0].output, M, 4)
         self.assertAlmostEqual(solutions[-1].output, m, 4)
 
-        #imghat = np.array(yhat).reshape((100, 100))
-        #plot_img_solutions(imghat, solutions[:3])
-        #plot_img_solutions(imghat, solutions[-3:])
+        # imghat = np.array(yhat).reshape((100, 100))
+        # plot_img_solutions(imghat, solutions[:3])
+        # plot_img_solutions(imghat, solutions[-3:])
 
     def test_img1_min(self):
         img, X, y, _, _ = get_img_data()
@@ -124,20 +126,19 @@ class TestSearch(unittest.TestCase):
         self.assertEqual(search.num_solutions(), 32)
 
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
-        self.assertTrue(all(x.output <= y.output for x, y
-                            in zip(solutions[:-1], solutions[1:]))) #sorted?
+        self.assertTrue(all(x.output <= y.output for x, y in zip(solutions[:-1], solutions[1:])))  # sorted?
         self.assertAlmostEqual(solutions[0].output, m, 4)
         self.assertAlmostEqual(solutions[-1].output, M, 4)
 
-        #imghat = np.array(yhat).reshape((100, 100))
-        #plot_img_solutions(imghat, solutions[:3])
-        #plot_img_solutions(imghat, solutions[-3:])
+        # imghat = np.array(yhat).reshape((100, 100))
+        # plot_img_solutions(imghat, solutions[:3])
+        # plot_img_solutions(imghat, solutions[-3:])
 
     def test_img2(self):
         img, X, y, _, _ = get_img_data()
 
         at = AddTree.read(os.path.join(BPATH, "models/xgb-img-easy-new.json"))
-        #at = at.prune([Domain(0, 30), Domain(0, 30)])
+        # at = at.prune([Domain(0, 30), Domain(0, 30)])
         yhat = at.eval(X)
         imghat = np.array(yhat).reshape((100, 100))
 
@@ -148,27 +149,26 @@ class TestSearch(unittest.TestCase):
         done = StopReason.NONE
         while done != StopReason.NO_MORE_OPEN:
             done = search.steps(100)
-            #print("done?", done)
-            #print(search.current_bounds(), search.is_optimal())
-            #print(search.snapshots[-1].avg_focal_size)
+            # print("done?", done)
+            # print(search.current_bounds(), search.is_optimal())
+            # print(search.snapshots[-1].avg_focal_size)
         self.assertTrue(done == StopReason.NO_MORE_OPEN)
 
         outputs_expected = sorted(np.unique(imghat[0:30, 0:30]), reverse=True)
         self.assertEqual(search.num_solutions(), len(outputs_expected))
 
         solutions = [search.get_solution(i) for i in range(search.num_solutions())]
-        self.assertTrue(all(x.output >= y.output for x, y
-                            in zip(solutions[:-1], solutions[1:]))) #sorted?
+        self.assertTrue(all(x.output >= y.output for x, y in zip(solutions[:-1], solutions[1:])))  # sorted?
         for s, x in zip(solutions, outputs_expected):
-            self.assertLess(abs(s.output-x)/x, 1e-4)
+            self.assertLess(abs(s.output - x) / x, 1e-4)
 
-        #plot_img_solutions(imghat, solutions[:3])
-        #plot_img_solutions(imghat, solutions[-3:])
+        # plot_img_solutions(imghat, solutions[:3])
+        # plot_img_solutions(imghat, solutions[-3:])
 
     def _do_img_multiclass(self, at, heuristic, output_opt, class_opt):
         img, X, y, yc, _ = get_img_data()
 
-        class_opt = np.max if class_opt=="max" else np.min
+        class_opt = np.max if class_opt == "max" else np.min
 
         for cls in range(4):
             at.swap_class(cls)
@@ -176,8 +176,8 @@ class TestSearch(unittest.TestCase):
 
             config = Config(heuristic)
             config.stop_when_optimal = False
-            #config.ignore_state_when_worse_than = 0.0
-            search = config.get_search(at)#, [Interval(10, 30), Interval(10, 30)])
+            # config.ignore_state_when_worse_than = 0.0
+            search = config.get_search(at)  # , [Interval(10, 30), Interval(10, 30)])
 
             done = StopReason.NONE
             while done != StopReason.NO_MORE_OPEN:
@@ -195,7 +195,7 @@ class TestSearch(unittest.TestCase):
             output_exp_sorted = np.unique(output_exp)
             if output_opt == "max":
                 output_exp_sorted = output_exp_sorted[::-1]
-            k = 0 # index into output_exp_sorted
+            k = 0  # index into output_exp_sorted
 
             covered = np.zeros((1000, 1000), dtype=int)
 
@@ -203,8 +203,7 @@ class TestSearch(unittest.TestCase):
                 box = sol.box()
                 box[0] = box.get(0, Interval(0, 100)).intersect(Interval(0, 100))
                 box[1] = box.get(1, Interval(0, 100)).intersect(Interval(0, 100))
-                covered[int(box[0].lo*10):int(box[0].hi*10),
-                        int(box[1].lo*10):int(box[1].hi*10)] += 1
+                covered[int(box[0].lo * 10) : int(box[0].hi * 10), int(box[1].lo * 10) : int(box[1].hi * 10)] += 1
                 ex = veritas.get_closest_example(box, np.zeros(2), 1e-5)
                 pred = at.eval(ex)[0]
                 expected = pred[0] - class_opt(pred[1:])
@@ -218,12 +217,11 @@ class TestSearch(unittest.TestCase):
                     while sol.output > output_exp_sorted[k] + 1e-9:
                         k += 1
 
-                if not box[0].contains(round(box[0].lo)) \
-                        or not box[1].contains(round(box[1].lo)):
-                    #print("skip", box[0], box[1], "-- not an integer solution")
+                if not box[0].contains(round(box[0].lo)) or not box[1].contains(round(box[1].lo)):
+                    # print("skip", box[0], box[1], "-- not an integer solution")
                     continue
 
-                #print(i, k, sol.output, output_exp_sorted[k],
+                # print(i, k, sol.output, output_exp_sorted[k],
                 #      box[0], box[0].contains(round(box[0].lo)),
                 #      box[1], box[1].contains(round(box[1].lo)))
                 self.assertAlmostEqual(sol.output, output_exp_sorted[k])
@@ -237,7 +235,7 @@ class TestSearch(unittest.TestCase):
             self.assertEqual(k + 1, len(output_exp_sorted))
             self.assertAlmostEqual(solutions[0].output, output_exp_sorted[0])
 
-            at.swap_class(cls) # back to normal
+            at.swap_class(cls)  # back to normal
 
     def test_img_multiclass(self):
         HType = HeuristicType
@@ -297,8 +295,7 @@ class TestSearch(unittest.TestCase):
             pred = at.eval(ex)[0]
             expected = pred[0] - np.max(pred[1:])
             self.assertAlmostEqual(sol.output, expected)
-            self.assertTrue(pred[0] >=
-                            config.multi_ignore_state_when_class0_worse_than)
+            self.assertTrue(pred[0] >= config.multi_ignore_state_when_class0_worse_than)
 
         # Same search, but output for class0 unconstrained
         # The number of solutions with prob(class0) > {value} must be equal
@@ -323,10 +320,6 @@ class TestSearch(unittest.TestCase):
                 count += 1
 
         self.assertEqual(count, search.num_solutions())
-
-
-
-
 
     def test_img5(self):
         img = np.load(os.path.join(BPATH, "data/img.npy"))

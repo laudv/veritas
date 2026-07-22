@@ -18,21 +18,24 @@
 # License: Apache License 2.0
 # Author: Laurens Devos
 
-import timeit
 import time
+import timeit
+
 import gurobipy as gu
 import numpy as np
+
 from veritas import AddTree, Interval
+
 
 class NodeInfo:
     def __init__(self, var, leafs_in_subtree):
         self.leafs_in_subtree = leafs_in_subtree
         self.var = var
 
+
 ## \ingroup python
 # \brief Base class for MILP methods
 class KantchelianBase:
-
     def __init__(self, split_values, guard=1e-4, max_time=1e100, silent=True):
         self.guard = guard
         self.split_values = split_values
@@ -71,7 +74,7 @@ class KantchelianBase:
             lo = self.model.getAttr(gu.GRB.Attr.ObjVal)
             self.bounds.append((lo, up))
             self.finished = True
-        except:
+        except Exception:
             pass
         self.total_time = timeit.default_timer() - self.start_time
         self.total_time_p = time.process_time() - self.start_time_p
@@ -83,7 +86,7 @@ class KantchelianBase:
             if attribute not in self.split_values:
                 continue
             split_values = self.split_values[attribute]
-            #print(lo, hi)
+            # print(lo, hi)
             for val in split_values:
                 var = self.pvars[(attribute, val)]
                 if val <= lo:
@@ -128,15 +131,15 @@ class KantchelianBase:
     def _optimize_callback(self):
         return lambda m, w: self._optimize_callback_fn(m, w)
 
-    def _construct_pvars(self): # uses self.split_values, self.model
+    def _construct_pvars(self):  # uses self.split_values, self.model
         pvars = {}
         for attribute, split_values in self.split_values.items():
-            for k, split_value in enumerate(split_values): # split values are sorted
+            for k, split_value in enumerate(split_values):  # split values are sorted
                 var = self.model.addVar(vtype=gu.GRB.BINARY, name=f"p{attribute}_{k}")
                 pvars[(attribute, split_value)] = var
         return pvars
 
-    def _collect_node_info(self, at): # uses self.model, self.pvars
+    def _collect_node_info(self, at):  # uses self.model, self.pvars
         node_info_per_tree = []
         for tree_index in range(len(at)):
             tree = at[tree_index]
@@ -147,36 +150,33 @@ class KantchelianBase:
                 if node in leafs_of_node:
                     return leafs_of_node[node]
                 if tree.is_leaf(node):
-                    var = self.model.addVar(lb=0.0, ub=1.0,
-                            name=f"l{tree_index}_{node}")
+                    var = self.model.addVar(lb=0.0, ub=1.0, name=f"l{tree_index}_{node}")
                     leafs = [(node)]
                 else:
                     split = tree.get_split(node)
                     var = self.pvars[(split.feat_id, split.split_value)]
-                    leafs = traverse(tree.left(node)) \
-                            + traverse(tree.right(node))
+                    leafs = traverse(tree.left(node)) + traverse(tree.right(node))
                 leafs_of_node[node] = leafs
                 var_of_node[node] = var
                 return leafs
+
             traverse(tree.root())
 
             node_infos = {}
-            for node in sorted(leafs_of_node.keys()): # sorted by node_id
-                node_infos[node] = NodeInfo(var_of_node[node],
-                        leafs_of_node[node])
+            for node in sorted(leafs_of_node.keys()):  # sorted by node_id
+                node_infos[node] = NodeInfo(var_of_node[node], leafs_of_node[node])
             node_info_per_tree.append(node_infos)
         return node_info_per_tree
 
-    def _add_leaf_consistency(self, at, node_info_per_tree): # uses self.model
+    def _add_leaf_consistency(self, at, node_info_per_tree):  # uses self.model
         for tree_index, node_infos in enumerate(node_info_per_tree):
             root_node_info = node_infos[at[tree_index].root()]
             vars = [node_infos[l].var for l in root_node_info.leafs_in_subtree]
             coef = [1] * len(vars)
 
-            self.model.addConstr(gu.LinExpr(coef, vars) == 1.0,
-                    name=f"leaf_sum{tree_index}")
+            self.model.addConstr(gu.LinExpr(coef, vars) == 1.0, name=f"leaf_sum{tree_index}")
 
-    def _add_predicate_leaf_consistency(self, at, node_info_per_tree): # uses self.model
+    def _add_predicate_leaf_consistency(self, at, node_info_per_tree):  # uses self.model
         for tree_index in range(len(at)):
             tree = at[tree_index]
             node_infos = node_info_per_tree[tree_index]
@@ -184,7 +184,8 @@ class KantchelianBase:
             stack = [tree.root()]
             while len(stack) > 0:
                 node = stack.pop()
-                if tree.is_leaf(node): continue
+                if tree.is_leaf(node):
+                    continue
                 pvar = node_infos[node].var
                 left, right = tree.left(node), tree.right(node)
                 left_leafs = node_infos[left].leafs_in_subtree
@@ -192,23 +193,23 @@ class KantchelianBase:
                 left_lvars = [node_infos[n].var for n in left_leafs]
                 right_lvars = [node_infos[n].var for n in right_leafs]
 
-                left_sum = gu.LinExpr([1]*len(left_lvars), left_lvars)
-                right_sum = gu.LinExpr([1]*len(right_lvars), right_lvars)
+                left_sum = gu.LinExpr([1] * len(left_lvars), left_lvars)
+                right_sum = gu.LinExpr([1] * len(right_lvars), right_lvars)
 
                 if tree.is_root(node):
                     # if pvar is true, then the right branch cannot contain a true leaf
-                    self.model.addConstr(right_sum+pvar == 1.0, name=f"plc_r{node}")
+                    self.model.addConstr(right_sum + pvar == 1.0, name=f"plc_r{node}")
                     # if pvar is false, then left sum cannot contain a true leaf
-                    self.model.addConstr(left_sum-pvar == 0.0, name=f"plc_l{node}")
+                    self.model.addConstr(left_sum - pvar == 0.0, name=f"plc_l{node}")
                 else:
                     # if pvar is true, right cannot have a true leaf
-                    self.model.addConstr(right_sum+pvar <= 1.0, name=f"plc_r{node}")
+                    self.model.addConstr(right_sum + pvar <= 1.0, name=f"plc_r{node}")
                     # if pvar is false, left cannot have a true leaf
-                    self.model.addConstr(left_sum-pvar <= 0.0, name=f"plc_l{node}")
+                    self.model.addConstr(left_sum - pvar <= 0.0, name=f"plc_l{node}")
 
                 stack += [right, left]
 
-    def _add_predicate_consistency(self): # uses self.split_values, self.pvars, self.model
+    def _add_predicate_consistency(self):  # uses self.split_values, self.pvars, self.model
         for attribute, split_values in self.split_values.items():
             # predicate in split is X < split_value
             # split values are sorted
@@ -218,12 +219,12 @@ class KantchelianBase:
                 self.model.addConstr(var0 <= var1, f"pc{k}")
                 var0 = var1
 
-    def _add_mislabel_constraint(self, at, node_info_per_tree, target_output): # uses self.model
+    def _add_mislabel_constraint(self, at, node_info_per_tree, target_output):  # uses self.model
         ensemble_output = self._get_ensemble_output_expr(at, node_info_per_tree)
-        if target_output: # positive class
-            self.model.addConstr(ensemble_output >= 0.0, name=f"mislabel_pos")
-        else: # negative class
-            self.model.addConstr(ensemble_output <= 0.0, name=f"mislabel_neg")
+        if target_output:  # positive class
+            self.model.addConstr(ensemble_output >= 0.0, name="mislabel_pos")
+        else:  # negative class
+            self.model.addConstr(ensemble_output <= 0.0, name="mislabel_neg")
 
     def _get_ensemble_output_expr(self, at, node_info_per_tree):
         leaf_values = []
@@ -236,11 +237,11 @@ class KantchelianBase:
             vars += [node_infos[n].var for n in leafs]
             leaf_values += [tree.get_leaf_value(n, 0) for n in leafs]
 
-        return (gu.LinExpr(leaf_values, vars) + at.get_base_score(0))
+        return gu.LinExpr(leaf_values, vars) + at.get_base_score(0)
 
-    def _add_robustness_objective(self, example): # uses self.model, split_values, pvars, adds self.bvar
+    def _add_robustness_objective(self, example):  # uses self.model, split_values, pvars, adds self.bvar
         self.bvar = self.model.addVar(name="b")
-        
+
         for attribute, split_values in self.split_values.items():
             pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
             x = self.example[attribute]
@@ -257,48 +258,47 @@ class KantchelianBase:
 
     def _get_objective_weights(self, split_values, x):
         axis = [-np.inf] + split_values + [np.inf]
-        w = [0.0] * (len(split_values)+1)
-        for k in range(len(split_values)+1, 0, -1):
+        w = [0.0] * (len(split_values) + 1)
+        for k in range(len(split_values) + 1, 0, -1):
             tau1 = axis[k]
-            tau0 = axis[k-1]
-            if tau0 <= x and x < tau1: # from paper: j == k-1 => interval of x
-                w[k-1] = 0.0
+            tau0 = axis[k - 1]
+            if tau0 <= x and x < tau1:  # from paper: j == k-1 => interval of x
+                w[k - 1] = 0.0
             elif x < tau0 and x < tau1:
-                w[k-1] = np.abs(x - tau0)
+                w[k - 1] = np.abs(x - tau0)
             elif x >= tau0 and x >= tau1:
-                w[k-1] = np.abs(x - tau1 + self.guard)
+                w[k - 1] = np.abs(x - tau1 + self.guard)
             else:
-                assert False
-        for k in range(len(w)-1):
-            w[k] -= w[k+1]
+                raise RuntimeError("unreachable")
+
+        for k in range(len(w) - 1):
+            w[k] -= w[k + 1]
         return w
 
     def has_solution(self):
-        return self.model.status == gu.GRB.OPTIMAL \
-                or self.model.status == gu.GRB.SUBOPTIMAL
+        return self.model.status == gu.GRB.OPTIMAL or self.model.status == gu.GRB.SUBOPTIMAL
 
     def objective_bound(self):
         return self.model.objBound
 
-    def _extract_adv_example(self, example): # uses self.split_values, self.pvars, self.guard
+    def _extract_adv_example(self, example):  # uses self.split_values, self.pvars, self.guard
         adv_example = example.copy()
-        #print(self._extract_ensemble_output(self.at, self.node_info_per_tree))
+        # print(self._extract_ensemble_output(self.at, self.node_info_per_tree))
         for attribute, split_values in self.split_values.items():
-            pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
             x = self.example[attribute]
-            #print("solution", attribute, x, [(p.x, s) for p, s in zip(pvars, split_values)])
+            # print("solution", attribute, x, [(p.x, s) for p, s in zip(pvars, split_values)])
             for split_value in split_values:
                 pvar = self.pvars[(attribute, split_value)]
-                if pvar.x > 0.5 and x >= split_value: # greater than or equal to split_value
-                    #print("adjusting attribute", attribute, "down from", x, "to", split_value-self.guard,\
+                if pvar.x > 0.5 and x >= split_value:  # greater than or equal to split_value
+                    # print("adjusting attribute", attribute, "down from", x, "to", split_value-self.guard,\
                     #    f"(split value: {split_value})")
                     adv_example[attribute] = split_value - self.guard
-                    break # pick first active pvar we encounter
+                    break  # pick first active pvar we encounter
                 if pvar.x <= 0.5 and x < split_value:
-                    #print("adjusting attribute", attribute, "up from", x, "to", split_value)
-                    adv_example[attribute] = split_value #+ self.guard
+                    # print("adjusting attribute", attribute, "up from", x, "to", split_value)
+                    adv_example[attribute] = split_value  # + self.guard
                     # pick last active pvar we encouter!
-        
+
         ### old debug stuff
         # active_leafs = []
         # for tree_index in range(len(self.at)):
@@ -314,7 +314,6 @@ class KantchelianBase:
         #                 #print(self.at[tree_index].get_splits())
         #                 #print(adv_example)
 
-
         #                 # start from leaf, go up
         #                 node = tree.eval_node(adv_example)[0]
         #                 while not tree.is_root(node):
@@ -326,7 +325,7 @@ class KantchelianBase:
         #                         print(
         #                             f"[Warning] Feature {split.feat_id}: {example[split.feat_id]}    Split value: {split.split_value}")
         #                 #exit()
-            
+
         # print(active_leafs)
         # print([tree.eval_node(adv_example)[0] for tree in self.at])
 
@@ -340,17 +339,16 @@ class KantchelianBase:
         # taken paths
         intervals = {}
         for attribute, split_values in self.split_values.items():
-            pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
             lo, hi = -np.inf, np.inf
             for split_value in split_values:
                 # pvar true means go left (ie less than split value)
                 pvar = self.pvars[(attribute, split_value)]
-                if pvar.x > 0.5 and hi == np.inf: # greater than or equal to split_value
-                    #print("POS ", attribute, split_value)
-                    hi = split_value # pick the first active pvar (lowest split value)
+                if pvar.x > 0.5 and hi == np.inf:  # greater than or equal to split_value
+                    # print("POS ", attribute, split_value)
+                    hi = split_value  # pick the first active pvar (lowest split value)
                 if pvar.x <= 0.5:
-                    #print("NEG ", attribute, split_value)
-                    lo = split_value # pick last active pvar we encouter!
+                    # print("NEG ", attribute, split_value)
+                    lo = split_value  # pick last active pvar we encouter!
             intervals[attribute] = Interval(lo, hi)
         return {attr: intervals[attr] for attr in sorted(intervals)}
 
@@ -361,17 +359,14 @@ class KantchelianBase:
             node_infos = node_info_per_tree[tree_index]
             leafs = node_infos[tree.root()].leafs_in_subtree
             lvars = [node_infos[n].var for n in leafs]
-            tree_output = sum(0.0 if lvar.x < 0.5 else tree.get_leaf_value(n, 0)
-                    for lvar, n in zip(lvars, leafs))
+            tree_output = sum(0.0 if lvar.x < 0.5 else tree.get_leaf_value(n, 0) for lvar, n in zip(lvars, leafs))
             ensemble_output += tree_output
         return ensemble_output
-
 
 
 ## \ingroup python
 # \brief Robustness checking with MILP
 class KantchelianAttack(KantchelianBase):
-
     def __init__(self, at, target_output, example, **kwargs):
         self.at = at
         self.example = example
@@ -381,7 +376,7 @@ class KantchelianAttack(KantchelianBase):
         self.node_info_per_tree = self._collect_node_info(self.at)
 
         # debug print [tree_index, node_id, gurobi var, leafs in node's subtree]
-        #for tree_index, node_infos in enumerate(self.node_info_per_tree):
+        # for tree_index, node_infos in enumerate(self.node_info_per_tree):
         #    for node, node_info in node_infos.items():
         #        print(tree_index, node, node_info.var, node_info.leafs_in_subtree)
 
@@ -398,24 +393,22 @@ class KantchelianAttack(KantchelianBase):
 
         # CONSTRAINT: mislabel constraint: instance we find should have a
         # specific class
-        self._add_mislabel_constraint(self.at, self.node_info_per_tree,
-                target_output=target_output)
+        self._add_mislabel_constraint(self.at, self.node_info_per_tree, target_output=target_output)
 
         self._add_robustness_objective(self.example)
 
         self.model.update()
-        #print(self.model.display())
+        # print(self.model.display())
 
     def solution(self):
         adv_example = self._extract_adv_example(self.example)
-        ensemble_output = self._extract_ensemble_output(self.at,
-                self.node_info_per_tree)
+        ensemble_output = self._extract_ensemble_output(self.at, self.node_info_per_tree)
         return adv_example, ensemble_output, self.bvar.x
+
 
 ## \ingroup python
 # \brief Targeted robustness checking with MILP
 class KantchelianTargetedAttack(KantchelianBase):
-
     def __init__(self, source_at, target_at, example, **kwargs):
         dummy_at = AddTree(source_at.num_leaf_values())
         self.source_at = source_at if source_at is not None else dummy_at
@@ -436,9 +429,9 @@ class KantchelianTargetedAttack(KantchelianBase):
         self._add_predicate_consistency()
 
         ## source_at < 0 && target_at > 0
-        #self._add_mislabel_constraint(self.source_at,
+        # self._add_mislabel_constraint(self.source_at,
         #        self.source_node_info_per_tree, target_output=False)
-        #self._add_mislabel_constraint(self.target_at,
+        # self._add_mislabel_constraint(self.target_at,
         #        self.target_node_info_per_tree, target_output=True)
 
         # same mislabel constraint as Veritas/Merge: more confident about
@@ -451,10 +444,8 @@ class KantchelianTargetedAttack(KantchelianBase):
 
     def solution(self):
         adv_example = self._extract_adv_example(self.example)
-        ensemble_output0 = self._extract_ensemble_output(self.source_at,
-                self.source_node_info_per_tree)
-        ensemble_output1 = self._extract_ensemble_output(self.target_at,
-                self.target_node_info_per_tree)
+        ensemble_output0 = self._extract_ensemble_output(self.source_at, self.source_node_info_per_tree)
+        ensemble_output1 = self._extract_ensemble_output(self.target_at, self.target_node_info_per_tree)
         return adv_example, ensemble_output0, ensemble_output1, self.bvar.x
 
     def _combine_split_values(self):
@@ -464,19 +455,15 @@ class KantchelianTargetedAttack(KantchelianBase):
         split_values = {}
         attributes = source_split_values.keys() | target_split_values.keys()
         for attr in attributes:
-            split_values[attr] = sorted(source_split_values.get(attr, []) \
-                + target_split_values.get(attr, []))
+            split_values[attr] = sorted(source_split_values.get(attr, []) + target_split_values.get(attr, []))
 
         return split_values
 
     def _add_multiclass_mislabel_constraint(self):
-        source_ensemble_output = self._get_ensemble_output_expr(self.source_at,
-                self.source_node_info_per_tree)
-        target_ensemble_output = self._get_ensemble_output_expr(self.target_at,
-                self.target_node_info_per_tree)
+        source_ensemble_output = self._get_ensemble_output_expr(self.source_at, self.source_node_info_per_tree)
+        target_ensemble_output = self._get_ensemble_output_expr(self.target_at, self.target_node_info_per_tree)
 
-        self.model.addConstr(source_ensemble_output <= target_ensemble_output,
-                name="multiclass_mislabel")
+        self.model.addConstr(source_ensemble_output <= target_ensemble_output, name="multiclass_mislabel")
 
 
 ## \ingroup python
@@ -496,8 +483,9 @@ class KantchelianOutputOpt(KantchelianBase):
         # self._add_output_objective(self.at, self.node_info_per_tree, sense=gu.GRB.MINIMIZE)
 
         # mislabel constraint: instance we find should have a specific class
-        self._add_mislabel_constraint(self.at, self.node_info_per_tree,
-                target_output=True) # always maximinize: need output >0
+        self._add_mislabel_constraint(
+            self.at, self.node_info_per_tree, target_output=True
+        )  # always maximinize: need output >0
 
         self.model.update()
 
@@ -507,7 +495,5 @@ class KantchelianOutputOpt(KantchelianBase):
 
     def solution2(self):
         adv_example = self._extract_adv_example(self.example)
-        ensemble_output = self._extract_ensemble_output(self.at,
-                self.node_info_per_tree)
+        ensemble_output = self._extract_ensemble_output(self.at, self.node_info_per_tree)
         return adv_example, ensemble_output
-
