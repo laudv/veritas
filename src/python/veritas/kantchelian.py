@@ -74,7 +74,7 @@ class KantchelianBase:
             lo = self.model.getAttr(gu.GRB.Attr.ObjVal)
             self.bounds.append((lo, up))
             self.finished = True
-        except:
+        except Exception:
             pass
         self.total_time = timeit.default_timer() - self.start_time
         self.total_time_p = time.process_time() - self.start_time_p
@@ -271,7 +271,7 @@ class KantchelianBase:
             elif x >= tau0 and x >= tau1:
                 w[k - 1] = np.abs(x - tau1 + self.guard)
             else:
-                assert False
+                raise ValueError("Unreachable state")
         for k in range(len(w) - 1):
             w[k] -= w[k + 1]
         return w
@@ -286,7 +286,6 @@ class KantchelianBase:
         adv_example = example.copy()
         # print(self._extract_ensemble_output(self.at, self.node_info_per_tree))
         for attribute, split_values in self.split_values.items():
-            pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
             x = self.example[attribute]
             # print("solution", attribute, x, [(p.x, s) for p, s in zip(pvars, split_values)])
             for split_value in split_values:
@@ -341,7 +340,6 @@ class KantchelianBase:
         # taken paths
         intervals = {}
         for attribute, split_values in self.split_values.items():
-            pvars = [self.pvars[(attribute, split_value)] for split_value in split_values]
             lo, hi = -np.inf, np.inf
             for split_value in split_values:
                 # pvar true means go left (ie less than split value)
