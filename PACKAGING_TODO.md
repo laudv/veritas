@@ -167,6 +167,18 @@ independently.
       box-drawing output. Not fixed at that level here (out of scope for this
       CI debugging pass) — worth a follow-up if this comes up as a real user
       report. Not verified end-to-end — no Windows runner in this sandbox.
+- [x] 18. `build_sdist` job showed a "Node.js 20 is deprecated" warning
+      (`actions/checkout@v4`, `actions/upload-artifact@v4` still declare
+      Node 20; GitHub force-runs them on Node 24, which works today but is a
+      compatibility shim, not a long-term guarantee). Bumped to current
+      majors: `actions/checkout` v4->v7, `actions/upload-artifact` v4->v7,
+      `actions/download-artifact` v4->v8, `actions/setup-python` v5->v6 in
+      both workflow files. Checked each major-version changelog for breaking
+      changes first: none apply to our usage (no fork-PR checkout, artifact
+      names are already unique per matrix job, standard `merge-multiple`
+      download). `pypa/cibuildwheel@v4.1.0` and
+      `pypa/gh-action-pypi-publish@release/v1` untouched (already
+      latest / auto-tracking a moving branch ref respectively).
 
 ## Nice-to-have
 

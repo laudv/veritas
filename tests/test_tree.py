@@ -234,6 +234,25 @@ class TestTree(unittest.TestCase):
         self.assertRaises(RuntimeError, at.predict, X)
         self.assertRaises(RuntimeError, at.eval, X)
 
+    def test_eval_node(self):  # https://github.com/laudv/veritas/issues/11
+        # One stump: split on feature 0 at 0.0 -> left leaf (id 1), right leaf (id 2)
+        at = AddTree(1, AddTreeType.CLF_SOFTMAX)
+        t = at.add_tree()
+        t.split(t.root(), 0, 0.0)
+        t.set_leaf_value(t.left(t.root()), 0, -1.0)
+        t.set_leaf_value(t.right(t.root()), 0, +1.0)
+
+        # feature0 = -1 must reach leaf 1 (left); feature0 = +1 must reach leaf 2 (right)
+        X = np.ascontiguousarray(np.array([[-1.0], [1.0]], dtype=FloatT))
+
+        # Test node ids returned by eval_node
+        self.assertEqual(t.eval_node(np.ascontiguousarray(X[0:1]))[0], 1)
+        self.assertEqual(t.eval_node(np.ascontiguousarray(X[1:2]))[0], 2)
+        self.assertTrue(np.all(t.eval_node(X) == np.array([1, 2])))
+
+        # Test leaf values returned by eval
+        self.assertTrue(np.all(t.eval(X) == np.array([[-1.0], [+1.0]])))
+
 
 if __name__ == "__main__":
     unittest.main()
