@@ -239,7 +239,7 @@ class VeritasRobustnessSearch(RobustnessSearch):
         # print("mip relax", kanup, kanlo)
         # print("====================================")
         # print()
-        stop_reason = s.step_for(max_time, 100)
+        s.step_for(max_time, 100)
         upper_bound = s.current_bounds().best
         # print("stop reason", stop_reason, upper_bound)
         max_output_diff = upper_bound

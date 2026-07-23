@@ -109,7 +109,7 @@ class GrootAddTreeConverter(AddTreeConverter):
         at = AddTree(num_leaf_values, at_type)
         num_trees = len(ensemble.estimators_)
 
-        for i, gtree in enumerate(ensemble.estimators_):
+        for gtree in ensemble.estimators_:
             _addtree_from_groot_tree(at, gtree, extract_value_fun)
 
         for k in range(num_leaf_values):
