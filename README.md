@@ -38,6 +38,9 @@ git clone https://github.com/laudv/veritas.git
 cd veritas
 git submodule init && git submodule update
 
+# Install the build backend first (required for --no-build-isolation below)
+pip install "scikit-build-core>=0.10"
+
 # editable install; C++ changes trigger an automatic rebuild on next import
 pip install --no-build-isolation --editable .
 ```
@@ -75,13 +78,26 @@ running `pip` itself, regardless of `PATH`.
 Python tests (from the repository root):
 
 ```sh
-python -m unittest discover tests
+pytest tests/
 ```
 
-Some tests exercise optional integrations (XGBoost, LightGBM, scikit-learn,
-Gurobi, z3) and are skipped automatically if the corresponding package isn't
-installed; install the extras you need (e.g. `pip install .[xgboost,smt]`) to
-run them too.
+To run all python tests, install the test dependencies first (using `pip install -e ".[test]"`). Some tests exercise optional integrations (XGBoost, LightGBM, scikit-learn, Gurobi, z3) and are skipped automatically if the corresponding package isn't installed.
+
+Alternatively, you can run the test suite against different combinations of supported Python versions and learner versions (xgboost, lightgbm, scikit-learn) using `nox`:
+
+```sh
+# Install nox
+pip install nox
+
+# Run all test configurations
+nox
+
+# Run a specific session (e.g. tests_xgboost)
+nox -s "tests_xgboost"
+
+# Run a specific version combination (forcing a specific Python version if needed):
+nox -s "tests_xgboost(xgboost='3.2.0')" --force-python 3.12
+```
 
 C++ tests use a separate CMake configuration
 (`-DVERITAS_BUILD_CPPTESTS=ON -DVERITAS_BUILD_PYBINDINGS=OFF`). The test
@@ -111,9 +127,9 @@ cibuildwheel --output-dir wheelhouse
 This uses the `[tool.cibuildwheel]` settings in `pyproject.toml`: after
 building each wheel, it installs it into a fresh venv along with
 `test-requires` (the optional integrations exercised by the test suite) and
-runs `test-command`, which is `cd {project} && python -m unittest discover
-tests` — the same test suite as above, but run against the actual built
-wheel rather than an editable install. Restrict this to a single target while
+runs `test-command`, which is `cd {project} && pytest tests` — the same
+test suite as above, but run against the actual built wheel rather than an
+editable install. Restrict this to a single target while
 iterating with e.g. `CIBW_BUILD="cp312-manylinux_x86_64" cibuildwheel
 --output-dir wheelhouse`.
 
@@ -128,12 +144,9 @@ import veritas
 from sklearn.datasets import make_moons
 from sklearn.ensemble import RandomForestClassifier
 
-(X,Y) = make_moons(100, random_state=0)
+(X, Y) = make_moons(100, random_state=0)
 
-clf = RandomForestClassifier(
-        max_depth=4,
-        random_state=0,
-        n_estimators=3)
+clf = RandomForestClassifier(max_depth=4, random_state=0, n_estimators=3)
 clf.fit(X, Y)
 
 # Convert the RandomForestClassifier model to a Veritas tree ensemble

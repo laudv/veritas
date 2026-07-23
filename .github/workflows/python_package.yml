@@ -30,29 +30,12 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install gurobipy
-          python -m pip install xgboost
-          python -m pip install scikit-learn
-
-      - name: Install veritas
-        run: |
-          python -m pip install . 
-
-      - name: Install unittest dependencies
-        run: |
-          python -m pip install ruff
-          python -m pip install lightgbm
-          python -m pip install z3-solver
-          python -m pip install imageio
-          python -m pip install pandas
+          python -m pip install nox
 
       - name: Lint and format with ruff
         run: |
-          # run ruff linter
-          ruff check .
-          # check ruff formatting
-          ruff format --check .
+          nox -s lint
 
-      - name: Test with unittest
+      - name: Test with nox
         run: |
-          python -m unittest discover tests
+          nox

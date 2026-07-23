@@ -5,11 +5,25 @@
 import unittest
 
 import imageio.v3 as imageio
-import lightgbm as lgb
 import numpy as np
+import pytest
 import veritas
-import xgboost as xgb
-from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+
+try:
+    import xgboost as xgb
+except ImportError:
+    xgb = None
+
+try:
+    import lightgbm as lgb
+except ImportError:
+    lgb = None
+
+try:
+    from sklearn.ensemble import RandomForestClassifier, RandomForestRegressor
+except ImportError:
+    RandomForestClassifier = None
+    RandomForestRegressor = None
 
 
 def get_img_data():
@@ -28,7 +42,8 @@ def get_img_data():
     return X, yr, y2, y4, yr_mt
 
 
-class TestConverters(unittest.TestCase):
+@pytest.mark.xgboost
+class TestXgbConverters(unittest.TestCase):
     def test_xgb_binary(self):
         X, _, y, _, _ = get_img_data()
 
@@ -36,7 +51,11 @@ class TestConverters(unittest.TestCase):
         X = X.astype(np.float32).astype(np.float64)
 
         model = xgb.XGBClassifier(
-            objective="binary:logistic", tree_method="hist", max_depth=5, learning_rate=0.25, n_estimators=10
+            objective="binary:logistic",
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=0.25,
+            n_estimators=10,
         )
         model.fit(X, y)
         ypred_model = model.predict_proba(X)[:, 1]
@@ -68,7 +87,12 @@ class TestConverters(unittest.TestCase):
         X = X.astype(np.float32).astype(np.float64)
 
         model = xgb.XGBClassifier(
-            objective="multi:softmax", num_class=4, tree_method="hist", max_depth=5, learning_rate=0.4, n_estimators=10
+            objective="multi:softmax",
+            num_class=4,
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=0.4,
+            n_estimators=10,
         )
         model.fit(X, y)
         ypred_model = model.predict_proba(X)
@@ -106,7 +130,11 @@ class TestConverters(unittest.TestCase):
         X = X.astype(np.float32).astype(np.float64)
 
         model = xgb.XGBRegressor(
-            objective="reg:squarederror", tree_method="hist", max_depth=5, learning_rate=1.0, n_estimators=10
+            objective="reg:squarederror",
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=1.0,
+            n_estimators=10,
         )
         model.fit(X, y)
         ypred_model = model.predict(X)
@@ -126,7 +154,11 @@ class TestConverters(unittest.TestCase):
 
         df = pd.DataFrame(X, columns=feature_names)
         model = xgb.XGBRegressor(
-            objective="reg:squarederror", tree_method="hist", max_depth=2, learning_rate=1.0, n_estimators=2
+            objective="reg:squarederror",
+            tree_method="hist",
+            max_depth=2,
+            learning_rate=1.0,
+            n_estimators=2,
         )
         model.fit(df, y)
         ypred_model = model.predict(df)
@@ -188,7 +220,11 @@ class TestConverters(unittest.TestCase):
         y = rng.uniform(size=200)
 
         model = xgb.XGBRegressor(
-            objective="reg:squarederror", tree_method="hist", max_depth=3, learning_rate=0.5, n_estimators=5
+            objective="reg:squarederror",
+            tree_method="hist",
+            max_depth=3,
+            learning_rate=0.5,
+            n_estimators=5,
         )
         model.fit(X, y)
         ypred_model = model.predict(X)
@@ -197,6 +233,9 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+
+@pytest.mark.sklearn
+class TestSklearnConverters(unittest.TestCase):
     def test_rf_binary(self):
         X, _, y, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
@@ -262,6 +301,9 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+
+@pytest.mark.lightgbm
+class TestLgbConverters(unittest.TestCase):
     def test_lgb_binary(self):
         X, _, y, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
@@ -276,7 +318,13 @@ class TestConverters(unittest.TestCase):
     def test_lgb_multiclass(self):
         X, _, _, y, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
-        model = lgb.LGBMClassifier(objective="multiclass", num_class=4, num_leaves=64, learning_rate=0.25, n_estimators=10)
+        model = lgb.LGBMClassifier(
+            objective="multiclass",
+            num_class=4,
+            num_leaves=64,
+            learning_rate=0.25,
+            n_estimators=10,
+        )
         model.fit(X, y)
         ypred_model = model.predict_proba(X)
 
@@ -284,12 +332,21 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
-        print("at base scores", [at.get_base_score(k) for k in range(at.num_leaf_values())])
+        print(
+            "at base scores",
+            [at.get_base_score(k) for k in range(at.num_leaf_values())],
+        )
 
     def test_lgb_regression(self):
         X, y, _, _, _ = get_img_data()
         X = X.astype(np.float32).astype(np.float64)
-        model = lgb.LGBMRegressor(objective="regression_l2", max_depth=5, learning_rate=1.0, n_estimators=10, n_jobs=1)
+        model = lgb.LGBMRegressor(
+            objective="regression_l2",
+            max_depth=5,
+            learning_rate=1.0,
+            n_estimators=10,
+            n_jobs=1,
+        )
         model.fit(X, y)
         ypred_model = model.predict(X)
 
@@ -297,6 +354,9 @@ class TestConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+
+@pytest.mark.sklearn
+class TestGrootConverter(unittest.TestCase):
     def test_groot_binary(self):
 
         try:
