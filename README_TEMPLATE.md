@@ -127,9 +127,9 @@ cibuildwheel --output-dir wheelhouse
 This uses the `[tool.cibuildwheel]` settings in `pyproject.toml`: after
 building each wheel, it installs it into a fresh venv along with
 `test-requires` (the optional integrations exercised by the test suite) and
-runs `test-command`, which is `cd {project} && python -m unittest discover
-tests` — the same test suite as above, but run against the actual built
-wheel rather than an editable install. Restrict this to a single target while
+runs `test-command`, which is `cd {project} && pytest tests` — the same
+test suite as above, but run against the actual built wheel rather than an
+editable install. Restrict this to a single target while
 iterating with e.g. `CIBW_BUILD="cp312-manylinux_x86_64" cibuildwheel
 --output-dir wheelhouse`.
 
