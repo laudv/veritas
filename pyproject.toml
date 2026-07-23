@@ -69,18 +69,18 @@ exclude = [
 skip = "cp39-* cp310-* *-win32 *-manylinux_i686 *-musllinux*"
 # z3-solver is only exercised on Linux (see per-platform overrides below)
 # macOS wheels failed and fixing it is not worth the time at the moment
-test-requires = "xgboost lightgbm scikit-learn gurobipy imageio pandas"
+test-requires = "pytest xgboost lightgbm scikit-learn gurobipy imageio pandas"
 # cd into {project} first: several tests open data/model files using paths
 # relative to the repo root (e.g. "tests/models/rf_model.json"), and
 # cibuildwheel does not run test-command from the project directory.
-test-command = "cd {project} && python -m unittest discover tests"
+test-command = "cd {project} && pytest tests"
 
 # Setuptools bug causes collision between pypy and cpython artifacts
 # (from pybind/cmake_example, is necessary)
 #before-build = "rm -rf {project}/build"
 
 [tool.cibuildwheel.linux]
-test-requires = "xgboost lightgbm scikit-learn gurobipy imageio pandas z3-solver"
+test-requires = "pytest xgboost lightgbm scikit-learn gurobipy imageio pandas z3-solver"
 
 [tool.cibuildwheel.macos]
 environment = { MACOSX_DEPLOYMENT_TARGET = "10.14" }
@@ -91,12 +91,10 @@ before-test = "brew install libomp"
 [tool.cibuildwheel.windows]
 # plain `cd` in cmd.exe does not switch drives; GitHub's Windows runners put
 # the checkout on D: while the shell's active drive is elsewhere, so the
-# top-level test-command's `cd {project}` silently no-ops and `discover`
-# then runs from the wrong directory ("tests" isn't found as a directory, so
-# unittest falls back to importing it as a dotted module name, which fails
-# with the same "Start directory is not importable" text -- unrelated to
-# tests/__init__.py). `cd /d` actually switches drives too.
-test-command = "cd /d {project} && python -m unittest discover tests"
+# top-level test-command's `cd {project}` silently no-ops and pytest then
+# runs from the wrong directory, failing to find the "tests" directory.
+# `cd /d` actually switches drives too.
+test-command = "cd /d {project} && pytest tests"
 # Tree.__str__/AddTree.__str__ (tree.hpp's print_node) use box-drawing
 # characters (├─ └─ │); Windows consoles default stdout to a legacy codepage
 # (e.g. cp1252) that can't encode them, crashing any `print(tree)`.
