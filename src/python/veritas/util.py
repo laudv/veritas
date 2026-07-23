@@ -2,6 +2,8 @@
 # \defgroup python Python classes and functions
 # \brief An overview of all class and functions defined in Python.
 
+import numpy as np
+
 from veritas import Solution
 
 
@@ -53,6 +55,20 @@ def get_closest_example(solution_or_box, example, eps, featmap=None):
             # print(f"dom {feat_id}:", dom, x, "->", closest[feat_id])
 
     return closest
+
+
+def transform_data_for_missing(X):
+    """Appends boolean missingness indicators for each feature in X.
+
+    Replaces NaNs in original features with 0.0.
+    """
+    X_arr = np.array(X)
+    X_clean = np.nan_to_num(X_arr, nan=0.0)
+    X_missing = np.isnan(X_arr).astype(X_arr.dtype)
+    if X_arr.ndim == 1:
+        return np.concatenate([X_clean, X_missing])
+    else:
+        return np.hstack([X_clean, X_missing])
 
 
 # PYTHON BINDINGS DOCS
