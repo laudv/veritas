@@ -16,7 +16,6 @@
 
 #include "basics.hpp"
 #include "box.hpp"
-#include "fp.hpp"
 #include "fp_search.hpp" // Config
 #include "leafiter.hpp"
 

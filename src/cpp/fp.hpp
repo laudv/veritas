@@ -21,7 +21,6 @@
 #include <iostream>
 #include <stdexcept>
 #include <vector>
-#include <limits>
 
 namespace veritas {
 
@@ -86,6 +85,14 @@ public:
         for (auto& v : splits_) {
             std::sort(v.begin(), v.end());
             v.erase(std::unique(v.begin(), v.end()), v.end());
+
+            // `transform(FeatId, const Interval&)` computes an exclusive
+            // upper-bound rank as `hi_rank + 1`, so ranks up to
+            // `v.size() + 1` must fit in FpT without overflowing -- hence
+            // `- 1` here rather than allowing `v.size() == Limits<FpT>::max`.
+            if (v.size() > static_cast<size_t>(Limits<FpT>::max) - 1) {
+                throw std::runtime_error("FpMap: too many distinct split values for one feature");
+            }
         }
         finalized_ = true;
     }

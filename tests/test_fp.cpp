@@ -169,12 +169,45 @@ int test_invalid_leaf_access() {
     return result;
 }
 
+int test_fp_rank_overflow() {
+    // FpT is an unsigned short: finalize() must reject a feature with more
+    // distinct split values than FpT can rank without overflowing, rather
+    // than silently truncating ranks in transform().
+    FpMap map_ok;
+    for (size_t i = 0; i < static_cast<size_t>(Limits<FpT>::max) - 1; ++i)
+        map_ok.add(0, static_cast<FloatT>(i));
+
+    bool did_not_throw = true;
+    try {
+        map_ok.finalize();
+    } catch (const std::runtime_error&) {
+        did_not_throw = false;
+    }
+
+    FpMap map_overflow;
+    for (size_t i = 0; i < static_cast<size_t>(Limits<FpT>::max); ++i)
+        map_overflow.add(0, static_cast<FloatT>(i));
+
+    bool threw = false;
+    try {
+        map_overflow.finalize();
+    } catch (const std::runtime_error&) {
+        threw = true;
+    }
+
+    bool result = did_not_throw && threw;
+
+    std::cout << "test_fp_rank_overflow " << result << std::endl;
+    return result;
+}
+
 int main_fp() {
     int result = 1
         && test_fp()
         && test_fp_interval()
         && test_fp_with_tree1()
         && test_invalid_leaf_access()
+        && test_fp_rank_overflow()
         ;
     return !result;
 }
