@@ -12,7 +12,6 @@
 #include "basics.hpp"
 #include "interval.hpp"
 #include <algorithm>
-#include <initializer_list>
 #include <stdexcept>
 #include <vector>
 

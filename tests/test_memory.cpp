@@ -1,10 +1,7 @@
-#include "basics.hpp"
 #include "box.hpp"
 #include "addtree.hpp"
-#include "json_io.hpp"
 #include "fp_search.hpp"
 #include <cstring>
-#include <fstream>
 #include <stdexcept>
 
 using namespace veritas;

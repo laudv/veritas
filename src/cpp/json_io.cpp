@@ -13,7 +13,6 @@
 
 #include <iostream>
 #include <istream>
-#include <sstream>
 
 namespace veritas {
 

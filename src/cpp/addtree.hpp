@@ -10,13 +10,11 @@
 #define VERITAS_ADDTREE_HPP
 
 #include "basics.hpp"
-#include "interval.hpp"
-#include "box.hpp"
 #include "tree.hpp"
 
 #include <cstdint>
-#include <memory>
 #include <stdexcept>
+#include <type_traits>
 
 namespace veritas {
 

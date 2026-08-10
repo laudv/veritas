@@ -1,7 +1,4 @@
-#include "basics.hpp"
-#include "box.hpp"
-
-using namespace veritas;
+#include <iostream>
 
 int test_something() {
 

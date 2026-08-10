@@ -6,7 +6,6 @@
 #include "json_io.hpp"
 #include <fstream>
 #include <stdexcept>
-#include <unordered_set>
 
 using namespace veritas;
 

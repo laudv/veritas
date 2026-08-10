@@ -17,12 +17,9 @@
 #include "block_store.hpp"
 #include "box.hpp"
 #include "fp.hpp"
-#include "interval.hpp"
-#include "tree.hpp"
 #include "addtree.hpp"
 
 #include <chrono>
-#include <functional>
 #include <memory>
 #include <iostream>
 

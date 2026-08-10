@@ -18,7 +18,6 @@
 #include "box.hpp"
 
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <vector>
 #include <unordered_map>

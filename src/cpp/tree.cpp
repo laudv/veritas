@@ -8,10 +8,6 @@
 
 #include "tree.hpp"
 
-#include <algorithm>
-#include <iostream>
-#include <stdexcept>
-#include <type_traits>
 #include <vector>
 #include <stack>
 
