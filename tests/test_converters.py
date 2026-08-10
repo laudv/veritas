@@ -166,6 +166,37 @@ class TestXgbConverters(unittest.TestCase):
         is_correct = veritas.test_conversion(at, X, ypred_model)
         self.assertTrue(is_correct)
 
+    def test_xgb_regression_ordinal(self):
+        X, y, _, _, _ = get_img_data()
+        X *= 100.0
+        X = X.astype(int)
+
+        model = xgb.XGBRegressor(
+            objective="reg:squarederror",
+            tree_method="hist",
+            max_depth=5,
+            learning_rate=1.0,
+            n_estimators=10,
+        )
+        model.fit(X, y)
+        ypred_model = model.predict(X)
+
+        at = veritas.get_addtree(model)
+        is_correct = veritas.test_conversion(at, X, ypred_model)
+        self.assertTrue(is_correct)
+
+        splits = at.get_splits()
+        fid0 = splits[0][10]
+        fid1 = splits[1][10]
+        X_force_exacteq_split0 = np.array([[fid0-1e10, fid1-1e10]])
+        X_force_exacteq_split1 = np.array([[fid0, fid1]])
+
+        for eps in [-1e-10, 0, +1e-10]:
+            X_force_exacteq_split0 = np.array([[fid0+eps, fid1+eps]])
+            pred_xgb = model.predict(X_force_exacteq_split0)
+            pred_at = at.predict(X_force_exacteq_split0).ravel()
+            self.assertTrue(np.isclose(pred_xgb[0], pred_at[0]))
+
     def test_xgb_regression_with_feature_names(self):
         import pandas as pd
 
@@ -262,6 +293,27 @@ class TestXgbConverters(unittest.TestCase):
         model.fit(X, y)
 
         ypred_model = model.predict(X, output_margin=True)
+
+        at = veritas.get_addtree(model, handle_missing=True)
+        X_trans = veritas.transform_data_for_missing(X)
+
+        is_correct = veritas.test_conversion(at, X_trans, ypred_model)
+        self.assertTrue(is_correct)
+
+    def test_xgb_regressor_missing2(self):
+        X, y, _, _, _ = get_img_data()
+
+        # also downscale X's precision because XGBoost uses float32
+        X = X.astype(np.float32).astype(np.float64)
+
+        rng = np.random.default_rng(42)
+        mask = rng.random(X.shape) < 0.2
+        X[mask] = np.nan
+
+        model = xgb.XGBRegressor(max_depth=3, n_estimators=1, random_state=42, learning_rate=1.0)
+        model.fit(X, y)
+
+        ypred_model = model.predict(X)
 
         at = veritas.get_addtree(model, handle_missing=True)
         X_trans = veritas.transform_data_for_missing(X)
