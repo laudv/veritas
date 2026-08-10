@@ -503,83 +503,57 @@ static void config_set_defaults(Config& c) {
     c.multi_ignore_state_when_class0_worse_than = OrdLim::worst(cmp);
 }
 
+namespace {
+
+// Tags the concrete heuristic type for a HeuristicType so it can be passed
+// to a generic lambda (auto tag -> typename decltype(tag)::type). This is
+// the single place mapping HeuristicType to its heuristic class -- adding a
+// new heuristic means adding one enum value (fp_search.hpp), one case here,
+// and one pybind value (bindings/search.cpp).
+template <typename H> struct HeuristicTag { using type = H; };
+
+template <typename F>
+static auto visit_heuristic(HeuristicType h, F&& f) {
+    switch (h) {
+    case HeuristicType::MAX_OUTPUT:
+        return f(HeuristicTag<MaxBasicOutputHeuristic>{});
+    case HeuristicType::MIN_OUTPUT:
+        return f(HeuristicTag<MinBasicOutputHeuristic>{});
+    case HeuristicType::MAX_COUNTING_OUTPUT:
+        return f(HeuristicTag<MaxCountingOutputHeuristic>{});
+    case HeuristicType::MIN_COUNTING_OUTPUT:
+        return f(HeuristicTag<MinCountingOutputHeuristic>{});
+    case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF:
+        return f(HeuristicTag<MaxMaxMultiOutputHeuristic>{});
+    case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF:
+        return f(HeuristicTag<MaxMinMultiOutputHeuristic>{});
+    case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF:
+        return f(HeuristicTag<MinMaxMultiOutputHeuristic>{});
+    }
+    throw std::runtime_error("invalid HeuristicType");
+}
+
+} // anonymous namespace
+
 Config::Config(HeuristicType h)
     : heuristic(h)
     , ignore_state_when_worse_than(0.0)
     , stop_when_atleast_bound_better_than(0.0)
     , multi_ignore_state_when_class0_worse_than(0.0) {
 
-    switch (heuristic) {
-    case HeuristicType::MAX_OUTPUT:
-        config_set_defaults<MaxBasicOutputHeuristic>(*this);
-        break;
-    case HeuristicType::MIN_OUTPUT:
-        config_set_defaults<MinBasicOutputHeuristic>(*this);
-        break;
-    case HeuristicType::MAX_COUNTING_OUTPUT:
-        config_set_defaults<MaxCountingOutputHeuristic>(*this);
-        break;
-    case HeuristicType::MIN_COUNTING_OUTPUT:
-        config_set_defaults<MinCountingOutputHeuristic>(*this);
-        break;
-    case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF:
-        config_set_defaults<MaxMaxMultiOutputHeuristic>(*this);
-        break;
-    case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF:
-        config_set_defaults<MaxMinMultiOutputHeuristic>(*this);
-        break;
-    case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF:
-        config_set_defaults<MinMaxMultiOutputHeuristic>(*this);
-        break;
-    default:
-        throw std::runtime_error("invalid HeuristicType in config (init)");
-    }
+    visit_heuristic(heuristic, [this](auto tag) {
+        config_set_defaults<typename decltype(tag)::type>(*this);
+    });
 }
 
 std::shared_ptr<Search>
 Config::get_search(const AddTree& at, const FlatBox& prune_box) const {
-    switch (heuristic) {
-    case HeuristicType::MAX_OUTPUT: {
-        auto h = std::make_shared<MaxBasicOutputHeuristic>();
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-                *this, std::move(h), at, prune_box);
-    }
-    case HeuristicType::MIN_OUTPUT: {
-        auto h = std::make_shared<MinBasicOutputHeuristic>();
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-                *this, std::move(h), at, prune_box);
-    }
-    case HeuristicType::MAX_COUNTING_OUTPUT: {
-        auto h = std::make_shared<MaxCountingOutputHeuristic>();
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-            *this, std::move(h), at, prune_box);
-    }
-    case HeuristicType::MIN_COUNTING_OUTPUT: {
-        auto h = std::make_shared<MinCountingOutputHeuristic>();
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-            *this, std::move(h), at, prune_box);
-    }
-    case HeuristicType::MULTI_MAX_MAX_OUTPUT_DIFF: {
-        auto h = std::make_shared<MaxMaxMultiOutputHeuristic>(
-            *this, at.num_leaf_values(), at.size());
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-            *this, std::move(h), at, prune_box);
-    }
-    case HeuristicType::MULTI_MAX_MIN_OUTPUT_DIFF: {
-        auto h = std::make_shared<MaxMinMultiOutputHeuristic>(
-            *this, at.num_leaf_values(), at.size());
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-            *this, std::move(h), at, prune_box);
-    }
-    case HeuristicType::MULTI_MIN_MAX_OUTPUT_DIFF: {
-        auto h = std::make_shared<MinMaxMultiOutputHeuristic>(
-            *this, at.num_leaf_values(), at.size());
-        return std::make_shared<SearchImpl<decltype(h)::element_type>>(
-            *this, std::move(h), at, prune_box);
-    }
-    default:
-        throw std::runtime_error("invalid HeuristicType in config (get_search)");
-    }
+    return visit_heuristic(heuristic, [this, &at, &prune_box](auto tag)
+            -> std::shared_ptr<Search> {
+        using H = typename decltype(tag)::type;
+        auto h = H::create(*this, at);
+        return std::make_shared<SearchImpl<H>>(*this, std::move(h), at, prune_box);
+    });
 }
 
 std::shared_ptr<Search>
@@ -587,23 +561,16 @@ Config::reuse_heuristic(const Search& search, const FlatBox& prune_box) const {
     if (search.config.heuristic != heuristic)
         throw std::runtime_error("incompatible heuristic setting");
     if (heuristic != HeuristicType::MAX_COUNTING_OUTPUT &&
-        heuristic != HeuristicType::MIN_COUNTING_OUTPUT) {
-    }
-
-    switch (heuristic) {
-    case HeuristicType::MAX_COUNTING_OUTPUT: {
-        const auto& s = dynamic_cast<const SearchImpl<MaxCountingOutputHeuristic>&>(search);
-        return std::make_shared<SearchImpl<MaxCountingOutputHeuristic>>(
-            *this, s.heuristic, s.get_addtree(), prune_box);
-    }
-    case HeuristicType::MIN_COUNTING_OUTPUT: {
-        const auto& s = dynamic_cast<const SearchImpl<MinCountingOutputHeuristic>&>(search);
-        return std::make_shared<SearchImpl<MinCountingOutputHeuristic>>(
-            *this, s.heuristic, s.get_addtree(), prune_box);
-    }
-    default:
+        heuristic != HeuristicType::MIN_COUNTING_OUTPUT)
         throw std::runtime_error("reuse_heuristic only available on counting heuristics");
-    }
+
+    return visit_heuristic(heuristic, [this, &search, &prune_box](auto tag)
+            -> std::shared_ptr<Search> {
+        using H = typename decltype(tag)::type;
+        const auto& s = dynamic_cast<const SearchImpl<H>&>(search);
+        return std::make_shared<SearchImpl<H>>(
+            *this, s.heuristic, s.get_addtree(), prune_box);
+    });
 }
 
 // Search constructor

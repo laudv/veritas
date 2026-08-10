@@ -14,6 +14,7 @@
 #ifndef VERITAS_HEURISTICS_HPP
 #define VERITAS_HEURISTICS_HPP
 
+#include "addtree.hpp"
 #include "basics.hpp"
 #include "box.hpp"
 #include "fp_search.hpp" // Config
@@ -21,6 +22,7 @@
 
 #include <algorithm>
 #include <cmath> // isinf
+#include <memory>
 #include <stdexcept>
 #include <type_traits>
 #include <vector>
@@ -211,6 +213,16 @@ struct OutputHeuristic {
                              const FlatBoxFp& /*prune_box*/,
                              const State& /*state*/) {
         throw std::runtime_error("override in Sub!");
+    }
+
+    /**
+     * Factory used by Config::get_search to construct a heuristic from just
+     * a Config and an AddTree, uniformly across heuristic types (see
+     * MultiOutputHeuristic::create for the other shape this takes).
+     */
+    static std::shared_ptr<Sub> create(const Config& /*conf*/,
+                                       const AddTree& /*at*/) {
+        return std::make_shared<Sub>();
     }
 };
 
@@ -447,6 +459,12 @@ struct MultiOutputHeuristic {
                              const FlatBoxFp& /*prune_box*/,
                              const State& /*state*/) {
         // nothing to do here
+    }
+
+    /** See OutputHeuristic::create -- MultiOutputHeuristic's constructor
+     * additionally needs the ensemble's number of leaf values and trees. */
+    static std::shared_ptr<SelfT> create(const Config& conf, const AddTree& at) {
+        return std::make_shared<SelfT>(conf, at.num_leaf_values(), at.size());
     }
 };
 
