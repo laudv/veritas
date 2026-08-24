@@ -101,7 +101,7 @@ class XGBAddTreeConverter(AddTreeConverter):
             print("|   base_score reported     ", base_score)
             print("|   versus manually detected", base_score_manual)
             print("|   abs err                 ", err)
-            print("|   rel err                 ", err / base_score)
+            print("|   rel err                 ", err / base_score if not np.isclose(base_score, 0.0) else "NA")
         if not np.all(np.isclose(base_score_manual, base_score, rtol=rel_tol)):
             if not silent:
                 msg = "(!) base_score NOT THE SAME"
