@@ -188,11 +188,11 @@ class TestXgbConverters(unittest.TestCase):
         splits = at.get_splits()
         fid0 = splits[0][10]
         fid1 = splits[1][10]
-        X_force_exacteq_split0 = np.array([[fid0-1e10, fid1-1e10]])
+        X_force_exacteq_split0 = np.array([[fid0 - 1e10, fid1 - 1e10]])
         X_force_exacteq_split1 = np.array([[fid0, fid1]])
 
         for eps in [-1e-10, 0, +1e-10]:
-            X_force_exacteq_split0 = np.array([[fid0+eps, fid1+eps]])
+            X_force_exacteq_split0 = np.array([[fid0 + eps, fid1 + eps]])
             pred_xgb = model.predict(X_force_exacteq_split0)
             pred_at = at.predict(X_force_exacteq_split0).ravel()
             self.assertTrue(np.isclose(pred_xgb[0], pred_at[0]))
@@ -376,6 +376,37 @@ class TestXgbConverters(unittest.TestCase):
         with self.assertRaises(ValueError) as ctx:
             tree.eval_node(X)
         self.assertIn("Input data contains missing values", str(ctx.exception))
+
+    def test_xgb_conversion_error_issue13(self):
+        """Model is last tree of model trained in Issue 12 with 0.0 base score (`regr.get_booster()[2:]`)"""
+        model_bytes = bytearray(
+            b'{"learner":{"attributes":{},"feature_names":[],"feature_types":[],"gradient_booster":{"model":{"cats":{"enc":[],"feature_segments":[],"sorted_idx":[]},"gbtree_model_param":{"num_parallel_tree":"1","num_trees":"1"},"iteration_indptr":[0,1],"tree_info":[0],"trees":[{"base_weights":[8.0104626E-5,-3.069526E-1,5.026176E-1,-1.7521982E-1,-4.1596647E-2,2.7186227E-1,7.3281884E-2],"categories":[],"categories_nodes":[],"categories_segments":[],"categories_sizes":[],"default_left":[0,0,0,0,0,0,0],"id":0,"left_children":[1,3,5,-1,-1,-1,-1],"loss_changes":[2.548035E3,4.7799884E2,6.5279224E2,0E0,0E0,0E0,0E0],"parents":[2147483647,0,0,1,1,2,2],"right_children":[2,4,6,-1,-1,-1,-1],"split_conditions":[4.0625E0,2.5139E0,2.7E0,-1.7521982E-1,-4.1596647E-2,2.7186227E-1,7.3281884E-2],"split_indices":[0,0,5,0,0,0,0],"split_type":[0,0,0,0,0,0,0],"sum_hessian":[1.6512E4,1.025E4,6.262E3,3.872E3,6.378E3,2.443E3,3.819E3],"tree_param":{"num_deleted":"0","num_feature":"8","num_nodes":"7","size_leaf_vector":"1"}}]},"name":"gbtree"},"learner_model_param":{"base_score":"[0.0E0]","boost_from_average":"1","num_class":"0","num_feature":"8","num_target":"1"},"objective":{"name":"reg:squarederror","reg_loss_param":{"scale_pos_weight":"1"}}},"version":[3,4,1]}'
+        )
+        regr = xgb.XGBRegressor()
+        regr.load_model(model_bytes)
+        at = veritas.get_addtree(regr)
+
+        # import io
+        # with io.StringIO() as f:
+        #    regr.get_booster().dump_model(f, dump_format="text")
+        #    f.seek(0)
+        #    print(f.read())
+        # print(at[0])
+
+        import json
+        xgb_json = json.loads(model_bytes)
+        print(json.dumps(xgb_json, indent=4))
+        print(xgb_json["learner"]["gradient_booster"]["model"]["trees"][0]["split_conditions"])
+
+        for dtype, conversion_error in ((np.float32, False), (np.float64, True)):
+            X = np.array([[4.0625, 0.0, 0.0, 0.0, 0.0, 2.7, 0.0, 0.0]], dtype=dtype)
+            # X.astype(np.float32).astype(np.float64)
+            xgb_pred = regr.predict(X)
+
+            print("XGB:", xgb_pred)
+            print("VER:", at.predict(X)[0])
+
+            self.assertEqual(not conversion_error, veritas.test_conversion(at, X, xgb_pred, silent=False))
 
 
 @pytest.mark.sklearn
@@ -600,7 +631,6 @@ class TestLgbConverters(unittest.TestCase):
 @pytest.mark.sklearn
 class TestGrootConverter(unittest.TestCase):
     def test_groot_binary(self):
-
         try:
             from groot.model import GrootRandomForestClassifier
         except ModuleNotFoundError:

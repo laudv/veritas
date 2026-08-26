@@ -137,7 +137,6 @@ class Z3Backend(VerifierBackend):
             raise RuntimeError("unsupported expression of type " + type(c).__qualname__)
 
     def _enc_verifier_bool_expr(self, c):
-
         if isinstance(c, VerifierAndExpr):
             cs = list(map(self._enc_bool_expr, c.conjuncts))
             return z3.And(*cs, self._ctx) if len(cs) > 0 else True

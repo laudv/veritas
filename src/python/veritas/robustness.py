@@ -292,7 +292,6 @@ class MilpRobustnessSearch(RobustnessSearch):
         return milp
 
     def get_max_output_difference(self, delta, max_time):
-
         if self.silent:
             with open(os.devnull, "w") as f, contextlib.redirect_stdout(f):
                 milp = self.get_milp(delta, max_time)
