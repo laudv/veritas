@@ -71,6 +71,10 @@ class XGBAddTreeConverter(AddTreeConverter):
         num_leaf_values = max(size_leaf_vector, num_class, num_target, 1)
         at = AddTree(num_leaf_values, at_type)
 
+        # base_score is a scalar or a per-output array depending on the model
+        # and XGBoost version; always use one value per leaf value from here on
+        base_score = np.broadcast_to(np.asarray(base_score, dtype=np.float64), (num_leaf_values,))
+
         version = booster_json["version"][0]
         num_features = model.num_features()
         for tree_json, clazz in zip(trees, tree_info):
@@ -87,6 +91,8 @@ class XGBAddTreeConverter(AddTreeConverter):
         rel_tol = single_rel_tol * len(at)
         base_score_manual, base_score_diff_std = try_determine_base_score(model, at, feature_names)
         err = np.abs(base_score_manual - base_score)
+        nonzero = ~np.isclose(base_score, 0.0)
+        rel_err = np.divide(err, np.abs(base_score), out=np.full(num_leaf_values, np.nan), where=nonzero)
 
         if not silent:
             print()
@@ -99,7 +105,7 @@ class XGBAddTreeConverter(AddTreeConverter):
             print("|   base_score reported     ", base_score)
             print("|   versus manually detected", base_score_manual)
             print("|   abs err                 ", err)
-            print("|   rel err                 ", err / base_score if not np.isclose(base_score, 0.0) else "NA")
+            print("|   rel err                 ", rel_err, "(NaN where base_score is 0)" if not np.all(nonzero) else "")
         if not np.all(np.isclose(base_score_manual, base_score, rtol=rel_tol)):
             if not silent:
                 msg = "(!) base_score NOT THE SAME"
@@ -110,8 +116,6 @@ class XGBAddTreeConverter(AddTreeConverter):
             print(f"|   {msg} with relative tolerance {rel_tol:g}")
             print()
 
-        if isinstance(base_score, float):
-            base_score = np.full(num_leaf_values, base_score)
         for k in range(num_leaf_values):
             at.set_base_score(k, base_score[k])
 
@@ -245,8 +249,9 @@ def try_determine_base_score(booster, at, feature_names, seed=472934901, n=1000)
         x_eval = np.hstack([x, np.zeros((n, max_feat_id + 1 - x.shape[1]), dtype=FloatT)])
     pred1 = at.eval(x_eval)
 
-    if pred1.shape[1] == 1:
-        pred1 = pred1.reshape(pred1.shape[0])
+    # XGBoost drops the output dimension for single-output models; keep one
+    # column per leaf value so the base_score estimate is always a vector
+    pred0 = pred0.reshape(pred1.shape)
 
     diff = (pred0 - pred1).astype(FloatT)
 
