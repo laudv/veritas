@@ -103,6 +103,42 @@ void init_tree(py::module &m) {
 
             return result;
         })
+        
+        // Newer faster way to do eval node
+        .def("fast_eval_node", [](const TreeRef& r, py::handle arr, NodeId nid) {
+            const Tree& tree = r.get();
+            tree.check_node_id(nid);
+            size_t min_num_cols = static_cast<size_t>(tree.get_maximum_feat_id(tree.root())) + 1;
+            data d = get_data(arr, min_num_cols);
+            auto result = py::array_t<NodeId>(d.num_rows);
+            NodeId* out = result.mutable_data();
+
+            struct Split {
+                size_t offset = 0; 
+                FloatT threshold = 0.0;
+                NodeId left = -1; 
+            };
+
+            std::vector<Split> nodes(tree.num_nodes());
+            for (size_t j = 0; j < nodes.size(); ++j) {
+                NodeId node = static_cast<NodeId>(j);
+                if (!tree.is_leaf(node)) {
+                    const auto& split = tree.get_split(node);
+                    nodes[j] = {static_cast<size_t>(split.feat_id) * d.stride_col,split.split_value, tree.left(node)};
+                }
+            }
+            for (size_t i = 0; i < d.num_rows; ++i) {
+                const FloatT* row = d.ptr + i * d.stride_row;
+                NodeId node = nid;
+                while (nodes[node].left >= 0) {
+                    const auto& split = nodes[node];
+                    node = split.left + static_cast<NodeId>(!(row[split.offset] < split.threshold));
+                }
+                out[i] = node;
+            }
+            return result;
+        }, py::arg("data"), py::arg("nid"),
+           "Return leaf IDs using batch-local flattened splits and iterative routing.")
 
         .def("__str__", [](const TreeRef& r) { return tostr(r.get()); })
         .def("compute_box", [](const TreeRef& r, NodeId n) {
