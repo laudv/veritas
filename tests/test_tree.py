@@ -3,7 +3,17 @@ import pickle
 import unittest
 
 import numpy as np
-from veritas import BOOL_SPLIT_VALUE, FALSE_INTERVAL, TRUE_INTERVAL, AddTree, AddTreeType, FloatT, Interval, LtSplit
+from veritas import (
+    BOOL_SPLIT_VALUE,
+    FALSE_INTERVAL,
+    TRUE_INTERVAL,
+    AddTree,
+    AddTreeType,
+    FastEvalAddTree,
+    FloatT,
+    Interval,
+    LtSplit,
+)
 
 BPATH = os.path.dirname(__file__)
 
@@ -75,9 +85,14 @@ class TestTree(unittest.TestCase):
 
         T, F = 1.0, 0.0
 
-        y = at.eval(np.array([[0.0, 0.5, F], [0.0, 1.5, T], [2.5, 0.5, T], [2.5, 0.5, F]], dtype=FloatT))
+        X = np.array([[0.0, 0.5, F], [0.0, 1.5, T], [2.5, 0.5, T], [2.5, 0.5, F]], dtype=FloatT)
+        y = at.eval(X)
 
         self.myAssertAlmostEqual(y, np.array([[1.0, -1.0], [2.0, -2.0], [8.0, -8.0], [4.0, -4.0]], dtype=FloatT))
+
+        fat = FastEvalAddTree(at)
+        self.assertTrue(np.array_equal(fat.eval(X), y))
+        self.assertEqual(fat.eval_node(X)[:, 0].tolist(), [t["ll"], t["lr"], t["rr"], t["rl"]])
 
         s = at.to_json()
         att = AddTree.from_json(s)
@@ -233,6 +248,8 @@ class TestTree(unittest.TestCase):
         self.assertRaises(RuntimeError, at[0].eval, X)
         self.assertRaises(RuntimeError, at.predict, X)
         self.assertRaises(RuntimeError, at.eval, X)
+        self.assertRaises(RuntimeError, FastEvalAddTree(at).eval, X)
+        self.assertRaises(RuntimeError, FastEvalAddTree(at).eval_node, X)
 
     def test_eval_node(self):  # https://github.com/laudv/veritas/issues/11
         # One stump: split on feature 0 at 0.0 -> left leaf (id 1), right leaf (id 2)
@@ -252,6 +269,106 @@ class TestTree(unittest.TestCase):
 
         # Test leaf values returned by eval
         self.assertTrue(np.all(t.eval(X) == np.array([[-1.0], [+1.0]])))
+
+        # FastEvalAddTree: split value itself goes right, the next float below it goes left
+        fat = FastEvalAddTree(at)
+        below = np.nextafter(FloatT(0.0), FloatT(-np.inf))
+        Xb = np.array([[-1.0], [1.0], [below], [0.0], [-np.inf], [np.inf]], dtype=FloatT)
+        self.assertEqual(t.eval_node(Xb).tolist(), [1, 2, 1, 2, 1, 2])
+        self.assertEqual(fat.eval_node(Xb)[:, 0].tolist(), [1, 2, 1, 2, 1, 2])
+        self.assertTrue(np.array_equal(fat.eval(Xb), at.eval(Xb)))
+        self.assertEqual(fat.eval_node(X[1]).tolist(), [[2]])
+
+    def assertFastEvalEqual(self, at, X):
+        fat = FastEvalAddTree(at)
+        self.assertTrue(np.array_equal(fat.eval(X), at.eval(X)))
+        self.assertTrue(np.array_equal(fat.eval_node(X), np.stack([t.eval_node(X) for t in at], axis=1)))
+
+    def test_fast_eval_models(self):
+        # integer grid hits every split of the xgb-img models exactly, and lies next to the rf-img splits
+        X = np.array([[x, y] for x in range(100) for y in range(100)], dtype=FloatT)
+        for name in ["xgb-img-hard-new", "xgb-img-multiclass", "xgb-img-multiclass-multivalue", "rf-img-multiclass"]:
+            with self.subTest(model=name):
+                at = AddTree.read(os.path.join(BPATH, f"models/{name}.json"))
+                self.assertFastEvalEqual(at, X)
+                fat = FastEvalAddTree(at)
+                self.assertEqual(len(fat), len(at))
+                self.assertEqual(fat.num_nodes(), at.num_nodes())
+                self.assertEqual(fat.num_leaf_values(), at.num_leaf_values())
+
+    def test_fast_eval_layouts(self):
+        # rf_model has 13 features: non-contiguous column access matters
+        at = AddTree.read(os.path.join(BPATH, "models/rf_model.json"))
+        rng = np.random.default_rng(1)
+        X = np.zeros((500, at.get_maximum_feat_id() + 1), dtype=FloatT)
+        for f, vals in at.get_splits().items():
+            vals = np.array(vals, dtype=FloatT)
+            X[:, f] = rng.choice(np.concatenate([vals, vals - 1.0, vals + 1.0]), size=X.shape[0])
+        Xcopy = X.copy()
+
+        fat = FastEvalAddTree(at)
+        y = at.eval(X)
+        nodes = np.stack([t.eval_node(X) for t in at], axis=1)
+
+        Xwide = np.zeros((X.shape[0] * 2, X.shape[1] * 3), dtype=FloatT)
+        Xwide[::2, ::3] = X
+        for Xl, rows in [
+            (X, slice(None)),
+            (np.asfortranarray(X), slice(None)),
+            (Xwide[::2, ::3], slice(None)),
+            (X[::-1], slice(None, None, -1)),
+            (Xwide[-2::-2, ::3], slice(None, None, -1)),
+            (X[:, ::-1][:, ::-1], slice(None)),
+        ]:
+            self.assertTrue(np.array_equal(fat.eval(Xl), y[rows]))
+            self.assertTrue(np.array_equal(fat.eval_node(Xl), nodes[rows]))
+        self.assertTrue(np.array_equal(X, Xcopy))
+        self.assertFastEvalEqual(at, X.astype(np.float32))
+
+    def test_fast_eval_edge_cases(self):
+        at = AddTree(2, AddTreeType.REGR)
+        at.set_base_score(0, 0.5)
+        at.set_base_score(1, -0.25)
+
+        # empty ensemble: only base scores
+        fat = FastEvalAddTree(at)
+        self.assertEqual(fat.eval(np.zeros((2, 1))).tolist(), [[0.5, -0.25]] * 2)
+        self.assertEqual(fat.eval_node(np.zeros((2, 1))).shape, (2, 0))
+
+        # leaf-only tree
+        t = at.add_tree()
+        t.set_leaf_value(t.root(), 0, 1.0)
+        self.assertFastEvalEqual(at, np.zeros((3, 2), dtype=FloatT))
+
+        t = at.add_tree()
+        t.split(t.root(), 0, 2.0)
+        t.split(t.left(t.root()), 1, 1.0)
+        t.set_leaf_value(t["ll"], 1, 3.0)
+        t.set_leaf_value(t["r"], 0, -2.0)
+        X = np.array([[0.0, 0.5], [0.0, 1.5], [3.0, 0.0]], dtype=FloatT)
+        self.assertFastEvalEqual(at, X)
+
+        fat = FastEvalAddTree(at)
+        expected = [[0, t["ll"]], [0, t["lr"]], [0, t["r"]]]
+        self.assertEqual(fat.eval_node(X).tolist(), expected)
+        self.assertEqual(fat.eval_node(X.tolist()).tolist(), expected)
+        self.assertEqual(fat.eval_node(X.astype(np.int32)).tolist(), expected)
+        self.assertEqual(fat.eval(np.zeros((0, 2), dtype=FloatT)).shape, (0, 2))
+        self.assertEqual(fat.eval_node(np.zeros((0, 2), dtype=FloatT)).shape, (0, 2))
+
+        # snapshot: later modifications to the AddTree are not reflected
+        y = fat.eval(X)
+        t.split(t["r"], 1, 0.5)
+        at.set_base_score(0, 10.0)
+        self.assertTrue(np.array_equal(fat.eval(X), y))
+        self.assertEqual(fat.eval_node(X).tolist(), expected)
+        self.assertFalse(np.array_equal(FastEvalAddTree(at).eval(X), y))
+
+        # NaNs are rejected unless the caller opts out of the check
+        X[1, 1] = np.nan
+        self.assertRaises(ValueError, fat.eval, X)
+        self.assertRaises(ValueError, fat.eval_node, X)
+        self.assertEqual(fat.eval_node(X, check_nan=False).shape, (3, 2))
 
 
 if __name__ == "__main__":
