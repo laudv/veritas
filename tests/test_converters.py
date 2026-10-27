@@ -394,6 +394,7 @@ class TestXgbConverters(unittest.TestCase):
         # print(at[0])
 
         import json
+
         xgb_json = json.loads(model_bytes)
         print(json.dumps(xgb_json, indent=4))
         print(xgb_json["learner"]["gradient_booster"]["model"]["trees"][0]["split_conditions"])
