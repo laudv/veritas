@@ -154,7 +154,7 @@ def __tree_fast_eval_node(self, data, nid=None, *, check_nan=True):
     """Like eval_node, with iterative C++ routing and no unconditional input copy.
 
     check_nan=False: the caller guarantees the data contains no NaNs. This avoids scanning the entire
-    matrix again for each tree when an ensemble caller has already validated its data once. 
+    matrix again for each tree when an ensemble caller has already validated its data once.
     """
     data = _np.asarray(data, dtype=FloatT)
     if not data.flags.aligned or any(s < 0 or s % data.itemsize for s in data.strides):
