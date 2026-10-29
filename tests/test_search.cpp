@@ -437,6 +437,73 @@ int test_heuristic_consistency(const char *filename) {
     return result;
 }
 
+/**
+ * Focal search finds solutions out of order. The solution list is sorted
+ * lazily (see SearchImpl::solutions_): reading solution 0 now and then forces
+ * merges of a partially sorted list. The best solution must always match the
+ * `atleast` bound, and the final list must be sorted best first.
+ */
+static int check_solution_order(const AddTree& at, HeuristicType h,
+                                const char *label) {
+    Config c(h);
+    c.focal_eps = 0.8;
+    c.stop_when_optimal = false;
+    c.stop_when_num_solutions_exceeds = 2000;
+    auto s = c.get_search(at, {});
+
+    auto isworse = [h](FloatT a, FloatT b) {
+        return h == HeuristicType::MAX_OUTPUT ? a < b : a > b;
+    };
+
+    int result = 1;
+    size_t num_improvements = 0;
+    FloatT prev_best = 0.0;
+    StopReason r = StopReason::NONE;
+    for (size_t step = 0; r == StopReason::NONE; ++step) {
+        r = s->step();
+        if (s->num_solutions() == 0)
+            continue;
+        FloatT atleast = s->current_bounds().atleast;
+        if (s->num_solutions() > 1 && isworse(prev_best, atleast))
+            ++num_improvements;
+        prev_best = atleast;
+        if (step % 7 == 0 && s->get_solution(0).output != atleast) {
+            std::cout << "  " << label << " step " << step << ": best "
+                << s->get_solution(0).output << " != atleast " << atleast
+                << std::endl;
+            result = 0;
+        }
+    }
+
+    for (size_t i = 1; result && i < s->num_solutions(); ++i) {
+        if (isworse(s->get_solution(i-1).output, s->get_solution(i).output)) {
+            std::cout << "  " << label << " not sorted at " << i << std::endl;
+            result = 0;
+        }
+    }
+    if (result)
+        result = s->get_solution(0).output == s->current_bounds().atleast;
+
+    // Otherwise, every solution is appended in order and the lazy sorting is
+    // not tested.
+    result = result && num_improvements > 0;
+
+    std::cout << "  " << label << ": " << s->num_solutions() << " sols, "
+        << num_improvements << " improvements of the best, ok " << result
+        << std::endl;
+    return result;
+}
+
+int test_solution_order(const char *filename) {
+    AddTree at = read_addtree(filename).make_singleclass(0);
+    int result = 1
+        && check_solution_order(at, HeuristicType::MAX_OUTPUT, "max")
+        && check_solution_order(at, HeuristicType::MIN_OUTPUT, "min")
+        ;
+    std::cout << "test_solution_order " << filename << " " << result << std::endl;
+    return result;
+}
+
 int main_search() {
     int result = 1
         && test_simple1_1()
@@ -450,6 +517,8 @@ int main_search() {
         && test_multiclass("rf-img-multiclass.json")
         && test_heuristic_consistency("xgb-img-multiclass.json")
         && test_heuristic_consistency("rf-img-multiclass.json")
+        && test_solution_order("xgb-img-multiclass.json")
+        && test_solution_order("rf-img-multiclass.json")
         ;
     return !result;
 }

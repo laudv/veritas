@@ -63,7 +63,11 @@ private:
 
     std::vector<State> open_;
     std::vector<size_t> focal_;
-    std::vector<SolutionImpl<State>> solutions_;
+    // Best first up to `num_sorted_solutions_`, newer solutions are appended
+    // unsorted until sorted_solutions_() merges them in.
+    mutable std::vector<SolutionImpl<State>> solutions_;
+    mutable size_t num_sorted_solutions_;
+    mutable size_t best_solution_; // index into solutions_, valid if non-empty
     mutable LeafIter<TreeFp> leafiter_;
     BoxFp::BufT boxbuf_; // buffer to construct box of new state
 
@@ -78,6 +82,8 @@ public:
         , open_{}
         , focal_{}
         , solutions_{}
+        , num_sorted_solutions_{0}
+        , best_solution_{0}
         , leafiter_{}
         , boxbuf_{}
         , is_oom_{false}
@@ -116,7 +122,7 @@ public:
     bool is_optimal() const override {
         return !solutions_.empty() &&
                (open_.empty() ||
-                heuristic->open_isworse(open_[0], solutions_[0].state));
+                heuristic->open_isworse(open_[0], best_solution_state_()));
     }
 
     size_t num_solutions() const override {
@@ -124,7 +130,7 @@ public:
     }
 
     Solution get_solution(size_t solution_index) const override {
-        const auto& sol = solutions_.at(solution_index);
+        const auto& sol = sorted_solutions_().at(solution_index);
 
         Box::BufT buf;
 
@@ -150,7 +156,7 @@ public:
     }
 
     std::vector<NodeId> get_solution_nodes(size_t solution_index) const override {
-        const auto& sol = solutions_.at(solution_index);
+        const auto& sol = sorted_solutions_().at(solution_index);
         std::vector<NodeId> nodes;
         for (const TreeFp& tree : atfp_) {
             leafiter_.setup(tree, sol.state.box, prune_box_);
@@ -169,8 +175,8 @@ public:
             b.best = b.top_of_open;
         }
         if (num_solutions() > 0) {
-            // best solution so far, sols are sorted
-            b.atleast = solutions_[0].state.open_score();
+            // best solution so far
+            b.atleast = best_solution_state_().open_score();
             if (is_optimal())
                 b.best = b.atleast;
         }
@@ -210,8 +216,7 @@ private:
         State state = pop_from_focal_();
 
         if (is_solution_(state)) {
-            /*size_t sol =*/ push_solution_(std::move(state));
-            //const auto& solsol = solutions_[sol];
+            push_solution_(std::move(state));
 
         } else {
             try {
@@ -239,7 +244,7 @@ private:
         }
         if (num_solutions() > 0 && heuristic->open_isworse(
                 config.stop_when_atleast_bound_better_than,
-                solutions_[0].state.open_score())) {
+                best_solution_state_().open_score())) {
             return StopReason::ATLEAST_BOUND_BETTER_THAN;
         }
 
@@ -456,8 +461,7 @@ private:
         return s;
     }
 
-    /** \return solution index */
-    size_t push_solution_(State&& state) {
+    void push_solution_(State&& state) {
         solutions_.emplace_back(
             std::move(state),
             time_since_start()
@@ -466,23 +470,33 @@ private:
         const State& sol_state = solutions_.back().state;
         heuristic->notify_new_solution(atfp_, prune_box_, sol_state);
 
-        //std::sort(solutions_.begin(), solutions_.end(),
-        //        [this](const auto& s0, const auto& s1) {
-        //            return heuristic->open_isworse(s0.state, s1.state);
-        //        });
-
-        // sort solutions
+        // Ties keep the older solution first, as a stable sort does.
         size_t i = solutions_.size()-1;
-        for (; i > 0; --i) {
-            auto& sol1 = solutions_[i-1]; // should have better score
-            auto& sol2 = solutions_[i];
-            if (heuristic->open_isworse(sol1.state, sol2.state)) {
-                std::swap(sol1, sol2);
-            } else {
-                return i;
-            }
+        if (i == 0 || heuristic->open_isworse(best_solution_state_(), sol_state))
+            best_solution_ = i;
+        if (num_sorted_solutions_ == i && (i == 0 || !heuristic->open_isworse(
+                    solutions_[i-1].state, sol_state)))
+            num_sorted_solutions_ = i+1; // still sorted
+    }
+
+    const State& best_solution_state_() const {
+        return solutions_[best_solution_].state;
+    }
+
+    /** The solutions, best first. Sorts lazily, see `solutions_`. */
+    const std::vector<SolutionImpl<State>>& sorted_solutions_() const {
+        if (num_sorted_solutions_ < solutions_.size()) {
+            auto better = [this](const auto& s0, const auto& s1) {
+                return heuristic->open_isworse(s1.state, s0.state);
+            };
+            auto mid = solutions_.begin()
+                + static_cast<std::ptrdiff_t>(num_sorted_solutions_);
+            std::stable_sort(mid, solutions_.end(), better);
+            std::inplace_merge(solutions_.begin(), mid, solutions_.end(), better);
+            num_sorted_solutions_ = solutions_.size();
+            best_solution_ = 0;
         }
-        return 0;
+        return solutions_;
     }
 
 }; // class SearchImpl
