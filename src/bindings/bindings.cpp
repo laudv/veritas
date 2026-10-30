@@ -35,6 +35,7 @@ PYBIND11_MODULE(veritas_core, m) {
     init_box(m);
     init_tree(m);
     init_addtree(m);
+    init_fast_eval_addtree(m);
     init_featmap(m);
     init_search(m);
 } /* PYBIND11_MODULE */

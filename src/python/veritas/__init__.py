@@ -16,6 +16,7 @@ from .veritas_core import (
     AddTreeType,
     Bounds,
     Config,
+    FastEvalAddTree,
     FeatMap,
     HeuristicType,
     Interval,
@@ -145,6 +146,44 @@ def __tree_eval_node(self, data, nid=None):
 
 Tree.eval = __tree_eval
 Tree.eval_node = __tree_eval_node
+
+
+def __fast_eval_data(data, check_nan):
+    # avoid copying the data when the C++ side can read it as is
+    data = _np.asarray(data, dtype=FloatT)
+    if not data.flags.aligned or any(s < 0 or s % data.itemsize for s in data.strides):
+        data = _np.array(data, dtype=FloatT, order="C")
+    if check_nan and _np.isnan(data).any():
+        raise ValueError(
+            "Input data contains missing values (NaNs). Veritas trees do not natively "
+            "evaluate NaNs. Please transform your dataset using `veritas.transform_data_for_missing(X)` "
+            "and convert your model using `veritas.get_addtree(model, handle_missing=True)`."
+        )
+    return data
+
+
+__fast_eval_addtree_eval_cpp = FastEvalAddTree.eval
+__fast_eval_addtree_eval_node_cpp = FastEvalAddTree.eval_node
+
+
+def __fast_eval_addtree_eval(self, data, *, check_nan=True):
+    """Evaluate the ensemble, same result as `AddTree.eval`.
+
+    check_nan=False: the caller guarantees the data contains no NaNs.
+    """
+    return __fast_eval_addtree_eval_cpp(self, __fast_eval_data(data, check_nan))
+
+
+def __fast_eval_addtree_eval_node(self, data, *, check_nan=True):
+    """Leaf node ids reached in each tree, shape (num_rows, num_trees).
+
+    Column `m` equals `at[m].eval_node(data)`. check_nan=False: the caller guarantees the data contains no NaNs.
+    """
+    return __fast_eval_addtree_eval_node_cpp(self, __fast_eval_data(data, check_nan))
+
+
+FastEvalAddTree.eval = __fast_eval_addtree_eval
+FastEvalAddTree.eval_node = __fast_eval_addtree_eval_node
 
 
 ################################################################################

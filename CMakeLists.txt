@@ -13,6 +13,7 @@ include_directories(${SOURCE_DIR})
 set(SOURCES
     "${SOURCE_DIR}/tree.cpp"
     "${SOURCE_DIR}/addtree.cpp"
+    "${SOURCE_DIR}/fast_eval_addtree.cpp"
     "${SOURCE_DIR}/json_io.cpp"
     "${SOURCE_DIR}/json_io_nlohmann.cpp"
     "${SOURCE_DIR}/fp_search.cpp"
@@ -87,6 +88,7 @@ if (VERITAS_BUILD_PYBINDINGS)
         "${BINDINGS_DIR}/box.cpp"
         "${BINDINGS_DIR}/tree.cpp"
         "${BINDINGS_DIR}/addtree.cpp"
+        "${BINDINGS_DIR}/fast_eval_addtree.cpp"
         "${BINDINGS_DIR}/featmap.cpp"
         "${BINDINGS_DIR}/search.cpp"
         "${BINDINGS_DIR}/bindings.cpp")

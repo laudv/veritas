@@ -57,6 +57,7 @@ void init_interval(pybind11::module& m);    /* bindings/interval.cpp */
 void init_box(pybind11::module& m);         /* bindings/box.cpp */
 void init_tree(pybind11::module& m);        /* bindings/tree.cpp */
 void init_addtree(pybind11::module& m);     /* bindings/addtree.cpp */
+void init_fast_eval_addtree(pybind11::module& m); /* bindings/fast_eval_addtree.cpp */
 void init_featmap(pybind11::module& m);     /* bindings/featmap.cpp */
 void init_search(pybind11::module& m);      /* bindings/search.cpp */
 
