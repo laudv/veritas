@@ -147,6 +147,32 @@ Tree.eval = __tree_eval
 Tree.eval_node = __tree_eval_node
 
 
+__tree_fast_eval_node_cpp = Tree.fast_eval_node
+
+
+def __tree_fast_eval_node(self, data, nid=None, *, check_nan=True):
+    """Like eval_node, with iterative C++ routing and no unconditional input copy.
+
+    check_nan=False: the caller guarantees the data contains no NaNs. This avoids scanning the entire
+    matrix again for each tree when an ensemble caller has already validated its data once.
+    """
+    data = _np.asarray(data, dtype=FloatT)
+    if not data.flags.aligned or any(s < 0 or s % data.itemsize for s in data.strides):
+        data = _np.array(data, dtype=FloatT, order="C", copy=True)
+    if check_nan and _np.isnan(data).any():
+        raise ValueError(
+            "Input data contains missing values (NaNs). Veritas trees do not natively "
+            "evaluate NaNs. Please transform your dataset using `veritas.transform_data_for_missing(X)` "
+            "and convert your model using `veritas.get_addtree(model, handle_missing=True)`."
+        )
+    if nid is None:
+        nid = self.root()
+    return __tree_fast_eval_node_cpp(self, data, nid)
+
+
+Tree.fast_eval_node = __tree_fast_eval_node
+
+
 ################################################################################
 #              Imports that rely on initialized Veritas core below             #
 ################################################################################
