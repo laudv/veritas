@@ -162,7 +162,7 @@ def convert_xgb_json_tree(at, tree_json, clazz, version, handle_missing=False, n
     rights = tree_json["right_children"]
     thresholds = tree_json["split_conditions"]
     feat_ids = tree_json["split_indices"]
-    leafvals = tree_json["base_weights"]
+    leafvals = thresholds
     default_lefts = tree_json.get("default_left", [])
 
     # versions <2 put even leaf values into tree_json['split_conditions']
