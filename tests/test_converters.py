@@ -410,6 +410,20 @@ class TestXgbConverters(unittest.TestCase):
             self.assertEqual(not conversion_error, veritas.test_conversion(at, X, xgb_pred, silent=False))
 
 
+    @unittest.skipIf(xgb is None or int(xgb.__version__.split(".")[0]) < 2, "needs xgboost>=2")
+    def test_xgb_exact_learning_rate_issue17(self):
+        # With tree_method="exact", `base_weights` holds the raw leaf weight;
+        # only `split_conditions` holds the learning-rate-scaled value.
+        X = np.array([[0], [1]] * 20, dtype=np.float32)
+        y = np.array([0.0, 1.0] * 20)
+        model = xgb.XGBRegressor(
+            tree_method="exact", n_estimators=1, max_depth=1, learning_rate=0.3, base_score=0.5
+        ).fit(X, y)
+
+        at = veritas.get_addtree(model, silent=True)
+        np.testing.assert_allclose(at.predict(X).ravel(), model.predict(X), rtol=1e-5, atol=1e-5)
+
+
 @pytest.mark.sklearn
 class TestSklearnConverters(unittest.TestCase):
     def test_rf_binary(self):
